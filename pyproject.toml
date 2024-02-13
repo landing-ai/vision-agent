@@ -1,0 +1,79 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "lmm-tools"
+version = "0.0.2"
+description = "Toolset for Large Multi-Modal Models"
+authors = ["Landing AI <dev@landing.ai>"]
+readme = "README.md"
+packages = [{include = "lmm_tools"}]
+
+[tool.poetry.urls]
+"Homepage" = "https://landing.ai"
+"repository" = "https://github.com/landing-ai/lmm-tools"
+"documentation" = "https://github.com/landing-ai/lmm-tools"
+
+[tool.poetry.dependencies]  # main dependency group
+python = ">=3.8,<4.0"
+
+numpy = ">=1.21.0,<2.0.0"
+pillow = "9.*" # Version 10.0.0 had a issue on FreeTypeFont that will be fixed on the next release
+requests = "2.*"
+tqdm = ">=4.64.0,<5.0.0"
+pandas = "2.0"
+
+[tool.poetry.group.dev.dependencies]
+autoflake = "1.*"
+pytest = "7.*"
+black = "23.*"
+flake8 = "5.*"
+isort = "5.*"
+responses = "^0.23.1"
+mypy = "<1.8.0"
+types-requests = "^2.31.0.0"
+types-pillow = "^9.5.0.4"
+data-science-types = "^0.2.23"
+types-tqdm = "^4.65.0.1"
+setuptools = "^68.0.0"
+mkdocs = "^1.5.3"
+mkdocstrings = {extras = ["python"], version = "^0.23.0"}
+mkdocs-material = "^9.4.2"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.black]
+exclude = '.vscode|.eggs|venv'
+line-length = 88               # suggested by black official site
+
+[tool.isort]
+line_length = 88
+profile = "black"
+
+[tool.mypy]
+exclude = "tests"
+show_error_context = true
+pretty = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_optional = true
+strict_equality = true
+extra_checks = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_return_any = true
+show_error_codes = true
+disallow_any_unimported = true
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+    "cv2.*",
+]
