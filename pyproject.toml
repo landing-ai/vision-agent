@@ -19,7 +19,7 @@ packages = [{include = "lmm_tools"}]
 python = ">=3.8,<4.0"
 
 numpy = ">=1.21.0,<2.0.0"
-pillow = "9.*" # Version 10.0.0 had a issue on FreeTypeFont that will be fixed on the next release
+pillow = ">=9,<11" # Version 10.0.0 had a issue on FreeTypeFont that will be fixed on the next release
 requests = "2.*"
 tqdm = ">=4.64.0,<5.0.0"
 pandas = "2.0"
