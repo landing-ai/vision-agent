@@ -1,5 +1,5 @@
 # Large Multimodal Model Tools
-LMM-Tools (Large Multmodal Model Tools) is a simple library that helps you utilize multimodal models to organize your image data. One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, I might have a bunch of pictures of houses and I want to count how many yellow houses I have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
+LMM-Tools (Large Multmodal Model Tools) is a simple library that helps you utilize multimodal models to organize your image data. One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
 
 ## Getting Started
 ### LMMs
