@@ -1,7 +1,8 @@
-# lmm-tools
+# Large Multimodal Model Tools
 LMM-Tools (Large Multmodal Model Tools) is a simple library that helps you utilize multimodal models to organize your image data. One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, I might have a bunch of pictures of houses and I want to count how many yellow houses I have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
 
 ## Getting Started
+### LMMs
 To get started you can create an LMM and start generating text from images. The following code will grab the LLaVA-1.6 34B model and generate a description of the image you pass it.
 
 ```python
@@ -12,6 +13,9 @@ model.generate("Describe this image", "image.png")
 >>> "A yellow house with a green lawn."
 ```
 
+We are hosting the LLaVA-1.6 34B model, if it times out please wait ~5-10 min for the server to warm up as it shuts down when usage is low.
+
+### DataStore
 You can use the `DataStore` class to store your images, add new metadata to them such as descriptions, and search over different columns.
 
 ```python
