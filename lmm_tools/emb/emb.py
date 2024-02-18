@@ -38,4 +38,6 @@ def get_embedder(name: str) -> Embedder:
     elif name == "openai":
         return OpenAIEmb()
     else:
-        raise ValueError(f"Unknown embedder name: {name}, currently support sentence-transformer, openai.")
+        raise ValueError(
+            f"Unknown embedder name: {name}, currently support sentence-transformer, openai."
+        )
