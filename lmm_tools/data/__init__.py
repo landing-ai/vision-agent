@@ -1,1 +1,1 @@
-from .data import Data, build_data
+from .data import DataStore, build_data_store
