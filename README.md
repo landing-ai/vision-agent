@@ -9,7 +9,7 @@ import lmm_tools as lmt
 
 model = lmt.lmm.get_model("llava")
 model.generate("Describe this image", "image.png")
->>> "A dog is sitting on a couch"
+>>> "A yellow house with a green lawn."
 ```
 
 You can use the `DataStore` class to store your images, add new metadata to them such as descriptions, and search over different columns.
