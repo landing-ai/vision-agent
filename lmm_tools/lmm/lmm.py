@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 
-def encode_image(image: str | Path) -> str:
+def encode_image(image: Union[str, Path]) -> str:
     with open(image, "rb") as f:
         encoded_image = base64.b64encode(f.read()).decode("utf-8")
     return encoded_image
