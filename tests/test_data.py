@@ -73,7 +73,6 @@ def test_add_column_no_lmm(small_ds):
 
 def test_search(small_ds_with_index):
     results = small_ds_with_index.search("test", top_k=1)
-    pytest.set_trace()
     assert len(results) == 1
 
 
