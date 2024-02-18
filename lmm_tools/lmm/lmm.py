@@ -17,6 +17,8 @@ class LMM(ABC):
 
 
 class LLaVALMM(LMM):
+    r"""An LMM class for the LLaVA-1.6 34B model."""
+
     def __init__(self, name: str):
         self.name = name
 
@@ -25,6 +27,8 @@ class LLaVALMM(LMM):
 
 
 class OpenAILMM(LMM):
+    r"""An LMM class for the OpenAI GPT-4 Vision model."""
+
     def __init__(self, name: str):
         from openai import OpenAI
 
@@ -37,7 +41,7 @@ class OpenAILMM(LMM):
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                ]
+                ],
             }
         ]
         if image:
@@ -54,8 +58,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model="gpt-4-vision-preview",
-            message=message
+            model="gpt-4-vision-preview", message=message
         )
         return response.choices[0].message.content
 
@@ -63,7 +66,7 @@ class OpenAILMM(LMM):
 def get_lmm(name: str) -> LMM:
     if name == "openai":
         return OpenAILMM(name)
-    elif name == "llava-v1.6-34b":
+    elif name == "llava":
         return LLaVALMM(name)
     else:
-        raise ValueError(f"Unknown LMM: {name}, current support openai, llava-v1.6-34b")
+        raise ValueError(f"Unknown LMM: {name}, current support openai, llava")

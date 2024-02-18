@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from pathlib import Path
 
@@ -5,37 +7,57 @@ import faiss
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from faiss import read_index, write_index
 from tqdm import tqdm
+from typing_extensions import Self
 
-from lmm_tools import LMM, Embedder
+from lmm_tools.emb import Embedder
+from lmm_tools.lmm import LMM
 
 tqdm.pandas()
 
 
-class Data:
+class DataStore:
+    r"""A class to store and manage image data along with its generated metadata from an LMM."""
+
     def __init__(self, df: pd.DataFrame):
-        self.df = pd.DataFrame()
+        r"""Initializes the DataStore with a DataFrame containing image paths and image IDs. If the image IDs are not present, they are generated using UUID4. The DataFrame must contain an 'image_paths' column.
+
+        Args:
+            df (pd.DataFrame): The DataFrame containing "image_paths" and "image_id" columns.
+
+        """
+        self.df = df
         self.lmm: LMM | None = None
         self.emb: Embedder | None = None
         self.index = None
-        if "image_paths" not in df.columns:
+        if "image_paths" not in self.df.columns:
             raise ValueError("image_paths column must be present in DataFrame")
+        if "image_id" not in self.df.columns:
+            self.df["image_id"] = [str(uuid.uuid4()) for _ in range(len(df))]
 
-    def add_embedder(self, emb: Embedder):
+    def add_embedder(self, emb: Embedder) -> Self:
         self.emb = emb
+        return self
 
-    def add_lmm(self, lmm: LMM):
+    def add_lmm(self, lmm: LMM) -> Self:
         self.lmm = lmm
+        return self
 
-    def add_column(self, name: str, prompt: str) -> None:
+    def add_column(self, name: str, prompt: str) -> Self:
+        r"""Adds a new column to the DataFrame containing the generated metadata from the LMM."""
         if self.lmm is None:
             raise ValueError("LMM not set yet")
 
         self.df[name] = self.df["image_paths"].progress_apply(
             lambda x: self.lmm.generate(prompt, image=x)
         )
+        return self
 
-    def add_index(self, target_col: str) -> None:
+    def build_index(self, target_col: str) -> Self:
+        r"""This will generate embeddings for the `target_col` and build a searchable index over them, so next time you run search it will search over this index.
+        Args:
+            target_col (str): The column name containing the data to be indexed."""
         if self.emb is None:
             raise ValueError("Embedder not set yet")
 
@@ -43,6 +65,7 @@ class Data:
         embeddings = np.array(embeddings.tolist()).astype(np.float32)
         self.index = faiss.IndexFlatL2(embeddings.shape[1])
         self.index.add(embeddings)
+        return self
 
     def get_embeddings(self) -> npt.NDArray[np.float32]:
         if self.index is None:
@@ -53,6 +76,10 @@ class Data:
         return faiss.rev_swig_ptr(self.index.get_xb(), ntotal * d).reshape(ntotal, d)
 
     def search(self, query: str, top_k: int = 10) -> list[dict]:
+        r"""Searches the index for the most similar images to the query and returns the top_k results.
+        Args:
+            query (str): The query to search for.
+            top_k (int, optional): The number of results to return. Defaults to 10."""
         if self.index is None:
             raise ValueError("Index not built yet")
         if self.emb is None:
@@ -62,8 +89,24 @@ class Data:
         _, I = self.index.search(query_embedding.reshape(1, -1), top_k)
         return self.df.iloc[I[0]].to_dict(orient="records")
 
+    def save(self, path: str | Path) -> None:
+        path = Path(path)
+        path.mkdir(parents=True)
+        self.df.to_csv(path / "data.csv")
+        if self.index is not None:
+            write_index(self.index, str(path / "data.index"))
 
-def build_data(data: str | Path | list[str | Path]) -> Data:
+    @classmethod
+    def load(cls, path: str | Path) -> DataStore:
+        path = Path(path)
+        df = pd.read_csv(path / "data.csv", index_col=0)
+        ds = DataStore(df)
+        if Path(path / "data.index").exists():
+            ds.index = read_index(str(path / "data.index"))
+        return ds
+
+
+def build_data_store(data: str | Path | list[str | Path]) -> DataStore:
     if isinstance(data, Path) or isinstance(data, str):
         data = Path(data)
         data_files = list(Path(data).glob("*"))
@@ -73,4 +116,4 @@ def build_data(data: str | Path | list[str | Path]) -> Data:
     df = pd.DataFrame()
     df["image_paths"] = data_files
     df["image_id"] = [uuid.uuid4() for _ in range(len(data_files))]
-    return Data(df)
+    return DataStore(df)
