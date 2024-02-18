@@ -19,10 +19,15 @@ packages = [{include = "lmm_tools"}]
 python = ">=3.8,<4.0"
 
 numpy = ">=1.21.0,<2.0.0"
-pillow = "9.*" # Version 10.0.0 had a issue on FreeTypeFont that will be fixed on the next release
+pillow = "10.*"
 requests = "2.*"
 tqdm = ">=4.64.0,<5.0.0"
-pandas = "2.0"
+pandas = "2.*"
+faiss-cpu = "1.*"
+torch = "2.1.*"  # 2.2 causes sentence-transformers to seg fault
+sentence-transformers = "2.*"
+openai = "1.*"
+typing_extensions = "4.*"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
@@ -49,7 +54,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.black]
 exclude = '.vscode|.eggs|venv'
-line-length = 88               # suggested by black official site
+line-length = 88  # suggested by black official site
 
 [tool.isort]
 line_length = 88
