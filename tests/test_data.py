@@ -38,6 +38,7 @@ class TestLMM:
     def generate(self, _, **kwargs):
         return "test"
 
+
 class TestEmb:
     def embed(self, _):
         return np.random.randn(128).astype(np.float32)
