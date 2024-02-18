@@ -1,7 +1,7 @@
 import base64
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
 def encode_image(image: str | Path) -> str:
@@ -12,7 +12,7 @@ def encode_image(image: str | Path) -> str:
 
 class LMM(ABC):
     @abstractmethod
-    def generate(self, prompt: str, image: Optional[str | Path]) -> str:
+    def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
         pass
 
 
@@ -22,7 +22,7 @@ class LLaVALMM(LMM):
     def __init__(self, name: str):
         self.name = name
 
-    def generate(self, prompt: str, image: Optional[str | Path]) -> str:
+    def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
         pass
 
 
@@ -35,7 +35,7 @@ class OpenAILMM(LMM):
         self.name = name
         self.client = OpenAI()
 
-    def generate(self, prompt: str, image: Optional[str | Path]) -> str:
+    def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
         message = [
             {
                 "role": "user",
