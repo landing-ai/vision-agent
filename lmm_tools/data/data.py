@@ -86,8 +86,8 @@ class DataStore:
             raise ValueError("Embedder not set yet")
 
         query_embedding = self.emb.embed(query)
-        _, I = self.index.search(query_embedding.reshape(1, -1), top_k)
-        return self.df.iloc[I[0]].to_dict(orient="records")
+        _, idx = self.index.search(query_embedding.reshape(1, -1), top_k)
+        return self.df.iloc[idx[0]].to_dict(orient="records")
 
     def save(self, path: str | Path) -> None:
         path = Path(path)
