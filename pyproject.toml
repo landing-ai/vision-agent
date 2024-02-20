@@ -16,7 +16,7 @@ packages = [{include = "lmm_tools"}]
 "documentation" = "https://github.com/landing-ai/lmm-tools"
 
 [tool.poetry.dependencies]  # main dependency group
-python = ">=3.8,<4.0"
+python = ">=3.10,<4.0"
 
 numpy = ">=1.21.0,<2.0.0"
 pillow = "10.*"
