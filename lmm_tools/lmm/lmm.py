@@ -58,7 +58,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model="gpt-4-vision-preview", message=message
+            model="gpt-4-vision-preview", messages=message  # type: ignore
         )
         return cast(str, response.choices[0].message.content)
 
