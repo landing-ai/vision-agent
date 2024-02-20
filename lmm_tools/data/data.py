@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, cast
 
 import faiss
 import numpy as np
@@ -31,7 +31,7 @@ class DataStore:
         self.df = df
         self.lmm: Optional[LMM] = None
         self.emb: Optional[Embedder] = None
-        self.index = None
+        self.index: Optional[faiss.IndexFlatL2] = None  # type: ignore
         if "image_paths" not in self.df.columns:
             raise ValueError("image_paths column must be present in DataFrame")
         if "image_id" not in self.df.columns:
@@ -50,7 +50,7 @@ class DataStore:
         if self.lmm is None:
             raise ValueError("LMM not set yet")
 
-        self.df[name] = self.df["image_paths"].progress_apply(
+        self.df[name] = self.df["image_paths"].progress_apply(  # type: ignore
             lambda x: self.lmm.generate(prompt, image=x)
         )
         return self
@@ -62,10 +62,10 @@ class DataStore:
         if self.emb is None:
             raise ValueError("Embedder not set yet")
 
-        embeddings = self.df[target_col].progress_apply(lambda x: self.emb.embed(x))
-        embeddings = np.array(embeddings.tolist()).astype(np.float32)
-        self.index = faiss.IndexFlatL2(embeddings.shape[1])
-        self.index.add(embeddings)
+        embeddings: pd.Series = self.df[target_col].progress_apply(lambda x: self.emb.embed(x))  # type: ignore
+        embeddings_np = np.array(embeddings.tolist()).astype(np.float32)
+        self.index = faiss.IndexFlatL2(embeddings_np.shape[1])
+        self.index.add(embeddings_np)
         return self
 
     def get_embeddings(self) -> npt.NDArray[np.float32]:
@@ -73,8 +73,11 @@ class DataStore:
             raise ValueError("Index not built yet")
 
         ntotal = self.index.ntotal
-        d = self.index.d
-        return faiss.rev_swig_ptr(self.index.get_xb(), ntotal * d).reshape(ntotal, d)
+        d: int = self.index.d
+        return cast(
+            npt.NDArray[np.float32],
+            faiss.rev_swig_ptr(self.index.get_xb(), ntotal * d).reshape(ntotal, d),
+        )
 
     def search(self, query: str, top_k: int = 10) -> List[Dict]:
         r"""Searches the index for the most similar images to the query and returns the top_k results.
@@ -86,9 +89,9 @@ class DataStore:
         if self.emb is None:
             raise ValueError("Embedder not set yet")
 
-        query_embedding = self.emb.embed(query)
+        query_embedding: npt.NDArray[np.float32] = self.emb.embed(query)
         _, idx = self.index.search(query_embedding.reshape(1, -1), top_k)
-        return self.df.iloc[idx[0]].to_dict(orient="records")
+        return cast(List[Dict], self.df.iloc[idx[0]].to_dict(orient="records"))
 
     def save(self, path: Union[str, Path]) -> None:
         path = Path(path)

@@ -81,4 +81,7 @@ disallow_any_unimported = true
 ignore_missing_imports = true
 module = [
     "cv2.*",
+    "faiss.*",
+    "openai.*",
+    "sentence_transformers.*",
 ]
