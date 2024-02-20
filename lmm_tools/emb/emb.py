@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -6,7 +7,7 @@ import numpy.typing as npt
 
 class Embedder(ABC):
     @abstractmethod
-    def embed(self, text: str) -> list:
+    def embed(self, text: str) -> npt.NDArray[np.float32]:
         pass
 
 
@@ -17,7 +18,10 @@ class SentenceTransformerEmb(Embedder):
         self.model = SentenceTransformer(model_name)
 
     def embed(self, text: str) -> npt.NDArray[np.float32]:
-        return self.model.encode([text]).flatten().astype(np.float32)
+        return cast(
+            npt.NDArray[np.float32],
+            self.model.encode([text]).flatten().astype(np.float32),
+        )
 
 
 class OpenAIEmb(Embedder):

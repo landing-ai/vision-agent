@@ -1,7 +1,7 @@
 import base64
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union, cast
 
 
 def encode_image(image: Union[str, Path]) -> str:
@@ -23,7 +23,7 @@ class LLaVALMM(LMM):
         self.name = name
 
     def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
-        pass
+        raise NotImplementedError("LLaVA LMM not implemented yet")
 
 
 class OpenAILMM(LMM):
@@ -36,7 +36,7 @@ class OpenAILMM(LMM):
         self.client = OpenAI()
 
     def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
-        message = [
+        message: list[Dict[str, Any]] = [
             {
                 "role": "user",
                 "content": [
@@ -58,9 +58,9 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model="gpt-4-vision-preview", message=message
+            model="gpt-4-vision-preview", messages=message  # type: ignore
         )
-        return response.choices[0].message.content
+        return cast(str, response.choices[0].message.content)
 
 
 def get_lmm(name: str) -> LMM:
