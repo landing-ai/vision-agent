@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "lmm-tools"
-version = "0.0.3"
+version = "0.0.4"
 description = "Toolset for Large Multi-Modal Models"
 authors = ["Landing AI <dev@landing.ai>"]
 readme = "README.md"
