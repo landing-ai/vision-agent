@@ -1,7 +1,7 @@
 import base64
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 
 def encode_image(image: Union[str, Path]) -> str:
@@ -36,7 +36,7 @@ class OpenAILMM(LMM):
         self.client = OpenAI()
 
     def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
-        message: list[Dict[str, Any]] = [
+        message: List[Dict[str, Any]] = [
             {
                 "role": "user",
                 "content": [
