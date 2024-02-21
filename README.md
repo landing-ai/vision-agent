@@ -13,7 +13,7 @@ model.generate("Describe this image", "image.png")
 >>> "A yellow house with a green lawn."
 ```
 
-We are hosting the LLaVA-1.6 34B model, if it times out please wait ~5-10 min for the server to warm up as it shuts down when usage is low.
+**WARNING** We are hosting the LLaVA-1.6 34B model, if it times out please wait ~5-10 min for the server to warm up as it shuts down when usage is low.
 
 ### DataStore
 You can use the `DataStore` class to store your images, add new metadata to them such as descriptions, and search over different columns.
