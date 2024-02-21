@@ -31,7 +31,7 @@ class DataStore:
         self.df = df
         self.lmm: Optional[LMM] = None
         self.emb: Optional[Embedder] = None
-        self.index: Optional[faiss.IndexFlatL2] = None  # type: ignore
+        self.index: Optional[faiss.IndexFlatIP] = None  # type: ignore
         if "image_paths" not in self.df.columns:
             raise ValueError("image_paths column must be present in DataFrame")
         if "image_id" not in self.df.columns:
@@ -64,7 +64,7 @@ class DataStore:
 
         embeddings: pd.Series = self.df[target_col].progress_apply(lambda x: self.emb.embed(x))  # type: ignore
         embeddings_np = np.array(embeddings.tolist()).astype(np.float32)
-        self.index = faiss.IndexFlatL2(embeddings_np.shape[1])
+        self.index = faiss.IndexFlatIP(embeddings_np.shape[1])
         self.index.add(embeddings_np)
         return self
 
