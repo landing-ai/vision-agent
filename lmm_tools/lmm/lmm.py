@@ -1,7 +1,9 @@
 import base64
+import requests
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
+from lmm_tools.config import BASETEN_API_KEY, BASETEN_URL
 
 
 def encode_image(image: Union[str, Path]) -> str:
@@ -12,7 +14,7 @@ def encode_image(image: Union[str, Path]) -> str:
 
 class LMM(ABC):
     @abstractmethod
-    def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
+    def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
         pass
 
 
@@ -22,8 +24,16 @@ class LLaVALMM(LMM):
     def __init__(self, name: str):
         self.name = name
 
-    def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
-        raise NotImplementedError("LLaVA LMM not implemented yet")
+    def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
+        data = {"prompt": prompt}
+        if image:
+            data["image"] = encode_image(image)
+        res = requests.post(
+            BASETEN_URL,
+            headers={"Authorization": f"Api-Key {BASETEN_API_KEY}"},
+            json=data,
+        )
+        return res.text
 
 
 class OpenAILMM(LMM):
@@ -35,7 +45,7 @@ class OpenAILMM(LMM):
         self.name = name
         self.client = OpenAI()
 
-    def generate(self, prompt: str, image: Optional[Union[str, Path]]) -> str:
+    def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
         message: List[Dict[str, Any]] = [
             {
                 "role": "user",
