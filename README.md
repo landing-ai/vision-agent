@@ -41,8 +41,8 @@ This will use the prompt you passed, "Describe this image.", and the LMM to crea
 You can now create an index on the descriptions column and search over it to find images that match your query.
 
 ```python
-ds = ds.create_index("descriptions", top_k=1)
-ds.search("A yellow house.")
+ds = ds.build_index("descriptions")
+ds.search("A yellow house.", top_k=1)
 >>> [{'image_paths': 'image1.png', 'image_id': 1, 'descriptions': 'A yellow house with a green lawn.'}]
 ```
 
