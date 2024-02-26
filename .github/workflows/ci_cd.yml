@@ -42,7 +42,7 @@ jobs:
         poetry run black --check --diff --color .
     - name: Type Checking
       run: |
-        poetry run mypy lmm_tools
+        poetry run mypy vision_agent
     - name: Test with pytest
       run: |
         poetry run pytest -v tests
