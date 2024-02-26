@@ -1,9 +1,11 @@
 import base64
-import requests
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
-from lmm_tools.config import BASETEN_API_KEY, BASETEN_URL
+
+import requests
+
+from vision_agent.config import BASETEN_API_KEY, BASETEN_URL
 
 
 def encode_image(image: Union[str, Path]) -> str:
