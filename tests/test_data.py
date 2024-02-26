@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lmm_tools.data import DataStore, build_data_store
+from vision_agent.data import DataStore, build_data_store
 
 
 @pytest.fixture(autouse=True)

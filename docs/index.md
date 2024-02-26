@@ -13,5 +13,5 @@ This library provides a set of tools to help you build applications with Large M
 First, install the library:
 
 ```bash
-pip install lmm-tools
+pip install vision-agent
 ```
