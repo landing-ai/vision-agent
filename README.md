@@ -1,14 +1,14 @@
-# Large Multimodal Model Tools
-LMM-Tools (Large Multmodal Model Tools) is a minimal library that helps you utilize multimodal models to organize and structure your image data. One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
+# Vision Agent
+Vision Agent is a minimal library that helps you utilize multimodal models to organize and structure your image data. One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
 
 ## Getting Started
 ### LMMs
 To get started you can create an LMM and start generating text from images. The following code will grab the LLaVA-1.6 34B model and generate a description of the image you pass it.
 
 ```python
-import lmm_tools as lmt
+import vision_agent as va
 
-model = lmt.lmm.get_model("llava")
+model = va.lmm.get_model("llava")
 model.generate("Describe this image", "image.png")
 >>> "A yellow house with a green lawn."
 ```
@@ -19,13 +19,13 @@ model.generate("Describe this image", "image.png")
 You can use the `DataStore` class to store your images, add new metadata to them such as descriptions, and search over different columns.
 
 ```python
-import lmm_tools as lmt
+import vision_agent as va
 import pandas as pd
 
 df = pd.DataFrame({"image_paths": ["image1.png", "image2.png", "image3.png"]})
-ds = lmt.data.DataStore(df)
-ds = ds.add_lmm(lmt.lmm.get_model("llava"))
-ds = ds.add_embedder(lmt.emb.get_embedder("sentence-transformer"))
+ds = va.data.DataStore(df)
+ds = ds.add_lmm(va.lmm.get_model("llava"))
+ds = ds.add_embedder(va.emb.get_embedder("sentence-transformer"))
 
 ds = ds.add_column("descriptions", "Describe this image.")
 ```

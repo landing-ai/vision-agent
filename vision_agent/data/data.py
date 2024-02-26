@@ -12,8 +12,8 @@ from faiss import read_index, write_index
 from tqdm import tqdm
 from typing_extensions import Self
 
-from lmm_tools.emb import Embedder
-from lmm_tools.lmm import LMM
+from vision_agent.emb import Embedder
+from vision_agent.lmm import LMM
 
 tqdm.pandas()
 
