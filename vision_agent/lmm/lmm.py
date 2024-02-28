@@ -35,14 +35,14 @@ class LLaVALMM(LMM):
         self,
         prompt: str,
         image: Optional[Union[str, Path]] = None,
-        temperature: float = 0.2,
-        max_new_tokens: int = 256,
+        temperature: float = 0.1,
+        max_new_tokens: int = 1500,
     ) -> str:
         data = {"prompt": prompt}
         if image:
             data["image"] = encode_image(image)
-        data["temperature"] = temperature
-        data["max_new_tokens"] = max_new_tokens
+        data["temperature"] = temperature  # type: ignore
+        data["max_new_tokens"] = max_new_tokens  # type: ignore
         res = requests.post(
             _LLAVA_ENDPOINT,
             headers={"Content-Type": "application/json"},
