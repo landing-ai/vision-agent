@@ -8,7 +8,7 @@ To get started you can create an LMM and start generating text from images. The 
 ```python
 import vision_agent as va
 
-model = va.lmm.get_model("llava")
+model = va.lmm.get_lmm("llava")
 model.generate("Describe this image", "image.png")
 >>> "A yellow house with a green lawn."
 ```
