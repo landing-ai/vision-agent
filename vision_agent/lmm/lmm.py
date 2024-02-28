@@ -26,10 +26,18 @@ class LLaVALMM(LMM):
     def __init__(self, name: str):
         self.name = name
 
-    def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
+    def generate(
+            self,
+            prompt: str,
+            image: Optional[Union[str, Path]] = None,
+            temperature: float = 0.2,
+            max_new_tokens: int = 256,
+    ) -> str:
         data = {"prompt": prompt}
         if image:
             data["image"] = encode_image(image)
+        data["temperature"] = temperature
+        data["max_new_tokens"] = max_new_tokens
         res = requests.post(
             BASETEN_URL,
             headers={"Authorization": f"Api-Key {BASETEN_API_KEY}"},
