@@ -44,7 +44,9 @@ class DataStore:
         self.lmm = lmm
         return self
 
-    def add_column(self, name: str, prompt: str, func: Optional[Callable[[str], str]] = None) -> Self:
+    def add_column(
+        self, name: str, prompt: str, func: Optional[Callable[[str], str]] = None
+    ) -> Self:
         r"""Adds a new column to the DataFrame containing the generated metadata from the LMM.
 
         Args:
@@ -56,7 +58,11 @@ class DataStore:
             raise ValueError("LMM not set yet")
 
         self.df[name] = self.df["image_paths"].progress_apply(  # type: ignore
-            lambda x: func(self.lmm.generate(prompt, image=x)) if func else self.lmm.generate(prompt, image=x)
+            lambda x: (
+                func(self.lmm.generate(prompt, image=x))
+                if func
+                else self.lmm.generate(prompt, image=x)
+            )
         )
         return self
 

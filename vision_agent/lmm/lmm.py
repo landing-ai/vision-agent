@@ -32,11 +32,11 @@ class LLaVALMM(LMM):
         self.name = name
 
     def generate(
-            self,
-            prompt: str,
-            image: Optional[Union[str, Path]] = None,
-            temperature: float = 0.2,
-            max_new_tokens: int = 256,
+        self,
+        prompt: str,
+        image: Optional[Union[str, Path]] = None,
+        temperature: float = 0.2,
+        max_new_tokens: int = 256,
     ) -> str:
         data = {"prompt": prompt}
         if image:
