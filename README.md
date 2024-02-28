@@ -8,7 +8,7 @@ To get started you can create an LMM and start generating text from images. The 
 ```python
 import vision_agent as va
 
-model = va.lmm.get_model("llava")
+model = va.lmm.get_lmm("llava")
 model.generate("Describe this image", "image.png")
 >>> "A yellow house with a green lawn."
 ```
@@ -24,7 +24,7 @@ import pandas as pd
 
 df = pd.DataFrame({"image_paths": ["image1.png", "image2.png", "image3.png"]})
 ds = va.data.DataStore(df)
-ds = ds.add_lmm(va.lmm.get_model("llava"))
+ds = ds.add_lmm(va.lmm.get_lmm("llava"))
 ds = ds.add_embedder(va.emb.get_embedder("sentence-transformer"))
 
 ds = ds.add_column("descriptions", "Describe this image.")

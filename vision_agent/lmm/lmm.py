@@ -1,11 +1,16 @@
 import base64
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
 import requests
 
-from vision_agent.config import BASETEN_API_KEY, BASETEN_URL
+logging.basicConfig(level=logging.INFO)
+
+_LOGGER = logging.getLogger(__name__)
+
+_LLAVA_ENDPOINT = "https://cpvlqoxw6vhpdro27uhkvceady0kvvqk.lambda-url.us-east-2.on.aws"
 
 
 def encode_image(image: Union[str, Path]) -> str:
@@ -31,11 +36,14 @@ class LLaVALMM(LMM):
         if image:
             data["image"] = encode_image(image)
         res = requests.post(
-            BASETEN_URL,
-            headers={"Authorization": f"Api-Key {BASETEN_API_KEY}"},
+            _LLAVA_ENDPOINT,
+            headers={"Content-Type": "application/json"},
             json=data,
         )
-        return res.text
+        resp_json: Dict[str, Any] = res.json()
+        if resp_json["statusCode"] != 200:
+            _LOGGER.error(f"Request failed: {resp_json['data']}")
+        return cast(str, resp_json["data"])
 
 
 class OpenAILMM(LMM):
