@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Union, cast
+from typing import Dict, List, Optional, Union, cast, Callable
 
 import faiss
 import numpy as np
@@ -44,18 +44,25 @@ class DataStore:
         self.lmm = lmm
         return self
 
-    def add_column(self, name: str, prompt: str) -> Self:
+    def add_column(
+        self, name: str, prompt: str, func: Optional[Callable[[str], str]] = None
+    ) -> Self:
         r"""Adds a new column to the DataFrame containing the generated metadata from the LMM.
 
         Args:
             name (str): The name of the column to be added.
             prompt (str): The prompt to be used to generate the metadata.
+            func (Optional[Callable[[Any], Any]]): A Python function to be applied on the output of `lmm.generate`. Defaults to None.
         """
         if self.lmm is None:
             raise ValueError("LMM not set yet")
 
         self.df[name] = self.df["image_paths"].progress_apply(  # type: ignore
-            lambda x: self.lmm.generate(prompt, image=x)
+            lambda x: (
+                func(self.lmm.generate(prompt, image=x))
+                if func
+                else self.lmm.generate(prompt, image=x)
+            )
         )
         return self
 
