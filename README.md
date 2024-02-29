@@ -1,6 +1,10 @@
 # 🔍 Vision Agent
 
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew)](https://discord.gg/wPdN8RCYew)
+![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
+![version](https://img.shields.io/pypi/pyversions/vision-agent)
+
 
 Vision Agent is a minimal library for educational purposes that helps you utilize multimodal models to organize and structure your image data. Checkout our discord for roadmaps and updates! One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
 
