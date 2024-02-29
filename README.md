@@ -2,11 +2,13 @@
 
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew)](https://discord.gg/wPdN8RCYew)
 
-Vision Agent is a minimal library for educational purposes that helps you utilize multimodal models to organize and structure your image data. Checkout our discord for roadmaps and updates! One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
+Vision Agent is a library for that helps you to use multimodal models to organize and structure your image data. Check out our discord for roadmaps and updates! 
+
+One of the problems of dealing with image data is it can be difficult to organize and search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. The vision agent library uses LMMs to help create tags or descriptions of images to allow you to search over them, or use them in a database to carry out other operations.
 
 ## Getting Started
 ### LMMs
-To get started you can create an LMM and start generating text from images. The following code will grab the LLaVA-1.6 34B model and generate a description of the image you pass it.
+To get started, you can use an LMM to start generating text from images. The following code will use the LLaVA-1.6 34B model to generate a description of the image you pass it.
 
 ```python
 import vision_agent as va
