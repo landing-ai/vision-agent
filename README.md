@@ -1,6 +1,10 @@
 # 🔍 Vision Agent
 
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew)](https://discord.gg/wPdN8RCYew)
+![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
+![version](https://img.shields.io/pypi/pyversions/vision-agent)
+
 
 Vision Agent is a library for that helps you to use multimodal models to organize and structure your image data. Check out our discord for roadmaps and updates! 
 
