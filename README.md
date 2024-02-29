@@ -1,5 +1,8 @@
-# Vision Agent
-Vision Agent is a minimal library that helps you utilize multimodal models to organize and structure your image data. One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
+# 🔍 Vision Agent
+
+[![](https://dcbadge.vercel.app/api/server/3fV8mXdBFp)](https://discord.gg/3fV8mXdBFp)
+
+Vision Agent is a minimal library for educational purposes that helps you utilize multimodal models to organize and structure your image data. Checkout our discord for roadmaps and updates! One of the problems of dealing with image data is it can be difficult to organize and quickly search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. This library utilizes LMMs to help create these tags or descriptions and allow you to search over them, or use them in a database to do other operations.
 
 ## Getting Started
 ### LMMs
