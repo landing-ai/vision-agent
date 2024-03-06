@@ -10,12 +10,10 @@ import requests
 from vision_agent.tools import (
     SYSTEM_PROMPT,
     CHOOSE_PARAMS,
-    GROUNDING_DINO,
-    GROUNDING_SAM,
+    ImageTool,
     CLIP,
-    Classifier,
-    Detector,
-    Segmentor,
+    GroundingDINO,
+    GroundingSAM,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -102,8 +100,8 @@ class OpenAILMM(LMM):
         )
         return cast(str, response.choices[0].message.content)
 
-    def generate_classifier(self, prompt: str) -> Classifier:
-        prompt = CHOOSE_PARAMS.format(api_doc=CLIP, question=prompt)
+    def generate_classifier(self, prompt: str) -> ImageTool:
+        prompt = CHOOSE_PARAMS.format(api_doc=CLIP.doc, question=prompt)
         response = self.client.chat.completions.create(
             model="gpt-4-turbo-preview",  # no need to use vision model here
             response_format={"type": "json_object"},
@@ -113,10 +111,10 @@ class OpenAILMM(LMM):
             ],
         )
         prompt = json.loads(response.choices[0].message.content)["prompt"]
-        return Classifier(prompt)
+        return CLIP(prompt)
 
-    def generate_detector(self, prompt: str) -> Detector:
-        prompt = CHOOSE_PARAMS.format(api_doc=GROUNDING_DINO, question=prompt)
+    def generate_detector(self, prompt: str) -> ImageTool:
+        prompt = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=prompt)
         response = self.client.chat.completions.create(
             model="gpt-4-turbo-preview",  # no need to use vision model here
             response_format={"type": "json_object"},
@@ -126,10 +124,10 @@ class OpenAILMM(LMM):
             ],
         )
         prompt = json.loads(response.choices[0].message.content)["prompt"]
-        return Detector(prompt)
+        return GroundingDINO(prompt)
 
-    def generate_segmentor(self, prompt: str) -> Segmentor:
-        prompt = CHOOSE_PARAMS.format(api_doc=GROUNDING_SAM, question=prompt)
+    def generate_segmentor(self, prompt: str) -> ImageTool:
+        prompt = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=prompt)
         response = self.client.chat.completions.create(
             model="gpt-4-turbo-preview",  # no need to use vision model here
             response_format={"type": "json_object"},
@@ -139,7 +137,7 @@ class OpenAILMM(LMM):
             ],
         )
         prompt = json.loads(response.choices[0].message.content)["prompt"]
-        return Segmentor(prompt)
+        return GroundingSAM(prompt)
 
 
 def get_lmm(name: str) -> LMM:
