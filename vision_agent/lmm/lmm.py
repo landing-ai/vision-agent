@@ -112,9 +112,13 @@ class OpenAILMM(LMM):
         )
 
         try:
-            prompt = json.loads(cast(str, response.choices[0].message.content))["prompt"]
+            prompt = json.loads(cast(str, response.choices[0].message.content))[
+                "prompt"
+            ]
         except json.JSONDecodeError:
-            _LOGGER.error(f"Failed to decode response: {response.choices[0].message.content}")
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
             raise ValueError("Failed to decode response")
 
         return CLIP(prompt)
@@ -131,9 +135,13 @@ class OpenAILMM(LMM):
         )
 
         try:
-            prompt = json.loads(cast(str, response.choices[0].message.content))["prompt"]
+            prompt = json.loads(cast(str, response.choices[0].message.content))[
+                "prompt"
+            ]
         except json.JSONDecodeError:
-            _LOGGER.error(f"Failed to decode response: {response.choices[0].message.content}")
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
             raise ValueError("Failed to decode response")
 
         return GroundingDINO(prompt)
@@ -150,9 +158,13 @@ class OpenAILMM(LMM):
         )
 
         try:
-            prompt = json.loads(cast(str, response.choices[0].message.content))["prompt"]
+            prompt = json.loads(cast(str, response.choices[0].message.content))[
+                "prompt"
+            ]
         except json.JSONDecodeError:
-            _LOGGER.error(f"Failed to decode response: {response.choices[0].message.content}")
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
             raise ValueError("Failed to decode response")
 
         return GroundingSAM(prompt)
