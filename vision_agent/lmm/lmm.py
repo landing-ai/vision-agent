@@ -110,7 +110,13 @@ class OpenAILMM(LMM):
                 {"role": "user", "content": prompt},
             ],
         )
-        prompt = json.loads(response.choices[0].message.content)["prompt"]
+
+        try:
+            prompt = json.loads(cast(str, response.choices[0].message.content))["prompt"]
+        except json.JSONDecodeError:
+            _LOGGER.error(f"Failed to decode response: {response.choices[0].message.content}")
+            raise ValueError("Failed to decode response")
+
         return CLIP(prompt)
 
     def generate_detector(self, prompt: str) -> ImageTool:
@@ -123,7 +129,13 @@ class OpenAILMM(LMM):
                 {"role": "user", "content": prompt},
             ],
         )
-        prompt = json.loads(response.choices[0].message.content)["prompt"]
+
+        try:
+            prompt = json.loads(cast(str, response.choices[0].message.content))["prompt"]
+        except json.JSONDecodeError:
+            _LOGGER.error(f"Failed to decode response: {response.choices[0].message.content}")
+            raise ValueError("Failed to decode response")
+
         return GroundingDINO(prompt)
 
     def generate_segmentor(self, prompt: str) -> ImageTool:
@@ -136,7 +148,13 @@ class OpenAILMM(LMM):
                 {"role": "user", "content": prompt},
             ],
         )
-        prompt = json.loads(response.choices[0].message.content)["prompt"]
+
+        try:
+            prompt = json.loads(cast(str, response.choices[0].message.content))["prompt"]
+        except json.JSONDecodeError:
+            _LOGGER.error(f"Failed to decode response: {response.choices[0].message.content}")
+            raise ValueError("Failed to decode response")
+
         return GroundingSAM(prompt)
 
 
