@@ -1,10 +1,20 @@
 import base64
+import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
 import requests
+
+from vision_agent.tools import (
+    SYSTEM_PROMPT,
+    CHOOSE_PARAMS,
+    ImageTool,
+    CLIP,
+    GroundingDINO,
+    GroundingSAM,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -89,6 +99,75 @@ class OpenAILMM(LMM):
             model="gpt-4-vision-preview", messages=message  # type: ignore
         )
         return cast(str, response.choices[0].message.content)
+
+    def generate_classifier(self, prompt: str) -> ImageTool:
+        prompt = CHOOSE_PARAMS.format(api_doc=CLIP.doc, question=prompt)
+        response = self.client.chat.completions.create(
+            model="gpt-4-turbo-preview",  # no need to use vision model here
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        try:
+            prompt = json.loads(cast(str, response.choices[0].message.content))[
+                "prompt"
+            ]
+        except json.JSONDecodeError:
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
+            raise ValueError("Failed to decode response")
+
+        return CLIP(prompt)
+
+    def generate_detector(self, prompt: str) -> ImageTool:
+        prompt = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=prompt)
+        response = self.client.chat.completions.create(
+            model="gpt-4-turbo-preview",  # no need to use vision model here
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        try:
+            prompt = json.loads(cast(str, response.choices[0].message.content))[
+                "prompt"
+            ]
+        except json.JSONDecodeError:
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
+            raise ValueError("Failed to decode response")
+
+        return GroundingDINO(prompt)
+
+    def generate_segmentor(self, prompt: str) -> ImageTool:
+        prompt = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=prompt)
+        response = self.client.chat.completions.create(
+            model="gpt-4-turbo-preview",  # no need to use vision model here
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        try:
+            prompt = json.loads(cast(str, response.choices[0].message.content))[
+                "prompt"
+            ]
+        except json.JSONDecodeError:
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
+            raise ValueError("Failed to decode response")
+
+        return GroundingSAM(prompt)
 
 
 def get_lmm(name: str) -> LMM:
