@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Union, cast
@@ -6,6 +7,8 @@ import requests
 from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import convert_to_b64
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class ImageTool(ABC):
@@ -56,8 +59,8 @@ class GroundingDINO(ImageTool):
             json=data,
         )
         resp_json: Dict[str, Any] = res.json()
-        # if resp_json["statusCode"] != 200:
-        # _LOGGER.error(f"Request failed: {resp_json['data']}")
+        if resp_json["statusCode"] != 200:
+            _LOGGER.error(f"Request failed: {resp_json['data']}")
         return cast(str, resp_json["data"])
 
 
