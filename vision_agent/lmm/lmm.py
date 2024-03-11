@@ -8,19 +8,19 @@ from typing import Any, Dict, List, Optional, Union, cast
 import requests
 
 from vision_agent.tools import (
-    SYSTEM_PROMPT,
     CHOOSE_PARAMS,
-    ImageTool,
     CLIP,
+    SYSTEM_PROMPT,
     GroundingDINO,
     GroundingSAM,
+    ImageTool,
 )
 
 logging.basicConfig(level=logging.INFO)
 
 _LOGGER = logging.getLogger(__name__)
 
-_LLAVA_ENDPOINT = "https://cpvlqoxw6vhpdro27uhkvceady0kvvqk.lambda-url.us-east-2.on.aws"
+_LLAVA_ENDPOINT = "https://svtswgdnleslqcsjvilau4p6u40jwrkn.lambda-url.us-east-2.on.aws"
 
 
 def encode_image(image: Union[str, Path]) -> str:
