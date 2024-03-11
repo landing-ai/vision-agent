@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 
-def b64_to_pil(b64_str: str) -> Image:
+def b64_to_pil(b64_str: str) -> Image.Image:
     # , can't be encoded in b64 data so must be part of prefix
     if "," in b64_str:
         b64_str = b64_str.split(",")[1]

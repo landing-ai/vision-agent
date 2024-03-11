@@ -60,8 +60,8 @@ class GroundingDINO(ImageTool):
         )
         resp_json: Dict[str, Any] = res.json()
         if resp_json["statusCode"] != 200:
-            _LOGGER.error(f"Request failed: {resp_json['data']}")
-        return cast(str, resp_json["data"])
+            _LOGGER.error(f"Request failed: {resp_json}")
+        return cast(List[Dict], resp_json["data"])
 
 
 class GroundingSAM(ImageTool):
