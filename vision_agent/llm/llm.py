@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from typing import cast
+from typing import Any, Dict, cast
 
 from vision_agent.tools import (
     CHOOSE_PARAMS,
@@ -67,7 +67,7 @@ class OpenAILLM(LLM):
         params = json.loads(cast(str, response.choices[0].message.content))[
             "Parameters"
         ]
-        return GroundingDINO(**params)
+        return GroundingDINO(*params)
 
     def generate_segmentor(self, params: str) -> ImageTool:
         params = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=params)
@@ -83,4 +83,4 @@ class OpenAILLM(LLM):
         params = json.loads(cast(str, response.choices[0].message.content))[
             "Parameters"
         ]
-        return GroundingSAM(**params)
+        return GroundingSAM(*params)
