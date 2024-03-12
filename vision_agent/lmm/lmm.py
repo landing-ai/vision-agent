@@ -3,7 +3,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, Union, cast
 
 import requests
 
@@ -112,7 +112,7 @@ class OpenAILMM(LMM):
 
         try:
             prompt = json.loads(cast(str, response.choices[0].message.content))[
-                "prompt"
+                "Parameters"
             ]
         except json.JSONDecodeError:
             _LOGGER.error(
@@ -120,7 +120,7 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return CLIP(prompt)
+        return CLIP(**cast(Mapping, prompt))
 
     def generate_detector(self, params: str) -> ImageTool:
         params = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=params)
@@ -142,7 +142,7 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return GroundingDINO(**params)
+        return GroundingDINO(**cast(Mapping, params))
 
     def generate_segmentor(self, prompt: str) -> ImageTool:
         prompt = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=prompt)
@@ -156,7 +156,7 @@ class OpenAILMM(LMM):
 
         try:
             prompt = json.loads(cast(str, response.choices[0].message.content))[
-                "prompt"
+                "Parameters"
             ]
         except json.JSONDecodeError:
             _LOGGER.error(
@@ -164,7 +164,7 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return GroundingSAM(prompt)
+        return GroundingSAM(**cast(Mapping, prompt))
 
 
 def get_lmm(name: str) -> LMM:
