@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 from PIL import Image
@@ -12,6 +12,16 @@ def b64_to_pil(b64_str: str) -> Image.Image:
     if "," in b64_str:
         b64_str = b64_str.split(",")[1]
     return Image.open(BytesIO(base64.b64decode(b64_str)))
+
+
+def get_image_size(data: Union[str, Path, np.ndarray, Image.Image]) -> Tuple[int, ...]:
+    if isinstance(data, (str, Path)):
+        data = Image.open(data)
+
+    if isinstance(data, Image.Image):
+        return data.size[::-1]
+    else:
+        return data.shape[:2]
 
 
 def convert_to_b64(data: Union[str, Path, np.ndarray, Image.Image]) -> str:

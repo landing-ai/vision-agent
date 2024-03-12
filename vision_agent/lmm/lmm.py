@@ -38,8 +38,8 @@ class LMM(ABC):
 class LLaVALMM(LMM):
     r"""An LMM class for the LLaVA-1.6 34B model."""
 
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, model_name: str):
+        self.model_name = model_name
 
     def generate(
         self,
@@ -67,10 +67,10 @@ class LLaVALMM(LMM):
 class OpenAILMM(LMM):
     r"""An LMM class for the OpenAI GPT-4 Vision model."""
 
-    def __init__(self, name: str):
+    def __init__(self, model_name: str = "gpt-4-vision-preview"):
         from openai import OpenAI
 
-        self.name = name
+        self.model_name = model_name
         self.client = OpenAI()
 
     def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
@@ -96,15 +96,14 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model="gpt-4-vision-preview", messages=message  # type: ignore
+            model=self.model_name, messages=message  # type: ignore
         )
         return cast(str, response.choices[0].message.content)
 
     def generate_classifier(self, prompt: str) -> ImageTool:
         prompt = CHOOSE_PARAMS.format(api_doc=CLIP.doc, question=prompt)
         response = self.client.chat.completions.create(
-            model="gpt-4-turbo-preview",  # no need to use vision model here
-            response_format={"type": "json_object"},
+            model=self.model_name,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -123,20 +122,19 @@ class OpenAILMM(LMM):
 
         return CLIP(prompt)
 
-    def generate_detector(self, prompt: str) -> ImageTool:
-        prompt = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=prompt)
+    def generate_detector(self, params: str) -> ImageTool:
+        params = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=params)
         response = self.client.chat.completions.create(
-            model="gpt-4-turbo-preview",  # no need to use vision model here
-            response_format={"type": "json_object"},
+            model=self.model_name,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": params},
             ],
         )
 
         try:
-            prompt = json.loads(cast(str, response.choices[0].message.content))[
-                "prompt"
+            params = json.loads(cast(str, response.choices[0].message.content))[
+                "Parameters"
             ]
         except json.JSONDecodeError:
             _LOGGER.error(
@@ -144,13 +142,12 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return GroundingDINO(prompt)
+        return GroundingDINO(**params)
 
     def generate_segmentor(self, prompt: str) -> ImageTool:
         prompt = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=prompt)
         response = self.client.chat.completions.create(
-            model="gpt-4-turbo-preview",  # no need to use vision model here
-            response_format={"type": "json_object"},
+            model=self.model_name,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},

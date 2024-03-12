@@ -1,14 +1,26 @@
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, Tuple, Union, cast
 
 import requests
 from PIL.Image import Image as ImageType
 
-from vision_agent.image_utils import convert_to_b64
+from vision_agent.image_utils import convert_to_b64, get_image_size
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def normalize_bbox(
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
+    r"""Normalize the bounding box coordinates to be between 0 and 1."""
+    x1, y1, x2, y2 = bbox
+    x1 = x1 / image_size[1]
+    y1 = y1 / image_size[0]
+    x2 = x2 / image_size[1]
+    y2 = y2 / image_size[0]
+    return [x1, y1, x2, y2]
 
 
 class ImageTool(ABC):
@@ -42,12 +54,18 @@ class GroundingDINO(ImageTool):
         'Example 1: User Question: "Can you build me a car detector?" {{"Parameters":{{"prompt": "car"}}}}\n'
         'Example 2: User Question: "Can you detect the person on the left?" {{"Parameters":{{"prompt": "person on the left"}}\n'
         'Exmaple 3: User Question: "Can you build me a tool that detects red shirts and green shirts?" {{"Parameters":{{"prompt": "red shirt. green shirt"}}}}\n'
+        "The tool returns a list of dictionaries, each containing the following keys:\n"
+        "  - 'lable': The label of the detected object.\n"
+        "  - 'score': The confidence score of the detection.\n"
+        "  - 'bbox': The bounding box of the detected object. The box coordinates are normalize to [0, 1]\n"
+        "An example output would be: [{'label': ['car'], 'score': [0.99], 'bbox': [[0.1, 0.2, 0.3, 0.4]]}]\n"
     )
 
     def __init__(self, prompt: str):
         self.prompt = prompt
 
     def __call__(self, image: Union[str, Path, ImageType]) -> List[Dict]:
+        image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
         data = {
             "prompt": self.prompt,
@@ -59,9 +77,18 @@ class GroundingDINO(ImageTool):
             json=data,
         )
         resp_json: Dict[str, Any] = res.json()
-        if resp_json["statusCode"] != 200:
+        if (
+            "statusCode" in resp_json and resp_json["statusCode"] != 200
+        ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
-        return cast(List[Dict], resp_json["data"])
+            return cast(List[Dict], [resp_json])
+        resp_data = resp_json["data"]
+        for elt in resp_data:
+            if "bboxes" in elt:
+                elt["bboxes"] = [
+                    normalize_bbox(box, image_size) for box in elt["bboxes"]
+                ]
+        return cast(List[Dict], resp_data)
 
 
 class GroundingSAM(ImageTool):
