@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional, Union, cast, Callable
+from typing import Callable, Dict, List, Optional, Union, cast
 
 import faiss
 import numpy as np
