@@ -1,6 +1,7 @@
 import json
 from abc import ABC, abstractmethod
 from typing import Mapping, cast
+from openai import OpenAI
 
 from vision_agent.tools import (
     CHOOSE_PARAMS,
@@ -22,8 +23,6 @@ class OpenAILLM(LLM):
     r"""An LLM class for any OpenAI LLM model."""
 
     def __init__(self, model_name: str = "gpt-4-turbo-preview"):
-        from openai import OpenAI
-
         self.model_name = model_name
         self.client = OpenAI()
 

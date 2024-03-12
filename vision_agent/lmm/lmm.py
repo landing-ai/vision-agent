@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union, cast
 
 import requests
+from openai import OpenAI
 
 from vision_agent.tools import (
     CHOOSE_PARAMS,
@@ -59,8 +60,11 @@ class LLaVALMM(LMM):
             json=data,
         )
         resp_json: Dict[str, Any] = res.json()
-        if resp_json["statusCode"] != 200:
-            _LOGGER.error(f"Request failed: {resp_json['data']}")
+        if (
+            "statusCode" in resp_json and resp_json["statusCode"] != 200
+        ) or "statusCode" not in resp_json:
+            _LOGGER.error(f"Request failed: {resp_json}")
+            raise ValueError(f"Request failed: {resp_json}")
         return cast(str, resp_json["data"])
 
 
@@ -68,8 +72,6 @@ class OpenAILMM(LMM):
     r"""An LMM class for the OpenAI GPT-4 Vision model."""
 
     def __init__(self, model_name: str = "gpt-4-vision-preview"):
-        from openai import OpenAI
-
         self.model_name = model_name
         self.client = OpenAI()
 
