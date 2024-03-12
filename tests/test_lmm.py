@@ -6,7 +6,7 @@ from PIL import Image
 from vision_agent.lmm.lmm import OpenAILMM
 from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
 
-from .fixtures import openai_lmm_mock
+from .fixtures import openai_lmm_mock  # noqa: F401
 
 
 def create_temp_image(image_format="jpeg"):
@@ -20,7 +20,7 @@ def create_temp_image(image_format="jpeg"):
 @pytest.mark.parametrize(
     "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
 )
-def test_generate_with_mock(openai_lmm_mock):
+def test_generate_with_mock(openai_lmm_mock):  # noqa: F811
     temp_image = create_temp_image()
     lmm = OpenAILMM()
     response = lmm.generate("test prompt", image=temp_image)
@@ -38,7 +38,7 @@ def test_generate_with_mock(openai_lmm_mock):
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock):
+def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     classifier = lmm.generate_classifier(prompt)
@@ -51,7 +51,7 @@ def test_generate_classifier(openai_lmm_mock):
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock):
+def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     detector = lmm.generate_detector(prompt)
@@ -64,7 +64,7 @@ def test_generate_classifier(openai_lmm_mock):
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock):
+def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     segmentor = lmm.generate_segmentor(prompt)
