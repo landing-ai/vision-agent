@@ -81,7 +81,7 @@ class GroundingDINO(ImageTool):
             "statusCode" in resp_json and resp_json["statusCode"] != 200
         ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
-            return cast(List[Dict], [resp_json])
+            raise ValueError(f"Request failed: {resp_json}")
         resp_data = resp_json["data"]
         for elt in resp_data:
             if "bboxes" in elt:
