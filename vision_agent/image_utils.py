@@ -1,7 +1,7 @@
 import base64
 from io import BytesIO
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 import numpy as np
 from PIL import Image

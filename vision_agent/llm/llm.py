@@ -1,6 +1,6 @@
 import json
-from typing import cast
 from abc import ABC, abstractmethod
+from typing import cast
 
 from vision_agent.tools import (
     CHOOSE_PARAMS,
