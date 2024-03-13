@@ -1,8 +1,7 @@
 import pytest
 
 from vision_agent.llm.llm import OpenAILLM
-from vision_agent.tools import CLIP
-from vision_agent.tools.tools import GroundingDINO
+from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
 
 from .fixtures import openai_llm_mock  # noqa: F401
 
