@@ -55,7 +55,7 @@ class GroundingDINO(ImageTool):
         'Example 2: User Question: "Can you detect the person on the left?" {{"Parameters":{{"prompt": "person on the left"}}\n'
         'Exmaple 3: User Question: "Can you build me a tool that detects red shirts and green shirts?" {{"Parameters":{{"prompt": "red shirt. green shirt"}}}}\n'
         "The tool returns a list of dictionaries, each containing the following keys:\n"
-        "  - 'lable': The label of the detected object.\n"
+        "  - 'label': The label of the detected object.\n"
         "  - 'score': The confidence score of the detection.\n"
         "  - 'bbox': The bounding box of the detected object. The box coordinates are normalize to [0, 1]\n"
         "An example output would be: [{'label': ['car'], 'score': [0.99], 'bbox': [[0.1, 0.2, 0.3, 0.4]]}]\n"
