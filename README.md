@@ -1,5 +1,5 @@
 <div align="center">
-    <img alt="vision_agent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo.jpg?raw=true"
+    <img alt="vision_agent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo.jpg?raw=true">
 </div>
 
 # 🔍🤖 Vision Agent
