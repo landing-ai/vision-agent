@@ -1,6 +1,5 @@
 <div align="center">
-    <img alt="vision_agent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo.jpg?raw=true"
-</div>
+    <img alt="vision_agent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo.jpg?raw=true">
 
 # 🔍🤖 Vision Agent
 
@@ -8,6 +7,7 @@
 ![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
 ![version](https://img.shields.io/pypi/pyversions/vision-agent)
+</div>
 
 
 Vision Agent is a library for that helps you to use multimodal models to organize and structure your image data. Check out our discord for roadmaps and updates! 

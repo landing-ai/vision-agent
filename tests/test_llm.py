@@ -1,8 +1,7 @@
 import pytest
 
 from vision_agent.llm.llm import OpenAILLM
-from vision_agent.tools import CLIP
-from vision_agent.tools.tools import GroundingDINO
+from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
 
 from .fixtures import openai_llm_mock  # noqa: F401
 
@@ -54,6 +53,6 @@ def test_generate_detector(openai_llm_mock):  # noqa: F811
 def test_generate_segmentor(openai_llm_mock):  # noqa: F811
     llm = OpenAILLM()
     prompt = "Can you generate a cat segmentor?"
-    segmentor = llm.generate_detector(prompt)
-    assert isinstance(segmentor, GroundingDINO)
+    segmentor = llm.generate_segmentor(prompt)
+    assert isinstance(segmentor, GroundingSAM)
     assert segmentor.prompt == "cat"
