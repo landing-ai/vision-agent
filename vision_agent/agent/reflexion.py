@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from vision_agent import LLM, OpenAILLM
 
@@ -62,8 +62,6 @@ class Reflexion(Agent):
         self.finsh_prompt = finsh_prompt
         self.cot_examples = cot_examples
         self.refelct_examples = reflect_examples
-        self.self_reflect_llm = self_reflect_llm
-        self.action_agent = action_agent
         self.reflections: List[str] = []
 
         if self_reflect_llm is None:
