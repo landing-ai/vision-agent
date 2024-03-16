@@ -51,7 +51,7 @@ def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock):  # noqa: F811
+def test_generate_detector(openai_lmm_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     detector = lmm.generate_detector(prompt)
@@ -64,7 +64,7 @@ def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock):  # noqa: F811
+def test_generate_segmentor(openai_lmm_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     segmentor = lmm.generate_segmentor(prompt)
