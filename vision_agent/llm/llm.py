@@ -1,6 +1,7 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Mapping, cast
+from typing import Dict, List, Mapping, Union, cast
+
 from openai import OpenAI
 
 from vision_agent.tools import (
@@ -16,6 +17,14 @@ from vision_agent.tools import (
 class LLM(ABC):
     @abstractmethod
     def generate(self, prompt: str) -> str:
+        pass
+
+    @abstractmethod
+    def chat(self, chat: List[Dict[str, str]]) -> str:
+        pass
+
+    @abstractmethod
+    def __call__(self, input: Union[str, List[Dict[str, str]]]) -> str:
         pass
 
 
@@ -35,6 +44,19 @@ class OpenAILLM(LLM):
         )
 
         return cast(str, response.choices[0].message.content)
+
+    def chat(self, chat: List[Dict[str, str]]) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=chat,  # type: ignore
+        )
+
+        return cast(str, response.choices[0].message.content)
+
+    def __call__(self, input: Union[str, List[Dict[str, str]]]) -> str:
+        if isinstance(input, str):
+            return self.generate(input)
+        return self.chat(input)
 
     def generate_classifier(self, prompt: str) -> ImageTool:
         prompt = CHOOSE_PARAMS.format(api_doc=CLIP.doc, question=prompt)
