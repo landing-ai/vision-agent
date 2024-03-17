@@ -17,8 +17,6 @@ from vision_agent.tools import (
     ImageTool,
 )
 
-logging.basicConfig(level=logging.INFO)
-
 _LOGGER = logging.getLogger(__name__)
 
 _LLAVA_ENDPOINT = "https://svtswgdnleslqcsjvilau4p6u40jwrkn.lambda-url.us-east-2.on.aws"
@@ -35,12 +33,40 @@ class LMM(ABC):
     def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
         pass
 
+    @abstractmethod
+    def chat(
+        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+    ) -> str:
+        pass
+
+    @abstractmethod
+    def __call__(
+        self,
+        input: Union[str, List[Dict[str, str]]],
+        image: Optional[Union[str, Path]] = None,
+    ) -> str:
+        pass
+
 
 class LLaVALMM(LMM):
     r"""An LMM class for the LLaVA-1.6 34B model."""
 
     def __init__(self, model_name: str):
         self.model_name = model_name
+
+    def __call__(
+        self,
+        input: Union[str, List[Dict[str, str]]],
+        image: Optional[Union[str, Path]] = None,
+    ) -> str:
+        if isinstance(input, str):
+            return self.generate(input, image)
+        return self.chat(input, image)
+
+    def chat(
+        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+    ) -> str:
+        raise NotImplementedError("Chat not supported for LLaVA")
 
     def generate(
         self,
@@ -71,9 +97,49 @@ class LLaVALMM(LMM):
 class OpenAILMM(LMM):
     r"""An LMM class for the OpenAI GPT-4 Vision model."""
 
-    def __init__(self, model_name: str = "gpt-4-vision-preview"):
+    def __init__(
+        self, model_name: str = "gpt-4-vision-preview", max_tokens: int = 1024
+    ):
         self.model_name = model_name
+        self.max_tokens = max_tokens
         self.client = OpenAI()
+
+    def __call__(
+        self,
+        input: Union[str, List[Dict[str, str]]],
+        image: Optional[Union[str, Path]] = None,
+    ) -> str:
+        if isinstance(input, str):
+            return self.generate(input, image)
+        return self.chat(input, image)
+
+    def chat(
+        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+    ) -> str:
+        fixed_chat = []
+        for c in chat:
+            fixed_c = {"role": c["role"]}
+            fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
+            fixed_chat.append(fixed_c)
+
+        if image:
+            extension = Path(image).suffix
+            encoded_image = encode_image(image)
+            fixed_chat[0]["content"].append(  # type: ignore
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/{extension};base64,{encoded_image}",
+                        "detail": "low",
+                    },
+                },
+            )
+
+        response = self.client.chat.completions.create(
+            model=self.model_name, messages=fixed_chat, max_tokens=self.max_tokens  # type: ignore
+        )
+
+        return cast(str, response.choices[0].message.content)
 
     def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
         message: List[Dict[str, Any]] = [
@@ -98,7 +164,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=message  # type: ignore
+            model=self.model_name, messages=message, max_tokens=self.max_tokens  # type: ignore
         )
         return cast(str, response.choices[0].message.content)
 

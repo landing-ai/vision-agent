@@ -22,10 +22,12 @@ class DataStore:
     r"""A class to store and manage image data along with its generated metadata from an LMM."""
 
     def __init__(self, df: pd.DataFrame):
-        r"""Initializes the DataStore with a DataFrame containing image paths and image IDs. If the image IDs are not present, they are generated using UUID4. The DataFrame must contain an 'image_paths' column.
+        r"""Initializes the DataStore with a DataFrame containing image paths and image
+        IDs. If the image IDs are not present, they are generated using UUID4. The
+        DataFrame must contain an 'image_paths' column.
 
         Args:
-            df (pd.DataFrame): The DataFrame containing "image_paths" and "image_id" columns.
+            df: The DataFrame containing "image_paths" and "image_id" columns.
         """
         self.df = df
         self.lmm: Optional[LMM] = None
@@ -47,12 +49,14 @@ class DataStore:
     def add_column(
         self, name: str, prompt: str, func: Optional[Callable[[str], str]] = None
     ) -> Self:
-        r"""Adds a new column to the DataFrame containing the generated metadata from the LMM.
+        r"""Adds a new column to the DataFrame containing the generated metadata from
+        the LMM.
 
         Args:
-            name (str): The name of the column to be added.
-            prompt (str): The prompt to be used to generate the metadata.
-            func (Optional[Callable[[Any], Any]]): A Python function to be applied on the output of `lmm.generate`. Defaults to None.
+            name: The name of the column to be added.
+            prompt: The prompt to be used to generate the metadata.
+            func: A Python function to be applied on the output of `lmm.generate`.
+                Defaults to None.
         """
         if self.lmm is None:
             raise ValueError("LMM not set yet")
@@ -67,10 +71,11 @@ class DataStore:
         return self
 
     def build_index(self, target_col: str) -> Self:
-        r"""This will generate embeddings for the `target_col` and build a searchable index over them, so next time you run search it will search over this index.
+        r"""This will generate embeddings for the `target_col` and build a searchable
+        index over them, so next time you run search it will search over this index.
 
         Args:
-            target_col (str): The column name containing the data to be indexed."""
+            target_col: The column name containing the data to be indexed."""
         if self.emb is None:
             raise ValueError("Embedder not set yet")
 
@@ -92,11 +97,12 @@ class DataStore:
         )
 
     def search(self, query: str, top_k: int = 10) -> List[Dict]:
-        r"""Searches the index for the most similar images to the query and returns the top_k results.
+        r"""Searches the index for the most similar images to the query and returns
+        the top_k results.
 
         Args:
-            query (str): The query to search for.
-            top_k (int, optional): The number of results to return. Defaults to 10."""
+            query: The query to search for.
+            top_k: The number of results to return. Defaults to 10."""
         if self.index is None:
             raise ValueError("Index not built yet")
         if self.emb is None:

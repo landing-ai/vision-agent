@@ -1,7 +1,10 @@
+import logging
 import re
+import sys
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-from vision_agent import LLM, OpenAILLM
+from vision_agent import LLM, LMM, OpenAILLM
 
 from .agent import Agent
 from .reflexion_prompts import (
@@ -13,20 +16,27 @@ from .reflexion_prompts import (
     REFLECTION_HEADER,
 )
 
+logging.basicConfig(stream=sys.stdout)
+
+_LOGGER = logging.getLogger(__name__)
+
 
 def format_step(step: str) -> str:
     return step.strip("\n").strip().replace("\n", "")
 
 
 def parse_action(input: str) -> Tuple[str, str]:
-    pattern = r"^(\w+)\[(.+)\]$"
-    match = re.match(pattern, input)
+    # Make the pattern slightly less strict, the LMMs are not as good at following
+    # instructions so they often would fail on the original regex.
+    pattern = r"(\w+)\[(.+)\]"
+    match = re.search(pattern, input)
 
     if match:
         action_type = match.group(1)
         argument = match.group(2)
         return action_type, argument
 
+    _LOGGER.error(f"Invalid action: {input}")
     raise ValueError(f"Invalid action: {input}")
 
 
@@ -47,6 +57,48 @@ def format_chat(chat: List[Dict[str, str]]) -> str:
 
 
 class Reflexion(Agent):
+    r"""This is an implementation of the Reflexion paper https://arxiv.org/abs/2303.11366
+    based on the original implementation https://github.com/noahshinn/reflexion in the
+    hotpotqa folder. There are several differences between this implementation and the
+    original one. Because we do not have instant feedback on whether or not the agent
+    was correct, we use user feedback to determine if the agent was correct. The user
+    feedback is evaluated by the self_reflect_model with a new prompt. We also expand
+    Reflexion to include the ability to use an image as input to the action_agent and the
+    self_reflect_model. Using Reflexion with LMMs may not work well, if it gets it wrong
+    the first time, chances are it can't actually see the thing you want it to see.
+
+    Examples::
+        >>> from vision_agent.agent import Reflexion
+        >>> agent = Reflexion()
+        >>> question = "How many tires does a truck have?"
+        >>> resp = agent(question)
+        >>> print(resp)
+        >>> "18"
+        >>> resp = agent([
+        >>>     {"role": "user", "content": question},
+        >>>     {"role": "assistant", "content": resp},
+        >>>     {"role": "user", "content": "No I mean those regular trucks but where the back tires are double."}
+        >>> ])
+        >>> print(resp)
+        >>> "6"
+        >>> agent = Reflexion(
+        >>>     self_reflect_model=va.lmm.OpenAILMM(),
+        >>>     action_agent=va.lmm.OpenAILMM()
+        >>> )
+        >>> quesiton = "How many hearts are in this image?"
+        >>> resp = agent(question, image="cards.png")
+        >>> print(resp)
+        >>> "6"
+        >>> resp = agent([
+        >>>     {"role": "user", "content": question},
+        >>>     {"role": "assistant", "content": resp},
+        >>>     {"role": "user", "content": "No, please count the hearts on the bottom card."}
+        >>> ], image="cards.png")
+        >>> print(resp)
+        >>> "4"
+        )
+    """
+
     def __init__(
         self,
         cot_examples: str = COTQA_SIMPLE6,
@@ -54,8 +106,9 @@ class Reflexion(Agent):
         agent_prompt: str = COT_AGENT_REFLECT_INSTRUCTION,
         reflect_prompt: str = COT_REFLECT_INSTRUCTION,
         finsh_prompt: str = CHECK_FINSH,
-        self_reflect_llm: Optional[LLM] = None,
-        action_agent: Optional[Union[Agent, LLM]] = None,
+        self_reflect_model: Optional[Union[LLM, LMM]] = None,
+        action_agent: Optional[Union[Agent, LLM, LMM]] = None,
+        verbose: bool = False,
     ):
         self.agent_prompt = agent_prompt
         self.reflect_prompt = reflect_prompt
@@ -63,25 +116,48 @@ class Reflexion(Agent):
         self.cot_examples = cot_examples
         self.refelct_examples = reflect_examples
         self.reflections: List[str] = []
+        if verbose:
+            _LOGGER.setLevel(logging.INFO)
 
-        if self_reflect_llm is None:
-            self.self_reflect_llm = OpenAILLM()
-        if action_agent is None:
-            self.action_agent = OpenAILLM()
+        if isinstance(self_reflect_model, LLM) and not isinstance(action_agent, LLM):
+            raise ValueError(
+                "If self_reflect_model is an LLM, then action_agent must also be an LLM."
+            )
+        if isinstance(self_reflect_model, LMM) and isinstance(action_agent, LLM):
+            raise ValueError(
+                "If self_reflect_model is an LMM, then action_agent must also be an agent or LMM."
+            )
 
-    def __call__(self, input: Union[List[Dict[str, str]], str]) -> str:
+        self.self_reflect_model = (
+            OpenAILLM() if self_reflect_model is None else self_reflect_model
+        )
+        self.action_agent = OpenAILLM() if action_agent is None else action_agent
+
+    def __call__(
+        self,
+        input: Union[str, List[Dict[str, str]]],
+        image: Optional[Union[str, Path]] = None,
+    ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input)
+        return self.chat(input, image)
 
-    def chat(self, chat: List[Dict[str, str]]) -> str:
+    def chat(
+        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+    ) -> str:
         if len(chat) == 0 or chat[0]["role"] != "user":
             raise ValueError(
-                f"Invalid chat. Should start with user and then assistant and contain at least one entry {chat}"
+                f"Invalid chat. Should start with user and alternate between user"
+                f"and assistant and contain at least one entry {chat}"
             )
+        if image is not None and isinstance(self.action_agent, LLM):
+            raise ValueError(
+                "If image is provided, then action_agent must be an agent or LMM."
+            )
+
         question = chat[0]["content"]
         if len(chat) == 1:
-            results = self._step(question)
+            results = self._step(question, image=image)
             self.last_scratchpad = results["scratchpad"]
             return results["action_arg"]
 
@@ -91,23 +167,33 @@ class Reflexion(Agent):
         self.last_scratchpad += "\nObservation: "
         if is_correct:
             self.last_scratchpad += "Answer is CORRECT"
-            return self.self_reflect_llm(chat)
+            return self.self_reflect_model(chat)
         else:
             self.last_scratchpad += "Answer is INCORRECT"
             chat_context = "The previous conversation was:\n" + chat_str
-            reflections = self.reflect(question, chat_context, self.last_scratchpad)
-            results = self._step(question, reflections)
+            reflections = self.reflect(
+                question, chat_context, self.last_scratchpad, image
+            )
+            _LOGGER.info(f" {reflections}")
+            results = self._step(question, reflections, image=image)
             self.last_scratchpad = results["scratchpad"]
             return results["action_arg"]
 
-    def _step(self, question: str, reflections: str = "") -> Dict[str, str]:
+    def _step(
+        self,
+        question: str,
+        reflections: str = "",
+        image: Optional[Union[str, Path]] = None,
+    ) -> Dict[str, str]:
         # Think
         scratchpad = "\nThought:"
-        scratchpad += " " + self.prompt_agent(question, reflections, scratchpad)
+        scratchpad += " " + self.prompt_agent(question, reflections, scratchpad, image)
+        _LOGGER.info(f" {scratchpad}")
 
         # Act
         scratchpad += "\nAction:"
-        action = self.prompt_agent(question, reflections, scratchpad)
+        action = self.prompt_agent(question, reflections, scratchpad, image)
+        _LOGGER.info(f" {action}")
         scratchpad += " " + action
         action_type, argument = parse_action(action)
         return {
@@ -116,23 +202,55 @@ class Reflexion(Agent):
             "action_arg": argument,
         }
 
-    def reflect(self, question: str, context: str, scratchpad: str) -> str:
-        self.reflections += [self.prompt_reflection(question, context, scratchpad)]
+    def reflect(
+        self,
+        question: str,
+        context: str,
+        scratchpad: str,
+        image: Optional[Union[str, Path]],
+    ) -> str:
+        self.reflections += [
+            self.prompt_reflection(question, context, scratchpad, image)
+        ]
         return format_reflections(self.reflections)
 
-    def prompt_agent(self, question: str, reflections: str, scratchpad: str) -> str:
+    def prompt_agent(
+        self,
+        question: str,
+        reflections: str,
+        scratchpad: str,
+        image: Optional[Union[str, Path]] = None,
+    ) -> str:
+        if isinstance(self.action_agent, LLM):
+            return format_step(
+                self.action_agent(
+                    self._build_agent_prompt(question, reflections, scratchpad)
+                )
+            )
         return format_step(
             self.action_agent(
-                self._build_agent_prompt(question, reflections, scratchpad)
+                self._build_agent_prompt(question, reflections, scratchpad),
+                image=image,
             )
         )
 
     def prompt_reflection(
-        self, question: str, context: str = "", scratchpad: str = ""
+        self,
+        question: str,
+        context: str = "",
+        scratchpad: str = "",
+        image: Optional[Union[str, Path]] = None,
     ) -> str:
+        if isinstance(self.self_reflect_model, LLM):
+            return format_step(
+                self.self_reflect_model(
+                    self._build_reflect_prompt(question, context, scratchpad)
+                )
+            )
         return format_step(
-            self.self_reflect_llm(
-                self._build_reflect_prompt(question, context, scratchpad)
+            self.self_reflect_model(
+                self._build_reflect_prompt(question, context, scratchpad),
+                image=image,
             )
         )
 
