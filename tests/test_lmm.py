@@ -34,6 +34,45 @@ def test_generate_with_mock(openai_lmm_mock):  # noqa: F811
 
 
 @pytest.mark.parametrize(
+    "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
+)
+def test_chat_with_mock(openai_lmm_mock):  # noqa: F811
+    lmm = OpenAILMM()
+    response = lmm.chat([{"role": "user", "content": "test prompt"}])
+    assert response == "mocked response"
+    assert (
+        openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][0]["text"]
+        == "test prompt"
+    )
+
+
+@pytest.mark.parametrize(
+    "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
+)
+def test_call_with_mock(openai_lmm_mock):  # noqa: F811
+    lmm = OpenAILMM()
+    response = lmm("test prompt")
+    assert response == "mocked response"
+    assert (
+        openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][0]["text"]
+        == "test prompt"
+    )
+
+    response = lmm([{"role": "user", "content": "test prompt"}])
+    assert response == "mocked response"
+    assert (
+        openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][0]["text"]
+        == "test prompt"
+    )
+
+
+@pytest.mark.parametrize(
     "openai_lmm_mock",
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
