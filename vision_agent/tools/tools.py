@@ -25,10 +25,11 @@ def normalize_bbox(
 
 
 def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
-    """
-    mask_rle: run-length as string formated (start length)
-    shape: (height,width) of array to return
-    Returns numpy array, 1 - mask, 0 - background
+    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
+
+    Args:
+        mask_rle: Run-length as string formated (start length)
+        shape: The (height, width) of array to return
     """
     s = mask_rle.split()
     starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
@@ -47,24 +48,27 @@ class ImageTool(ABC):
 
 
 class CLIP(ImageTool):
-    """
-    Example usage:
-    > from vision_agent.tools import tools
-    > t = tools.CLIP(["red line", "yellow dot", "none"])
-    > t("examples/img/ct_scan1.jpg"))
+    r"""CLIP is a tool that can classify or tag any image given a set if input classes
+    or tags.
 
-    [[0.02567436918616295, 0.9534115791320801, 0.020914122462272644]]
+    Examples::
+        >>> from vision_agent.tools import tools
+        >>> t = tools.CLIP(["red line", "yellow dot", "none"])
+        >>> t("examples/img/ct_scan1.jpg"))
+        >>> [[0.02567436918616295, 0.9534115791320801, 0.020914122462272644]]
     """
 
     _ENDPOINT = "https://rb4ii6dfacmwqfxivi4aedyyfm0endsv.lambda-url.us-east-2.on.aws"
 
-    doc = (
-        "CLIP is a tool that can classify or tag any image given a set if input classes or tags."
+    name = "clip_"
+    description = (
+        "'clip_' is a tool that can classify or tag any image given a set if input classes or tags."
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
         'Example 1: User Question: "Can you classify this image as a cat?" {{"Parameters":{{"prompt": ["cat"]}}}}\n'
         'Example 2: User Question: "Can you tag this photograph with cat or dog?" {{"Parameters":{{"prompt": ["cat", "dog"]}}}}\n'
         'Exmaple 3: User Question: "Can you build me a classifier taht classifies red shirts, green shirts and other?" {{"Parameters":{{"prompt": ["red shirt", "green shirt", "other"]}}}}\n'
     )
+    usage = {}
 
     def __init__(self, prompt: list[str]):
         self.prompt = prompt
@@ -92,18 +96,33 @@ class CLIP(ImageTool):
 class GroundingDINO(ImageTool):
     _ENDPOINT = "https://chnicr4kes5ku77niv2zoytggq0qyqlp.lambda-url.us-east-2.on.aws"
 
-    doc = (
-        "Grounding DINO is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
+    name = "grounding_dino_"
+    description = (
+        "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
-        'Example 1: User Question: "Can you build me a car detector?" {{"Parameters":{{"prompt": "car"}}}}\n'
-        'Example 2: User Question: "Can you detect the person on the left?" {{"Parameters":{{"prompt": "person on the left"}}\n'
-        'Exmaple 3: User Question: "Can you build me a tool that detects red shirts and green shirts?" {{"Parameters":{{"prompt": "red shirt. green shirt"}}}}\n'
         "The tool returns a list of dictionaries, each containing the following keys:\n"
-        "  - 'label': The label of the detected object.\n"
-        "  - 'score': The confidence score of the detection.\n"
-        "  - 'bbox': The bounding box of the detected object. The box coordinates are normalize to [0, 1]\n"
-        "An example output would be: [{'label': ['car'], 'score': [0.99], 'bbox': [[0.1, 0.2, 0.3, 0.4]]}]\n"
+        '  - "label": The label of the detected object.\n'
+        '  - "score": The confidence score of the detection.\n'
+        '  - "bbox": The bounding box of the detected object. The box coordinates are normalize to [0, 1]\n'
+        'An example output would be: [{"label": ["car"], "score": [0.99], "bbox": [[0.1, 0.2, 0.3, 0.4]]}]\n'
     )
+    usage = {
+        "required_parameters": {"name": "prompt", "type": "str"},
+        "examples": [
+            {
+                "scenario": "Can you build me a car detector?",
+                "parameters": {"prompt": "car"},
+            },
+            {
+                "scenario": "Can you detect the person on the left?",
+                "parameters": {"prompt": "person on the left"},
+            },
+            {
+                "scenario": "Detect the red shirts and green shirst.",
+                "parameters": {"prompt": "red shirt. green shirt"},
+            },
+        ],
+    }
 
     def __init__(self, prompt: str):
         self.prompt = prompt
@@ -136,32 +155,35 @@ class GroundingDINO(ImageTool):
 
 
 class GroundingSAM(ImageTool):
-    """
-    Example usage:
-    > from vision_agent.tools import tools
-    > t = tools.GroundingSAM(["red line", "yellow dot", "none"])
-    > t("examples/img/ct_scan1.jpg")
+    r"""Grounding SAM is a tool that can detect and segment arbitrary objects with
+    inputs such as category names or referring expressions.
 
-    [{'label': 'none', 'mask': array([[0, 0, 0, ..., 0, 0, 0],
-       [0, 0, 0, ..., 0, 0, 0],
-       ...,
-       [0, 0, 0, ..., 0, 0, 0],
-       [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)}, {'label': 'red line', 'mask': array([[0, 0, 0, ..., 0, 0, 0],
-       [0, 0, 0, ..., 0, 0, 0],
-       ...,
-       [1, 1, 1, ..., 1, 1, 1],
-       [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)}]
+    Examples::
+        >>> from vision_agent.tools import tools
+        >>> t = tools.GroundingSAM(["red line", "yellow dot", "none"])
+        >>> t("examples/img/ct_scan1.jpg")
+        >>> [{'label': 'none', 'mask': array([[0, 0, 0, ..., 0, 0, 0],
+        >>>    [0, 0, 0, ..., 0, 0, 0],
+        >>>    ...,
+        >>>    [0, 0, 0, ..., 0, 0, 0],
+        >>>    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)}, {'label': 'red line', 'mask': array([[0, 0, 0, ..., 0, 0, 0],
+        >>>    [0, 0, 0, ..., 0, 0, 0],
+        >>>    ...,
+        >>>    [1, 1, 1, ..., 1, 1, 1],
+        >>>    [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)}]
     """
 
     _ENDPOINT = "https://cou5lfmus33jbddl6hoqdfbw7e0qidrw.lambda-url.us-east-2.on.aws"
 
-    doc = (
-        "Grounding SAM is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
+    name = "grounding_sam_"
+    description = (
+        "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
         'Example 1: User Question: "Can you build me a car segmentor?" {{"Parameters":{{"prompt": ["car"]}}}}\n'
         'Example 2: User Question: "Can you segment the person on the left?" {{"Parameters":{{"prompt": ["person on the left"]}}\n'
         'Exmaple 3: User Question: "Can you build me a tool that segments red shirts and green shirts?" {{"Parameters":{{"prompt": ["red shirt", "green shirt"]}}}}\n'
     )
+    usage = {}
 
     def __init__(self, prompt: list[str]):
         self.prompt = prompt
@@ -195,3 +217,87 @@ class GroundingSAM(ImageTool):
                 }
             )
         return preds
+
+
+class Add:
+    name = "add_"
+    description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
+    usage = (
+        {
+            "required_parameters": {"name": "input", "type": "List[int]"},
+            "examples": [
+                {
+                    "scenario": "If you want to calculate 2 + 4",
+                    "parameters": {"input": [2, 4]},
+                }
+            ],
+        },
+    )
+
+    def __call__(self, input: List[int]) -> float:
+        return round(sum(input), 2)
+
+
+class Subtract:
+    name = "subtract_"
+    description = "'subtract_' returns the difference of all the arguments passed to it, normalized to 2 decimal places."
+    usage = (
+        {
+            "required_parameters": {"name": "input", "type": "List[int]"},
+            "examples": [
+                {
+                    "scenario": "If you want to calculate 4 - 2",
+                    "parameters": {"input": [4, 2]},
+                }
+            ],
+        },
+    )
+
+    def __call__(self, input: List[int]) -> float:
+        return round(input[0] - input[1], 2)
+
+
+class Multiply:
+    name = "multiply_"
+    description = "'multiply_' returns the product of all the arguments passed to it, normalized to 2 decimal places."
+    usage = (
+        {
+            "required_parameters": {"name": "input", "type": "List[int]"},
+            "examples": [
+                {
+                    "scenario": "If you want to calculate 2 * 4",
+                    "parameters": {"input": [2, 4]},
+                }
+            ],
+        },
+    )
+
+    def __call__(self, input: List[int]) -> float:
+        return round(input[0] * input[1], 2)
+
+
+class Divide:
+    name = "divide_"
+    description = "'divide_' returns the division of all the arguments passed to it, normalized to 2 decimal places."
+    usage = (
+        {
+            "required_parameters": {"name": "input", "type": "List[int]"},
+            "examples": [
+                {
+                    "scenario": "If you want to calculate 4 / 2",
+                    "parameters": {"input": [4, 2]},
+                }
+            ],
+        },
+    )
+
+    def __call__(self, input: List[int]) -> float:
+        return round(input[0] / input[1], 2)
+
+
+TOOLS = {
+    i: {"name": c.name, "description": c.description, "usage": c.usage, "class": c}
+    for i, c in enumerate(
+        [CLIP, GroundingDINO, GroundingSAM, Add, Subtract, Multiply, Divide]
+    )
+}
