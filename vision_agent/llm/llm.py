@@ -31,7 +31,9 @@ class LLM(ABC):
 class OpenAILLM(LLM):
     r"""An LLM class for any OpenAI LLM model."""
 
-    def __init__(self, model_name: str = "gpt-4-turbo-preview", json_mode: bool = False):
+    def __init__(
+        self, model_name: str = "gpt-4-turbo-preview", json_mode: bool = False
+    ):
         self.model_name = model_name
         self.client = OpenAI()
         self.json_mode = json_mode
@@ -43,7 +45,7 @@ class OpenAILLM(LLM):
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            **kwargs, # type: ignore
+            **kwargs,  # type: ignore
         )
 
         return cast(str, response.choices[0].message.content)
@@ -53,7 +55,7 @@ class OpenAILLM(LLM):
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=chat,  # type: ignore
-            **kwargs, # type: ignore
+            **kwargs,  # type: ignore
         )
 
         return cast(str, response.choices[0].message.content)

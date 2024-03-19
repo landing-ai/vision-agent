@@ -160,7 +160,7 @@ def retrieval(
     tool_name = tool_instructions["name"]
 
     parameters = choose_parameter(model, question, tool_usage, previous_log)
-    if parameters is None: # TODO
+    if parameters is None:  # TODO
         pass
     tool_results = [{"tool_name": tool_name, "parameters": parameters}]
 
@@ -212,6 +212,7 @@ class EasyTool(Agent):
         >>> print(resp)
         >>> "It will travel approximately 31.03 kilometers in 29 minutes."
     """
+
     def __init__(
         self,
         task_model: Optional[Union[LLM, LMM]] = None,
