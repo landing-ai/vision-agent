@@ -41,7 +41,13 @@ def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
     return img.reshape(shape)
 
 
-class ImageTool(ABC):
+class Tool(ABC):
+    name: str
+    description: str
+    usage: Dict
+
+
+class ImageTool(Tool):
     @abstractmethod
     def __call__(self, image: Union[str, ImageType]) -> List[Dict]:
         pass
@@ -68,7 +74,7 @@ class CLIP(ImageTool):
         'Example 2: User Question: "Can you tag this photograph with cat or dog?" {{"Parameters":{{"prompt": ["cat", "dog"]}}}}\n'
         'Exmaple 3: User Question: "Can you build me a classifier taht classifies red shirts, green shirts and other?" {{"Parameters":{{"prompt": ["red shirt", "green shirt", "other"]}}}}\n'
     )
-    usage = {}
+    usage: Dict = {}
 
     def __init__(self, prompt: list[str]):
         self.prompt = prompt
@@ -183,7 +189,7 @@ class GroundingSAM(ImageTool):
         'Example 2: User Question: "Can you segment the person on the left?" {{"Parameters":{{"prompt": ["person on the left"]}}\n'
         'Exmaple 3: User Question: "Can you build me a tool that segments red shirts and green shirts?" {{"Parameters":{{"prompt": ["red shirt", "green shirt"]}}}}\n'
     )
-    usage = {}
+    usage: Dict = {}
 
     def __init__(self, prompt: list[str]):
         self.prompt = prompt
@@ -219,77 +225,69 @@ class GroundingSAM(ImageTool):
         return preds
 
 
-class Add:
+class Add(Tool):
     name = "add_"
     description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
-    usage = (
-        {
-            "required_parameters": {"name": "input", "type": "List[int]"},
-            "examples": [
-                {
-                    "scenario": "If you want to calculate 2 + 4",
-                    "parameters": {"input": [2, 4]},
-                }
-            ],
-        },
-    )
+    usage = {
+        "required_parameters": {"name": "input", "type": "List[int]"},
+        "examples": [
+            {
+                "scenario": "If you want to calculate 2 + 4",
+                "parameters": {"input": [2, 4]},
+            }
+        ],
+    }
 
     def __call__(self, input: List[int]) -> float:
         return round(sum(input), 2)
 
 
-class Subtract:
+class Subtract(Tool):
     name = "subtract_"
     description = "'subtract_' returns the difference of all the arguments passed to it, normalized to 2 decimal places."
-    usage = (
-        {
-            "required_parameters": {"name": "input", "type": "List[int]"},
-            "examples": [
-                {
-                    "scenario": "If you want to calculate 4 - 2",
-                    "parameters": {"input": [4, 2]},
-                }
-            ],
-        },
-    )
+    usage = {
+        "required_parameters": {"name": "input", "type": "List[int]"},
+        "examples": [
+            {
+                "scenario": "If you want to calculate 4 - 2",
+                "parameters": {"input": [4, 2]},
+            }
+        ],
+    }
 
     def __call__(self, input: List[int]) -> float:
         return round(input[0] - input[1], 2)
 
 
-class Multiply:
+class Multiply(Tool):
     name = "multiply_"
     description = "'multiply_' returns the product of all the arguments passed to it, normalized to 2 decimal places."
-    usage = (
-        {
-            "required_parameters": {"name": "input", "type": "List[int]"},
-            "examples": [
-                {
-                    "scenario": "If you want to calculate 2 * 4",
-                    "parameters": {"input": [2, 4]},
-                }
-            ],
-        },
-    )
+    usage = {
+        "required_parameters": {"name": "input", "type": "List[int]"},
+        "examples": [
+            {
+                "scenario": "If you want to calculate 2 * 4",
+                "parameters": {"input": [2, 4]},
+            }
+        ],
+    }
 
     def __call__(self, input: List[int]) -> float:
         return round(input[0] * input[1], 2)
 
 
-class Divide:
+class Divide(Tool):
     name = "divide_"
     description = "'divide_' returns the division of all the arguments passed to it, normalized to 2 decimal places."
-    usage = (
-        {
-            "required_parameters": {"name": "input", "type": "List[int]"},
-            "examples": [
-                {
-                    "scenario": "If you want to calculate 4 / 2",
-                    "parameters": {"input": [4, 2]},
-                }
-            ],
-        },
-    )
+    usage = {
+        "required_parameters": {"name": "input", "type": "List[int]"},
+        "examples": [
+            {
+                "scenario": "If you want to calculate 4 / 2",
+                "parameters": {"input": [4, 2]},
+            }
+        ],
+    }
 
     def __call__(self, input: List[int]) -> float:
         return round(input[0] / input[1], 2)
@@ -300,4 +298,5 @@ TOOLS = {
     for i, c in enumerate(
         [CLIP, GroundingDINO, GroundingSAM, Add, Subtract, Multiply, Divide]
     )
+    if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
 }

@@ -16,7 +16,7 @@ from .easytool_prompts import (
 )
 
 
-def parse_json(s: str) -> Dict:
+def parse_json(s: str) -> Any:
     s = (
         s.replace(": true", ": True")
         .replace(": false", ": False")
@@ -28,7 +28,7 @@ def parse_json(s: str) -> Dict:
     return json.loads(s)
 
 
-def change_name(name: str):
+def change_name(name: str) -> str:
     change_list = ["from", "class", "return", "false", "true", "id", "and", "", "ID"]
     if name in change_list:
         name = "is_" + name.lower()
@@ -53,7 +53,7 @@ def task_decompose(
         try:
             str_result = model(prompt)
             result = parse_json(str_result)
-            return result["Tasks"]
+            return result["Tasks"]  # type: ignore
         except Exception:
             if tries > 10:
                 raise ValueError(f"Failed task_decompose on: {str_result}")
@@ -78,7 +78,7 @@ def task_topology(
                     elt["dep"] = [elt["dep"]]
                 elif isinstance(elt["dep"], list):
                     elt["dep"] = [int(dep) for dep in elt["dep"]]
-            return result["Tasks"]
+            return result["Tasks"]  # type: ignore
         except Exception:
             if tries > 10:
                 raise ValueError(f"Failed task_topology on: {str_result}")
@@ -96,7 +96,7 @@ def choose_tool(
         try:
             str_result = model(prompt)
             result = parse_json(str_result)
-            return result["ID"]
+            return result["ID"]  # type: ignore
         except Exception:
             if tries > 10:
                 raise ValueError(f"Failed choose_tool on: {str_result}")
@@ -217,15 +217,10 @@ class EasyTool(Agent):
         task_model: Optional[Union[LLM, LMM]] = None,
         answer_model: Optional[Union[LLM, LMM]] = None,
     ):
-        if task_model is None:
-            self.task_model = OpenAILLM(json_mode=True)
-        else:
-            self.task_model = task_model
-
-        if answer_model is None:
-            self.answer_model = OpenAILLM()
-        else:
-            self.answer_model = answer_model
+        self.task_model = (
+            OpenAILLM(json_mode=True) if task_model is None else task_model
+        )
+        self.answer_model = OpenAILLM() if answer_model is None else answer_model
 
         self.retrieval_num = 3
         self.tools = TOOLS

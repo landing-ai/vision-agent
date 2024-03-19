@@ -55,7 +55,7 @@ class OpenAILLM(LLM):
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=chat,  # type: ignore
-            **kwargs,  # type: ignore
+            **kwargs,
         )
 
         return cast(str, response.choices[0].message.content)
