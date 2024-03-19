@@ -64,7 +64,8 @@ class OpenAILLM(LLM):
         return self.chat(input)
 
     def generate_classifier(self, prompt: str) -> ImageTool:
-        prompt = CHOOSE_PARAMS.format(api_doc=CLIP.description, question=prompt)
+        api_doc = CLIP.description + "\n" + str(CLIP.usage)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=prompt)
         response = self.client.chat.completions.create(
             model=self.model_name,
             response_format={"type": "json_object"},
@@ -97,7 +98,8 @@ class OpenAILLM(LLM):
         return GroundingDINO(**cast(Mapping, params))
 
     def generate_segmentor(self, params: str) -> ImageTool:
-        params = CHOOSE_PARAMS.format(api_doc=GroundingSAM.description, question=params)
+        api_doc = GroundingSAM.description + "\n" + str(GroundingSAM.usage)
+        params = CHOOSE_PARAMS.format(api_doc=api_doc, question=params)
         response = self.client.chat.completions.create(
             model=self.model_name,
             response_format={"type": "json_object"},

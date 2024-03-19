@@ -169,7 +169,8 @@ class OpenAILMM(LMM):
         return cast(str, response.choices[0].message.content)
 
     def generate_classifier(self, prompt: str) -> ImageTool:
-        prompt = CHOOSE_PARAMS.format(api_doc=CLIP.doc, question=prompt)
+        api_doc = CLIP.description + "\n" + str(CLIP.usage)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=prompt)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
@@ -191,7 +192,8 @@ class OpenAILMM(LMM):
         return CLIP(**cast(Mapping, prompt))
 
     def generate_detector(self, params: str) -> ImageTool:
-        params = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=params)
+        api_doc = GroundingDINO.description + "\n" + str(GroundingDINO.usage)
+        params = CHOOSE_PARAMS.format(api_doc=api_doc, question=params)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
@@ -213,7 +215,8 @@ class OpenAILMM(LMM):
         return GroundingDINO(**cast(Mapping, params))
 
     def generate_segmentor(self, prompt: str) -> ImageTool:
-        prompt = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=prompt)
+        api_doc = GroundingSAM.description + "\n" + str(GroundingSAM.usage)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=prompt)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
