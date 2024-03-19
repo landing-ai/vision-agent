@@ -54,7 +54,7 @@ def task_decompose(
             str_result = model(prompt)
             result = parse_json(str_result)
             return result["Tasks"]
-        except Exception as _:
+        except Exception:
             if tries > 10:
                 raise ValueError(f"Failed task_decompose on: {str_result}")
             tries += 1
@@ -78,8 +78,8 @@ def task_topology(
                     elt["dep"] = [elt["dep"]]
                 elif isinstance(elt["dep"], list):
                     elt["dep"] = [int(dep) for dep in elt["dep"]]
-            return result["Tasks"]  ## TODO
-        except Exception as _:
+            return result["Tasks"]
+        except Exception:
             if tries > 10:
                 raise ValueError(f"Failed task_topology on: {str_result}")
             tries += 1
@@ -97,7 +97,7 @@ def choose_tool(
             str_result = model(prompt)
             result = parse_json(str_result)
             return result["ID"]
-        except Exception as _:
+        except Exception:
             if tries > 10:
                 raise ValueError(f"Failed choose_tool on: {str_result}")
             tries += 1
@@ -118,7 +118,7 @@ def choose_parameter(
             str_result = model(prompt)
             result = parse_json(str_result)
             return result["Parameters"]
-        except Exception as _:
+        except Exception:
             if tries > 10:
                 raise ValueError(f"Failed choose_parameter on: {str_result}")
             tries += 1
@@ -155,7 +155,6 @@ def retrieval(
         pass
 
     tool_instructions = tools[tool_id]
-    tool_description = tool_instructions["description"]
     tool_usage = tool_instructions["usage"]
     tool_name = tool_instructions["name"]
 
@@ -175,7 +174,7 @@ def retrieval(
                 parameters[change_name(key)] = result["parameters"][key]
                 # TODO: wrap call to handle errors
                 call_result = tools[tool_id]["class"]()(**parameters)
-                if call_result == None:
+                if call_result is None:
                     continue
                 call_results.append(call_result)
         elif isinstance(result["parameters"], List):
@@ -184,7 +183,7 @@ def retrieval(
                 for key in param_list:
                     parameters[change_name(key)] = param_list[key]
                 call_result = tools[tool_id]["class"]()(**parameters)
-                if call_result == None:
+                if call_result is None:
                     continue
                 call_results.append(call_result)
         return call_results
