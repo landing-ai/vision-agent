@@ -3,7 +3,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import requests
 from openai import OpenAI
@@ -14,7 +14,6 @@ from vision_agent.tools import (
     SYSTEM_PROMPT,
     GroundingDINO,
     GroundingSAM,
-    ImageTool,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -168,35 +167,14 @@ class OpenAILMM(LMM):
         )
         return cast(str, response.choices[0].message.content)
 
-    def generate_classifier(self, prompt: str) -> ImageTool:
-        prompt = CHOOSE_PARAMS.format(api_doc=CLIP.doc, question=prompt)
+    def generate_classifier(self, question: str) -> Callable:
+        api_doc = CLIP.description + "\n" + str(CLIP.usage)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
-            ],
-        )
-
-        try:
-            prompt = json.loads(cast(str, response.choices[0].message.content))[
-                "Parameters"
-            ]
-        except json.JSONDecodeError:
-            _LOGGER.error(
-                f"Failed to decode response: {response.choices[0].message.content}"
-            )
-            raise ValueError("Failed to decode response")
-
-        return CLIP(**cast(Mapping, prompt))
-
-    def generate_detector(self, params: str) -> ImageTool:
-        params = CHOOSE_PARAMS.format(api_doc=GroundingDINO.doc, question=params)
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": params},
             ],
         )
 
@@ -210,10 +188,11 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return GroundingDINO(**cast(Mapping, params))
+        return lambda x: CLIP()(**{"prompt": params["prompt"], "image": x})
 
-    def generate_segmentor(self, prompt: str) -> ImageTool:
-        prompt = CHOOSE_PARAMS.format(api_doc=GroundingSAM.doc, question=prompt)
+    def generate_detector(self, question: str) -> Callable:
+        api_doc = GroundingDINO.description + "\n" + str(GroundingDINO.usage)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
@@ -223,7 +202,7 @@ class OpenAILMM(LMM):
         )
 
         try:
-            prompt = json.loads(cast(str, response.choices[0].message.content))[
+            params = json.loads(cast(str, response.choices[0].message.content))[
                 "Parameters"
             ]
         except json.JSONDecodeError:
@@ -232,7 +211,30 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return GroundingSAM(**cast(Mapping, prompt))
+        return lambda x: GroundingDINO()(**{"prompt": params["prompt"], "image": x})
+
+    def generate_segmentor(self, question: str) -> Callable:
+        api_doc = GroundingSAM.description + "\n" + str(GroundingSAM.usage)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        try:
+            params = json.loads(cast(str, response.choices[0].message.content))[
+                "Parameters"
+            ]
+        except json.JSONDecodeError:
+            _LOGGER.error(
+                f"Failed to decode response: {response.choices[0].message.content}"
+            )
+            raise ValueError("Failed to decode response")
+
+        return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
 
 
 def get_lmm(name: str) -> LMM:

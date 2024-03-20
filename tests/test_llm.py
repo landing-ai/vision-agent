@@ -1,9 +1,13 @@
 import pytest
 
 from vision_agent.llm.llm import OpenAILLM
-from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
 
-from .fixtures import openai_llm_mock  # noqa: F401
+from .fixtures import (  # noqa: F401
+    clip_mock,
+    grounding_dino_mock,
+    grounding_sam_mock,
+    openai_llm_mock,
+)
 
 
 @pytest.mark.parametrize(
@@ -57,12 +61,12 @@ def test_call_with_mock(openai_llm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_llm_mock"],
 )
-def test_generate_classifier(openai_llm_mock):  # noqa: F811
+def test_generate_classifier(openai_llm_mock, clip_mock):  # noqa: F811
     llm = OpenAILLM()
     prompt = "Can you generate a cat classifier?"
     classifier = llm.generate_classifier(prompt)
-    assert isinstance(classifier, CLIP)
-    assert classifier.prompt == "cat"
+    classifier("image.png")
+    assert clip_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
 
 
 @pytest.mark.parametrize(
@@ -70,12 +74,12 @@ def test_generate_classifier(openai_llm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_llm_mock"],
 )
-def test_generate_detector(openai_llm_mock):  # noqa: F811
+def test_generate_detector(openai_llm_mock, grounding_dino_mock):  # noqa: F811
     llm = OpenAILLM()
     prompt = "Can you generate a cat detector?"
     detector = llm.generate_detector(prompt)
-    assert isinstance(detector, GroundingDINO)
-    assert detector.prompt == "cat"
+    detector("image.png")
+    assert grounding_dino_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
 
 
 @pytest.mark.parametrize(
@@ -83,9 +87,9 @@ def test_generate_detector(openai_llm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_llm_mock"],
 )
-def test_generate_segmentor(openai_llm_mock):  # noqa: F811
+def test_generate_segmentor(openai_llm_mock, grounding_sam_mock):  # noqa: F811
     llm = OpenAILLM()
     prompt = "Can you generate a cat segmentor?"
     segmentor = llm.generate_segmentor(prompt)
-    assert isinstance(segmentor, GroundingSAM)
-    assert segmentor.prompt == "cat"
+    segmentor("image.png")
+    assert grounding_sam_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}

@@ -2,6 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
+
 
 @pytest.fixture
 def openai_llm_mock(request):
@@ -27,3 +29,24 @@ def openai_lmm_mock(request):
             choices=[MagicMock(message=MagicMock(content=content))]
         )
         yield mock_instance
+
+
+@pytest.fixture
+def clip_mock(request):
+    with patch.object(CLIP, "__call__", autospec=True) as mock:
+        mock.return_value = "test"
+        yield mock
+
+
+@pytest.fixture
+def grounding_dino_mock(request):
+    with patch.object(GroundingDINO, "__call__", autospec=True) as mock:
+        mock.return_value = "test"
+        yield mock
+
+
+@pytest.fixture
+def grounding_sam_mock(request):
+    with patch.object(GroundingSAM, "__call__", autospec=True) as mock:
+        mock.return_value = "test"
+        yield mock
