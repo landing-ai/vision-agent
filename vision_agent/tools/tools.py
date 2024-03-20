@@ -66,7 +66,10 @@ class CLIP(Tool):
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
     )
     usage = {
-        "required_parameters": [{"name": "prompt", "type": "List[str]"}, {"name": "image", "type": "str"}],
+        "required_parameters": [
+            {"name": "prompt", "type": "List[str]"},
+            {"name": "image", "type": "str"},
+        ],
         "examples": [
             {
                 "scenario": "Can you classify this image as a cat? Image name: cat.jpg",
@@ -120,7 +123,10 @@ class GroundingDINO(Tool):
         'An example output would be: [{"label": ["car"], "score": [0.99], "bbox": [[0.1, 0.2, 0.3, 0.4]]}]\n'
     )
     usage = {
-        "required_parameters": [{"name": "prompt", "type": "str"}, {"name": "image", "type": "str"}],
+        "required_parameters": [
+            {"name": "prompt", "type": "str"},
+            {"name": "image", "type": "str"},
+        ],
         "examples": [
             {
                 "scenario": "Can you build me a car detector?",
@@ -132,7 +138,10 @@ class GroundingDINO(Tool):
             },
             {
                 "scenario": "Detect the red shirts and green shirst. Image name: shirts.jpg",
-                "parameters": {"prompt": "red shirt. green shirt", "image": "shirts.jpg"},
+                "parameters": {
+                    "prompt": "red shirt. green shirt",
+                    "image": "shirts.jpg",
+                },
             },
         ],
     }
@@ -193,7 +202,10 @@ class GroundingSAM(Tool):
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
     )
     usage = {
-        "required_parameters": [{"name": "prompt", "type": "List[str]"}, {"name": "image", "type": "str"}],
+        "required_parameters": [
+            {"name": "prompt", "type": "List[str]"},
+            {"name": "image", "type": "str"},
+        ],
         "examples": [
             {
                 "scenario": "Can you build me a car segmentor?",
@@ -205,9 +217,12 @@ class GroundingSAM(Tool):
             },
             {
                 "scenario": "Can you build me a tool that segments red shirts and green shirts? Image name: shirts.jpg",
-                "parameters": {"prompt": ["red shirt", "green shirt"], "image": "shirts.jpg"},
+                "parameters": {
+                    "prompt": ["red shirt", "green shirt"],
+                    "image": "shirts.jpg",
+                },
             },
-        ]
+        ],
     }
 
     def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
