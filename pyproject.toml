@@ -32,7 +32,7 @@ typing_extensions = "4.*"
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
 pytest = "7.*"
-black = "23.*"
+black = ">=23,<25"
 flake8 = "5.*"
 isort = "5.*"
 responses = "^0.23.1"
