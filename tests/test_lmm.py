@@ -4,9 +4,13 @@ import pytest
 from PIL import Image
 
 from vision_agent.lmm.lmm import OpenAILMM
-from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
 
-from .fixtures import openai_lmm_mock  # noqa: F401
+from .fixtures import (  # noqa: F401
+    clip_mock,
+    grounding_dino_mock,
+    grounding_sam_mock,
+    openai_lmm_mock,
+)
 
 
 def create_temp_image(image_format="jpeg"):
@@ -77,12 +81,12 @@ def test_call_with_mock(openai_lmm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock):  # noqa: F811
+def test_generate_classifier(openai_lmm_mock, clip_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     classifier = lmm.generate_classifier(prompt)
-    assert isinstance(classifier, CLIP)
-    assert classifier.prompt == "cat"
+    classifier("image.png")
+    assert clip_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
 
 
 @pytest.mark.parametrize(
@@ -90,12 +94,12 @@ def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_detector(openai_lmm_mock):  # noqa: F811
+def test_generate_detector(openai_lmm_mock, grounding_dino_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     detector = lmm.generate_detector(prompt)
-    assert isinstance(detector, GroundingDINO)
-    assert detector.prompt == "cat"
+    detector("image.png")
+    assert grounding_dino_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
 
 
 @pytest.mark.parametrize(
@@ -103,9 +107,9 @@ def test_generate_detector(openai_lmm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_segmentor(openai_lmm_mock):  # noqa: F811
+def test_generate_segmentor(openai_lmm_mock, grounding_sam_mock):  # noqa: F811
     lmm = OpenAILMM()
     prompt = "Can you generate a cat classifier?"
     segmentor = lmm.generate_segmentor(prompt)
-    assert isinstance(segmentor, GroundingSAM)
-    assert segmentor.prompt == "cat"
+    segmentor("image.png")
+    assert grounding_sam_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
