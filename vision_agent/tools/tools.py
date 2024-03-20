@@ -1,5 +1,5 @@
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, cast
 
@@ -17,10 +17,10 @@ def normalize_bbox(
 ) -> List[float]:
     r"""Normalize the bounding box coordinates to be between 0 and 1."""
     x1, y1, x2, y2 = bbox
-    x1 = x1 / image_size[1]
-    y1 = y1 / image_size[0]
-    x2 = x2 / image_size[1]
-    y2 = y2 / image_size[0]
+    x1 = round(x1 / image_size[1], 2)
+    y1 = round(y1 / image_size[0], 2)
+    x2 = round(x2 / image_size[1], 2)
+    y2 = round(y2 / image_size[0], 2)
     return [x1, y1, x2, y2]
 
 
@@ -47,13 +47,7 @@ class Tool(ABC):
     usage: Dict
 
 
-class ImageTool(Tool):
-    @abstractmethod
-    def __call__(self, image: Union[str, ImageType]) -> List[Dict]:
-        pass
-
-
-class CLIP(ImageTool):
+class CLIP(Tool):
     r"""CLIP is a tool that can classify or tag any image given a set if input classes
     or tags.
 
@@ -70,19 +64,32 @@ class CLIP(ImageTool):
     description = (
         "'clip_' is a tool that can classify or tag any image given a set if input classes or tags."
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
-        'Example 1: User Question: "Can you classify this image as a cat?" {{"Parameters":{{"prompt": ["cat"]}}}}\n'
-        'Example 2: User Question: "Can you tag this photograph with cat or dog?" {{"Parameters":{{"prompt": ["cat", "dog"]}}}}\n'
-        'Exmaple 3: User Question: "Can you build me a classifier taht classifies red shirts, green shirts and other?" {{"Parameters":{{"prompt": ["red shirt", "green shirt", "other"]}}}}\n'
     )
-    usage: Dict = {}
+    usage = {
+        "required_parameters": [{"name": "prompt", "type": "List[str]"}, {"name": "image", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "Can you classify this image as a cat? Image name: cat.jpg",
+                "parameters": {"prompt": ["cat"], "image": "cat.jpg"},
+            },
+            {
+                "scenario": "Can you tag this photograph with cat or dog? Image name: cat_dog.jpg",
+                "parameters": {"prompt": ["cat", "dog"], "image": "cat_dog.jpg"},
+            },
+            {
+                "scenario": "Can you build me a classifier that classifies red shirts, green shirts and other? Image name: shirts.jpg",
+                "parameters": {
+                    "prompt": ["red shirt", "green shirt", "other"],
+                    "image": "shirts.jpg",
+                },
+            },
+        ],
+    }
 
-    def __init__(self, prompt: list[str]):
-        self.prompt = prompt
-
-    def __call__(self, image: Union[str, ImageType]) -> List[Dict]:
+    def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
         image_b64 = convert_to_b64(image)
         data = {
-            "classes": self.prompt,
+            "classes": prompt,
             "images": [image_b64],
         }
         res = requests.post(
@@ -99,7 +106,7 @@ class CLIP(ImageTool):
         return cast(List[Dict], resp_json["data"])
 
 
-class GroundingDINO(ImageTool):
+class GroundingDINO(Tool):
     _ENDPOINT = "https://chnicr4kes5ku77niv2zoytggq0qyqlp.lambda-url.us-east-2.on.aws"
 
     name = "grounding_dino_"
@@ -113,31 +120,28 @@ class GroundingDINO(ImageTool):
         'An example output would be: [{"label": ["car"], "score": [0.99], "bbox": [[0.1, 0.2, 0.3, 0.4]]}]\n'
     )
     usage = {
-        "required_parameters": {"name": "prompt", "type": "str"},
+        "required_parameters": [{"name": "prompt", "type": "str"}, {"name": "image", "type": "str"}],
         "examples": [
             {
                 "scenario": "Can you build me a car detector?",
-                "parameters": {"prompt": "car"},
+                "parameters": {"prompt": "car", "image": ""},
             },
             {
-                "scenario": "Can you detect the person on the left?",
-                "parameters": {"prompt": "person on the left"},
+                "scenario": "Can you detect the person on the left? Image name: person.jpg",
+                "parameters": {"prompt": "person on the left", "image": "person.jpg"},
             },
             {
-                "scenario": "Detect the red shirts and green shirst.",
-                "parameters": {"prompt": "red shirt. green shirt"},
+                "scenario": "Detect the red shirts and green shirst. Image name: shirts.jpg",
+                "parameters": {"prompt": "red shirt. green shirt", "image": "shirts.jpg"},
             },
         ],
     }
 
-    def __init__(self, prompt: str):
-        self.prompt = prompt
-
-    def __call__(self, image: Union[str, Path, ImageType]) -> List[Dict]:
+    def __call__(self, prompt: str, image: Union[str, Path, ImageType]) -> List[Dict]:
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
         data = {
-            "prompt": self.prompt,
+            "prompt": prompt,
             "images": [image_b64],
         }
         res = requests.post(
@@ -157,10 +161,12 @@ class GroundingDINO(ImageTool):
                 elt["bboxes"] = [
                     normalize_bbox(box, image_size) for box in elt["bboxes"]
                 ]
+            if "scores" in elt:
+                elt["scores"] = [round(score, 2) for score in elt["scores"]]
         return cast(List[Dict], resp_data)
 
 
-class GroundingSAM(ImageTool):
+class GroundingSAM(Tool):
     r"""Grounding SAM is a tool that can detect and segment arbitrary objects with
     inputs such as category names or referring expressions.
 
@@ -185,19 +191,29 @@ class GroundingSAM(ImageTool):
     description = (
         "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
         "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
-        'Example 1: User Question: "Can you build me a car segmentor?" {{"Parameters":{{"prompt": ["car"]}}}}\n'
-        'Example 2: User Question: "Can you segment the person on the left?" {{"Parameters":{{"prompt": ["person on the left"]}}\n'
-        'Exmaple 3: User Question: "Can you build me a tool that segments red shirts and green shirts?" {{"Parameters":{{"prompt": ["red shirt", "green shirt"]}}}}\n'
     )
-    usage: Dict = {}
+    usage = {
+        "required_parameters": [{"name": "prompt", "type": "List[str]"}, {"name": "image", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "Can you build me a car segmentor?",
+                "parameters": {"prompt": ["car"], "image": ""},
+            },
+            {
+                "scenario": "Can you segment the person on the left? Image name: person.jpg",
+                "parameters": {"prompt": ["person on the left"], "image": "person.jpg"},
+            },
+            {
+                "scenario": "Can you build me a tool that segments red shirts and green shirts? Image name: shirts.jpg",
+                "parameters": {"prompt": ["red shirt", "green shirt"], "image": "shirts.jpg"},
+            },
+        ]
+    }
 
-    def __init__(self, prompt: list[str]):
-        self.prompt = prompt
-
-    def __call__(self, image: Union[str, ImageType]) -> List[Dict]:
+    def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
         image_b64 = convert_to_b64(image)
         data = {
-            "classes": self.prompt,
+            "classes": prompt,
             "image": image_b64,
         }
         res = requests.post(

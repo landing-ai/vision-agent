@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Dict, List, Mapping, Union, cast
+from typing import Callable, Dict, List, Mapping, Union, cast
 
 from openai import OpenAI
 
@@ -10,7 +10,6 @@ from vision_agent.tools import (
     SYSTEM_PROMPT,
     GroundingDINO,
     GroundingSAM,
-    ImageTool,
 )
 
 
@@ -65,9 +64,9 @@ class OpenAILLM(LLM):
             return self.generate(input)
         return self.chat(input)
 
-    def generate_classifier(self, prompt: str) -> ImageTool:
+    def generate_classifier(self, question: str) -> Callable:
         api_doc = CLIP.description + "\n" + str(CLIP.usage)
-        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=prompt)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
             response_format={"type": "json_object"},
@@ -80,38 +79,41 @@ class OpenAILLM(LLM):
         params = json.loads(cast(str, response.choices[0].message.content))[
             "Parameters"
         ]
-        return CLIP(**cast(Mapping, params))
 
-    def generate_detector(self, params: str) -> ImageTool:
+        return lambda x: CLIP()(**{"prompt": params["prompt"], "image": x})
+
+    def generate_detector(self, question: str) -> Callable:
         api_doc = GroundingDINO.description + "\n" + str(GroundingDINO.usage)
-        params = CHOOSE_PARAMS.format(api_doc=api_doc, question=params)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": params},
+                {"role": "user", "content": prompt},
             ],
         )
 
-        params = json.loads(cast(str, response.choices[0].message.content))[
+        params: Mapping = json.loads(cast(str, response.choices[0].message.content))[
             "Parameters"
         ]
-        return GroundingDINO(**cast(Mapping, params))
 
-    def generate_segmentor(self, params: str) -> ImageTool:
+        return lambda x: GroundingDINO()(**{"prompt": params["prompt"], "image": x})
+
+    def generate_segmentor(self, question: str) -> Callable:
         api_doc = GroundingSAM.description + "\n" + str(GroundingSAM.usage)
-        params = CHOOSE_PARAMS.format(api_doc=api_doc, question=params)
+        prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": params},
+                {"role": "user", "content": prompt},
             ],
         )
 
-        params = json.loads(cast(str, response.choices[0].message.content))[
+        params: Mapping = json.loads(cast(str, response.choices[0].message.content))[
             "Parameters"
         ]
-        return GroundingSAM(**cast(Mapping, params))
+
+        return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
