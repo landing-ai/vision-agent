@@ -1,9 +1,10 @@
 import logging
+import os
 import tempfile
 from abc import ABC
+from collections import Counter as CounterClass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, cast
-from collections import Counter as CounterClass
 
 import numpy as np
 import requests
@@ -343,9 +344,12 @@ class ImageSearch(Tool):
         assert isinstance(image, str), "The input image must be a string url."
         image = "https://popmenucloud.com/cdn-cgi/image/width%3D1920%2Cheight%3D1920%2Cfit%3Dscale-down%2Cformat%3Dauto%2Cquality%3D60/vpylarnm/a6ad1671-8938-457f-b4cd-3215caa122cb.png"
         url = "https://www.googleapis.com/customsearch/v1"
+        api_key = os.getenv("GOOGLE_API_KEY")
+        search_engine_id = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
+        assert api_key and search_engine_id, "Please set the GOOGLE_API_KEY and GOOGLE_SEARCH_ENGINE_ID environment variable. See https://developers.google.com/custom-search/v1/using_rest for more information."
         params = {
-            "key": "AIzaSyDy3UMHL1E3nFLTLdIQb3nyIU5-zhSfzPo",
-            "cx": "831f248aa2e1d4daf",
+            "key": api_key,
+            "cx": search_engine_id,
             "q": image,
             "num": 10,
             "searchType":"image",
