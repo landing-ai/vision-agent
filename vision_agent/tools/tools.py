@@ -1,10 +1,12 @@
 import logging
+import tempfile
 from abc import ABC
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, cast
 
 import numpy as np
 import requests
+from PIL import Image
 from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import convert_to_b64, get_image_size
@@ -61,10 +63,7 @@ class CLIP(Tool):
     _ENDPOINT = "https://rb4ii6dfacmwqfxivi4aedyyfm0endsv.lambda-url.us-east-2.on.aws"
 
     name = "clip_"
-    description = (
-        "'clip_' is a tool that can classify or tag any image given a set if input classes or tags."
-        "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
-    )
+    description = "'clip_' is a tool that can classify or tag any image given a set if input classes or tags."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "List[str]"},
@@ -113,15 +112,7 @@ class GroundingDINO(Tool):
     _ENDPOINT = "https://chnicr4kes5ku77niv2zoytggq0qyqlp.lambda-url.us-east-2.on.aws"
 
     name = "grounding_dino_"
-    description = (
-        "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
-        "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
-        "The tool returns a list of dictionaries, each containing the following keys:\n"
-        '  - "label": The label of the detected object.\n'
-        '  - "score": The confidence score of the detection.\n'
-        '  - "bbox": The bounding box of the detected object. The box coordinates are normalize to [0, 1]\n'
-        'An example output would be: [{"label": ["car"], "score": [0.99], "bbox": [[0.1, 0.2, 0.3, 0.4]]}]\n'
-    )
+    description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -197,10 +188,7 @@ class GroundingSAM(Tool):
     _ENDPOINT = "https://cou5lfmus33jbddl6hoqdfbw7e0qidrw.lambda-url.us-east-2.on.aws"
 
     name = "grounding_sam_"
-    description = (
-        "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
-        "Here are some exmaples of how to use the tool, the examples are in the format of User Question: which will have the user's question in quotes followed by the parameters in JSON format, which is the parameters you need to output to call the API to solve the user's question.\n"
-    )
+    description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "List[str]"},
@@ -256,11 +244,64 @@ class GroundingSAM(Tool):
         return preds
 
 
+class Crop(Tool):
+    name = "crop_"
+    description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image."
+    usage = {
+        "required_parameters": [
+            {"name": "bbox", "type": "List[float]"},
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you crop the image to the bounding box [0.1, 0.1, 0.9, 0.9]? Image name: image.jpg",
+                "parameters": {"bbox": [0.1, 0.1, 0.9, 0.9], "image": "image.jpg"},
+            },
+            {
+                "scenario": "Cut out the image to the bounding box [0.2, 0.2, 0.8, 0.8]. Image name: car.jpg",
+                "parameters": {"bbox": [0.2, 0.2, 0.8, 0.8], "image": "car.jpg"},
+            },
+        ],
+    }
+
+    def __call__(self, bbox: List[float], image: Union[str, Path]) -> str:
+        pil_image = Image.open(image)
+        width, height = pil_image.size
+        bbox = [
+            int(bbox[0] * width),
+            int(bbox[1] * height),
+            int(bbox[2] * width),
+            int(bbox[3] * height),
+        ]
+        cropped_image = pil_image.crop(bbox)
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            cropped_image.save(tmp.name)
+
+        return tmp.name
+
+
+class ImageSearch(Tool):
+    name = "image_search_"
+    description = "'image_search_' searches for images similar to the input image."
+    usage = {
+        "required_parameters": [{"name": "image", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "Can you find images similar to the image? Image name: image.jpg",
+                "parameters": {"image": "image.jpg"},
+            }
+        ],
+    }
+
+    def __call__(self, image: Union[str, Path]) -> List[str]:
+        return ["image1.png", "image2.png", "image3.png"]
+
+
 class Add(Tool):
     name = "add_"
     description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
-        "required_parameters": {"name": "input", "type": "List[int]"},
+        "required_parameters": [{"name": "input", "type": "List[int]"}],
         "examples": [
             {
                 "scenario": "If you want to calculate 2 + 4",
@@ -277,7 +318,7 @@ class Subtract(Tool):
     name = "subtract_"
     description = "'subtract_' returns the difference of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
-        "required_parameters": {"name": "input", "type": "List[int]"},
+        "required_parameters": [{"name": "input", "type": "List[int]"}],
         "examples": [
             {
                 "scenario": "If you want to calculate 4 - 2",
@@ -294,7 +335,7 @@ class Multiply(Tool):
     name = "multiply_"
     description = "'multiply_' returns the product of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
-        "required_parameters": {"name": "input", "type": "List[int]"},
+        "required_parameters": [{"name": "input", "type": "List[int]"}],
         "examples": [
             {
                 "scenario": "If you want to calculate 2 * 4",
@@ -311,7 +352,7 @@ class Divide(Tool):
     name = "divide_"
     description = "'divide_' returns the division of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
-        "required_parameters": {"name": "input", "type": "List[int]"},
+        "required_parameters": [{"name": "input", "type": "List[int]"}],
         "examples": [
             {
                 "scenario": "If you want to calculate 4 / 2",
@@ -327,7 +368,7 @@ class Divide(Tool):
 TOOLS = {
     i: {"name": c.name, "description": c.description, "usage": c.usage, "class": c}
     for i, c in enumerate(
-        [CLIP, GroundingDINO, GroundingSAM, Add, Subtract, Multiply, Divide]
+        [CLIP, GroundingDINO, GroundingSAM, Crop, ImageSearch, Add, Subtract, Multiply, Divide]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
 }
