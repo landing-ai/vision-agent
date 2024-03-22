@@ -1,5 +1,4 @@
 import logging
-import os
 import tempfile
 from abc import ABC
 from collections import Counter as CounterClass
