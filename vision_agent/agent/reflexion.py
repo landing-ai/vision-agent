@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-from vision_agent import LLM, LMM, OpenAILLM
+from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.lmm import LMM
 
 from .agent import Agent
 from .reflexion_prompts import (
@@ -114,7 +115,7 @@ class Reflexion(Agent):
         self.reflect_prompt = reflect_prompt
         self.finsh_prompt = finsh_prompt
         self.cot_examples = cot_examples
-        self.refelct_examples = reflect_examples
+        self.reflect_examples = reflect_examples
         self.reflections: List[str] = []
         if verbose:
             _LOGGER.setLevel(logging.INFO)
@@ -273,7 +274,7 @@ class Reflexion(Agent):
         self, question: str, context: str = "", scratchpad: str = ""
     ) -> str:
         return self.reflect_prompt.format(
-            examples=self.refelct_examples,
+            examples=self.reflect_examples,
             context=context,
             question=question,
             scratchpad=scratchpad,
