@@ -54,9 +54,9 @@ class CLIP(Tool):
     or tags.
 
     Examples::
-        >>> from vision_agent.tools import tools
-        >>> t = tools.CLIP(["red line", "yellow dot", "none"])
-        >>> t("examples/img/ct_scan1.jpg"))
+        >>> import vision_agent as va
+        >>> clip = va.tools.CLIP()
+        >>> clip(["red line", "yellow dot"], "examples/img/ct_scan1.jpg"))
         >>> [[0.02567436918616295, 0.9534115791320801, 0.020914122462272644]]
     """
 
@@ -105,7 +105,11 @@ class CLIP(Tool):
         ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
-        return cast(List[Dict], resp_json["data"])
+
+        rets = []
+        for elt in resp_json["data"]:
+            rets.append({"labels": prompt, "scores": [round(prob, 2) for prob in elt]})
+        return cast(List[Dict], rets)
 
 
 class GroundingDINO(Tool):
@@ -174,7 +178,7 @@ class GroundingSAM(Tool):
         >>> from vision_agent.tools import tools
         >>> t = tools.GroundingSAM(["red line", "yellow dot", "none"])
         >>> t("examples/img/ct_scan1.jpg")
-        >>> [{'label': 'none', 'mask': array([[0, 0, 0, ..., 0, 0, 0],
+        >>> [{'label': 'yellow dot', 'mask': array([[0, 0, 0, ..., 0, 0, 0],
         >>>    [0, 0, 0, ..., 0, 0, 0],
         >>>    ...,
         >>>    [0, 0, 0, ..., 0, 0, 0],
@@ -214,6 +218,7 @@ class GroundingSAM(Tool):
     }
 
     def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
+        image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
         data = {
             "classes": prompt,
@@ -231,17 +236,56 @@ class GroundingSAM(Tool):
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
         resp_data = resp_json["data"]
-        preds = []
+        ret_pred = {"labels": [], "bboxes": [], "masks": []}
         for pred in resp_data["preds"]:
             encoded_mask = pred["encoded_mask"]
             mask = rle_decode(mask_rle=encoded_mask, shape=pred["mask_shape"])
-            preds.append(
-                {
-                    "label": pred["label_name"],
-                    "mask": mask,
-                }
-            )
-        return preds
+            ret_pred["labels"].append(pred["label_name"])
+            ret_pred["bboxes"].append(normalize_bbox(pred["bbox"], image_size))
+            ret_pred["masks"].append(mask)
+        return [ret_pred]
+
+
+class AgentGroundingSAM(GroundingSAM):
+    r"""AgentGroundingSAM is the same as GroundingSAM but it saves the masks as files
+    returns the file name. This makes it easier for agents to use.
+    """
+
+    def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
+        rets = super().__call__(prompt, image)
+        for ret in rets:
+            mask_files = []
+            for mask in ret["masks"]:
+                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                    Image.fromarray(mask * 255).save(tmp)
+                    mask_files.append(tmp.name)
+            ret["masks"] = mask_files
+        return rets
+
+
+class Counter(Tool):
+    name = "counter_"
+    description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression."
+    usage = {
+        "required_parameters": [
+            {"name": "prompt", "type": "str"},
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you count the number of cars in this image? Image name image.jpg",
+                "parameters": {"prompt": "car", "image": "image.jpg"},
+            },
+            {
+                "scenario": "Can you count the number of people? Image name: people.png",
+                "parameters": {"prompt": "person", "image": "people.png"},
+            },
+        ],
+    }
+
+    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
+        resp = GroundingDINO()(prompt, image)
+        return dict(Counter=resp[0]["labels"])
 
 
 class Crop(Tool):
@@ -368,7 +412,18 @@ class Divide(Tool):
 TOOLS = {
     i: {"name": c.name, "description": c.description, "usage": c.usage, "class": c}
     for i, c in enumerate(
-        [CLIP, GroundingDINO, GroundingSAM, Crop, ImageSearch, Add, Subtract, Multiply, Divide]
+        [
+            CLIP,
+            GroundingDINO,
+            AgentGroundingSAM,
+            Counter,
+            Crop,
+            ImageSearch,
+            Add,
+            Subtract,
+            Multiply,
+            Divide,
+        ]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
 }
