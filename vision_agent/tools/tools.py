@@ -418,7 +418,6 @@ TOOLS = {
             AgentGroundingSAM,
             Counter,
             Crop,
-            ImageSearch,
             Add,
             Subtract,
             Multiply,
