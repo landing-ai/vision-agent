@@ -114,7 +114,7 @@ class Reflexion(Agent):
         self.reflect_prompt = reflect_prompt
         self.finsh_prompt = finsh_prompt
         self.cot_examples = cot_examples
-        self.refelct_examples = reflect_examples
+        self.reflect_examples = reflect_examples
         self.reflections: List[str] = []
         if verbose:
             _LOGGER.setLevel(logging.INFO)
@@ -273,7 +273,7 @@ class Reflexion(Agent):
         self, question: str, context: str = "", scratchpad: str = ""
     ) -> str:
         return self.reflect_prompt.format(
-            examples=self.refelct_examples,
+            examples=self.reflect_examples,
             context=context,
             question=question,
             scratchpad=scratchpad,
