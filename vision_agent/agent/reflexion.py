@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-from vision_agent import LLM, LMM, OpenAILLM
+from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.lmm import LMM
 
 from .agent import Agent
 from .reflexion_prompts import (
