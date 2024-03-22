@@ -3,6 +3,7 @@ import tempfile
 from abc import ABC
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, cast
+from collections import Counter as CounterClass
 
 import numpy as np
 import requests
@@ -285,7 +286,8 @@ class Counter(Tool):
 
     def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
         resp = GroundingDINO()(prompt, image)
-        return dict(Counter=resp[0]["labels"])
+        __import__("ipdb").set_trace()
+        return dict(CounterClass(resp[0]["labels"]))
 
 
 class Crop(Tool):
@@ -339,6 +341,7 @@ class ImageSearch(Tool):
 
     def __call__(self, image: Union[str, Path]) -> List[str]:
         assert isinstance(image, str), "The input image must be a string url."
+        image = "https://popmenucloud.com/cdn-cgi/image/width%3D1920%2Cheight%3D1920%2Cfit%3Dscale-down%2Cformat%3Dauto%2Cquality%3D60/vpylarnm/a6ad1671-8938-457f-b4cd-3215caa122cb.png"
         url = "https://www.googleapis.com/customsearch/v1"
         params = {
             "key": "AIzaSyDy3UMHL1E3nFLTLdIQb3nyIU5-zhSfzPo",
@@ -355,7 +358,6 @@ class ImageSearch(Tool):
 
         resp = response.json()
         items = resp.get("items", [])
-        print(f"Found {len(items)} results.")
         return [item["link"] for item in items]
 
 
