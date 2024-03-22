@@ -42,10 +42,10 @@ def change_name(name: str) -> str:
 
 def format_tools(tools: Dict[int, Any]) -> str:
     # Format this way so it's clear what the ID's are
-    tool_list = []
+    tool_str = ""
     for key in tools:
-        tool_list.append(f"ID: {key}, {tools[key]}\\n")
-    return str(tool_list)
+        tool_str += f"ID: {key}, {tools[key]}\n"
+    return tool_str
 
 
 def task_decompose(
@@ -151,7 +151,11 @@ def answer_summarize(
 
 
 def function_call(tool: Callable, parameters: Dict[str, Any]) -> Any:
-    return tool()(**parameters)
+    try:
+        return tool()(**parameters)
+    except Exception as e:
+        _LOGGER.error(f"Failed function_call on: {e}")
+        return None
 
 
 def retrieval(
@@ -160,7 +164,6 @@ def retrieval(
     tools: Dict[int, Any],
     previous_log: str,
 ) -> Tuple[List[Dict], str]:
-    # TODO: remove tools_used?
     tool_id = choose_tool(
         model, question, {k: v["description"] for k, v in tools.items()}
     )
@@ -200,7 +203,7 @@ def retrieval(
         call_results.extend(parse_tool_results(result))
         tool_results[i]["call_results"] = call_results
 
-    call_results_str = "\n\n".join([str(e) for e in call_results])
+    call_results_str = "\n\n".join([str(e) for e in call_results if e is not None])
     _LOGGER.info(f"\tCall Results: {call_results_str}")
     return tool_results, call_results_str
 
