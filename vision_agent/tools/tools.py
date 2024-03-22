@@ -338,7 +338,25 @@ class ImageSearch(Tool):
     }
 
     def __call__(self, image: Union[str, Path]) -> List[str]:
-        return ["image1.png", "image2.png", "image3.png"]
+        assert isinstance(image, str), "The input image must be a string url."
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            "key": "AIzaSyDy3UMHL1E3nFLTLdIQb3nyIU5-zhSfzPo",
+            "cx": "831f248aa2e1d4daf",
+            "q": image,
+            "num": 10,
+            "searchType":"image",
+        }
+        response = requests.get(url, params=params)
+
+        # Check if the request was successful
+        if response.status_code != 200:
+            raise RuntimeError(f"Failed to fetch data: {response.status_code} {response.reason}")
+
+        resp = response.json()
+        items = resp.get("items", [])
+        print(f"Found {len(items)} results.")
+        return [item["link"] for item in items]
 
 
 class Add(Tool):
