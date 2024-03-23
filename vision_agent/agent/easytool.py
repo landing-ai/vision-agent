@@ -49,6 +49,33 @@ def format_tools(tools: Dict[int, Any]) -> str:
     return tool_str
 
 
+def topological_sort(tasks: List[Dict]) -> List[Dict]:
+    in_degree = {task["id"]: 0 for task in tasks}
+    for task in tasks:
+        for dep in task["dep"]:
+            if dep in in_degree:
+                in_degree[task["id"]] += 1
+
+    queue = [task for task in tasks if in_degree[task["id"]] == 0]
+    sorted_order = []
+
+    while queue:
+        current = queue.pop(0)
+        sorted_order.append(current)
+
+        for task in tasks:
+            if current["id"] in task["dep"]:
+                in_degree[task["id"]] -= 1
+                if in_degree[task["id"]] == 0:
+                    queue.append(task)
+
+    if len(sorted_order) != len(tasks):
+        completed_ids = set([task["id"] for task in sorted_order])
+        remaining_tasks = [task for task in tasks if task["id"] not in completed_ids]
+        sorted_order.extend(remaining_tasks)
+    return sorted_order
+
+
 def task_decompose(
     model: Union[LLM, LMM, Agent], question: str, tools: Dict[int, Any]
 ) -> Optional[Dict]:
@@ -265,6 +292,10 @@ class EasyTool(Agent):
         if tasks is not None:
             task_list = [{"task": task, "id": i + 1} for i, task in enumerate(tasks)]
             task_list = task_topology(self.task_model, question, task_list)
+            try:
+                task_list = topological_sort(task_list)
+            except Exception:
+                _LOGGER.error(f"Failed topological_sort on: {task_list}")
         else:
             task_list = []
 
@@ -274,7 +305,6 @@ class EasyTool(Agent):
         answers = []
         for task in task_list:
             task_depend[task["id"]] = {"task": task["task"], "answer": ""}  # type: ignore
-        # TODO topological sort task_list
         all_tool_results = []
         for task in task_list:
             task_str = task["task"]
