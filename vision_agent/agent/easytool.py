@@ -45,7 +45,7 @@ def format_tools(tools: Dict[int, Any]) -> str:
     # Format this way so it's clear what the ID's are
     tool_str = ""
     for key in tools:
-        tool_str += f"ID: {key}, {tools[key]}\n"
+        tool_str += f"ID: {key} - {tools[key]}\n"
     return tool_str
 
 

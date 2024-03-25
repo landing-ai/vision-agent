@@ -14,7 +14,7 @@ Please note that:
 Output: """
 
 TASK_TOPOLOGY = """Given a complex user's question, I have decompose this question into some simple subtasks. I think there exists a logical connections and order amontg the tasks. Thus you need to help me output this logical connections and order.
-You must ONLY output in a parsible JSON format with the following format:"
+You must ONLY output in a parsible JSON format with the following format:
 
 {{"Tasks": [{{"task": task, "id", task_id, "dep": [dependency_task_id1, dependency_task_id2, ...]}}]}}
 
@@ -31,7 +31,6 @@ Output: """
 
 CHOOSE_TOOL = """This is the user's question: {question}
 These are the tools you can select to solve the question:
-Tool List:
 {tools}
 
 Please note that:
