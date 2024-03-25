@@ -505,6 +505,33 @@ class Divide(Tool):
         return round(input[0] / input[1], 2)
 
 
+class ExtractFrames(Tool):
+    name = "extract_frames_"
+    description = "'extract_frames_' extract image frames from the input video, return a list of tuple (frame, timestamp), where the timestamp is the relative time in seconds of the frame occurred in the video."
+    usage = {
+        "required_parameters": [{"name": "video_uri", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "Can you extract the frames from this video? Video: www.foobar.com/video?name=test.mp4",
+                "parameters": {"video_uri": "www.foobar.com/video?name=test.mp4"},
+            },
+            {
+                "scenario": "Can you extract the images from this video file? Video path: tests/data/test.mp4",
+                "parameters": {"video_uri": "tests/data/test.mp4"},
+            },
+        ],
+    }
+
+    def __call__(self, video_uri: str) -> list[tuple[np.ndarray, float]]:
+        try:
+            from vision_agent.tools.video import extract_frames_from_video
+        except Exception as e:
+            raise ImportError(
+                "vision_agent is not installed correctly (cause: missing dependencies), please run 'pip install vision-agent[video]' instead."
+            ) from e
+        return extract_frames_from_video(video_uri)
+
+
 TOOLS = {
     i: {"name": c.name, "description": c.description, "usage": c.usage, "class": c}
     for i, c in enumerate(
@@ -520,6 +547,7 @@ TOOLS = {
             Subtract,
             Multiply,
             Divide,
+            ExtractFrames,
         ]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))

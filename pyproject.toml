@@ -29,6 +29,10 @@ sentence-transformers = "2.*"
 openai = "1.*"
 typing_extensions = "4.*"
 
+[tool.poetry.group.video.dependencies]
+moviepy = "1.*"
+opencv-python-headless = "4.*"
+
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
 pytest = "7.*"
@@ -84,4 +88,5 @@ module = [
     "faiss.*",
     "openai.*",
     "sentence_transformers.*",
+    "moviepy.*",
 ]
