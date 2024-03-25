@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.lmm import LMM
+from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOLS
 
 from .agent import Agent
@@ -16,6 +16,14 @@ from .easytool_prompts import (
     CHOOSE_TOOL,
     TASK_DECOMPOSE,
     TASK_TOPOLOGY,
+)
+from .vision_agent_prompts import (
+    ANSWER_GENERATE_DEPENDS,
+    ANSWER_SUMMARIZE_DEPENDS,
+    CHOOSE_PARAMETER_DEPENDS,
+    CHOOSE_TOOL_DEPENDS,
+    TASK_DECOMPOSE_DEPENDS,
+    VISION_AGENT_REFLECTION,
 )
 
 logging.basicConfig(stream=sys.stdout)
@@ -77,9 +85,17 @@ def topological_sort(tasks: List[Dict]) -> List[Dict]:
 
 
 def task_decompose(
-    model: Union[LLM, LMM, Agent], question: str, tools: Dict[int, Any]
+    model: Union[LLM, LMM, Agent],
+    question: str,
+    tools: Dict[int, Any],
+    reflections: str,
 ) -> Optional[Dict]:
-    prompt = TASK_DECOMPOSE.format(question=question, tools=format_tools(tools))
+    if reflections:
+        prompt = TASK_DECOMPOSE_DEPENDS.format(
+            question=question, tools=format_tools(tools), reflections=reflections
+        )
+    else:
+        prompt = TASK_DECOMPOSE.format(question=question, tools=format_tools(tools))
     tries = 0
     str_result = ""
     while True:
@@ -122,9 +138,17 @@ def task_topology(
 
 
 def choose_tool(
-    model: Union[LLM, LMM, Agent], question: str, tools: Dict[int, Any]
+    model: Union[LLM, LMM, Agent],
+    question: str,
+    tools: Dict[int, Any],
+    reflections: str,
 ) -> Optional[int]:
-    prompt = CHOOSE_TOOL.format(question=question, tools=format_tools(tools))
+    if reflections:
+        prompt = CHOOSE_TOOL_DEPENDS.format(
+            question=question, tools=format_tools(tools), reflections=reflections
+        )
+    else:
+        prompt = CHOOSE_TOOL.format(question=question, tools=format_tools(tools))
     tries = 0
     str_result = ""
     while True:
@@ -141,12 +165,24 @@ def choose_tool(
 
 
 def choose_parameter(
-    model: Union[LLM, LMM, Agent], question: str, tool_usage: Dict, previous_log: str
+    model: Union[LLM, LMM, Agent],
+    question: str,
+    tool_usage: Dict,
+    previous_log: str,
+    reflections: str,
 ) -> Optional[Any]:
     # TODO: should format tool_usage
-    prompt = CHOOSE_PARAMETER.format(
-        question=question, tool_usage=tool_usage, previous_log=previous_log
-    )
+    if reflections:
+        prompt = CHOOSE_PARAMETER_DEPENDS.format(
+            question=question,
+            tool_usage=tool_usage,
+            previous_log=previous_log,
+            reflections=reflections,
+        )
+    else:
+        prompt = CHOOSE_PARAMETER.format(
+            question=question, tool_usage=tool_usage, previous_log=previous_log
+        )
     tries = 0
     str_result = ""
     while True:
@@ -163,18 +199,35 @@ def choose_parameter(
 
 
 def answer_generate(
-    model: Union[LLM, LMM, Agent], question: str, call_results: str, previous_log: str
+    model: Union[LLM, LMM, Agent],
+    question: str,
+    call_results: str,
+    previous_log: str,
+    reflections: str,
 ) -> str:
-    prompt = ANSWER_GENERATE.format(
-        question=question, call_results=call_results, previous_log=previous_log
-    )
+    if reflections:
+        prompt = ANSWER_GENERATE_DEPENDS.format(
+            question=question,
+            call_results=call_results,
+            previous_log=previous_log,
+            reflections=reflections,
+        )
+    else:
+        prompt = ANSWER_GENERATE.format(
+            question=question, call_results=call_results, previous_log=previous_log
+        )
     return model(prompt)
 
 
 def answer_summarize(
-    model: Union[LLM, LMM, Agent], question: str, answers: List[Dict]
+    model: Union[LLM, LMM, Agent], question: str, answers: List[Dict], reflections: str
 ) -> str:
-    prompt = ANSWER_SUMMARIZE.format(question=question, answers=answers)
+    if reflections:
+        prompt = ANSWER_SUMMARIZE_DEPENDS.format(
+            question=question, answers=answers, reflections=reflections
+        )
+    else:
+        prompt = ANSWER_SUMMARIZE.format(question=question, answers=answers)
     return model(prompt)
 
 
@@ -183,7 +236,8 @@ def function_call(tool: Callable, parameters: Dict[str, Any]) -> Any:
         return tool()(**parameters)
     except Exception as e:
         _LOGGER.error(f"Failed function_call on: {e}")
-        return None
+        # return error message so it can self-correct
+        return str(e)
 
 
 def retrieval(
@@ -191,9 +245,10 @@ def retrieval(
     question: str,
     tools: Dict[int, Any],
     previous_log: str,
+    reflections: str,
 ) -> Tuple[List[Dict], str]:
     tool_id = choose_tool(
-        model, question, {k: v["description"] for k, v in tools.items()}
+        model, question, {k: v["description"] for k, v in tools.items()}, reflections
     )
     if tool_id is None:
         return [{}], ""
@@ -203,7 +258,9 @@ def retrieval(
     tool_usage = tool_instructions["usage"]
     tool_name = tool_instructions["name"]
 
-    parameters = choose_parameter(model, question, tool_usage, previous_log)
+    parameters = choose_parameter(
+        model, question, tool_usage, previous_log, reflections
+    )
     _LOGGER.info(f"\tParameters: {parameters} for {tool_name}")
     if parameters is None:
         return [{}], ""
@@ -214,16 +271,12 @@ def retrieval(
     def parse_tool_results(result: Dict[str, Union[Dict, List]]) -> Any:
         call_results: List[Any] = []
         if isinstance(result["parameters"], Dict):
-            call_result = function_call(tools[tool_id]["class"], result["parameters"])
-            if call_result is None:
-                return call_results
-            call_results.append(call_result)
+            call_results.append(
+                function_call(tools[tool_id]["class"], result["parameters"])
+            )
         elif isinstance(result["parameters"], List):
             for parameters in result["parameters"]:
-                call_result = function_call(tools[tool_id]["class"], parameters)
-                if call_result is None:
-                    continue
-                call_results.append(call_result)
+                call_results.append(function_call(tools[tool_id]["class"], parameters))
         return call_results
 
     call_results = []
@@ -236,34 +289,79 @@ def retrieval(
     return tool_results, call_results_str
 
 
-class EasyTool(Agent):
-    r"""This is an implementation of the EasyTool paper https://arxiv.org/abs/2401.06201
-    based on the original implementation https://github.com/microsoft/JARVIS/tree/main/easytool
-    from the funcQA code.
+def create_tasks(
+    task_model: Union[LLM, LMM], question: str, tools: Dict[int, Any], reflections: str
+) -> List[Dict]:
+    tasks = task_decompose(
+        task_model,
+        question,
+        {k: v["description"] for k, v in tools.items()},
+        reflections,
+    )
+
+    _LOGGER.info(f"Tasks: {tasks}")
+    if tasks is not None:
+        task_list = [{"task": task, "id": i + 1} for i, task in enumerate(tasks)]
+        task_list = task_topology(task_model, question, task_list)
+        try:
+            task_list = topological_sort(task_list)
+        except Exception:
+            _LOGGER.error(f"Failed topological_sort on: {task_list}")
+    else:
+        task_list = []
+    return task_list
+
+
+def self_reflect(
+    reflect_model: Union[LLM, LMM],
+    question: str,
+    tool_result: List[Dict],
+    final_answer: str,
+    image: Optional[Union[str, Path]] = None,
+) -> str:
+    prompt = VISION_AGENT_REFLECTION.format(
+        question=question, tool_results=str(tool_result), final_answer=final_answer
+    )
+    if issubclass(type(reflect_model), LMM):
+        return reflect_model(prompt, image=image)  # type: ignore
+    return reflect_model(prompt)
+
+
+def parse_reflect(reflect: str) -> bool:
+    return reflect.lower() == "finish"
+
+
+class VisionAgent(Agent):
+    r"""Vision Agent is an agent framework that utilizes tools as well as self
+    reflection to accomplish tasks, in particular vision tasks. Vision Agent is based
+    off of EasyTool https://arxiv.org/abs/2401.06201 and Reflexion
+    https://arxiv.org/abs/2303.11366 where it will attempt to complete a task and then
+    reflect on whether or not it was able to accomplish the task based off of the plan
+    and final results, if not it will redo the task with this newly added reflection.
 
     Examples::
-        >>> from vision_agent.agent import EasyTool
-        >>> agent = EasyTool()
-        >>> resp = agent("If a car is traveling at 64 km/h, how many kilometers does it travel in 29 minutes?")
+        >>> from vision_agent.agent import VisionAgent
+        >>> agent = VisionAgent()
+        >>> resp = agent("If red tomatoes cost $5 each and yellow tomatoes cost $2.50 each, what is the total cost of all the tomatoes in the image?", image="tomatoes.jpg")
         >>> print(resp)
-        >>> "It will travel approximately 31.03 kilometers in 29 minutes."
-        >>> resp = agent("How many cards are in this image?", image="cards.jpg")
-        >>> print(resp)
-        >>> "There are 2 cards in this image."
+        >>> "The total cost is $57.50."
     """
 
     def __init__(
         self,
         task_model: Optional[Union[LLM, LMM]] = None,
         answer_model: Optional[Union[LLM, LMM]] = None,
+        reflect_model: Optional[Union[LLM, LMM]] = None,
+        max_retries: int = 2,
         verbose: bool = False,
     ):
         self.task_model = (
             OpenAILLM(json_mode=True) if task_model is None else task_model
         )
         self.answer_model = OpenAILLM() if answer_model is None else answer_model
+        self.reflect_model = OpenAILMM() if reflect_model is None else reflect_model
+        self.max_retries = max_retries
 
-        self.retrieval_num = 3
         self.tools = TOOLS
         if verbose:
             _LOGGER.setLevel(logging.INFO)
@@ -283,51 +381,59 @@ class EasyTool(Agent):
         question = chat[0]["content"]
         if image:
             question += f" Image name: {image}"
-        tasks = task_decompose(
-            self.task_model,
-            question,
-            {k: v["description"] for k, v in self.tools.items()},
-        )
-        _LOGGER.info(f"Tasks: {tasks}")
-        if tasks is not None:
-            task_list = [{"task": task, "id": i + 1} for i, task in enumerate(tasks)]
-            task_list = task_topology(self.task_model, question, task_list)
-            try:
-                task_list = topological_sort(task_list)
-            except Exception:
-                _LOGGER.error(f"Failed topological_sort on: {task_list}")
-        else:
-            task_list = []
 
-        _LOGGER.info(f"Task Dependency: {task_list}")
-        task_depend = {"Original Quesiton": question}
-        previous_log = ""
-        answers = []
-        for task in task_list:
-            task_depend[task["id"]] = {"task": task["task"], "answer": ""}  # type: ignore
-        all_tool_results = []
-        for task in task_list:
-            task_str = task["task"]
-            previous_log = str(task_depend)
-            _LOGGER.info(f"\tSubtask: {task_str}")
-            tool_results, call_results = retrieval(
-                self.task_model,
-                task_str,
-                self.tools,
-                previous_log,
+        reflections = ""
+        final_answer = ""
+        all_tool_results: List[Dict] = []
+
+        for _ in range(self.max_retries):
+            task_list = create_tasks(self.task_model, question, self.tools, reflections)
+
+            _LOGGER.info(f"Task Dependency: {task_list}")
+            task_depend = {"Original Quesiton": question}
+            previous_log = ""
+            answers = []
+            for task in task_list:
+                task_depend[task["id"]] = {"task": task["task"], "answer": "", "call_result": ""}  # type: ignore
+            all_tool_results = []
+
+            for task in task_list:
+                task_str = task["task"]
+                previous_log = str(task_depend)
+                _LOGGER.info(f"\tSubtask: {task_str}")
+                tool_results, call_results = retrieval(
+                    self.task_model,
+                    task_str,
+                    self.tools,
+                    previous_log,
+                    reflections,
+                )
+                answer = answer_generate(
+                    self.answer_model, task_str, call_results, previous_log, reflections
+                )
+
+                for tool_result in tool_results:
+                    tool_result["answer"] = answer
+                all_tool_results.extend(tool_results)
+
+                _LOGGER.info(f"\tAnswer: {answer}")
+                answers.append({"task": task_str, "answer": answer})
+                task_depend[task["id"]]["answer"] = answer  # type: ignore
+                task_depend[task["id"]]["call_result"] = call_results  # type: ignore
+            final_answer = answer_summarize(
+                self.answer_model, question, answers, reflections
             )
-            answer = answer_generate(
-                self.answer_model, task_str, call_results, previous_log
+
+            reflection = self_reflect(
+                self.reflect_model, question, all_tool_results, final_answer, image
             )
+            _LOGGER.info(f"\tReflection: {reflection}")
+            if parse_reflect(reflection):
+                break
+            else:
+                reflections += reflection
 
-            for tool_result in tool_results:
-                tool_result["answer"] = answer
-            all_tool_results.extend(tool_results)
-
-            _LOGGER.info(f"\tAnswer: {answer}")
-            answers.append({"task": task_str, "answer": answer})
-            task_depend[task["id"]]["answer"] = answer  # type: ignore
-        return answer_summarize(self.answer_model, question, answers), all_tool_results
+        return final_answer, all_tool_results
 
     def chat(
         self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
