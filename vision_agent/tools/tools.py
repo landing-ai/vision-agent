@@ -180,6 +180,7 @@ class GroundingDINO(Tool):
                 ]
             if "scores" in elt:
                 elt["scores"] = [round(score, 2) for score in elt["scores"]]
+            elt["size"] = (image_size[1], image_size[0])
         return cast(List[Dict], resp_data)
 
 
@@ -341,6 +342,53 @@ class Crop(Tool):
         return tmp.name
 
 
+class BboxArea(Tool):
+    name = "bbox_area_"
+    description = "'bbox_area_' returns the area of the bounding box in pixels normalized to 2 decimal places."
+    usage = {
+        "required_parameters": [{"name": "bbox", "type": "List[int]"}],
+        "examples": [
+            {
+                "scenario": "If you want to calculate the area of the bounding box [0, 0, 100, 100]",
+                "parameters": {"bboxes": [0.2, 0.21, 0.34, 0.42]},
+            }
+        ],
+    }
+
+    def __call__(self, bboxes: List[Dict]) -> List[Dict]:
+        areas = []
+        for elt in bboxes:
+            height, width = elt["size"]
+            for label, bbox in zip(elt["labels"], elt["bboxes"]):
+                x1, y1, x2, y2 = bbox
+                areas.append(
+                    {
+                        "area": round((x2 - x1) * (y2 - y1) * width * height, 2),
+                        "label": label,
+                    }
+                )
+        return areas
+
+
+class SegArea(Tool):
+    name = "seg_area_"
+    description = "'seg_area_' returns the area of the segmentation mask in pixels normalized to 2 decimal places."
+    usage = {
+        "required_parameters": [{"name": "masks", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "If you want to calculate the area of the segmentation mask, pass the masks file name.",
+                "parameters": {"masks": "mask_file.jpg"},
+            },
+        ],
+    }
+
+    def __call__(self, masks: Union[str, Path]) -> float:
+        pil_mask = Image.open(str(masks))
+        np_mask = np.array(pil_mask)  # type: ignore
+        return round(np.sum(np_mask) / 255, 2)
+
+
 class Add(Tool):
     name = "add_"
     description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
@@ -418,6 +466,8 @@ TOOLS = {
             AgentGroundingSAM,
             Counter,
             Crop,
+            BboxArea,
+            SegArea,
             Add,
             Subtract,
             Multiply,
