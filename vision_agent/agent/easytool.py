@@ -246,10 +246,10 @@ class EasyTool(Agent):
         >>> agent = EasyTool()
         >>> resp = agent("If a car is traveling at 64 km/h, how many kilometers does it travel in 29 minutes?")
         >>> print(resp)
-        >>> "It will travel approximately 31.03 kilometers in 29 minutes."
+        "It will travel approximately 31.03 kilometers in 29 minutes."
         >>> resp = agent("How many cards are in this image?", image="cards.jpg")
         >>> print(resp)
-        >>> "There are 2 cards in this image."
+        "There are 2 cards in this image."
     """
 
     def __init__(

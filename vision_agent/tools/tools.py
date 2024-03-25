@@ -58,13 +58,13 @@ class CLIP(Tool):
         >>> import vision_agent as va
         >>> clip = va.tools.CLIP()
         >>> clip(["red line", "yellow dot"], "ct_scan1.jpg"))
-        >>> [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
+        [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
     """
 
     _ENDPOINT = "https://rb4ii6dfacmwqfxivi4aedyyfm0endsv.lambda-url.us-east-2.on.aws"
 
     name = "clip_"
-    description = "'clip_' is a tool that can classify or tag any image given a set if input classes or tags."
+    description = "'clip_' is a tool that can classify or tag any image given a set of input classes or tags."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "List[str]"},
@@ -121,9 +121,9 @@ class GroundingDINO(Tool):
         >>> import vision_agent as va
         >>> t = va.tools.GroundingDINO()
         >>> t("red line. yellow dot", "ct_scan1.jpg")
-        >>> [{'labels': ['red line', 'yellow dot'],
-        >>> 'bboxes': [[0.38, 0.15, 0.59, 0.7], [0.48, 0.25, 0.69, 0.71]],
-        >>> 'scores': [0.98, 0.02]}]
+        [{'labels': ['red line', 'yellow dot'],
+        'bboxes': [[0.38, 0.15, 0.59, 0.7], [0.48, 0.25, 0.69, 0.71]],
+        'scores': [0.98, 0.02]}]
     """
 
     _ENDPOINT = "https://chnicr4kes5ku77niv2zoytggq0qyqlp.lambda-url.us-east-2.on.aws"
@@ -192,18 +192,18 @@ class GroundingSAM(Tool):
         >>> import vision_agent as va
         >>> t = va.tools.GroundingSAM()
         >>> t(["red line", "yellow dot"], ct_scan1.jpg"])
-        >>> [{'labels': ['yellow dot', 'red line'],
-        >>> 'bboxes': [[0.38, 0.15, 0.59, 0.7], [0.48, 0.25, 0.69, 0.71]],
-        >>> 'masks': [array([[0, 0, 0, ..., 0, 0, 0],
-        >>>    [0, 0, 0, ..., 0, 0, 0],
-        >>>    ...,
-        >>>    [0, 0, 0, ..., 0, 0, 0],
-        >>>    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)},
-        >>> array([[0, 0, 0, ..., 0, 0, 0],
-        >>>    [0, 0, 0, ..., 0, 0, 0],
-        >>>    ...,
-        >>>    [1, 1, 1, ..., 1, 1, 1],
-        >>>    [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
+        [{'labels': ['yellow dot', 'red line'],
+        'bboxes': [[0.38, 0.15, 0.59, 0.7], [0.48, 0.25, 0.69, 0.71]],
+        'masks': [array([[0, 0, 0, ..., 0, 0, 0],
+           [0, 0, 0, ..., 0, 0, 0],
+           ...,
+           [0, 0, 0, ..., 0, 0, 0],
+           [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)},
+        array([[0, 0, 0, ..., 0, 0, 0],
+           [0, 0, 0, ..., 0, 0, 0],
+           ...,
+           [1, 1, 1, ..., 1, 1, 1],
+           [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
     """
 
     _ENDPOINT = "https://cou5lfmus33jbddl6hoqdfbw7e0qidrw.lambda-url.us-east-2.on.aws"

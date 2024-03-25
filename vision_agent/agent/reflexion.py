@@ -74,14 +74,14 @@ class Reflexion(Agent):
         >>> question = "How many tires does a truck have?"
         >>> resp = agent(question)
         >>> print(resp)
-        >>> "18"
+        "18"
         >>> resp = agent([
         >>>     {"role": "user", "content": question},
         >>>     {"role": "assistant", "content": resp},
         >>>     {"role": "user", "content": "No I mean those regular trucks but where the back tires are double."}
         >>> ])
         >>> print(resp)
-        >>> "6"
+        "6"
         >>> agent = Reflexion(
         >>>     self_reflect_model=va.lmm.OpenAILMM(),
         >>>     action_agent=va.lmm.OpenAILMM()
@@ -89,14 +89,14 @@ class Reflexion(Agent):
         >>> quesiton = "How many hearts are in this image?"
         >>> resp = agent(question, image="cards.png")
         >>> print(resp)
-        >>> "6"
+        "6"
         >>> resp = agent([
         >>>     {"role": "user", "content": question},
         >>>     {"role": "assistant", "content": resp},
         >>>     {"role": "user", "content": "No, please count the hearts on the bottom card."}
         >>> ], image="cards.png")
         >>> print(resp)
-        >>> "4"
+        "4"
         )
     """
 
