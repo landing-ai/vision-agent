@@ -9,66 +9,97 @@
 ![version](https://img.shields.io/pypi/pyversions/vision-agent)
 </div>
 
+Vision Agent is a library that helps you utilize agent frameworks for your vision tasks.
+Check out our discord for updates and roadmaps!
 
-Vision Agent is a library for that helps you to use multimodal models to organize and structure your image data. Check out our discord for roadmaps and updates! 
-
-One of the problems of dealing with image data is it can be difficult to organize and search. For example, you might have a bunch of pictures of houses and want to count how many yellow houses you have, or how many houses with adobe roofs. The vision agent library uses LMMs to help create tags or descriptions of images to allow you to search over them, or use them in a database to carry out other operations.
+Many current vision problems can easy take hours or days to solve, you need to find the
+right model, figure out how to use it, possibly write programming logic around it to 
+accomplish the task you want or even more expensive, train your own model. Vision Agent
+aims to provide an in-seconds experience by allowing users to describe their problem in
+text and utilizing agent frameworks to solve the task for them.
 
 ## Getting Started
-### LMMs
-To get started, you can use an LMM to start generating text from images. The following code will use the LLaVA-1.6 34B model to generate a description of the image you pass it.
+### Installation
+To get started, you can install the library using pip:
 
-```python
-import vision_agent as va
-
-model = va.lmm.get_lmm("llava")
-model.generate("Describe this image", "image.png")
->>> "A yellow house with a green lawn."
+```bash
+pip install vision-agent
 ```
 
-**WARNING** We are hosting the LLaVA-1.6 34B model, if it times out please wait ~3-5 min for the server to warm up as it shuts down when usage is low.
+Ensure you have an OpenAI API key and set it as an environment variable:
 
-### DataStore
-You can use the `DataStore` class to store your images, add new metadata to them such as descriptions, and search over different columns.
-
-```python
-import vision_agent as va
-import pandas as pd
-
-df = pd.DataFrame({"image_paths": ["image1.png", "image2.png", "image3.png"]})
-ds = va.data.DataStore(df)
-ds = ds.add_lmm(va.lmm.get_lmm("llava"))
-ds = ds.add_embedder(va.emb.get_embedder("sentence-transformer"))
-
-ds = ds.add_column("descriptions", "Describe this image.")
+```bash
+export OPENAI_API_KEY="your-api-key"
 ```
 
-This will use the prompt you passed, "Describe this image.", and the LMM to create a new column of descriptions for your image. Your data will now contain a new column with the descriptions of each image:
-
-| image\_paths | image\_id | descriptions |
-| --- | --- | --- |
-| image1.png | 1 | "A yellow house with a green lawn." |
-| image2.png | 2 | "A white house with a two door garage." |
-| image3.png | 3 | "A wooden house in the middle of the forest." |
-
-You can now create an index on the descriptions column and search over it to find images that match your query.
+### Vision Agents
+You can interact with the agents as you would with any LLM or LMM model:
 
 ```python
-ds = ds.build_index("descriptions")
-ds.search("A yellow house.", top_k=1)
->>> [{'image_paths': 'image1.png', 'image_id': 1, 'descriptions': 'A yellow house with a green lawn.'}]
+>>> import vision_agent as va
+>>> agent = VisionAgent()
+>>> agent("How many apples are in this image?", image="apples.jpg")
+"There are 2 apples in the image."
 ```
 
-You can also create other columns for you data such as `is_yellow`:
+To better understand how the model came up with it's answer, you can also run it in
+debug mode by passing in the verbose argument:
 
 ```python
-ds = ds.add_column("is_yellow", "Is the house in this image yellow? Please answer yes or no.")
+>>> agent = VisionAgent(verbose=True)
 ```
 
-which would give you a dataset similar to this:
+You can also have it return the workflow it used to complete the task along with all
+the individual steps and tools to get the answer:
 
-| image\_paths | image\_id | descriptions | is\_yellow |
-| --- | --- | --- | --- |
-| image1.png | 1 | "A yellow house with a green lawn." | "yes" |
-| image2.png | 2 | "A white house with a two door garage." | "no" |
-| image3.png | 3 | "A wooden house in the middle of the forest." | "no" |
+```python
+>>> resp, workflow = agent.chat_with_workflow([{"role": "user", "content": "How many apples are in this image?"}], image="apples.jpg")
+>>> print(workflow)
+[{"task": "Count the number of apples using 'grounding_dino_'.",
+  "tool": "grounding_dino_",
+  "parameters": {"prompt": "apple", "image": "apples.jpg"},
+  "call_results": [[
+    {
+      "labels": ["apple", "apple"],
+      "scores": [0.99, 0.95]
+      "bboxes": [
+        [0.58, 0.2, 0.72, 0.45],
+        [0.94, 0.57, 0.98, 0.66],
+      ]
+    }
+  ]],
+  "answer": "There are 2 apples in the image.",
+}]
+```
+
+### Tools
+There are a variety of tools for the model or the user to use. Some are executed locally
+while others are hosted for you. You can also ask an LLM directly to build a tool for
+you. For example:
+
+```python
+>>> import vision_agent as va
+>>> llm = va.llm.OpenAILLM()
+>>> detector = llm.generate_detector("Can you build an apple detector for me?")
+>>> detector("apples.jpg")
+[{"labels": ["apple", "apple"],
+  "scores": [0.99, 0.95]
+  "bboxes": [
+    [0.58, 0.2, 0.72, 0.45],
+    [0.94, 0.57, 0.98, 0.66],
+  ]
+}]
+```
+
+| Tool | Description |
+| --- | --- |
+| CLIP | CLIP is a tool that can classify or tag any image given a set of input classes or tags. |
+| GroundingDINO | GroundingDINO is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. |
+| GroundingSAM | GroundingSAM is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. |
+| Counter | Counter detects and counts the number of objects in an image given an input such as a category name or referring expression. |
+| Crop | Crop crops an image given a bounding box and returns a file name of the cropped image. |
+| BboxArea | BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places. |
+| SegArea | SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places. |
+
+
+It also has a basic set of calculate tools such as add, subtract, multiply and divide.

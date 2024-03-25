@@ -344,7 +344,7 @@ class VisionAgent(Agent):
         >>> agent = VisionAgent()
         >>> resp = agent("If red tomatoes cost $5 each and yellow tomatoes cost $2.50 each, what is the total cost of all the tomatoes in the image?", image="tomatoes.jpg")
         >>> print(resp)
-        >>> "The total cost is $57.50."
+        "The total cost is $57.50."
     """
 
     def __init__(
