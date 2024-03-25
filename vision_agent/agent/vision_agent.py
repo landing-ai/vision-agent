@@ -323,7 +323,7 @@ def self_reflect(
         question=question, tool_results=str(tool_result), final_answer=final_answer
     )
     if issubclass(type(reflect_model), LMM):
-        return reflect_model(prompt, image=image)
+        return reflect_model(prompt, image=image)  # type: ignore
     return reflect_model(prompt)
 
 
@@ -384,7 +384,7 @@ class VisionAgent(Agent):
 
         reflections = ""
         final_answer = ""
-        all_tool_results = []
+        all_tool_results: List[Dict] = []
 
         for _ in range(self.max_retries):
             task_list = create_tasks(self.task_model, question, self.tools, reflections)

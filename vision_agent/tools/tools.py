@@ -385,8 +385,8 @@ class SegArea(Tool):
 
     def __call__(self, masks: Union[str, Path]) -> float:
         pil_mask = Image.open(str(masks))
-        np_mask = np.array(pil_mask)  # type: ignore
-        return round(np.sum(np_mask) / 255, 2)
+        np_mask = np.array(pil_mask)
+        return cast(float, round(np.sum(np_mask) / 255, 2))
 
 
 class Add(Tool):
