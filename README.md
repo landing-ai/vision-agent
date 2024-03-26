@@ -10,13 +10,12 @@
 </div>
 
 Vision Agent is a library that helps you utilize agent frameworks for your vision tasks.
-Check out our discord for updates and roadmaps!
-
-Many current vision problems can easy take hours or days to solve, you need to find the
+Many current vision problems can easily take hours or days to solve, you need to find the
 right model, figure out how to use it, possibly write programming logic around it to 
 accomplish the task you want or even more expensive, train your own model. Vision Agent
 aims to provide an in-seconds experience by allowing users to describe their problem in
-text and utilizing agent frameworks to solve the task for them.
+text and utilizing agent frameworks to solve the task for them. Check out our discord
+for updates and roadmaps!
 
 ## Getting Started
 ### Installation
@@ -61,7 +60,7 @@ the individual steps and tools to get the answer:
   "call_results": [[
     {
       "labels": ["apple", "apple"],
-      "scores": [0.99, 0.95]
+      "scores": [0.99, 0.95],
       "bboxes": [
         [0.58, 0.2, 0.72, 0.45],
         [0.94, 0.57, 0.98, 0.66],
@@ -83,7 +82,7 @@ you. For example:
 >>> detector = llm.generate_detector("Can you build an apple detector for me?")
 >>> detector("apples.jpg")
 [{"labels": ["apple", "apple"],
-  "scores": [0.99, 0.95]
+  "scores": [0.99, 0.95],
   "bboxes": [
     [0.58, 0.2, 0.72, 0.45],
     [0.94, 0.57, 0.98, 0.66],
