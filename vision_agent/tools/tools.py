@@ -507,7 +507,7 @@ class Divide(Tool):
 
 class ExtractFrames(Tool):
     name = "extract_frames_"
-    description = "'extract_frames_' extract image frames from the input video, return a list of tuple (frame, timestamp), where the timestamp is the relative time in seconds of the frame occurred in the video."
+    description = "'extract_frames_' extract image frames from the input video, return a list of tuple (frame, timestamp), where the timestamp is the relative time in seconds of the frame occurred in the video, the frame is a local image file path that stores the frame."
     usage = {
         "required_parameters": [{"name": "video_uri", "type": "str"}],
         "examples": [
@@ -522,14 +522,23 @@ class ExtractFrames(Tool):
         ],
     }
 
-    def __call__(self, video_uri: str) -> list[tuple[np.ndarray, float]]:
+    def __call__(self, video_uri: str) -> list[tuple[str, float]]:
         try:
             from vision_agent.tools.video import extract_frames_from_video
         except Exception as e:
             raise ImportError(
                 "vision_agent is not installed correctly (cause: missing dependencies), please run 'pip install vision-agent[video]' instead."
             ) from e
-        return extract_frames_from_video(video_uri)
+        frames = extract_frames_from_video(video_uri)
+        result = []
+        _LOGGER.info(
+            f"Extracted {len(frames)} frames from video {video_uri}. Temporarily saving them as images to disk for downstream tasks."
+        )
+        for frame, ts in frames:
+            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                Image.fromarray(frame).save(tmp)
+            result.append((tmp.name, ts))
+        return result
 
 
 TOOLS = {
