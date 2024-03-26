@@ -315,12 +315,16 @@ def create_tasks(
 def self_reflect(
     reflect_model: Union[LLM, LMM],
     question: str,
+    tools: Dict[int, Any],
     tool_result: List[Dict],
     final_answer: str,
     image: Optional[Union[str, Path]] = None,
 ) -> str:
     prompt = VISION_AGENT_REFLECTION.format(
-        question=question, tool_results=str(tool_result), final_answer=final_answer
+        question=question,
+        tools=format_tools(tools),
+        tool_results=str(tool_result),
+        final_answer=final_answer,
     )
     if issubclass(type(reflect_model), LMM):
         return reflect_model(prompt, image=image)  # type: ignore
@@ -328,7 +332,8 @@ def self_reflect(
 
 
 def parse_reflect(reflect: str) -> bool:
-    return reflect.lower() == "finish"
+    # GPT-4V has a hard time following directions, so make the criteria less strict
+    return "finish" in reflect.lower() and len(reflect) < 100
 
 
 class VisionAgent(Agent):
@@ -425,7 +430,12 @@ class VisionAgent(Agent):
             )
 
             reflection = self_reflect(
-                self.reflect_model, question, all_tool_results, final_answer, image
+                self.reflect_model,
+                question,
+                self.tools,
+                all_tool_results,
+                final_answer,
+                image,
             )
             _LOGGER.info(f"\tReflection: {reflection}")
             if parse_reflect(reflection):
