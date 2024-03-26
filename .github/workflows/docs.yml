@@ -1,4 +1,4 @@
-name: pdoc
+name: publish-doc
 
 # build the documentation whenever there are new commits on main
 on:
