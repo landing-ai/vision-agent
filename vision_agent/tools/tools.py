@@ -99,7 +99,7 @@ class CLIP(Tool):
             image: the input image to classify.
 
         Returns:
-            A list of dictionaries containing the labels and scores. Each dictionary contains the classification result for an image. E.g. [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]   
+            A list of dictionaries containing the labels and scores. Each dictionary contains the classification result for an image. E.g. [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
         """
         image_b64 = convert_to_b64(image)
         data = {
@@ -342,6 +342,7 @@ class Counter(Tool):
 
 class Crop(Tool):
     r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
+
     name = "crop_"
     description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image."
     usage = {

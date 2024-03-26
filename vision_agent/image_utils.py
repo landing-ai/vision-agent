@@ -29,7 +29,7 @@ def get_image_size(data: Union[str, Path, np.ndarray, ImageType]) -> Tuple[int, 
     """Get the size of an image.
 
     Parameters:
-        data: the input image 
+        data: the input image
 
     Returns:
         The size of the image in the form (height, width)
