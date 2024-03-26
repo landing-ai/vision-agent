@@ -30,7 +30,7 @@ def normalize_bbox(
 def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
     r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
 
-    Args:
+    Parameters:
         mask_rle: Run-length as string formated (start length)
         shape: The (height, width) of array to return
     """
@@ -54,7 +54,8 @@ class CLIP(Tool):
     r"""CLIP is a tool that can classify or tag any image given a set if input classes
     or tags.
 
-    Examples::
+    Example
+    -------
         >>> import vision_agent as va
         >>> clip = va.tools.CLIP()
         >>> clip(["red line", "yellow dot"], "ct_scan1.jpg"))
@@ -89,7 +90,17 @@ class CLIP(Tool):
         ],
     }
 
+    # TODO: Add support for input multiple images, which aligns with the output type.
     def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
+        """Invoke the CLIP model.
+
+        Parameters:
+            prompt: a list of classes or tags to classify the image.
+            image: the input image to classify.
+
+        Returns:
+            A list of dictionaries containing the labels and scores. Each dictionary contains the classification result for an image. E.g. [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
+        """
         image_b64 = convert_to_b64(image)
         data = {
             "classes": prompt,
@@ -117,7 +128,8 @@ class GroundingDINO(Tool):
     r"""Grounding DINO is a tool that can detect arbitrary objects with inputs such as
     category names or referring expressions.
 
-    Examples::
+    Example
+    -------
         >>> import vision_agent as va
         >>> t = va.tools.GroundingDINO()
         >>> t("red line. yellow dot", "ct_scan1.jpg")
@@ -154,7 +166,17 @@ class GroundingDINO(Tool):
         ],
     }
 
+    # TODO: Add support for input multiple images, which aligns with the output type.
     def __call__(self, prompt: str, image: Union[str, Path, ImageType]) -> List[Dict]:
+        """Invoke the Grounding DINO model.
+
+        Parameters:
+            prompt: one or multiple class names to detect. The classes should be separated by a period if there are multiple classes. E.g. "big dog . small cat"
+            image: the input image to run against.
+
+        Returns:
+            A list of dictionaries containing the labels, scores, and bboxes. Each dictionary contains the detection result for an image.
+        """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
         data = {
@@ -188,7 +210,8 @@ class GroundingSAM(Tool):
     r"""Grounding SAM is a tool that can detect and segment arbitrary objects with
     inputs such as category names or referring expressions.
 
-    Examples::
+    Example
+    -------
         >>> import vision_agent as va
         >>> t = va.tools.GroundingSAM()
         >>> t(["red line", "yellow dot"], ct_scan1.jpg"])
@@ -234,7 +257,17 @@ class GroundingSAM(Tool):
         ],
     }
 
+    # TODO: Add support for input multiple images, which aligns with the output type.
     def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> List[Dict]:
+        """Invoke the Grounding SAM model.
+
+        Parameters:
+            prompt: a list of classes to segment.
+            image: the input image to segment.
+
+        Returns:
+            A list of dictionaries containing the labels, scores, bboxes and masks. Each dictionary contains the segmentation result for an image.
+        """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
         data = {
@@ -260,8 +293,7 @@ class GroundingSAM(Tool):
             ret_pred["labels"].append(pred["label_name"])
             ret_pred["bboxes"].append(normalize_bbox(pred["bbox"], image_size))
             ret_pred["masks"].append(mask)
-        ret_preds = [ret_pred]
-        return ret_preds
+        return [ret_pred]
 
 
 class AgentGroundingSAM(GroundingSAM):
@@ -282,6 +314,8 @@ class AgentGroundingSAM(GroundingSAM):
 
 
 class Counter(Tool):
+    r"""Counter detects and counts the number of objects in an image given an input such as a category name or referring expression."""
+
     name = "counter_"
     description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression."
     usage = {
@@ -307,6 +341,8 @@ class Counter(Tool):
 
 
 class Crop(Tool):
+    r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
+
     name = "crop_"
     description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image."
     usage = {
@@ -343,6 +379,8 @@ class Crop(Tool):
 
 
 class BboxArea(Tool):
+    r"""BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places."""
+
     name = "bbox_area_"
     description = "'bbox_area_' returns the area of the bounding box in pixels normalized to 2 decimal places."
     usage = {
@@ -371,6 +409,8 @@ class BboxArea(Tool):
 
 
 class SegArea(Tool):
+    r"""SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places."""
+
     name = "seg_area_"
     description = "'seg_area_' returns the area of the segmentation mask in pixels normalized to 2 decimal places."
     usage = {
@@ -390,6 +430,8 @@ class SegArea(Tool):
 
 
 class Add(Tool):
+    r"""Add returns the sum of all the arguments passed to it, normalized to 2 decimal places."""
+
     name = "add_"
     description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
@@ -407,6 +449,8 @@ class Add(Tool):
 
 
 class Subtract(Tool):
+    r"""Subtract returns the difference of all the arguments passed to it, normalized to 2 decimal places."""
+
     name = "subtract_"
     description = "'subtract_' returns the difference of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
@@ -424,6 +468,8 @@ class Subtract(Tool):
 
 
 class Multiply(Tool):
+    r"""Multiply returns the product of all the arguments passed to it, normalized to 2 decimal places."""
+
     name = "multiply_"
     description = "'multiply_' returns the product of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
@@ -441,6 +487,8 @@ class Multiply(Tool):
 
 
 class Divide(Tool):
+    r"""Divide returns the division of all the arguments passed to it, normalized to 2 decimal places."""
+
     name = "divide_"
     description = "'divide_' returns the division of all the arguments passed to it, normalized to 2 decimal places."
     usage = {
