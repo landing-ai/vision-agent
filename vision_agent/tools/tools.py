@@ -507,6 +507,8 @@ class Divide(Tool):
 
 
 class ExtractFrames(Tool):
+    r"""Extract frames from a video."""
+
     name = "extract_frames_"
     description = "'extract_frames_' extract image frames from the input video, return a list of tuple (frame, timestamp), where the timestamp is the relative time in seconds of the frame occurred in the video, the frame is a local image file path that stores the frame."
     usage = {
@@ -524,7 +526,7 @@ class ExtractFrames(Tool):
     }
 
     def __call__(self, video_uri: str) -> list[tuple[str, float]]:
-        """Extract frames from a video clip with start and end time in seconds.
+        """Extract frames from a video.
 
 
         Parameters:

@@ -19,19 +19,15 @@ def extract_frames_from_video(
 ) -> list[tuple[np.ndarray, float]]:
     """Extract frames from a video
 
-    Parameters
-    ----------
-    video_uri: str, the path to the video file or a video file url
-    fps: int, the frame rate per second to extract the frames
-    motion_detection_threshold: float, The threshold to detect motion between changes/frames.
-        A value between 0-1, which represents the percentage change required for the frames to be considered in motion.
-        For example, a lower value means more frames will be extracted.
+    Parameters:
+        video_uri: the path to the video file or a video file url
+        fps: the frame rate per second to extract the frames
+        motion_detection_threshold: The threshold to detect motion between changes/frames.
+            A value between 0-1, which represents the percentage change required for the frames to be considered in motion.
+            For example, a lower value means more frames will be extracted.
 
-    Returns
-    -------
-    list[tuple[np.ndarray, int]], a list of tuples containing the extracted frame and the timestamp in seconds. E.g. [(frame1, 0.0), (frame2, 0.5), ...]
-        The timestamp is the time in seconds from the start of the video. E.g. 12.125 means 12.125 seconds from the start of the video.
-        The frames are sorted by the timestamp in ascending order.
+    Returns:
+        a list of tuples containing the extracted frame and the timestamp in seconds. E.g. [(frame1, 0.0), (frame2, 0.5), ...]. The timestamp is the time in seconds from the start of the video. E.g. 12.125 means 12.125 seconds from the start of the video. The frames are sorted by the timestamp in ascending order.
     """
     with VideoFileClip(video_uri) as video:
         video_duration: float = video.duration
@@ -93,13 +89,12 @@ def _extract_frames_by_clip(
 ) -> list[tuple[np.ndarray, float]]:
     """Extract frames from a video clip with start and end time in seconds.
 
-    Parameters
-    ----------
-    video_uri: str, the path to the video file or a video file url
-    start: int, the start time (in seconds) of the clip to extract
-    end: float, the end time (in seconds, up to millisecond level precision) of the clip to extract, if -1, extract the whole video
-    fps: int, the frame rate to extract the frames
-    motion_detection_threshold: float, the threshold to detect the motion between frames
+    Parameters:
+        video_uri: the path to the video file or a video file url
+        start: the start time (in seconds) of the clip to extract
+        end: the end time (in seconds, up to millisecond level precision) of the clip to extract, if -1, extract the whole video
+        fps: the frame rate to extract the frames
+        motion_detection_threshold: the threshold to detect the motion between frames
     """
     with VideoFileClip(video_uri) as video:
         source_fps = video.fps
@@ -165,10 +160,8 @@ def _similar_frame(
 ) -> bool:
     """Detect two frames are similar or not
 
-    Parameters
-    ----------
-    threshold : float, optional
-        Similarity threshold, a value between 0-1, the percentage change that is considered a different frame.
+    Parameters:
+        threshold: similarity threshold, a value between 0-1, the percentage change that is considered a different frame.
     """
     # calculate difference and update previous frame TODO: don't assume the processed image is cached
     diff_frame = cv2.absdiff(src1=prev_frame, src2=curr_frame)
