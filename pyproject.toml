@@ -28,8 +28,6 @@ torch = "2.1.*"  # 2.2 causes sentence-transformers to seg fault
 sentence-transformers = "2.*"
 openai = "1.*"
 typing_extensions = "4.*"
-
-[tool.poetry.group.video.dependencies]
 moviepy = "1.*"
 opencv-python-headless = "4.*"
 

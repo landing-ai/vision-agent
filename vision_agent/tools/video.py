@@ -23,9 +23,9 @@ def extract_frames_from_video(
     ----------
     video_uri: str, the path to the video file or a video file url
     fps: int, the frame rate per second to extract the frames
-    motion_detection_threshold: float, the threshold to detect the motion between frames.
-        A value between 0-1, the percentage change that is considered a different frame.
-        A lower value means more frames will be extracted.
+    motion_detection_threshold: float, The threshold to detect motion between changes/frames.
+        A value between 0-1, which represents the percentage change required for the frames to be considered in motion.
+        For example, a lower value means more frames will be extracted.
 
     Returns
     -------
@@ -181,10 +181,3 @@ def _similar_frame(
     )
     _LOGGER.debug(f"Image diff: {change_percentage}")
     return change_percentage < threshold
-
-
-# res = extract_frames(video)
-if __name__ == "__main__":
-    video_path = "/Users/asia/Downloads/frames/baby_cam1.MP4"
-    res = extract_frames_from_video(video_path)
-    print("done, extracted num frames: ", len(res))

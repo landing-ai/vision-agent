@@ -11,6 +11,7 @@ from PIL import Image
 from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import convert_to_b64, get_image_size
+from vision_agent.tools.video import extract_frames_from_video
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -523,12 +524,15 @@ class ExtractFrames(Tool):
     }
 
     def __call__(self, video_uri: str) -> list[tuple[str, float]]:
-        try:
-            from vision_agent.tools.video import extract_frames_from_video
-        except Exception as e:
-            raise ImportError(
-                "vision_agent is not installed correctly (cause: missing dependencies), please run 'pip install vision-agent[video]' instead."
-            ) from e
+        """Extract frames from a video clip with start and end time in seconds.
+
+
+        Parameters:
+            video_uri: the path to the video file or a url points to the video data
+
+        Returns:
+            a list of tuples containing the extracted frame and the timestamp in seconds. E.g. [(path_to_frame1, 0.0), (path_to_frame2, 0.5), ...]. The timestamp is the time in seconds from the start of the video. E.g. 12.125 means 12.125 seconds from the start of the video. The frames are sorted by the timestamp in ascending order.
+        """
         frames = extract_frames_from_video(video_uri)
         result = []
         _LOGGER.info(
