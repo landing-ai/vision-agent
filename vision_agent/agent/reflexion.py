@@ -68,7 +68,8 @@ class Reflexion(Agent):
     self_reflect_model. Using Reflexion with LMMs may not work well, if it gets it wrong
     the first time, chances are it can't actually see the thing you want it to see.
 
-    Examples::
+    Example
+    -------
         >>> from vision_agent.agent import Reflexion
         >>> agent = Reflexion()
         >>> question = "How many tires does a truck have?"
@@ -139,6 +140,15 @@ class Reflexion(Agent):
         input: Union[str, List[Dict[str, str]]],
         image: Optional[Union[str, Path]] = None,
     ) -> str:
+        """Invoke the vision agent.
+
+        Parameters:
+            input: a prompt that describe the task or a conversation in the format of [{"role": "user", "content": "describe your task here..."}].
+            image: the input image referenced in the prompt parameter.
+
+        Returns:
+            A text response.
+        """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         return self.chat(input, image)

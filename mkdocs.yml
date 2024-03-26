@@ -1,0 +1,43 @@
+site_name: Landing AI Vision Agent Library Documentation
+site_url: https://landing-ai.github.io/
+repo_url: https://github.com/landing-ai/vision-agent
+edit_uri: edit/main/docs/
+
+
+theme:
+  name: "material"
+  custom_dir: docs/_overrides
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+
+plugins:
+  - mkdocstrings
+  - search
+
+markdown_extensions:
+  # Syntax highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+  # Multiline note/warning/etc blocks (https://squidfunk.github.io/mkdocs-material/reference/admonitions)
+  - admonition
+  - pymdownx.details
+
+nav:
+  - Quick start: index.md
+  - APIs:
+    - vision_agent.agent: api/agent.md
+    - vision_agent.tools: api/tools.md
+    - vision_agent.llm: api/llm.md
+    - vision_agent.lmm: api/lmm.md
+    - vision_agent.data: api/data.md
+    - vision_agent.emb: api/emb.md
+    - vision_agent.image_utils: api/image_utils.md
+  - Old documentation: old.md

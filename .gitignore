@@ -89,6 +89,7 @@ MANIFEST
 examples/output
 tests/output
 docs-build
+site
 
 # Local or WIP files
 local/

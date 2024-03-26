@@ -344,7 +344,8 @@ class VisionAgent(Agent):
     reflect on whether or not it was able to accomplish the task based off of the plan
     and final results, if not it will redo the task with this newly added reflection.
 
-    Examples::
+    Example
+    -------
         >>> from vision_agent.agent import VisionAgent
         >>> agent = VisionAgent()
         >>> resp = agent("If red tomatoes cost $5 each and yellow tomatoes cost $2.50 each, what is the total cost of all the tomatoes in the image?", image="tomatoes.jpg")
@@ -376,6 +377,15 @@ class VisionAgent(Agent):
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
     ) -> str:
+        """Invoke the vision agent.
+
+        Parameters:
+            input: a prompt that describe the task or a conversation in the format of [{"role": "user", "content": "describe your task here..."}].
+            image: the input image referenced in the prompt parameter.
+
+        Returns:
+            The result of the vision agent in text.
+        """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         return self.chat(input, image=image)

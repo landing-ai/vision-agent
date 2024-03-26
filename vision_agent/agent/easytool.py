@@ -241,7 +241,8 @@ class EasyTool(Agent):
     based on the original implementation https://github.com/microsoft/JARVIS/tree/main/easytool
     from the funcQA code.
 
-    Examples::
+    Example
+    -------
         >>> from vision_agent.agent import EasyTool
         >>> agent = EasyTool()
         >>> resp = agent("If a car is traveling at 64 km/h, how many kilometers does it travel in 29 minutes?")
@@ -273,6 +274,15 @@ class EasyTool(Agent):
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
     ) -> str:
+        """Invoke the vision agent.
+
+        Parameters:
+            input: a prompt that describe the task or a conversation in the format of [{"role": "user", "content": "describe your task here..."}].
+            image: the input image referenced in the prompt parameter.
+
+        Returns:
+            A text response.
+        """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         return self.chat(input, image=image)
