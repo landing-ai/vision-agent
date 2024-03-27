@@ -388,7 +388,7 @@ class BboxArea(Tool):
         "required_parameters": [{"name": "bbox", "type": "List[int]"}],
         "examples": [
             {
-                "scenario": "If you want to calculate the area of the bounding box [0, 0, 100, 100]",
+                "scenario": "If you want to calculate the area of the bounding box [0.2, 0.21, 0.34, 0.42]",
                 "parameters": {"bboxes": [0.2, 0.21, 0.34, 0.42]},
             }
         ],
@@ -428,6 +428,57 @@ class SegArea(Tool):
         pil_mask = Image.open(str(masks))
         np_mask = np.array(pil_mask)
         return cast(float, round(np.sum(np_mask) / 255, 2))
+
+
+class BboxIoU(Tool):
+    name = "bbox_iou_"
+    description = "'bbox_iou_' returns the intersection over union of two bounding boxes."
+    usage = {
+        "required_parameters": [{"name": "bbox1", "type": "List[int]"}, {"name": "bbox2", "type": "List[int]"}],
+        "examples": [
+            {
+                "scenario": "If you want to calculate the intersection over union of the bounding boxes [0.2, 0.21, 0.34, 0.42] and [0.3, 0.31, 0.44, 0.52]",
+                "parameters": {"bbox1": [0.2, 0.21, 0.34, 0.42], "bbox2": [0.3, 0.31, 0.44, 0.52]},
+            }
+        ]
+    }
+
+    def __call__(self, bbox1: List[int], bbox2: List[int]) -> float:
+        x1, y1, x2, y2 = bbox1
+        x3, y3, x4, y4 = bbox2
+        xA = max(x1, x3)
+        yA = max(y1, y3)
+        xB = min(x2, x4)
+        yB = min(y2, y4)
+        inter_area = max(0, xB - xA) * max(0, yB - yA)
+        boxa_area = (x2 - x1) * (y2 - y1)
+        boxb_area = (x4 - x3) * (y4 - y3)
+        iou = inter_area / float(boxa_area + boxb_area - inter_area)
+        return round(iou, 2)
+
+
+class SegIoU(Tool):
+    name = "seg_iou_"
+    description = "'seg_iou_' returns the intersection over union of two segmentation masks."
+    usage = {
+        "required_parameters": [{"name": "mask1", "type": "str"}, {"name": "mask2", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "If you want to calculate the intersection over union of the segmentation masks for mask1.png and mask2.png",
+                "parameters": {"mask1": "mask1.png", "mask2": "mask2.png"},
+            }
+        ],
+    }
+
+    def __call__(self, mask1: Union[str, Path], mask2: Union[str, Path]) -> float:
+        pil_mask1 = Image.open(str(mask1))
+        pil_mask2 = Image.open(str(mask2))
+        np_mask1 = np.clip(np.array(pil_mask1), 0, 1)
+        np_mask2 = np.clip(np.array(pil_mask2), 0, 1)
+        intersection = np.logical_and(np_mask1, np_mask2)
+        union = np.logical_or(np_mask1, np_mask2)
+        iou = np.sum(intersection) / np.sum(union)
+        return round(iou, 2)
 
 
 class Add(Tool):
@@ -558,6 +609,8 @@ TOOLS = {
             Crop,
             BboxArea,
             SegArea,
+            BboxIoU,
+            SegIoU,
             Add,
             Subtract,
             Multiply,
