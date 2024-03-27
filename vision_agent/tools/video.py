@@ -2,7 +2,7 @@ import logging
 import math
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import cast
+from typing import List, Tuple, cast
 
 import cv2
 import numpy as np
@@ -16,7 +16,7 @@ _CLIP_LENGTH = 30.0
 
 def extract_frames_from_video(
     video_uri: str, fps: int = 2, motion_detection_threshold: float = 0.06
-) -> list[tuple[np.ndarray, float]]:
+) -> List[Tuple[np.ndarray, float]]:
     """Extract frames from a video
 
     Parameters:
@@ -86,7 +86,7 @@ def _extract_frames_by_clip(
     end: float = -1,
     fps: int = 2,
     motion_detection_threshold: float = 0.06,
-) -> list[tuple[np.ndarray, float]]:
+) -> List[Tuple[np.ndarray, float]]:
     """Extract frames from a video clip with start and end time in seconds.
 
     Parameters:
