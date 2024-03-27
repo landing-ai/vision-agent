@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from tabulate import tabulate
+
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOLS
@@ -268,6 +270,11 @@ def retrieval(
         {"task": question, "tool_name": tool_name, "parameters": parameters}
     ]
 
+    _LOGGER.info(
+        f"""Going to run the following {len(tool_results)} tool(s) in sequence:
+{tabulate(tool_results, headers="keys", tablefmt="mixed_grid")}"""
+    )
+
     def parse_tool_results(result: Dict[str, Union[Dict, List]]) -> Any:
         call_results: List[Any] = []
         if isinstance(result["parameters"], Dict):
@@ -298,8 +305,6 @@ def create_tasks(
         {k: v["description"] for k, v in tools.items()},
         reflections,
     )
-
-    _LOGGER.info(f"Tasks: {tasks}")
     if tasks is not None:
         task_list = [{"task": task, "id": i + 1} for i, task in enumerate(tasks)]
         task_list = task_topology(task_model, question, task_list)
@@ -309,6 +314,10 @@ def create_tasks(
             _LOGGER.error(f"Failed topological_sort on: {task_list}")
     else:
         task_list = []
+    _LOGGER.info(
+        f"""Planned tasks:
+{tabulate(task_list, headers="keys", tablefmt="mixed_grid")}"""
+    )
     return task_list
 
 

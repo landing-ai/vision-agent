@@ -2166,6 +2166,20 @@ files = [
 mpmath = ">=0.19"
 
 [[package]]
+name = "tabulate"
+version = "0.9.0"
+description = "Pretty-print tabular data"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f"},
+    {file = "tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c"},
+]
+
+[package.extras]
+widechars = ["wcwidth"]
+
+[[package]]
 name = "threadpoolctl"
 version = "3.4.0"
 description = "threadpoolctl"
@@ -2610,4 +2624,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "93a4e362ddaf2a1e65a6457c212896853b1c4409e0456f9209f33b795b5ec748"
+content-hash = "64b8ef44533f8d72d76d866df9db0407b0f4e43ee286a4df5dd8107e6bc5d46e"
