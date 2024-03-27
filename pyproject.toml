@@ -16,7 +16,7 @@ packages = [{include = "vision_agent"}]
 "documentation" = "https://github.com/landing-ai/vision-agent"
 
 [tool.poetry.dependencies]  # main dependency group
-python = ">=3.10,<3.12"
+python = ">=3.9,<3.12"
 
 numpy = ">=1.21.0,<2.0.0"
 pillow = "10.*"
@@ -28,6 +28,8 @@ torch = "2.1.*"  # 2.2 causes sentence-transformers to seg fault
 sentence-transformers = "2.*"
 openai = "1.*"
 typing_extensions = "4.*"
+moviepy = "1.*"
+opencv-python-headless = "4.*"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
@@ -84,4 +86,5 @@ module = [
     "faiss.*",
     "openai.*",
     "sentence_transformers.*",
+    "moviepy.*",
 ]

@@ -11,6 +11,7 @@ from PIL import Image
 from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import convert_to_b64, get_image_size
+from vision_agent.tools.video import extract_frames_from_video
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -505,6 +506,47 @@ class Divide(Tool):
         return round(input[0] / input[1], 2)
 
 
+class ExtractFrames(Tool):
+    r"""Extract frames from a video."""
+
+    name = "extract_frames_"
+    description = "'extract_frames_' extract image frames from the input video, return a list of tuple (frame, timestamp), where the timestamp is the relative time in seconds of the frame occurred in the video, the frame is a local image file path that stores the frame."
+    usage = {
+        "required_parameters": [{"name": "video_uri", "type": "str"}],
+        "examples": [
+            {
+                "scenario": "Can you extract the frames from this video? Video: www.foobar.com/video?name=test.mp4",
+                "parameters": {"video_uri": "www.foobar.com/video?name=test.mp4"},
+            },
+            {
+                "scenario": "Can you extract the images from this video file? Video path: tests/data/test.mp4",
+                "parameters": {"video_uri": "tests/data/test.mp4"},
+            },
+        ],
+    }
+
+    def __call__(self, video_uri: str) -> list[tuple[str, float]]:
+        """Extract frames from a video.
+
+
+        Parameters:
+            video_uri: the path to the video file or a url points to the video data
+
+        Returns:
+            a list of tuples containing the extracted frame and the timestamp in seconds. E.g. [(path_to_frame1, 0.0), (path_to_frame2, 0.5), ...]. The timestamp is the time in seconds from the start of the video. E.g. 12.125 means 12.125 seconds from the start of the video. The frames are sorted by the timestamp in ascending order.
+        """
+        frames = extract_frames_from_video(video_uri)
+        result = []
+        _LOGGER.info(
+            f"Extracted {len(frames)} frames from video {video_uri}. Temporarily saving them as images to disk for downstream tasks."
+        )
+        for frame, ts in frames:
+            with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                Image.fromarray(frame).save(tmp)
+            result.append((tmp.name, ts))
+        return result
+
+
 TOOLS = {
     i: {"name": c.name, "description": c.description, "usage": c.usage, "class": c}
     for i, c in enumerate(
@@ -520,6 +562,7 @@ TOOLS = {
             Subtract,
             Multiply,
             Divide,
+            ExtractFrames,
         ]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
