@@ -1,11 +1,14 @@
 import json
 import logging
 import sys
+import tempfile
+from os import walk
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from tabulate import tabulate
 
+from vision_agent.image_utils import overlay_bboxes, overlay_masks
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOLS
@@ -248,12 +251,12 @@ def retrieval(
     tools: Dict[int, Any],
     previous_log: str,
     reflections: str,
-) -> Tuple[List[Dict], str]:
+) -> Tuple[Dict, str]:
     tool_id = choose_tool(
         model, question, {k: v["description"] for k, v in tools.items()}, reflections
     )
     if tool_id is None:
-        return [{}], ""
+        return {}, ""
     _LOGGER.info(f"\t(Tool ID, name): ({tool_id}, {tools[tool_id]['name']})")
 
     tool_instructions = tools[tool_id]
@@ -265,14 +268,12 @@ def retrieval(
     )
     _LOGGER.info(f"\tParameters: {parameters} for {tool_name}")
     if parameters is None:
-        return [{}], ""
-    tool_results = [
-        {"task": question, "tool_name": tool_name, "parameters": parameters}
-    ]
+        return {}, ""
+    tool_results = {"task": question, "tool_name": tool_name, "parameters": parameters}
 
     _LOGGER.info(
-        f"""Going to run the following {len(tool_results)} tool(s) in sequence:
-{tabulate(tool_results, headers="keys", tablefmt="mixed_grid")}"""
+        f"""Going to run the following tool(s) in sequence:
+{tabulate([tool_results], headers="keys", tablefmt="mixed_grid")}"""
     )
 
     def parse_tool_results(result: Dict[str, Union[Dict, List]]) -> Any:
@@ -286,12 +287,10 @@ def retrieval(
                 call_results.append(function_call(tools[tool_id]["class"], parameters))
         return call_results
 
-    call_results = []
-    for i, result in enumerate(tool_results):
-        call_results.extend(parse_tool_results(result))
-        tool_results[i]["call_results"] = call_results
+    call_results = parse_tool_results(tool_results)
+    tool_results["call_results"] = call_results
 
-    call_results_str = "\n\n".join([str(e) for e in call_results if e is not None])
+    call_results_str = str(call_results)
     _LOGGER.info(f"\tCall Results: {call_results_str}")
     return tool_results, call_results_str
 
@@ -335,7 +334,11 @@ def self_reflect(
         tool_results=str(tool_result),
         final_answer=final_answer,
     )
-    if issubclass(type(reflect_model), LMM):
+    if (
+        issubclass(type(reflect_model), LMM)
+        and image is not None
+        and Path(image).suffix in [".jpg", ".jpeg", ".png"]
+    ):
         return reflect_model(prompt, image=image)  # type: ignore
     return reflect_model(prompt)
 
@@ -343,6 +346,56 @@ def self_reflect(
 def parse_reflect(reflect: str) -> bool:
     # GPT-4V has a hard time following directions, so make the criteria less strict
     return "finish" in reflect.lower() and len(reflect) < 100
+
+
+def visualize_result(all_tool_results: List[Dict]) -> List[str]:
+    image_to_data = {}
+    for tool_result in all_tool_results:
+        if not tool_result["tool_name"] in ["grounding_sam_", "grounding_dino_"]:
+            continue
+
+        parameters = tool_result["parameters"]
+        # parameters can either be a dictionary or list, parameters can also be malformed
+        # becaus the LLM builds them
+        if isinstance(parameters, dict):
+            if "image" not in parameters:
+                continue
+            parameters = [parameters]
+        elif isinstance(tool_result["parameters"], list):
+            if (
+                len(tool_result["parameters"]) < 1
+                and "image" not in tool_result["parameters"][0]
+            ):
+                continue
+
+        for param, call_result in zip(parameters, tool_result["call_results"]):
+
+            # calls can fail, so we need to check if the call was successful
+            if not isinstance(call_result, dict):
+                continue
+            if not "bboxes" in call_result:
+                continue
+
+            # if the call was successful, then we can add the image data
+            image = param["image"]
+            if image not in image_to_data:
+                image_to_data[image] = {"bboxes": [], "masks": [], "labels": []}
+
+            image_to_data[image]["bboxes"].extend(call_result["bboxes"])
+            image_to_data[image]["labels"].extend(call_result["labels"])
+            if "masks" in call_result:
+                image_to_data[image]["masks"].extend(call_result["masks"])
+
+    visualized_images = []
+    for image in image_to_data:
+        image_path = Path(image)
+        image_data = image_to_data[image]
+        image = overlay_masks(image_path, image_data)
+        image = overlay_bboxes(image, image_data)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            image.save(f.name)
+            visualized_images.append(f.name)
+    return visualized_images
 
 
 class VisionAgent(Agent):
@@ -389,7 +442,8 @@ class VisionAgent(Agent):
         """Invoke the vision agent.
 
         Parameters:
-            input: a prompt that describe the task or a conversation in the format of [{"role": "user", "content": "describe your task here..."}].
+            input: a prompt that describe the task or a conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}].
             image: the input image referenced in the prompt parameter.
 
         Returns:
@@ -436,9 +490,8 @@ class VisionAgent(Agent):
                     self.answer_model, task_str, call_results, previous_log, reflections
                 )
 
-                for tool_result in tool_results:
-                    tool_result["answer"] = answer
-                all_tool_results.extend(tool_results)
+                tool_results["answer"] = answer
+                all_tool_results.append(tool_results)
 
                 _LOGGER.info(f"\tAnswer: {answer}")
                 answers.append({"task": task_str, "answer": answer})
@@ -448,13 +501,14 @@ class VisionAgent(Agent):
                 self.answer_model, question, answers, reflections
             )
 
+            visualized_images = visualize_result(all_tool_results)
             reflection = self_reflect(
                 self.reflect_model,
                 question,
                 self.tools,
                 all_tool_results,
                 final_answer,
-                image,
+                visualized_images[0] if len(visualized_images) > 0 else image,
             )
             _LOGGER.info(f"\tReflection: {reflection}")
             if parse_reflect(reflection):
