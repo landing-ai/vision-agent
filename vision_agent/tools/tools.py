@@ -59,7 +59,7 @@ class CLIP(Tool):
     -------
         >>> import vision_agent as va
         >>> clip = va.tools.CLIP()
-        >>> clip(["red line", "yellow dot"], "ct_scan1.jpg"))
+        >>> clip("red line, yellow dot", "ct_scan1.jpg"))
         [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
     """
 
@@ -69,22 +69,22 @@ class CLIP(Tool):
     description = "'clip_' is a tool that can classify or tag any image given a set of input classes or tags."
     usage = {
         "required_parameters": [
-            {"name": "prompt", "type": "List[str]"},
+            {"name": "prompt", "type": "str"},
             {"name": "image", "type": "str"},
         ],
         "examples": [
             {
                 "scenario": "Can you classify this image as a cat? Image name: cat.jpg",
-                "parameters": {"prompt": ["cat"], "image": "cat.jpg"},
+                "parameters": {"prompt": "cat", "image": "cat.jpg"},
             },
             {
                 "scenario": "Can you tag this photograph with cat or dog? Image name: cat_dog.jpg",
-                "parameters": {"prompt": ["cat", "dog"], "image": "cat_dog.jpg"},
+                "parameters": {"prompt": "cat, dog", "image": "cat_dog.jpg"},
             },
             {
                 "scenario": "Can you build me a classifier that classifies red shirts, green shirts and other? Image name: shirts.jpg",
                 "parameters": {
-                    "prompt": ["red shirt", "green shirt", "other"],
+                    "prompt": "red shirt, green shirt, other",
                     "image": "shirts.jpg",
                 },
             },
@@ -92,11 +92,11 @@ class CLIP(Tool):
     }
 
     # TODO: Add support for input multiple images, which aligns with the output type.
-    def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> Dict:
+    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
         """Invoke the CLIP model.
 
         Parameters:
-            prompt: a list of classes or tags to classify the image.
+            prompt: a string includes a list of classes or tags to classify the image.
             image: the input image to classify.
 
         Returns:
@@ -104,8 +104,8 @@ class CLIP(Tool):
         """
         image_b64 = convert_to_b64(image)
         data = {
-            "classes": prompt,
-            "images": [image_b64],
+            "prompt": prompt,
+            "image": image_b64,
         }
         res = requests.post(
             self._ENDPOINT,
@@ -139,7 +139,7 @@ class GroundingDINO(Tool):
         'scores': [0.98, 0.02]}]
     """
 
-    _ENDPOINT = "https://chnicr4kes5ku77niv2zoytggq0qyqlp.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_dino_"
     description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
@@ -182,7 +182,8 @@ class GroundingDINO(Tool):
         image_b64 = convert_to_b64(image)
         data = {
             "prompt": prompt,
-            "images": [image_b64],
+            "image": image_b64,
+            "tool": "visual_grounding",
         }
         res = requests.post(
             self._ENDPOINT,
@@ -195,16 +196,17 @@ class GroundingDINO(Tool):
         ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
-        resp_data = resp_json["data"]
-        for elt in resp_data:
-            if "bboxes" in elt:
-                elt["bboxes"] = [
-                    normalize_bbox(box, image_size) for box in elt["bboxes"]
-                ]
-            if "scores" in elt:
-                elt["scores"] = [round(score, 2) for score in elt["scores"]]
-            elt["size"] = (image_size[1], image_size[0])
-        return cast(Dict, resp_data)
+        data: Dict[str, Any] = resp_json["data"]
+        if "bboxes" in data:
+            data["bboxes"] = [
+                normalize_bbox(box, image_size) for box in data["bboxes"][0]
+            ]
+        if "scores" in data:
+            data["scores"] = [round(score, 2) for score in data["scores"][0]]
+        if "labels" in data:
+            data["labels"] = [label for label in data["labels"][0]]
+        data["size"] = (image_size[1], image_size[0])
+        return data
 
 
 class GroundingSAM(Tool):
@@ -215,7 +217,7 @@ class GroundingSAM(Tool):
     -------
         >>> import vision_agent as va
         >>> t = va.tools.GroundingSAM()
-        >>> t(["red line", "yellow dot"], ct_scan1.jpg"])
+        >>> t("red line, yellow dot", "ct_scan1.jpg"])
         [{'labels': ['yellow dot', 'red line'],
         'bboxes': [[0.38, 0.15, 0.59, 0.7], [0.48, 0.25, 0.69, 0.71]],
         'masks': [array([[0, 0, 0, ..., 0, 0, 0],
@@ -230,28 +232,28 @@ class GroundingSAM(Tool):
            [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
     """
 
-    _ENDPOINT = "https://cou5lfmus33jbddl6hoqdfbw7e0qidrw.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_sam_"
     description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
     usage = {
         "required_parameters": [
-            {"name": "prompt", "type": "List[str]"},
+            {"name": "prompt", "type": "str"},
             {"name": "image", "type": "str"},
         ],
         "examples": [
             {
                 "scenario": "Can you build me a car segmentor?",
-                "parameters": {"prompt": ["car"], "image": ""},
+                "parameters": {"prompt": "car", "image": ""},
             },
             {
                 "scenario": "Can you segment the person on the left? Image name: person.jpg",
-                "parameters": {"prompt": ["person on the left"], "image": "person.jpg"},
+                "parameters": {"prompt": "person on the left", "image": "person.jpg"},
             },
             {
                 "scenario": "Can you build me a tool that segments red shirts and green shirts? Image name: shirts.jpg",
                 "parameters": {
-                    "prompt": ["red shirt", "green shirt"],
+                    "prompt": "red shirt, green shirt",
                     "image": "shirts.jpg",
                 },
             },
@@ -259,7 +261,7 @@ class GroundingSAM(Tool):
     }
 
     # TODO: Add support for input multiple images, which aligns with the output type.
-    def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> Dict:
+    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
         """Invoke the Grounding SAM model.
 
         Parameters:
@@ -272,8 +274,9 @@ class GroundingSAM(Tool):
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
         data = {
-            "classes": prompt,
+            "prompt": prompt,
             "image": image_b64,
+            "tool": "visual_grounding_segment",
         }
         res = requests.post(
             self._ENDPOINT,
@@ -286,14 +289,15 @@ class GroundingSAM(Tool):
         ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
-        resp_data = resp_json["data"]
+        data = resp_json["data"]
         ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
-        for pred in resp_data["preds"]:
-            encoded_mask = pred["encoded_mask"]
-            mask = rle_decode(mask_rle=encoded_mask, shape=pred["mask_shape"])
-            ret_pred["labels"].append(pred["label_name"])
-            ret_pred["bboxes"].append(normalize_bbox(pred["bbox"], image_size))
-            ret_pred["masks"].append(mask)
+        data: Dict[str, Any] = resp_json["data"]
+        if "bboxes" in data:
+            data["bboxes"] = [
+                normalize_bbox(box, image_size) for box in data["bboxes"]
+            ]
+        if "masks" in data:
+            data["masks"] = [rle_decode(mask_rle=mask, shape=data["mask_shape"]) for mask in data["masks"][0]]
         return ret_pred
 
 
