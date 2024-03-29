@@ -22,12 +22,16 @@ def extract_frames_from_video(
     Parameters:
         video_uri: the path to the video file or a video file url
         fps: the frame rate per second to extract the frames
-        motion_detection_threshold: The threshold to detect motion between changes/frames.
-            A value between 0-1, which represents the percentage change required for the frames to be considered in motion.
-            For example, a lower value means more frames will be extracted.
+        motion_detection_threshold: The threshold to detect motion between
+            changes/frames. A value between 0-1, which represents the percentage change
+            required for the frames to be considered in motion. For example, a lower
+            value means more frames will be extracted.
 
     Returns:
-        a list of tuples containing the extracted frame and the timestamp in seconds. E.g. [(frame1, 0.0), (frame2, 0.5), ...]. The timestamp is the time in seconds from the start of the video. E.g. 12.125 means 12.125 seconds from the start of the video. The frames are sorted by the timestamp in ascending order.
+        a list of tuples containing the extracted frame and the timestamp in seconds.
+        E.g. [(frame1, 0.0), (frame2, 0.5), ...]. The timestamp is the time in seconds
+        from the start of the video. E.g. 12.125 means 12.125 seconds from the start of
+        the video. The frames are sorted by the timestamp in ascending order.
     """
     with VideoFileClip(video_uri) as video:
         video_duration: float = video.duration
