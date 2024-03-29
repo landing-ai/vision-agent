@@ -2,7 +2,6 @@ import json
 import logging
 import sys
 import tempfile
-from os import walk
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -349,7 +348,7 @@ def parse_reflect(reflect: str) -> bool:
 
 
 def visualize_result(all_tool_results: List[Dict]) -> List[str]:
-    image_to_data = {}
+    image_to_data: Dict[str, Dict] = {}
     for tool_result in all_tool_results:
         if not tool_result["tool_name"] in ["grounding_sam_", "grounding_dino_"]:
             continue
@@ -373,7 +372,7 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
             # calls can fail, so we need to check if the call was successful
             if not isinstance(call_result, dict):
                 continue
-            if not "bboxes" in call_result:
+            if "bboxes" not in call_result:
                 continue
 
             # if the call was successful, then we can add the image data

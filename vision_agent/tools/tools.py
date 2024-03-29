@@ -488,7 +488,7 @@ class SegIoU(Tool):
         intersection = np.logical_and(np_mask1, np_mask2)
         union = np.logical_or(np_mask1, np_mask2)
         iou = np.sum(intersection) / np.sum(union)
-        return round(iou, 2)
+        return cast(float, round(iou, 2))
 
 
 class ExtractFrames(Tool):
