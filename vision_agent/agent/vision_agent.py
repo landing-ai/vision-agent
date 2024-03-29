@@ -501,6 +501,7 @@ class VisionAgent(Agent):
             )
 
             visualized_images = visualize_result(all_tool_results)
+            all_tool_results.append({"visualized_images": visualized_images})
             reflection = self_reflect(
                 self.reflect_model,
                 question,
