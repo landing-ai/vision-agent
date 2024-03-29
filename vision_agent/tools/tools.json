@@ -1,0 +1,150 @@
+[
+    {
+        "name": "image_question_answering",
+        "description": "answers a question about an image"
+    },
+    {
+        "name": "text_question_answering",
+        "description": "answers a question provided a context in text form"
+    },
+    {
+        "name": "image_captioning",
+        "description": "Generate a caption for the image. It can generate a brief description that can be used for image perception and image generation. For example: a) you can use this tool when you want to know what is it in the image\"; and b) when you want to generate a new image similar or resemble to input.png, you can use `image_captioning` to obtain the description about image input.png."
+    },
+    {
+        "name": "image_to_text",
+        "description": "Generate a description for the image. It can generate a detailed description that can be used for image perception and image generation. For example: a) you can use this tool when you want to know what is it in the image\"; and b) when you want to generate a new image similar or resemble to input.png, you can use `text_to_image` to obtain the description about image input.png."
+    },
+    {
+        "name": "image_to_edge",
+        "description": "get the edge map of the image."
+    },
+    {
+        "name": "image_to_line",
+        "description": "get the line map of the image."
+    },
+    {
+        "name": "image_to_hed",
+        "description": "get the HED map of the image."
+    },
+    {
+        "name": "image_to_scribble",
+        "description": "get the scribble of the image."
+    },
+    {
+        "name": "image_to_pose",
+        "description": "Get the pose of the image. It is usually used in image generation conditioned on pose map from input image."
+    },
+    {
+        "name": "image_to_depth",
+        "description": "get the depth map of the image."
+    },
+    {
+        "name": "image_to_normal",
+        "description": "get the normal map of the image."
+    },
+    {
+        "name": "object_detection",
+        "description": "detect all the objects in the image."
+    },
+    {
+        "name": "image_classification",
+        "description": "classify the objects in the image."
+    },
+    {
+        "name": "panoptic_segmentation",
+        "description": "segment the common objects in the given image."
+    },
+    {
+        "name": "visual_grounding",
+        "description": "Visual Grounding (VG) aims to locate the most relevant object or region in an image, based on a natural language query. The query can be a phrase, a sentence or even a multi-round dialogue."
+    },
+    {
+        "name": "visual_grounding_segment",
+        "description": "Visual Grounding (VG) aims to locate the most relevant object or region in an image, based on a natural language query. The query can be a phrase, a sentence or even a multi-round dialogue."
+    },
+    {
+        "name": "optical_character_recognition",
+        "description": "Optical Character Recognition (OCR) is the process that converts an image of text into a machine-readable text format."
+    },
+    {
+        "name": "select_category",
+        "description": "select the target classes in category list with the given condition."
+    },
+    {
+        "name": "select_bbox",
+        "description": "select the bounding boxes with the given condition."
+    },
+    {
+        "name": "select_mask",
+        "description": "select the masks with the given condition."
+    },
+    {
+        "name": "count_categories",
+        "description": "count target categories in the given list."
+    },
+    {
+        "name": "count_objects",
+        "description": "count target objects in the given list. It is useful when you want to count the number of objects in the image"
+    },
+    {
+        "name": "count_masks",
+        "description": "count target mask in the given list."
+    },
+    {
+        "name": "video_captioning",
+        "description": "Generate a caption or description for video. It can generate a detailed description that can be used for video perception and video generation. For example: a) you can use this tool when you want to know what happened in the video\"; and b) when you want to generate tags for input video, you can use translate description obtained from `image_captioning` into tags."
+    },
+    {
+        "name": "video_classification",
+        "description": "Classify the video and detect the actions in the video."
+    },
+    {
+        "name": "frame_captioning",
+        "description": "Generate a caption or description for video every n seconds. It can generate a detailed description that can be used for video perception and video generation. For example: a) you can use this tool when you want to know what happened in the video\"; and b) when you want to generate tags for input video, you can use translate description obtained from `image_captioning` into tags."
+    },
+    {
+        "name": "frame_classification",
+        "description": "Classify the video and detect the actions in the  every n seconds."
+    },
+    {
+        "name": "text_to_text_generation",
+        "description": "Text to text generation. It can be used for sentence acceptability judgment, Sentiment analysis, Paraphrasing/sentence similarity, Natural language inference, Sentence completion, Word sense disambiguation, Question answering."
+    },
+    {
+        "name": "openai_chat_model",
+        "description": "Answer the question by Large Language Model. It is useful for tasks such as generating content, answering questions, engaging in conversations and providing explanations. However, it still has some limitations. For example, it can not directly access the up-to-date information like time, weather, etc."
+    },
+    {
+        "name": "summarization",
+        "description": "Summarize sentences, long narratives, articles, papers, textbooks."
+    },
+    {
+        "name": "text_to_tags",
+        "description": "Predict the tags of text, article and papers by using the their textual content as input"
+    },
+    {
+        "name": "sentiment_analysis",
+        "description": "Sentiment analysis is the process of analyzing digital text to determine if the emotional tone of the message is positive, negative, or neutral."
+    }
+]
+
+input_keys: [
+    { "image": "image file"},
+    { "prompt": "text"},
+    { "video": "video file"},
+    { "context": "context for text qa"},
+    { "tool": "tool name mentioned above"},
+]
+
+output_keys: [
+    { "labels": "list of labels for image tasks"},
+    { "scores": "list of scores for image and text tasks"},
+    { "bboxes": "list of bounding boxes for detection tasks"},
+    { "masks": "list of masks for segmentation tasks"},
+    { "text": "list of text for text tasks"},
+    { "frames": "list of frame numbers for video tasks"},
+]
+
+
+

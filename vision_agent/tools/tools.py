@@ -1,5 +1,6 @@
 import logging
 import tempfile
+import os
 from abc import ABC
 from collections import Counter as CounterClass
 from pathlib import Path
@@ -139,7 +140,7 @@ class GroundingDINO(Tool):
         'scores': [0.98, 0.02]}]
     """
 
-    _ENDPOINT = "https://chnicr4kes5ku77niv2zoytggq0qyqlp.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = "https://model-owp50nlq.api.baseten.co/production/predict"
 
     name = "grounding_dino_"
     description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
@@ -182,11 +183,15 @@ class GroundingDINO(Tool):
         image_b64 = convert_to_b64(image)
         data = {
             "prompt": prompt,
-            "images": [image_b64],
+            "images": image_b64,
+            "tool": "visual_grounding",
         }
         res = requests.post(
             self._ENDPOINT,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Api-Key {os.environ['BASETEN_API_KEY']}",
+            },
             json=data,
         )
         resp_json: Dict[str, Any] = res.json()
@@ -230,7 +235,7 @@ class GroundingSAM(Tool):
            [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
     """
 
-    _ENDPOINT = "https://cou5lfmus33jbddl6hoqdfbw7e0qidrw.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = "https://model-owp50nlq.api.baseten.co/production/predict"
 
     name = "grounding_sam_"
     description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
@@ -274,10 +279,14 @@ class GroundingSAM(Tool):
         data = {
             "classes": prompt,
             "image": image_b64,
+            "tool": "visual_grounding_segment",
         }
         res = requests.post(
             self._ENDPOINT,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Api-Key {os.environ['BASETEN_API_KEY']}",
+            },
             json=data,
         )
         resp_json: Dict[str, Any] = res.json()
