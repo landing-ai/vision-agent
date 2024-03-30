@@ -52,6 +52,10 @@
         "description": "classify the objects in the image."
     },
     {
+        "name": "closed_set_image_classification",
+        "description": "Given a set of classes as a text prompt, classify the objects in the image based on the given classes."
+    },
+    {
         "name": "panoptic_segmentation",
         "description": "segment the common objects in the given image."
     },
