@@ -97,11 +97,15 @@ class OpenAILMM(LMM):
     r"""An LMM class for the OpenAI GPT-4 Vision model."""
 
     def __init__(
-        self, model_name: str = "gpt-4-vision-preview", max_tokens: int = 1024
+        self,
+        model_name: str = "gpt-4-vision-preview",
+        max_tokens: int = 1024,
+        **kwargs: Any,
     ):
         self.model_name = model_name
         self.max_tokens = max_tokens
         self.client = OpenAI()
+        self.kwargs = kwargs
 
     def __call__(
         self,
@@ -123,6 +127,13 @@ class OpenAILMM(LMM):
 
         if image:
             extension = Path(image).suffix
+            if extension.lower() == ".jpeg" or extension.lower() == ".jpg":
+                extension = "jpg"
+            elif extension.lower() == ".png":
+                extension = "png"
+            else:
+                raise ValueError(f"Unsupported image extension: {extension}")
+
             encoded_image = encode_image(image)
             fixed_chat[0]["content"].append(  # type: ignore
                 {
@@ -135,7 +146,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=fixed_chat, max_tokens=self.max_tokens  # type: ignore
+            model=self.model_name, messages=fixed_chat, max_tokens=self.max_tokens, **self.kwargs  # type: ignore
         )
 
         return cast(str, response.choices[0].message.content)
@@ -163,7 +174,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=message, max_tokens=self.max_tokens  # type: ignore
+            model=self.model_name, messages=message, max_tokens=self.max_tokens, **self.kwargs  # type: ignore
         )
         return cast(str, response.choices[0].message.content)
 
