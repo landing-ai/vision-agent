@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Mapping, Union, cast
+from typing import Any, Callable, Dict, List, Mapping, Union, cast
 
 from openai import OpenAI
 
@@ -31,30 +31,33 @@ class OpenAILLM(LLM):
     r"""An LLM class for any OpenAI LLM model."""
 
     def __init__(
-        self, model_name: str = "gpt-4-turbo-preview", json_mode: bool = False
+        self,
+        model_name: str = "gpt-4-turbo-preview",
+        json_mode: bool = False,
+        **kwargs: Any
     ):
         self.model_name = model_name
         self.client = OpenAI()
-        self.json_mode = json_mode
+        self.kwargs = kwargs
+        if json_mode:
+            self.kwargs["response_format"] = {"type": "json_object"}
 
     def generate(self, prompt: str) -> str:
-        kwargs = {"response_format": {"type": "json_object"}} if self.json_mode else {}
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            **kwargs,  # type: ignore
+            **self.kwargs,
         )
 
         return cast(str, response.choices[0].message.content)
 
     def chat(self, chat: List[Dict[str, str]]) -> str:
-        kwargs = {"response_format": {"type": "json_object"}} if self.json_mode else {}
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=chat,  # type: ignore
-            **kwargs,
+            **self.kwargs,
         )
 
         return cast(str, response.choices[0].message.content)
