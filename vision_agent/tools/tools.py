@@ -140,7 +140,7 @@ class GroundingDINO(Tool):
         'scores': [0.98, 0.02]}]
     """
 
-    _ENDPOINT = "https://model-owp50nlq.api.baseten.co/production/predict"
+    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_dino_"
     description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
