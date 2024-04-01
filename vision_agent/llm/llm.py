@@ -48,7 +48,7 @@ class OpenAILLM(LLM):
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            **self.kwargs,  # type: ignore
+            **self.kwargs,
         )
 
         return cast(str, response.choices[0].message.content)

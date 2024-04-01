@@ -431,7 +431,7 @@ class VisionAgent(Agent):
             OpenAILLM(temperature=0.1) if answer_model is None else answer_model
         )
         self.reflect_model = (
-            OpenAILMM(temperature=0.0) if reflect_model is None else reflect_model
+            OpenAILMM(temperature=0.1) if reflect_model is None else reflect_model
         )
         self.max_retries = max_retries
 
