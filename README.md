@@ -42,8 +42,8 @@ You can interact with the agents as you would with any LLM or LMM model:
 ```python
 >>> import vision_agent as va
 >>> agent = VisionAgent()
->>> agent("How many apples are in this image?", image="apples.jpg")
-"There are 2 apples in the image."
+>>> agent("What percentage of the area of this jar is filled with coffee beans?", image="jar.jpg")
+"The percentage of area of the jar filled with coffee beans is 25%."
 ```
 
 To better understand how the model came up with it's answer, you can also run it in
@@ -57,22 +57,22 @@ You can also have it return the workflow it used to complete the task along with
 the individual steps and tools to get the answer:
 
 ```python
->>> resp, workflow = agent.chat_with_workflow([{"role": "user", "content": "How many apples are in this image?"}], image="apples.jpg")
+>>> resp, workflow = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of this jar is filled with coffee beans?"}], image="jar.jpg")
 >>> print(workflow)
-[{"task": "Count the number of apples using 'grounding_dino_'.",
-  "tool": "grounding_dino_",
-  "parameters": {"prompt": "apple", "image": "apples.jpg"},
+[{"task": "Segment the jar using 'grounding_sam_'.",
+  "tool": "grounding_sam_",
+  "parameters": {"prompt": "jar", "image": "jar.jpg"},
   "call_results": [[
     {
-      "labels": ["apple", "apple"],
-      "scores": [0.99, 0.95],
+      "labels": ["jar"],
+      "scores": [0.99],
       "bboxes": [
         [0.58, 0.2, 0.72, 0.45],
-        [0.94, 0.57, 0.98, 0.66],
-      ]
+      ],
+      "masks": "mask.png"
     }
   ]],
-  "answer": "There are 2 apples in the image.",
+  "answer": "The jar is located at [0.58, 0.2, 0.72, 0.45].",
 }]
 ```
 
@@ -84,13 +84,12 @@ you. For example:
 ```python
 >>> import vision_agent as va
 >>> llm = va.llm.OpenAILLM()
->>> detector = llm.generate_detector("Can you build an apple detector for me?")
->>> detector("apples.jpg")
-[{"labels": ["apple", "apple"],
-  "scores": [0.99, 0.95],
+>>> detector = llm.generate_detector("Can you build a jar detector for me?")
+>>> detector("jar.jpg")
+[{"labels": ["jar",],
+  "scores": [0.99],
   "bboxes": [
     [0.58, 0.2, 0.72, 0.45],
-    [0.94, 0.57, 0.98, 0.66],
   ]
 }]
 ```
