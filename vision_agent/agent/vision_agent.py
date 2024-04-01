@@ -256,7 +256,6 @@ def retrieval(
     )
     if tool_id is None:
         return {}, ""
-    _LOGGER.info(f"\t(Tool ID, name): ({tool_id}, {tools[tool_id]['name']})")
 
     tool_instructions = tools[tool_id]
     tool_usage = tool_instructions["usage"]
@@ -265,7 +264,6 @@ def retrieval(
     parameters = choose_parameter(
         model, question, tool_usage, previous_log, reflections
     )
-    _LOGGER.info(f"\tParameters: {parameters} for {tool_name}")
     if parameters is None:
         return {}, ""
     tool_results = {"task": question, "tool_name": tool_name, "parameters": parameters}
@@ -290,7 +288,7 @@ def retrieval(
     tool_results["call_results"] = call_results
 
     call_results_str = str(call_results)
-    _LOGGER.info(f"\tCall Results: {call_results_str}")
+    # _LOGGER.info(f"\tCall Results: {call_results_str}")
     return tool_results, call_results_str
 
 
@@ -344,7 +342,9 @@ def self_reflect(
 
 def parse_reflect(reflect: str) -> bool:
     # GPT-4V has a hard time following directions, so make the criteria less strict
-    return "finish" in reflect.lower() and len(reflect) < 100
+    return (
+        "finish" in reflect.lower() and len(reflect) < 100
+    ) or "finish" in reflect.lower()[-10:]
 
 
 def visualize_result(all_tool_results: List[Dict]) -> List[str]:
@@ -423,10 +423,16 @@ class VisionAgent(Agent):
         verbose: bool = False,
     ):
         self.task_model = (
-            OpenAILLM(json_mode=True) if task_model is None else task_model
+            OpenAILLM(json_mode=True, temperature=0.1)
+            if task_model is None
+            else task_model
         )
-        self.answer_model = OpenAILLM() if answer_model is None else answer_model
-        self.reflect_model = OpenAILMM() if reflect_model is None else reflect_model
+        self.answer_model = (
+            OpenAILLM(temperature=0.1) if answer_model is None else answer_model
+        )
+        self.reflect_model = (
+            OpenAILMM(temperature=0.0) if reflect_model is None else reflect_model
+        )
         self.max_retries = max_retries
 
         self.tools = TOOLS
@@ -466,7 +472,6 @@ class VisionAgent(Agent):
         for _ in range(self.max_retries):
             task_list = create_tasks(self.task_model, question, self.tools, reflections)
 
-            _LOGGER.info(f"Task Dependency: {task_list}")
             task_depend = {"Original Quesiton": question}
             previous_log = ""
             answers = []
@@ -477,7 +482,6 @@ class VisionAgent(Agent):
             for task in task_list:
                 task_str = task["task"]
                 previous_log = str(task_depend)
-                _LOGGER.info(f"\tSubtask: {task_str}")
                 tool_results, call_results = retrieval(
                     self.task_model,
                     task_str,
@@ -492,6 +496,7 @@ class VisionAgent(Agent):
                 tool_results["answer"] = answer
                 all_tool_results.append(tool_results)
 
+                _LOGGER.info(f"\tCall Result: {call_results}")
                 _LOGGER.info(f"\tAnswer: {answer}")
                 answers.append({"task": task_str, "answer": answer})
                 task_depend[task["id"]]["answer"] = answer  # type: ignore
@@ -510,7 +515,7 @@ class VisionAgent(Agent):
                 final_answer,
                 visualized_images[0] if len(visualized_images) > 0 else image,
             )
-            _LOGGER.info(f"\tReflection: {reflection}")
+            _LOGGER.info(f"Reflection: {reflection}")
             if parse_reflect(reflection):
                 break
             else:
