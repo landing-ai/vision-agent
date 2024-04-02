@@ -103,7 +103,9 @@ you. For example:
 | Crop | Crop crops an image given a bounding box and returns a file name of the cropped image. |
 | BboxArea | BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places. |
 | SegArea | SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places. |
-| ExtractFrames | ExtractFrames extracts image frames from the input video. |
+| BboxIoU | BboxIoU returns the intersection over union of two bounding boxes normalized to 2 decimal places. |
+| SegIoU | SegIoU returns the intersection over union of two segmentation masks normalized to 2 decimal places. |
+| ExtractFrames | ExtractFrames extracts frames with motion from a video. |
 
 
 It also has a basic set of calculate tools such as add, subtract, multiply and divide.
