@@ -40,7 +40,7 @@ export OPENAI_API_KEY="your-api-key"
 You can interact with the agents as you would with any LLM or LMM model:
 
 ```python
->>> import vision_agent as va
+>>> from vision_agent.agent import VisionAgent
 >>> agent = VisionAgent()
 >>> agent("What percentage of the area of this jar is filled with coffee beans?", image="jar.jpg")
 "The percentage of area of the jar filled with coffee beans is 25%."
