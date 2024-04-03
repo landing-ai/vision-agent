@@ -368,7 +368,6 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
                 continue
 
         for param, call_result in zip(parameters, tool_result["call_results"]):
-
             # calls can fail, so we need to check if the call was successful
             if not isinstance(call_result, dict):
                 continue

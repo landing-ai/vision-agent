@@ -180,7 +180,7 @@ class GroundingDINO(Tool):
         """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
-        data = {
+        request_data = {
             "prompt": prompt,
             "image": image_b64,
             "tool": "visual_grounding",
@@ -188,7 +188,7 @@ class GroundingDINO(Tool):
         res = requests.post(
             self._ENDPOINT,
             headers={"Content-Type": "application/json"},
-            json=data,
+            json=request_data,
         )
         resp_json: Dict[str, Any] = res.json()
         if (
@@ -273,7 +273,7 @@ class GroundingSAM(Tool):
         """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
-        data = {
+        request_data = {
             "prompt": prompt,
             "image": image_b64,
             "tool": "visual_grounding_segment",
@@ -281,7 +281,7 @@ class GroundingSAM(Tool):
         res = requests.post(
             self._ENDPOINT,
             headers={"Content-Type": "application/json"},
-            json=data,
+            json=request_data,
         )
         resp_json: Dict[str, Any] = res.json()
         if (
@@ -289,15 +289,15 @@ class GroundingSAM(Tool):
         ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
-        data = resp_json["data"]
-        ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
         data: Dict[str, Any] = resp_json["data"]
+        ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
         if "bboxes" in data:
-            data["bboxes"] = [
-                normalize_bbox(box, image_size) for box in data["bboxes"]
-            ]
+            data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
         if "masks" in data:
-            data["masks"] = [rle_decode(mask_rle=mask, shape=data["mask_shape"]) for mask in data["masks"][0]]
+            data["masks"] = [
+                rle_decode(mask_rle=mask, shape=data["mask_shape"])
+                for mask in data["masks"][0]
+            ]
         return ret_pred
 
 
@@ -306,7 +306,7 @@ class AgentGroundingSAM(GroundingSAM):
     returns the file name. This makes it easier for agents to use.
     """
 
-    def __call__(self, prompt: List[str], image: Union[str, ImageType]) -> Dict:
+    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
         rets = super().__call__(prompt, image)
         mask_files = []
         for mask in rets["masks"]:
