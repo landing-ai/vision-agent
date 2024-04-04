@@ -301,6 +301,7 @@ class GroundingSAM(Tool):
                 for mask in data["masks"]
             ]
         ret_pred["labels"] = data["labels"]
+        ret_pred["scores"] = data["scores"]
         return ret_pred
 
 
