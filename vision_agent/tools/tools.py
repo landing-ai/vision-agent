@@ -292,12 +292,15 @@ class GroundingSAM(Tool):
         data: Dict[str, Any] = resp_json["data"]
         ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
         if "bboxes" in data:
-            data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
-        if "masks" in data:
-            data["masks"] = [
-                rle_decode(mask_rle=mask, shape=data["mask_shape"])
-                for mask in data["masks"][0]
+            ret_pred["bboxes"] = [
+                normalize_bbox(box, image_size) for box in data["bboxes"]
             ]
+        if "masks" in data:
+            ret_pred["masks"] = [
+                rle_decode(mask_rle=mask, shape=data["mask_shape"])
+                for mask in data["masks"]
+            ]
+        ret_pred["labels"] = data["labels"]
         return ret_pred
 
 
