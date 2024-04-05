@@ -53,7 +53,9 @@ class Tool(ABC):
 
 class NoOp(Tool):
     name = "noop_"
-    description = "'noop_' is a no-op tool that does nothing if you do not need to use a tool."
+    description = (
+        "'noop_' is a no-op tool that does nothing if you do not need to use a tool."
+    )
     usage = {
         "required_parameters": [],
         "examples": [
