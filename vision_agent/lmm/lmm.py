@@ -99,12 +99,16 @@ class OpenAILMM(LMM):
     def __init__(
         self,
         model_name: str = "gpt-4-vision-preview",
+        api_key: str = "",
         max_tokens: int = 1024,
         **kwargs: Any,
     ):
         self.model_name = model_name
         self.max_tokens = max_tokens
-        self.client = OpenAI()
+        if api_key:
+            self.client = OpenAI(api_key=api_key)
+        else:
+            self.client = OpenAI()
         self.kwargs = kwargs
 
     def __call__(

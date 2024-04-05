@@ -33,11 +33,15 @@ class OpenAILLM(LLM):
     def __init__(
         self,
         model_name: str = "gpt-4-turbo-preview",
+        api_key: str = "",
         json_mode: bool = False,
         **kwargs: Any
     ):
         self.model_name = model_name
-        self.client = OpenAI()
+        if api_key:
+            self.client = OpenAI(api_key=api_key)
+        else:
+            self.client = OpenAI()
         self.kwargs = kwargs
         if json_mode:
             self.kwargs["response_format"] = {"type": "json_object"}
