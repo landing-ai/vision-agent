@@ -51,6 +51,23 @@ class Tool(ABC):
     usage: Dict
 
 
+class NoOp(Tool):
+    name = "noop_"
+    description = "'noop_' is a no-op tool that does nothing."
+    usage = {
+        "required_parameters": [],
+        "examples": [
+            {
+                "scenario": "If you do not want to use a tool.",
+                "parameters": {},
+            }
+        ],
+    }
+
+    def __call__(self) -> None:
+        return None
+
+
 class CLIP(Tool):
     r"""CLIP is a tool that can classify or tag any image given a set if input classes
     or tags.
@@ -612,6 +629,7 @@ TOOLS = {
     i: {"name": c.name, "description": c.description, "usage": c.usage, "class": c}
     for i, c in enumerate(
         [
+            NoOp,
             CLIP,
             GroundingDINO,
             AgentGroundingSAM,
