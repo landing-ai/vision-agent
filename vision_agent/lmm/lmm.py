@@ -105,10 +105,9 @@ class OpenAILMM(LMM):
         **kwargs: Any,
     ):
         if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
-
-        if not api_key:
-            raise ValueError("OpenAI API key is required.")
+            self.client = OpenAI()
+        else:
+            self.client = OpenAI(api_key=api_key)
 
         self.client = OpenAI(api_key=api_key)
         self.model_name = model_name

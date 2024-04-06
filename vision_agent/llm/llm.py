@@ -39,12 +39,10 @@ class OpenAILLM(LLM):
         **kwargs: Any
     ):
         if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
+            self.client = OpenAI()
+        else:
+            self.client = OpenAI(api_key=api_key)
 
-        if not api_key:
-            raise ValueError("OpenAI API key is required.")
-
-        self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
         self.kwargs = kwargs
         if json_mode:
