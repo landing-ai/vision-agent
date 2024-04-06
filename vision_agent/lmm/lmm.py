@@ -260,13 +260,13 @@ class AzureOpenAILMM(OpenAILMM):
         self,
         model_name: str = "gpt-4-vision-preview",
         api_key: Optional[str] = None,
-        api_version: str = "2021-02-01",
+        api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
         max_tokens: int = 1024,
         **kwargs: Any,
     ):
         if not api_key:
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = os.getenv("AZURE_OPENAI_API_KEY")
         if not azure_endpoint:
             azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 
