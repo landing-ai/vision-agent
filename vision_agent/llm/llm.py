@@ -1,8 +1,9 @@
 import json
+import os
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Mapping, Union, cast
+from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
 
-from openai import OpenAI
+from openai import AzureOpenAI, OpenAI
 
 from vision_agent.tools import (
     CHOOSE_PARAMS,
@@ -33,15 +34,18 @@ class OpenAILLM(LLM):
     def __init__(
         self,
         model_name: str = "gpt-4-turbo-preview",
-        api_key: str = "",
+        api_key: Optional[str] = None,
         json_mode: bool = False,
         **kwargs: Any
     ):
+        if not api_key:
+            api_key = os.getenv("OPENAI_API_KEY")
+
+        if not api_key:
+            raise ValueError("OpenAI API key is required.")
+
+        self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
-        if api_key:
-            self.client = OpenAI(api_key=api_key)
-        else:
-            self.client = OpenAI()
         self.kwargs = kwargs
         if json_mode:
             self.kwargs["response_format"] = {"type": "json_object"}
@@ -124,3 +128,32 @@ class OpenAILLM(LLM):
         ]
 
         return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
+
+
+class AzureOpenAILLM(OpenAILLM):
+    def __init__(
+        self,
+        model_name: str = "gpt-4-turbo-preview",
+        api_key: Optional[str] = None,
+        api_version: str = "2024-02-01",
+        azure_endpoint: Optional[str] = None,
+        json_mode: bool = False,
+        **kwargs: Any
+    ):
+        if not api_key:
+            api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if not azure_endpoint:
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+        if not api_key:
+            raise ValueError("Azure OpenAI API key is required.")
+        if not azure_endpoint:
+            raise ValueError("Azure OpenAI endpoint is required.")
+
+        self.client = AzureOpenAI(
+            api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+        )
+        self.model_name = model_name
+        self.kwargs = kwargs
+        if json_mode:
+            self.kwargs["response_format"] = {"type": "json_object"}
