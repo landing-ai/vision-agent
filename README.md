@@ -30,7 +30,8 @@ To get started, you can install the library using pip:
 pip install vision-agent
 ```
 
-Ensure you have an OpenAI API key and set it as an environment variable:
+Ensure you have an OpenAI API key and set it as an environment variable (if you are
+using Azure OpenAI please see the additional setup section):
 
 ```bash
 export OPENAI_API_KEY="your-api-key"
@@ -109,3 +110,23 @@ you. For example:
 
 
 It also has a basic set of calculate tools such as add, subtract, multiply and divide.
+
+### Additional Setup
+If you want to use Azure OpenAI models, you can set the environment variable:
+
+```bash
+export AZURE_OPENAI_API_KEY="your-api-key"
+export AZURE_OPENAI_ENDPOINT="your-endpoint"
+```
+
+You can then run Vision Agent using the Azure OpenAI models:
+
+```python
+>>> import vision_agent as va
+>>> agent = va.agent.VisionAgent(
+>>>     task_model=va.llm.AzureOpenAILLM(),
+>>>     answer_model=va.lmm.AzureOpenAILMM(),
+>>>     reflection_model=va.lmm.AzureOpenAILMM(),
+>>> )
+```
+
