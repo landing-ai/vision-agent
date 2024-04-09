@@ -348,9 +348,9 @@ class DINOv(Tool):
                 "parameters": {
                     "prompt": [
                         {"mask": "balloon_mask1.jpg", "image": "balloon.jpg"},
-                        {"mask": "balloon_mask2.jpg", "image": "balloon.jpg"}
+                        {"mask": "balloon_mask2.jpg", "image": "balloon.jpg"},
                     ],
-                    "image": "input.jpg"
+                    "image": "input.jpg",
                 },
             },
             {
@@ -359,13 +359,15 @@ class DINOv(Tool):
                     "prompt": [
                         {"mask": "obj_mask1.jpg", "image": "background.jpg"},
                     ],
-                    "image": "input.jpg"
+                    "image": "input.jpg",
                 },
             },
         ],
     }
 
-    def __call__(self, prompt: List[Dict[str, str]], image: Union[str, ImageType]) -> Dict:
+    def __call__(
+        self, prompt: List[Dict[str, str]], image: Union[str, ImageType]
+    ) -> Dict:
         """Invoke the DINOv model.
 
         Parameters:
@@ -394,7 +396,7 @@ class DINOv(Tool):
         ) or "statusCode" not in resp_json:
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
-        rets = resp_json["data"]
+        rets: Dict[str, Any] = resp_json["data"]
         shape = rets.pop("mask_shape")
         mask_files = []
         for encoded_mask in rets["masks"]:
