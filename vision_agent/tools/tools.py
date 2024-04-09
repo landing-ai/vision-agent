@@ -495,7 +495,7 @@ class BboxArea(Tool):
     name = "bbox_area_"
     description = "'bbox_area_' returns the area of the bounding box in pixels normalized to 2 decimal places."
     usage = {
-        "required_parameters": [{"name": "bbox", "type": "List[int]"}],
+        "required_parameters": [{"name": "bboxes", "type": "List[int]"}],
         "examples": [
             {
                 "scenario": "If you want to calculate the area of the bounding box [0.2, 0.21, 0.34, 0.42]",
