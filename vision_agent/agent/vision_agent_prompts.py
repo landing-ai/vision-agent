@@ -53,7 +53,7 @@ These are the tools you can select to solve the question:
 {tools}
 
 Please note that:
-1. You should only choose one tool from the tool list to solve this question.
+1. You should only choose one tool from the Tool List to solve this question.
 2. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
 
 Example 1: {{"ID": 1}}
@@ -70,7 +70,7 @@ This is a reflection from a previous failed attempt:
 {reflections}
 
 Please note that:
-1. You should only choose one tool from the tool list to solve this question.
+1. You should only choose one tool from the Tool List to solve this question.
 2. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
 
 Example 1: {{"ID": 1}}
@@ -80,7 +80,7 @@ Output: """
 
 CHOOSE_PARAMETER_DEPENDS = """Given a user's question and an API tool documentation, you need to output parameters according to the API tool documentation to successfully call the API to solve the user's question.
 Please note that:
-1. The examples in the API tool documentation can help you better understand the use of the API.
+1. The Example in the API tool documentation can help you better understand the use of the API.
 2. Ensure the parameters you output are correct. The output must contain the required parameters, and can contain the optional parameters based on the question. If there are no paremters in the required parameters and optional parameters, just leave it as {{"Parameters":{{}}}}
 3. If the user's question mentions other APIs, you should ONLY consider the API tool documentation I give and do not consider other APIs.
 4. The question may have dependencies on answers of other questions, so we will provide logs of previous questions and answers for your reference.
