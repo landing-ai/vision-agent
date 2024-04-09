@@ -63,7 +63,7 @@ class CLIP(Tool):
         [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
     """
 
-    _ENDPOINT = "https://rb4ii6dfacmwqfxivi4aedyyfm0endsv.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "clip_"
     description = "'clip_' is a tool that can classify or tag any image given a set of input classes or tags."
@@ -106,6 +106,7 @@ class CLIP(Tool):
         data = {
             "prompt": prompt,
             "image": image_b64,
+            "tool": "closed_set_image_classification",
         }
         res = requests.post(
             self._ENDPOINT,
@@ -119,10 +120,11 @@ class CLIP(Tool):
             _LOGGER.error(f"Request failed: {resp_json}")
             raise ValueError(f"Request failed: {resp_json}")
 
-        rets = []
-        for elt in resp_json["data"]:
-            rets.append({"labels": prompt, "scores": [round(prob, 2) for prob in elt]})
-        return cast(Dict, rets[0])
+        resp_json["data"]["scores"] = [
+            round(prob, 4) for prob in resp_json["data"]["scores"]
+        ]
+
+        return resp_json["data"]
 
 
 class GroundingDINO(Tool):
@@ -148,6 +150,10 @@ class GroundingDINO(Tool):
             {"name": "prompt", "type": "str"},
             {"name": "image", "type": "str"},
         ],
+        "optional_parameters": [
+            {"name": "box_threshold", "type": "float"},
+            {"name": "iou_threshold", "type": "float"},
+        ],
         "examples": [
             {
                 "scenario": "Can you build me a car detector?",
@@ -162,18 +168,28 @@ class GroundingDINO(Tool):
                 "parameters": {
                     "prompt": "red shirt. green shirt",
                     "image": "shirts.jpg",
+                    "box_threshold": 0.20,
+                    "iou_threshold": 0.75,
                 },
             },
         ],
     }
 
     # TODO: Add support for input multiple images, which aligns with the output type.
-    def __call__(self, prompt: str, image: Union[str, Path, ImageType]) -> Dict:
+    def __call__(
+        self,
+        prompt: str,
+        image: Union[str, Path, ImageType],
+        box_threshold: float = 0.20,
+        iou_threshold: float = 0.75,
+    ) -> Dict:
         """Invoke the Grounding DINO model.
 
         Parameters:
             prompt: one or multiple class names to detect. The classes should be separated by a period if there are multiple classes. E.g. "big dog . small cat"
             image: the input image to run against.
+            box_threshold: the threshold to filter out the bounding boxes with low scores.
+            iou_threshold: the threshold for intersection over union used in nms algorithm. It will suppress the boxes which have iou greater than this threshold.
 
         Returns:
             A list of dictionaries containing the labels, scores, and bboxes. Each dictionary contains the detection result for an image.
@@ -184,6 +200,7 @@ class GroundingDINO(Tool):
             "prompt": prompt,
             "image": image_b64,
             "tool": "visual_grounding",
+            "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
         }
         res = requests.post(
             self._ENDPOINT,
@@ -198,13 +215,11 @@ class GroundingDINO(Tool):
             raise ValueError(f"Request failed: {resp_json}")
         data: Dict[str, Any] = resp_json["data"]
         if "bboxes" in data:
-            data["bboxes"] = [
-                normalize_bbox(box, image_size) for box in data["bboxes"][0]
-            ]
+            data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
         if "scores" in data:
-            data["scores"] = [round(score, 2) for score in data["scores"][0]]
+            data["scores"] = [round(score, 2) for score in data["scores"]]
         if "labels" in data:
-            data["labels"] = [label for label in data["labels"][0]]
+            data["labels"] = [label for label in data["labels"]]
         data["size"] = (image_size[1], image_size[0])
         return data
 
@@ -241,6 +256,10 @@ class GroundingSAM(Tool):
             {"name": "prompt", "type": "str"},
             {"name": "image", "type": "str"},
         ],
+        "optional_parameters": [
+            {"name": "box_threshold", "type": "float"},
+            {"name": "iou_threshold", "type": "float"},
+        ],
         "examples": [
             {
                 "scenario": "Can you build me a car segmentor?",
@@ -255,18 +274,28 @@ class GroundingSAM(Tool):
                 "parameters": {
                     "prompt": "red shirt, green shirt",
                     "image": "shirts.jpg",
+                    "box_threshold": 0.20,
+                    "iou_threshold": 0.75,
                 },
             },
         ],
     }
 
     # TODO: Add support for input multiple images, which aligns with the output type.
-    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
+    def __call__(
+        self,
+        prompt: str,
+        image: Union[str, ImageType],
+        box_threshold: float = 0.2,
+        iou_threshold: float = 0.75,
+    ) -> Dict:
         """Invoke the Grounding SAM model.
 
         Parameters:
             prompt: a list of classes to segment.
             image: the input image to segment.
+            box_threshold: the threshold to filter out the bounding boxes with low scores.
+            iou_threshold: the threshold for intersection over union used in nms algorithm. It will suppress the boxes which have iou greater than this threshold.
 
         Returns:
             A list of dictionaries containing the labels, scores, bboxes and masks. Each dictionary contains the segmentation result for an image.
@@ -277,6 +306,7 @@ class GroundingSAM(Tool):
             "prompt": prompt,
             "image": image_b64,
             "tool": "visual_grounding_segment",
+            "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
         }
         res = requests.post(
             self._ENDPOINT,
