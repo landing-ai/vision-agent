@@ -20,7 +20,7 @@ This is the tool list:
 
 Please note that:
 1. You should only decompose this user's complex question into some simple subtasks which can be executed easily by using one single tool in the tool list.
-2. If one subtask needs the results from other subtask, you should write clearly. For example:
+2. If one subtask needs the results from another subtask, you should write clearly. For example:
 {{"Tasks": ["Convert 23 km/h to X km/min by 'divide_'", "Multiply X km/min by 45 min to get Y by 'multiply_'"]}}
 3. You must ONLY output in a parsible JSON format. An example output looks like:
 
