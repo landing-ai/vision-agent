@@ -323,7 +323,7 @@ class DINOv(Tool):
     -------
         >>> import vision_agent as va
         >>> t = va.tools.DINOv()
-        >>> t(["red line", "yellow dot"], ct_scan1.jpg"])
+        >>> t(prompt=[{"mask":"balloon_mask.jpg", "image": "balloon.jpg"}], image="balloon.jpg"])
         [{'scores': [0.512, 0.212],
         'masks': [array([[0, 0, 0, ..., 0, 0, 0],
            ...,
