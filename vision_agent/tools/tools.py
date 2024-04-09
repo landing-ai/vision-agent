@@ -124,7 +124,7 @@ class CLIP(Tool):
             round(prob, 4) for prob in resp_json["data"]["scores"]
         ]
 
-        return resp_json["data"]
+        return resp_json["data"]  # type: ignore
 
 
 class GroundingDINO(Tool):
@@ -340,8 +340,14 @@ class AgentGroundingSAM(GroundingSAM):
     returns the file name. This makes it easier for agents to use.
     """
 
-    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
-        rets = super().__call__(prompt, image)
+    def __call__(
+        self,
+        prompt: str,
+        image: Union[str, ImageType],
+        box_threshold: float = 0.2,
+        iou_threshold: float = 0.75,
+    ) -> Dict:
+        rets = super().__call__(prompt, image, box_threshold, iou_threshold)
         mask_files = []
         for mask in rets["masks"]:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
