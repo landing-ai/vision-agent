@@ -1,1 +1,1 @@
-from .lmm import LMM, LLaVALMM, OpenAILMM, get_lmm
+from .lmm import LMM, AzureOpenAILMM, LLaVALMM, OpenAILMM, get_lmm
