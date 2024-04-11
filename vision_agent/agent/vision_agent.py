@@ -363,7 +363,7 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
         elif isinstance(tool_result["parameters"], list):
             if (
                 len(tool_result["parameters"]) < 1
-                and "image" not in tool_result["parameters"][0]
+                or ("image" not in tool_result["parameters"][0])
             ):
                 continue
 
