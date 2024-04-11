@@ -466,7 +466,7 @@ class VisionAgent(Agent):
                 reflections += reflection
         # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
-            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</<ANSWER>"
+            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
         )
         return final_answer, all_tool_results
 
