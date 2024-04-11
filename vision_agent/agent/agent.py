@@ -11,3 +11,10 @@ class Agent(ABC):
         image: Optional[Union[str, Path]] = None,
     ) -> str:
         pass
+
+    @abstractmethod
+    def log_progress(self, description: str) -> None:
+        """Log the progress of the agent.
+        This is a hook that is intended for reporting the progress of the agent.
+        """
+        pass
