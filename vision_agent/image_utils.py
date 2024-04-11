@@ -79,7 +79,7 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
         data = Image.open(data)
     if isinstance(data, Image.Image):
         buffer = BytesIO()
-        data.save(buffer, format="PNG")
+        data.convert("RGB").save(buffer, format="JPEG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     else:
         arr_bytes = data.tobytes()
