@@ -54,7 +54,7 @@ class Tool(ABC):
 class NoOp(Tool):
     name = "noop_"
     description = (
-        "'noop_' is a no-op tool that does nothing if you do not need to use a tool."
+        "'noop_' is a no-op tool that does nothing if you do not want answer the question directly and not use a tool."
     )
     usage = {
         "required_parameters": [],
@@ -85,7 +85,7 @@ class CLIP(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "clip_"
-    description = "'clip_' is a tool that can classify or tag any image given a set of input classes or tags."
+    description = "'clip_' is a tool that can classify any image given a set of input names or tags."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -370,8 +370,9 @@ class AgentGroundingSAM(GroundingSAM):
         mask_files = []
         for mask in rets["masks"]:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                Image.fromarray(mask * 255).save(tmp)
-                mask_files.append(tmp.name)
+                file_name = Path(tmp.name).with_suffix(".mask.png")
+                Image.fromarray(mask * 255).save(file_name)
+                mask_files.append(str(file_name))
         rets["masks"] = mask_files
         return rets
 
@@ -591,8 +592,9 @@ class ExtractFrames(Tool):
         )
         for frame, ts in frames:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                Image.fromarray(frame).save(tmp)
-            result.append((tmp.name, ts))
+                file_name = Path(tmp.name).with_suffix(".frame.png")
+                Image.fromarray(frame).save(file_name)
+            result.append((str(file_name), ts))
         return result
 
 

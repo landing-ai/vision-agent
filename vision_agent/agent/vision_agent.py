@@ -304,10 +304,11 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
             # if the call was successful, then we can add the image data
             image = param["image"]
             if image not in image_to_data:
-                image_to_data[image] = {"bboxes": [], "masks": [], "labels": []}
+                image_to_data[image] = {"bboxes": [], "masks": [], "labels": [], "scores": []}
 
             image_to_data[image]["bboxes"].extend(call_result["bboxes"])
             image_to_data[image]["labels"].extend(call_result["labels"])
+            image_to_data[image]["scores"].extend(call_result["scores"])
             if "masks" in call_result:
                 image_to_data[image]["masks"].extend(call_result["masks"])
 
