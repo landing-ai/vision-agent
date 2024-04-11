@@ -109,7 +109,7 @@ def overlay_bboxes(
     fontsize = max(12, int(min(width, height) / 40))
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype(
-        str(resources.files("vision_agent.fonts").joinpath("arial.ttf")), fontsize
+        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")), fontsize
     )
     if "bboxes" not in bboxes:
         return image.convert("RGB")
