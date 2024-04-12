@@ -147,7 +147,7 @@ def overlay_masks(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(masks["labels"])}
+    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(set(masks["labels"]))}
     if "masks" not in masks:
         return image.convert("RGB")
 
