@@ -53,9 +53,7 @@ class Tool(ABC):
 
 class NoOp(Tool):
     name = "noop_"
-    description = (
-        "'noop_' is a no-op tool that does nothing if you do not need to use a tool."
-    )
+    description = "'noop_' is a no-op tool that does nothing if you do not want answer the question directly and not use a tool."
     usage = {
         "required_parameters": [],
         "examples": [
@@ -85,7 +83,7 @@ class CLIP(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "clip_"
-    description = "'clip_' is a tool that can classify or tag any image given a set of input classes or tags."
+    description = "'clip_' is a tool that can classify any image given a set of input names or tags. It returns a list of the input names along with their probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -163,7 +161,7 @@ class GroundingDINO(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_dino_"
-    description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
+    description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -179,8 +177,11 @@ class GroundingDINO(Tool):
                 "parameters": {"prompt": "car", "image": ""},
             },
             {
-                "scenario": "Can you detect the person on the left? Image name: person.jpg",
-                "parameters": {"prompt": "person on the left", "image": "person.jpg"},
+                "scenario": "Can you detect the person on the left and right? Image name: person.jpg",
+                "parameters": {
+                    "prompt": "left person. right person",
+                    "image": "person.jpg",
+                },
             },
             {
                 "scenario": "Detect the red shirts and green shirst. Image name: shirts.jpg",
@@ -269,7 +270,7 @@ class GroundingSAM(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_sam_"
-    description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
+    description = "'grounding_sam_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and masks file names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -285,8 +286,11 @@ class GroundingSAM(Tool):
                 "parameters": {"prompt": "car", "image": ""},
             },
             {
-                "scenario": "Can you segment the person on the left? Image name: person.jpg",
-                "parameters": {"prompt": "person on the left", "image": "person.jpg"},
+                "scenario": "Can you segment the person on the left and right? Image name: person.jpg",
+                "parameters": {
+                    "prompt": "left person. right person",
+                    "image": "person.jpg",
+                },
             },
             {
                 "scenario": "Can you build me a tool that segments red shirts and green shirts? Image name: shirts.jpg",
@@ -462,8 +466,9 @@ class AgentGroundingSAM(GroundingSAM):
         mask_files = []
         for mask in rets["masks"]:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                Image.fromarray(mask * 255).save(tmp)
-                mask_files.append(tmp.name)
+                file_name = Path(tmp.name).with_suffix(".mask.png")
+                Image.fromarray(mask * 255).save(file_name)
+                mask_files.append(str(file_name))
         rets["masks"] = mask_files
         return rets
 
@@ -472,7 +477,7 @@ class Counter(Tool):
     r"""Counter detects and counts the number of objects in an image given an input such as a category name or referring expression."""
 
     name = "counter_"
-    description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression."
+    description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression. It returns a dictionary containing the labels and their counts."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -492,14 +497,14 @@ class Counter(Tool):
 
     def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
         resp = GroundingDINO()(prompt, image)
-        return dict(CounterClass(resp[0]["labels"]))
+        return dict(CounterClass(resp["labels"]))
 
 
 class Crop(Tool):
     r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
 
     name = "crop_"
-    description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image."
+    description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image. It returns a file with the cropped image."
     usage = {
         "required_parameters": [
             {"name": "bbox", "type": "List[float]"},
@@ -587,9 +592,7 @@ class SegArea(Tool):
 
 class BboxIoU(Tool):
     name = "bbox_iou_"
-    description = (
-        "'bbox_iou_' returns the intersection over union of two bounding boxes."
-    )
+    description = "'bbox_iou_' returns the intersection over union of two bounding boxes. This is a good tool for determining if two objects are overlapping."
     usage = {
         "required_parameters": [
             {"name": "bbox1", "type": "List[int]"},
@@ -683,85 +686,35 @@ class ExtractFrames(Tool):
         )
         for frame, ts in frames:
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                Image.fromarray(frame).save(tmp)
-            result.append((tmp.name, ts))
+                file_name = Path(tmp.name).with_suffix(".frame.png")
+                Image.fromarray(frame).save(file_name)
+            result.append((str(file_name), ts))
         return result
 
 
-class Add(Tool):
-    r"""Add returns the sum of all the arguments passed to it, normalized to 2 decimal places."""
+class Calculator(Tool):
+    r"""Calculator is a tool that can perform basic arithmetic operations."""
 
-    name = "add_"
-    description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
+    name = "calculator_"
+    description = (
+        "'calculator_' is a tool that can perform basic arithmetic operations."
+    )
     usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
+        "required_parameters": [{"name": "equation", "type": "str"}],
         "examples": [
             {
-                "scenario": "If you want to calculate 2 + 4",
-                "parameters": {"input": [2, 4]},
-            }
+                "scenario": "If you want to calculate (2 * 3) + 4",
+                "parameters": {"equation": "2 + 4"},
+            },
+            {
+                "scenario": "If you want to calculate (4 + 2.5) / 2.1",
+                "parameters": {"equation": "(4 + 2.5) / 2.1"},
+            },
         ],
     }
 
-    def __call__(self, input: List[int]) -> float:
-        return round(sum(input), 2)
-
-
-class Subtract(Tool):
-    r"""Subtract returns the difference of all the arguments passed to it, normalized to 2 decimal places."""
-
-    name = "subtract_"
-    description = "'subtract_' returns the difference of all the arguments passed to it, normalized to 2 decimal places."
-    usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
-        "examples": [
-            {
-                "scenario": "If you want to calculate 4 - 2",
-                "parameters": {"input": [4, 2]},
-            }
-        ],
-    }
-
-    def __call__(self, input: List[int]) -> float:
-        return round(input[0] - input[1], 2)
-
-
-class Multiply(Tool):
-    r"""Multiply returns the product of all the arguments passed to it, normalized to 2 decimal places."""
-
-    name = "multiply_"
-    description = "'multiply_' returns the product of all the arguments passed to it, normalized to 2 decimal places."
-    usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
-        "examples": [
-            {
-                "scenario": "If you want to calculate 2 * 4",
-                "parameters": {"input": [2, 4]},
-            }
-        ],
-    }
-
-    def __call__(self, input: List[int]) -> float:
-        return round(input[0] * input[1], 2)
-
-
-class Divide(Tool):
-    r"""Divide returns the division of all the arguments passed to it, normalized to 2 decimal places."""
-
-    name = "divide_"
-    description = "'divide_' returns the division of all the arguments passed to it, normalized to 2 decimal places."
-    usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
-        "examples": [
-            {
-                "scenario": "If you want to calculate 4 / 2",
-                "parameters": {"input": [4, 2]},
-            }
-        ],
-    }
-
-    def __call__(self, input: List[int]) -> float:
-        return round(input[0] / input[1], 2)
+    def __call__(self, equation: str) -> float:
+        return cast(float, round(eval(equation), 2))
 
 
 TOOLS = {
@@ -779,10 +732,7 @@ TOOLS = {
             SegArea,
             BboxIoU,
             SegIoU,
-            Add,
-            Subtract,
-            Multiply,
-            Divide,
+            Calculator,
         ]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
