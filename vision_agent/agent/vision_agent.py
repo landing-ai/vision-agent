@@ -407,6 +407,11 @@ class VisionAgent(Agent):
         if self.report_progress_callback:
             self.report_progress_callback(description)
 
+    def log_progress(self, description: str) -> None:
+        _LOGGER.info(description)
+        if self.report_progress_callback:
+            self.report_progress_callback(description)
+
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
