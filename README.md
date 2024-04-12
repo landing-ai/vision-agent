@@ -74,7 +74,8 @@ the individual steps and tools to get the answer:
     }
   ]],
   "answer": "The jar is located at [0.58, 0.2, 0.72, 0.45].",
-}]
+},
+{"visualize_output": "final_output.png"}]
 ```
 
 ### Tools
