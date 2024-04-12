@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from PIL import Image
 from tabulate import tabulate
 
 from vision_agent.image_utils import overlay_bboxes, overlay_masks
@@ -288,9 +289,8 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
                 continue
             parameters = [parameters]
         elif isinstance(tool_result["parameters"], list):
-            if (
-                len(tool_result["parameters"]) < 1
-                or ("image" not in tool_result["parameters"][0])
+            if len(tool_result["parameters"]) < 1 or (
+                "image" not in tool_result["parameters"][0]
             ):
                 continue
 
@@ -304,7 +304,12 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
             # if the call was successful, then we can add the image data
             image = param["image"]
             if image not in image_to_data:
-                image_to_data[image] = {"bboxes": [], "masks": [], "labels": [], "scores": []}
+                image_to_data[image] = {
+                    "bboxes": [],
+                    "masks": [],
+                    "labels": [],
+                    "scores": [],
+                }
 
             image_to_data[image]["bboxes"].extend(call_result["bboxes"])
             image_to_data[image]["labels"].extend(call_result["labels"])
@@ -346,7 +351,7 @@ class VisionAgent(Agent):
         task_model: Optional[Union[LLM, LMM]] = None,
         answer_model: Optional[Union[LLM, LMM]] = None,
         reflect_model: Optional[Union[LLM, LMM]] = None,
-        max_retries: int = 2,
+        max_retries: int = 3,
         verbose: bool = False,
         report_progress_callback: Optional[Callable[[str], None]] = None,
     ):
@@ -381,6 +386,7 @@ class VisionAgent(Agent):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
+        visualize_output: Optional[bool] = False,
     ) -> str:
         """Invoke the vision agent.
 
@@ -402,7 +408,10 @@ class VisionAgent(Agent):
             self.report_progress_callback(description)
 
     def chat_with_workflow(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        image: Optional[Union[str, Path]] = None,
+        visualize_output: Optional[bool] = False,
     ) -> Tuple[str, List[Dict]]:
         question = chat[0]["content"]
         if image:
@@ -464,15 +473,24 @@ class VisionAgent(Agent):
             if parse_reflect(reflection):
                 break
             else:
-                reflections += reflection
+                reflections += "\n" + reflection
         # '<END>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
             f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</<ANSWER>"
         )
+
+        if visualize_output:
+            visualized_images = all_tool_results[-1]["visualized_images"]
+            for image in visualized_images:
+                Image.open(image).show()
+
         return final_answer, all_tool_results
 
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        image: Optional[Union[str, Path]] = None,
+        visualize_output: Optional[bool] = False,
     ) -> str:
         answer, _ = self.chat_with_workflow(chat, image=image)
         return answer
