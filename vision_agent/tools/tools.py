@@ -269,7 +269,7 @@ class GroundingSAM(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_sam_"
-    description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names, masks file names and associated probability scores."
+    description = "'grounding_sam_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and masks file names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -497,7 +497,7 @@ class SegArea(Tool):
 class BboxIoU(Tool):
     name = "bbox_iou_"
     description = (
-        "'bbox_iou_' returns the intersection over union of two bounding boxes."
+        "'bbox_iou_' returns the intersection over union of two bounding boxes. This is a good tool for determining if two objects are overlapping."
     )
     usage = {
         "required_parameters": [
