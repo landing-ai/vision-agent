@@ -598,80 +598,27 @@ class ExtractFrames(Tool):
         return result
 
 
-class Add(Tool):
-    r"""Add returns the sum of all the arguments passed to it, normalized to 2 decimal places."""
+class Calculator(Tool):
+    r"""Calculator is a tool that can perform basic arithmetic operations."""
 
-    name = "add_"
-    description = "'add_' returns the sum of all the arguments passed to it, normalized to 2 decimal places."
+    name = "calculator_"
+    description = "'calculator_' is a tool that can perform basic arithmetic operations."
     usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
+        "required_parameters": [{"name": "equation", "type": "str"}],
         "examples": [
             {
-                "scenario": "If you want to calculate 2 + 4",
-                "parameters": {"input": [2, 4]},
-            }
-        ],
-    }
-
-    def __call__(self, input: List[int]) -> float:
-        return round(sum(input), 2)
-
-
-class Subtract(Tool):
-    r"""Subtract returns the difference of all the arguments passed to it, normalized to 2 decimal places."""
-
-    name = "subtract_"
-    description = "'subtract_' returns the difference of all the arguments passed to it, normalized to 2 decimal places."
-    usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
-        "examples": [
+                "scenario": "If you want to calculate (2 * 3) + 4",
+                "parameters": {"equation": "2 + 4"},
+            },
             {
-                "scenario": "If you want to calculate 4 - 2",
-                "parameters": {"input": [4, 2]},
+                "scenario": "If you want to calculate (4 + 2.5) / 2.1",
+                "parameters": {"equation": "(4 + 2.5) / 2.1"},
             }
-        ],
+        ]
     }
 
-    def __call__(self, input: List[int]) -> float:
-        return round(input[0] - input[1], 2)
-
-
-class Multiply(Tool):
-    r"""Multiply returns the product of all the arguments passed to it, normalized to 2 decimal places."""
-
-    name = "multiply_"
-    description = "'multiply_' returns the product of all the arguments passed to it, normalized to 2 decimal places."
-    usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
-        "examples": [
-            {
-                "scenario": "If you want to calculate 2 * 4",
-                "parameters": {"input": [2, 4]},
-            }
-        ],
-    }
-
-    def __call__(self, input: List[int]) -> float:
-        return round(input[0] * input[1], 2)
-
-
-class Divide(Tool):
-    r"""Divide returns the division of all the arguments passed to it, normalized to 2 decimal places."""
-
-    name = "divide_"
-    description = "'divide_' returns the division of all the arguments passed to it, normalized to 2 decimal places."
-    usage = {
-        "required_parameters": [{"name": "input", "type": "List[int]"}],
-        "examples": [
-            {
-                "scenario": "If you want to calculate 4 / 2",
-                "parameters": {"input": [4, 2]},
-            }
-        ],
-    }
-
-    def __call__(self, input: List[int]) -> float:
-        return round(input[0] / input[1], 2)
+    def __call__(self, equation: str) -> float:
+        return round(eval(equation), 2)
 
 
 TOOLS = {
@@ -689,10 +636,7 @@ TOOLS = {
             SegArea,
             BboxIoU,
             SegIoU,
-            Add,
-            Subtract,
-            Multiply,
-            Divide,
+            Calculator,
         ]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
