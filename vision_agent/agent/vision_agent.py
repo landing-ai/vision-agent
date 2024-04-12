@@ -400,7 +400,7 @@ class VisionAgent(Agent):
         """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image=image)
+        return self.chat(input, image=image, visualize_output=visualize_output)
 
     def log_progress(self, description: str) -> None:
         _LOGGER.info(description)
@@ -480,9 +480,9 @@ class VisionAgent(Agent):
         )
 
         if visualize_output:
-            visualized_output = all_tool_results[-1]["visualized_images"]
+            visualized_output = all_tool_results[-1]["visualized_output"]
             for image in visualized_output:
-                Image.open(image).show()
+                Image.open(image).show()  # type: ignore
 
         return final_answer, all_tool_results
 
@@ -492,7 +492,7 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         visualize_output: Optional[bool] = False,
     ) -> str:
-        answer, _ = self.chat_with_workflow(chat, image=image)
+        answer, _ = self.chat_with_workflow(chat, image=image, visualize_output=visualize_output)
         return answer
 
     def retrieval(
