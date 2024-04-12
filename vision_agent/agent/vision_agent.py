@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from PIL import Image
 from tabulate import tabulate
 
 from vision_agent.image_utils import overlay_bboxes, overlay_masks
@@ -288,9 +289,8 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
                 continue
             parameters = [parameters]
         elif isinstance(tool_result["parameters"], list):
-            if (
-                len(tool_result["parameters"]) < 1
-                and "image" not in tool_result["parameters"][0]
+            if len(tool_result["parameters"]) < 1 or (
+                "image" not in tool_result["parameters"][0]
             ):
                 continue
 
@@ -304,10 +304,16 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
             # if the call was successful, then we can add the image data
             image = param["image"]
             if image not in image_to_data:
-                image_to_data[image] = {"bboxes": [], "masks": [], "labels": []}
+                image_to_data[image] = {
+                    "bboxes": [],
+                    "masks": [],
+                    "labels": [],
+                    "scores": [],
+                }
 
             image_to_data[image]["bboxes"].extend(call_result["bboxes"])
             image_to_data[image]["labels"].extend(call_result["labels"])
+            image_to_data[image]["scores"].extend(call_result["scores"])
             if "masks" in call_result:
                 image_to_data[image]["masks"].extend(call_result["masks"])
 
@@ -345,7 +351,7 @@ class VisionAgent(Agent):
         task_model: Optional[Union[LLM, LMM]] = None,
         answer_model: Optional[Union[LLM, LMM]] = None,
         reflect_model: Optional[Union[LLM, LMM]] = None,
-        max_retries: int = 2,
+        max_retries: int = 3,
         verbose: bool = False,
         report_progress_callback: Optional[Callable[[str], None]] = None,
     ):
@@ -380,6 +386,7 @@ class VisionAgent(Agent):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
+        visualize_output: Optional[bool] = False,
     ) -> str:
         """Invoke the vision agent.
 
@@ -393,7 +400,7 @@ class VisionAgent(Agent):
         """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image=image)
+        return self.chat(input, image=image, visualize_output=visualize_output)
 
     def log_progress(self, description: str) -> None:
         _LOGGER.info(description)
@@ -401,7 +408,10 @@ class VisionAgent(Agent):
             self.report_progress_callback(description)
 
     def chat_with_workflow(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        image: Optional[Union[str, Path]] = None,
+        visualize_output: Optional[bool] = False,
     ) -> Tuple[str, List[Dict]]:
         question = chat[0]["content"]
         if image:
@@ -449,31 +459,42 @@ class VisionAgent(Agent):
                 self.answer_model, question, answers, reflections
             )
 
-            visualized_images = visualize_result(all_tool_results)
-            all_tool_results.append({"visualized_images": visualized_images})
+            visualized_output = visualize_result(all_tool_results)
+            all_tool_results.append({"visualized_output": visualized_output})
             reflection = self_reflect(
                 self.reflect_model,
                 question,
                 self.tools,
                 all_tool_results,
                 final_answer,
-                visualized_images[0] if len(visualized_images) > 0 else image,
+                visualized_output[0] if len(visualized_output) > 0 else image,
             )
             self.log_progress(f"Reflection: {reflection}")
             if parse_reflect(reflection):
                 break
             else:
-                reflections += reflection
-        # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
+                reflections += "\n" + reflection
+        # '<END>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
-            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
+            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</<ANSWER>"
         )
+
+        if visualize_output:
+            visualized_output = all_tool_results[-1]["visualized_output"]
+            for image in visualized_output:
+                Image.open(image).show()
+
         return final_answer, all_tool_results
 
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        image: Optional[Union[str, Path]] = None,
+        visualize_output: Optional[bool] = False,
     ) -> str:
-        answer, _ = self.chat_with_workflow(chat, image=image)
+        answer, _ = self.chat_with_workflow(
+            chat, image=image, visualize_output=visualize_output
+        )
         return answer
 
     def retrieval(

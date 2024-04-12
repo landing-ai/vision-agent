@@ -1,6 +1,7 @@
 """Utility functions for image processing."""
 
 import base64
+from importlib import resources
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, Tuple, Union
@@ -104,19 +105,28 @@ def overlay_bboxes(
 
     color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(bboxes["labels"])}
 
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()
     width, height = image.size
+    fontsize = max(12, int(min(width, height) / 40))
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.truetype(
+        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
+        fontsize,
+    )
     if "bboxes" not in bboxes:
         return image.convert("RGB")
 
-    for label, box in zip(bboxes["labels"], bboxes["bboxes"]):
-        box = [box[0] * width, box[1] * height, box[2] * width, box[3] * height]
-        draw.rectangle(box, outline=color[label], width=3)
-        label = f"{label}"
-        text_box = draw.textbbox((box[0], box[1]), text=label, font=font)
-        draw.rectangle(text_box, fill=color[label])
-        draw.text((text_box[0], text_box[1]), label, fill="black", font=font)
+    for label, box, scores in zip(bboxes["labels"], bboxes["bboxes"], bboxes["scores"]):
+        box = [
+            int(box[0] * width),
+            int(box[1] * height),
+            int(box[2] * width),
+            int(box[3] * height),
+        ]
+        draw.rectangle(box, outline=color[label], width=4)
+        text = f"{label}: {scores:.2f}"
+        text_box = draw.textbbox((box[0], box[1]), text=text, font=font)
+        draw.rectangle((box[0], box[1], text_box[2], text_box[3]), fill=color[label])
+        draw.text((box[0], box[1]), text, fill="black", font=font)
     return image.convert("RGB")
 
 
@@ -138,7 +148,9 @@ def overlay_masks(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(masks["labels"])}
+    color = {
+        label: COLORS[i % len(COLORS)] for i, label in enumerate(set(masks["labels"]))
+    }
     if "masks" not in masks:
         return image.convert("RGB")
 
