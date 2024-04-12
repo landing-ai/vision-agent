@@ -85,7 +85,7 @@ class CLIP(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "clip_"
-    description = "'clip_' is a tool that can classify any image given a set of input names or tags."
+    description = "'clip_' is a tool that can classify any image given a set of input names or tags. It returns a list of the input names along with their probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -163,7 +163,7 @@ class GroundingDINO(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_dino_"
-    description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions."
+    description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -179,8 +179,8 @@ class GroundingDINO(Tool):
                 "parameters": {"prompt": "car", "image": ""},
             },
             {
-                "scenario": "Can you detect the person on the left? Image name: person.jpg",
-                "parameters": {"prompt": "person on the left", "image": "person.jpg"},
+                "scenario": "Can you detect the person on the left and right? Image name: person.jpg",
+                "parameters": {"prompt": "left person. right person", "image": "person.jpg"},
             },
             {
                 "scenario": "Detect the red shirts and green shirst. Image name: shirts.jpg",
@@ -269,7 +269,7 @@ class GroundingSAM(Tool):
     _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
 
     name = "grounding_sam_"
-    description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions."
+    description = "'grounding_sam_' is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names, masks file names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -285,8 +285,8 @@ class GroundingSAM(Tool):
                 "parameters": {"prompt": "car", "image": ""},
             },
             {
-                "scenario": "Can you segment the person on the left? Image name: person.jpg",
-                "parameters": {"prompt": "person on the left", "image": "person.jpg"},
+                "scenario": "Can you segment the person on the left and right? Image name: person.jpg",
+                "parameters": {"prompt": "left person. right person", "image": "person.jpg"},
             },
             {
                 "scenario": "Can you build me a tool that segments red shirts and green shirts? Image name: shirts.jpg",
@@ -381,7 +381,7 @@ class Counter(Tool):
     r"""Counter detects and counts the number of objects in an image given an input such as a category name or referring expression."""
 
     name = "counter_"
-    description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression."
+    description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression. It returns a dictionary containing the labels and their counts."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -401,14 +401,14 @@ class Counter(Tool):
 
     def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
         resp = GroundingDINO()(prompt, image)
-        return dict(CounterClass(resp[0]["labels"]))
+        return dict(CounterClass(resp["labels"]))
 
 
 class Crop(Tool):
     r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
 
     name = "crop_"
-    description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image."
+    description = "'crop_' crops an image given a bounding box and returns a file name of the cropped image. It returns a file with the cropped image."
     usage = {
         "required_parameters": [
             {"name": "bbox", "type": "List[float]"},
