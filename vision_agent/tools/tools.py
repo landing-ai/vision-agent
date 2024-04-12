@@ -53,9 +53,7 @@ class Tool(ABC):
 
 class NoOp(Tool):
     name = "noop_"
-    description = (
-        "'noop_' is a no-op tool that does nothing if you do not want answer the question directly and not use a tool."
-    )
+    description = "'noop_' is a no-op tool that does nothing if you do not want answer the question directly and not use a tool."
     usage = {
         "required_parameters": [],
         "examples": [
@@ -180,7 +178,10 @@ class GroundingDINO(Tool):
             },
             {
                 "scenario": "Can you detect the person on the left and right? Image name: person.jpg",
-                "parameters": {"prompt": "left person. right person", "image": "person.jpg"},
+                "parameters": {
+                    "prompt": "left person. right person",
+                    "image": "person.jpg",
+                },
             },
             {
                 "scenario": "Detect the red shirts and green shirst. Image name: shirts.jpg",
@@ -286,7 +287,10 @@ class GroundingSAM(Tool):
             },
             {
                 "scenario": "Can you segment the person on the left and right? Image name: person.jpg",
-                "parameters": {"prompt": "left person. right person", "image": "person.jpg"},
+                "parameters": {
+                    "prompt": "left person. right person",
+                    "image": "person.jpg",
+                },
             },
             {
                 "scenario": "Can you build me a tool that segments red shirts and green shirts? Image name: shirts.jpg",
@@ -496,9 +500,7 @@ class SegArea(Tool):
 
 class BboxIoU(Tool):
     name = "bbox_iou_"
-    description = (
-        "'bbox_iou_' returns the intersection over union of two bounding boxes. This is a good tool for determining if two objects are overlapping."
-    )
+    description = "'bbox_iou_' returns the intersection over union of two bounding boxes. This is a good tool for determining if two objects are overlapping."
     usage = {
         "required_parameters": [
             {"name": "bbox1", "type": "List[int]"},
@@ -602,7 +604,9 @@ class Calculator(Tool):
     r"""Calculator is a tool that can perform basic arithmetic operations."""
 
     name = "calculator_"
-    description = "'calculator_' is a tool that can perform basic arithmetic operations."
+    description = (
+        "'calculator_' is a tool that can perform basic arithmetic operations."
+    )
     usage = {
         "required_parameters": [{"name": "equation", "type": "str"}],
         "examples": [
@@ -613,8 +617,8 @@ class Calculator(Tool):
             {
                 "scenario": "If you want to calculate (4 + 2.5) / 2.1",
                 "parameters": {"equation": "(4 + 2.5) / 2.1"},
-            }
-        ]
+            },
+        ],
     }
 
     def __call__(self, equation: str) -> float:

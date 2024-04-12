@@ -109,7 +109,8 @@ def overlay_bboxes(
     fontsize = max(12, int(min(width, height) / 40))
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype(
-        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")), fontsize
+        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
+        fontsize,
     )
     if "bboxes" not in bboxes:
         return image.convert("RGB")
@@ -147,7 +148,9 @@ def overlay_masks(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(set(masks["labels"]))}
+    color = {
+        label: COLORS[i % len(COLORS)] for i, label in enumerate(set(masks["labels"]))
+    }
     if "masks" not in masks:
         return image.convert("RGB")
 

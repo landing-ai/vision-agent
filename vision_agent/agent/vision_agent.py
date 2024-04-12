@@ -492,7 +492,9 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         visualize_output: Optional[bool] = False,
     ) -> str:
-        answer, _ = self.chat_with_workflow(chat, image=image, visualize_output=visualize_output)
+        answer, _ = self.chat_with_workflow(
+            chat, image=image, visualize_output=visualize_output
+        )
         return answer
 
     def retrieval(
