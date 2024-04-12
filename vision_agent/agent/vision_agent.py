@@ -459,15 +459,15 @@ class VisionAgent(Agent):
                 self.answer_model, question, answers, reflections
             )
 
-            visualized_images = visualize_result(all_tool_results)
-            all_tool_results.append({"visualized_images": visualized_images})
+            visualized_output = visualize_result(all_tool_results)
+            all_tool_results.append({"visualized_output": visualized_output})
             reflection = self_reflect(
                 self.reflect_model,
                 question,
                 self.tools,
                 all_tool_results,
                 final_answer,
-                visualized_images[0] if len(visualized_images) > 0 else image,
+                visualized_output[0] if len(visualized_output) > 0 else image,
             )
             self.log_progress(f"Reflection: {reflection}")
             if parse_reflect(reflection):
@@ -480,8 +480,8 @@ class VisionAgent(Agent):
         )
 
         if visualize_output:
-            visualized_images = all_tool_results[-1]["visualized_images"]
-            for image in visualized_images:
+            visualized_output = all_tool_results[-1]["visualized_images"]
+            for image in visualized_output:
                 Image.open(image).show()
 
         return final_answer, all_tool_results
