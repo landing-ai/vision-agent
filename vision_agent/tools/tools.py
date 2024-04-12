@@ -622,7 +622,7 @@ class Calculator(Tool):
     }
 
     def __call__(self, equation: str) -> float:
-        return round(eval(equation), 2)
+        return cast(float, round(eval(equation), 2))
 
 
 TOOLS = {

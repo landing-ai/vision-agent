@@ -482,7 +482,7 @@ class VisionAgent(Agent):
         if visualize_output:
             visualized_output = all_tool_results[-1]["visualized_output"]
             for image in visualized_output:
-                Image.open(image).show()  # type: ignore
+                Image.open(image).show()
 
         return final_answer, all_tool_results
 
