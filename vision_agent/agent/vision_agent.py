@@ -295,7 +295,9 @@ def parse_reflect(reflect: str) -> Any:
     return {"Finish": finish, "Reflection": reflect}
 
 
-def _handle_extract_frames(image_to_data: Dict[str, Dict], tool_result: Dict) -> Dict[str, Dict]:
+def _handle_extract_frames(
+    image_to_data: Dict[str, Dict], tool_result: Dict
+) -> Dict[str, Dict]:
     image_to_data = image_to_data.copy()
     # handle extract_frames_ case, useful if it extracts frames but doesn't do
     # any following processing
@@ -312,7 +314,9 @@ def _handle_extract_frames(image_to_data: Dict[str, Dict], tool_result: Dict) ->
     return image_to_data
 
 
-def _handle_viz_tools(image_to_data: Dict[str, Dict], tool_result: Dict) -> Dict[str, Dict]:
+def _handle_viz_tools(
+    image_to_data: Dict[str, Dict], tool_result: Dict
+) -> Dict[str, Dict]:
     image_to_data = image_to_data.copy()
 
     # handle grounding_sam_ and grounding_dino_
@@ -426,7 +430,9 @@ class VisionAgent(Agent):
             OpenAILLM(temperature=0.1) if answer_model is None else answer_model
         )
         self.reflect_model = (
-            OpenAILMM(json_mode=True, temperature=0.1) if reflect_model is None else reflect_model
+            OpenAILMM(json_mode=True, temperature=0.1)
+            if reflect_model is None
+            else reflect_model
         )
         self.max_retries = max_retries
         self.tools = TOOLS
