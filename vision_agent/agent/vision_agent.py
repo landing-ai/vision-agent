@@ -255,7 +255,7 @@ def self_reflect(
 ) -> str:
     prompt = VISION_AGENT_REFLECTION.format(
         question=question,
-        tools=format_tools(tools),
+        tools=format_tools({k: v["description"] for k, v in tools.items()}),
         tool_results=str(tool_result),
         final_answer=final_answer,
     )
@@ -268,11 +268,16 @@ def self_reflect(
     return reflect_model(prompt)
 
 
-def parse_reflect(reflect: str) -> bool:
-    # GPT-4V has a hard time following directions, so make the criteria less strict
-    return (
+def parse_reflect(reflect: str) -> Dict[str, Any]:
+    try:
+        return parse_json(reflect)
+    except Exception:
+        _LOGGER.error(f"Failed parse json reflection: {reflect}")
+    # LMMs have a hard time following directions, so make the criteria less strict
+    finish = (
         "finish" in reflect.lower() and len(reflect) < 100
     ) or "finish" in reflect.lower()[-10:]
+    return {"Finish": finish, "Reflection": reflect}
 
 
 def visualize_result(all_tool_results: List[Dict]) -> List[str]:
@@ -389,7 +394,7 @@ class VisionAgent(Agent):
             OpenAILLM(temperature=0.1) if answer_model is None else answer_model
         )
         self.reflect_model = (
-            OpenAILMM(temperature=0.1) if reflect_model is None else reflect_model
+            OpenAILMM(json_mode=True, temperature=0.1) if reflect_model is None else reflect_model
         )
         self.max_retries = max_retries
         self.tools = TOOLS
@@ -485,13 +490,14 @@ class VisionAgent(Agent):
                 visualized_output[0] if len(visualized_output) > 0 else image,
             )
             self.log_progress(f"Reflection: {reflection}")
-            if parse_reflect(reflection):
+            parsed_reflection = parse_reflect(reflection)
+            if parsed_reflection["Finish"]:
                 break
             else:
-                reflections += "\n" + reflection
-        # '<END>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
+                reflections += "\n" + parsed_reflection["Reflection"]
+        # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
-            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</<ANSWER>"
+            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
         )
 
         if visualize_output:
