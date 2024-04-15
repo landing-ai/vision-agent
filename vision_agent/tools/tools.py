@@ -12,8 +12,11 @@ from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import convert_to_b64, get_image_size
 from vision_agent.tools.video import extract_frames_from_video
+from vision_agent.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
+_LND_API_KEY = LandingaiAPIKey().api_key
+_LND_API_URL = "https://api.dev.landing.ai/v1/agent"
 
 
 def normalize_bbox(
@@ -80,7 +83,7 @@ class CLIP(Tool):
         [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
     """
 
-    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = f"{_LND_API_URL}/model/tools"
 
     name = "clip_"
     description = "'clip_' is a tool that can classify any image given a set of input names or tags. It returns a list of the input names along with their probability scores."
@@ -125,23 +128,9 @@ class CLIP(Tool):
             "image": image_b64,
             "tool": "closed_set_image_classification",
         }
-        res = requests.post(
-            self._ENDPOINT,
-            headers={"Content-Type": "application/json"},
-            json=data,
-        )
-        resp_json: Dict[str, Any] = res.json()
-        if (
-            "statusCode" in resp_json and resp_json["statusCode"] != 200
-        ) or "statusCode" not in resp_json:
-            _LOGGER.error(f"Request failed: {resp_json}")
-            raise ValueError(f"Request failed: {resp_json}")
-
-        resp_json["data"]["scores"] = [
-            round(prob, 4) for prob in resp_json["data"]["scores"]
-        ]
-
-        return resp_json["data"]  # type: ignore
+        resp_data = _send_inference_request(data, "tools")
+        resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
+        return resp_data
 
 
 class ImageCaption(Tool):
@@ -156,7 +145,7 @@ class ImageCaption(Tool):
         {'text': ['a box of orange and white socks']}
     """
 
-    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = f"{_LND_API_URL}/model/tools"
 
     name = "image_caption_"
     description = "'image_caption_' is a tool that can caption an image based on its contents or tags. It returns a text describing the image"
@@ -197,19 +186,7 @@ class ImageCaption(Tool):
             "image": image_b64,
             "tool": "image_captioning",
         }
-        res = requests.post(
-            self._ENDPOINT,
-            headers={"Content-Type": "application/json"},
-            json=data,
-        )
-        resp_json: Dict[str, Any] = res.json()
-        if (
-            "statusCode" in resp_json and resp_json["statusCode"] != 200
-        ) or "statusCode" not in resp_json:
-            _LOGGER.error(f"Request failed: {resp_json}")
-            raise ValueError(f"Request failed: {resp_json}")
-
-        return resp_json["data"]  # type: ignore
+        return _send_inference_request(data, "tools")
 
 
 class GroundingDINO(Tool):
@@ -226,7 +203,7 @@ class GroundingDINO(Tool):
         'scores': [0.98, 0.02]}]
     """
 
-    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = f"{_LND_API_URL}/model/tools"
 
     name = "grounding_dino_"
     description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and associated probability scores."
@@ -290,24 +267,13 @@ class GroundingDINO(Tool):
             "tool": "visual_grounding",
             "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
         }
-        res = requests.post(
-            self._ENDPOINT,
-            headers={"Content-Type": "application/json"},
-            json=request_data,
-        )
-        resp_json: Dict[str, Any] = res.json()
-        if (
-            "statusCode" in resp_json and resp_json["statusCode"] != 200
-        ) or "statusCode" not in resp_json:
-            _LOGGER.error(f"Request failed: {resp_json}")
-            raise ValueError(f"Request failed: {resp_json}")
-        data: Dict[str, Any] = resp_json["data"]
+        data: Dict[str, Any] = _send_inference_request(request_data, "tools")
         if "bboxes" in data:
             data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
         if "scores" in data:
             data["scores"] = [round(score, 2) for score in data["scores"]]
         if "labels" in data:
-            data["labels"] = [label for label in data["labels"]]
+            data["labels"] = list(data["labels"])
         data["size"] = (image_size[1], image_size[0])
         return data
 
@@ -335,7 +301,7 @@ class GroundingSAM(Tool):
            [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
     """
 
-    _ENDPOINT = "https://soi4ewr6fjqqdf5vuss6rrilee0kumxq.lambda-url.us-east-2.on.aws"
+    _ENDPOINT = f"{_LND_API_URL}/model/tools"
 
     name = "grounding_sam_"
     description = "'grounding_sam_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and masks file names and associated probability scores."
@@ -399,18 +365,7 @@ class GroundingSAM(Tool):
             "tool": "visual_grounding_segment",
             "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
         }
-        res = requests.post(
-            self._ENDPOINT,
-            headers={"Content-Type": "application/json"},
-            json=request_data,
-        )
-        resp_json: Dict[str, Any] = res.json()
-        if (
-            "statusCode" in resp_json and resp_json["statusCode"] != 200
-        ) or "statusCode" not in resp_json:
-            _LOGGER.error(f"Request failed: {resp_json}")
-            raise ValueError(f"Request failed: {resp_json}")
-        data: Dict[str, Any] = resp_json["data"]
+        data: Dict[str, Any] = _send_inference_request(request_data, "tools")
         ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
         if "bboxes" in data:
             ret_pred["bboxes"] = [
@@ -714,3 +669,20 @@ TOOLS = {
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
 }
+
+
+def _send_inference_request(
+    payload: Dict[str, Any], endpoint_name: str
+) -> Dict[str, Any]:
+    res = requests.post(
+        f"{_LND_API_URL}/model/{endpoint_name}",
+        headers={
+            "Content-Type": "application/json",
+            "apikey": _LND_API_KEY,
+        },
+        json=payload,
+    )
+    if res.status_code != 200:
+        _LOGGER.error(f"Request failed: {res.text}")
+        raise ValueError(f"Request failed: {res.text}")
+    return res.json()["data"]  # type: ignore
