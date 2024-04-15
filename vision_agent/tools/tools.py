@@ -83,8 +83,6 @@ class CLIP(Tool):
         [{"labels": ["red line", "yellow dot"], "scores": [0.98, 0.02]}]
     """
 
-    _ENDPOINT = f"{_LND_API_URL}/model/tools"
-
     name = "clip_"
     description = "'clip_' is a tool that can classify any image given a set of input names or tags. It returns a list of the input names along with their probability scores."
     usage = {
@@ -145,8 +143,6 @@ class ImageCaption(Tool):
         {'text': ['a box of orange and white socks']}
     """
 
-    _ENDPOINT = f"{_LND_API_URL}/model/tools"
-
     name = "image_caption_"
     description = "'image_caption_' is a tool that can caption an image based on its contents or tags. It returns a text describing the image"
     usage = {
@@ -202,8 +198,6 @@ class GroundingDINO(Tool):
         'bboxes': [[0.38, 0.15, 0.59, 0.7], [0.48, 0.25, 0.69, 0.71]],
         'scores': [0.98, 0.02]}]
     """
-
-    _ENDPOINT = f"{_LND_API_URL}/model/tools"
 
     name = "grounding_dino_"
     description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and associated probability scores."
@@ -300,8 +294,6 @@ class GroundingSAM(Tool):
            [1, 1, 1, ..., 1, 1, 1],
            [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
     """
-
-    _ENDPOINT = f"{_LND_API_URL}/model/tools"
 
     name = "grounding_sam_"
     description = "'grounding_sam_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and masks file names and associated probability scores."
