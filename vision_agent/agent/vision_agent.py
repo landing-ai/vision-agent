@@ -351,7 +351,7 @@ class VisionAgent(Agent):
         task_model: Optional[Union[LLM, LMM]] = None,
         answer_model: Optional[Union[LLM, LMM]] = None,
         reflect_model: Optional[Union[LLM, LMM]] = None,
-        max_retries: int = 3,
+        max_retries: int = 2,
         verbose: bool = False,
         report_progress_callback: Optional[Callable[[str], None]] = None,
     ):
