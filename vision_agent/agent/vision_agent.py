@@ -474,7 +474,6 @@ class VisionAgent(Agent):
                 self.answer_model, question, answers, reflections
             )
 
-            __import__("ipdb").set_trace()
             visualized_output = visualize_result(all_tool_results)
             all_tool_results.append({"visualized_output": visualized_output})
             reflection = self_reflect(
