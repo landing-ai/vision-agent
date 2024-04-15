@@ -374,9 +374,9 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
             image_to_data = _handle_viz_tools(image_to_data, tool_result)
 
     visualized_images = []
-    for image in image_to_data:
-        image_path = Path(image)
-        image_data = image_to_data[image]
+    for image_str in image_to_data:
+        image_path = Path(image_str)
+        image_data = image_to_data[image_str]
         image = overlay_masks(image_path, image_data)
         image = overlay_bboxes(image, image_data)
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
