@@ -37,10 +37,10 @@ _LOGGER = logging.getLogger(__name__)
 
 def parse_json(s: str) -> Any:
     s = (
-        s.replace(": true", ": True")
-        .replace(": false", ": False")
-        .replace(":true", ": True")
-        .replace(":false", ": False")
+        s.replace(": True", ": true")
+        .replace(": False", ": false")
+        .replace(":True", ": true")
+        .replace(":False", ": false")
         .replace("```", "")
         .strip()
     )
@@ -60,6 +60,19 @@ def format_tools(tools: Dict[int, Any]) -> str:
     for key in tools:
         tool_str += f"ID: {key} - {tools[key]}\n"
     return tool_str
+
+
+def format_tool_usage(tools: Dict[int, Any], tool_result: List[Dict]) -> str:
+    usage = []
+    name_to_usage = {v["name"]: v["usage"] for v in tools.values()}
+    for tool_res in tool_result:
+        if "tool_name" in tool_res:
+            usage.append((tool_res["tool_name"], name_to_usage[tool_res["tool_name"]]))
+
+    usage_str = ""
+    for tool_name, tool_usage in usage:
+        usage_str += f"{tool_name} - {tool_usage}\n"
+    return usage_str
 
 
 def topological_sort(tasks: List[Dict]) -> List[Dict]:
@@ -256,6 +269,7 @@ def self_reflect(
     prompt = VISION_AGENT_REFLECTION.format(
         question=question,
         tools=format_tools({k: v["description"] for k, v in tools.items()}),
+        tool_usage=format_tool_usage(tools, tool_result),
         tool_results=str(tool_result),
         final_answer=final_answer,
     )
@@ -269,6 +283,7 @@ def self_reflect(
 
 
 def parse_reflect(reflect: str) -> Any:
+    reflect = reflect.strip()
     try:
         return parse_json(reflect)
     except Exception:
