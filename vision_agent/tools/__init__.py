@@ -9,6 +9,7 @@ from .tools import (
     ExtractFrames,
     GroundingDINO,
     GroundingSAM,
+    ImageCaption,
     SegArea,
     SegIoU,
     Tool,
