@@ -18,7 +18,7 @@ def test_generate_with_mock(openai_llm_mock):  # noqa: F811
     response = llm.generate("test prompt")
     assert response == "mocked response"
     openai_llm_mock.chat.completions.create.assert_called_once_with(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": "test prompt"}],
     )
 
@@ -31,7 +31,7 @@ def test_chat_with_mock(openai_llm_mock):  # noqa: F811
     response = llm.chat([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
     openai_llm_mock.chat.completions.create.assert_called_once_with(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": "test prompt"}],
     )
 
@@ -44,14 +44,14 @@ def test_call_with_mock(openai_llm_mock):  # noqa: F811
     response = llm("test prompt")
     assert response == "mocked response"
     openai_llm_mock.chat.completions.create.assert_called_once_with(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": "test prompt"}],
     )
 
     response = llm([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
     openai_llm_mock.chat.completions.create.assert_called_with(
-        model="gpt-4-turbo-preview",
+        model="gpt-4-turbo",
         messages=[{"role": "user", "content": "test prompt"}],
     )
 
