@@ -15,7 +15,7 @@ _CLIP_LENGTH = 30.0
 
 
 def extract_frames_from_video(
-    video_uri: str, fps: int = 12, motion_detection_threshold: float = 0.06
+    video_uri: str, fps: float = 0.5, motion_detection_threshold: float = 0.0
 ) -> List[Tuple[np.ndarray, float]]:
     """Extract frames from a video
 

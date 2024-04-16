@@ -577,7 +577,7 @@ class ExtractFrames(Tool):
     r"""Extract frames from a video."""
 
     name = "extract_frames_"
-    description = "'extract_frames_' extracts frames where there is motion detected in a video, returns a list of tuples (frame, timestamp), where timestamp is the relative time in seconds where teh frame was captured. The frame is a local image file path."
+    description = "'extract_frames_' extracts frames from a video, returns a list of tuples (frame, timestamp), where timestamp is the relative time in seconds where the frame was captured. The frame is a local image file path."
     usage = {
         "required_parameters": [{"name": "video_uri", "type": "str"}],
         "examples": [
