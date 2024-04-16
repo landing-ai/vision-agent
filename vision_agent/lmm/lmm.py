@@ -99,9 +99,10 @@ class OpenAILMM(LMM):
 
     def __init__(
         self,
-        model_name: str = "gpt-4-vision-preview",
+        model_name: str = "gpt-4-turbo",
         api_key: Optional[str] = None,
         max_tokens: int = 1024,
+        json_mode: bool = False,
         **kwargs: Any,
     ):
         if not api_key:
@@ -111,7 +112,10 @@ class OpenAILMM(LMM):
 
         self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
-        self.max_tokens = max_tokens
+        if "max_tokens" not in kwargs:
+            kwargs["max_tokens"] = max_tokens
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
         self.kwargs = kwargs
 
     def __call__(
@@ -153,7 +157,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=fixed_chat, max_tokens=self.max_tokens, **self.kwargs  # type: ignore
+            model=self.model_name, messages=fixed_chat, **self.kwargs  # type: ignore
         )
 
         return cast(str, response.choices[0].message.content)
@@ -181,7 +185,7 @@ class OpenAILMM(LMM):
             )
 
         response = self.client.chat.completions.create(
-            model=self.model_name, messages=message, max_tokens=self.max_tokens, **self.kwargs  # type: ignore
+            model=self.model_name, messages=message, **self.kwargs  # type: ignore
         )
         return cast(str, response.choices[0].message.content)
 
