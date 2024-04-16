@@ -37,10 +37,10 @@ _LOGGER = logging.getLogger(__name__)
 
 def parse_json(s: str) -> Any:
     s = (
-        s.replace(": true", ": True")
-        .replace(": false", ": False")
-        .replace(":true", ": True")
-        .replace(":false", ": False")
+        s.replace(": True", ": true")
+        .replace(": False", ": false")
+        .replace(":True", ": true")
+        .replace(":False", ": false")
         .replace("```", "")
         .strip()
     )
@@ -60,6 +60,19 @@ def format_tools(tools: Dict[int, Any]) -> str:
     for key in tools:
         tool_str += f"ID: {key} - {tools[key]}\n"
     return tool_str
+
+
+def format_tool_usage(tools: Dict[int, Any], tool_result: List[Dict]) -> str:
+    usage = []
+    name_to_usage = {v["name"]: v["usage"] for v in tools.values()}
+    for tool_res in tool_result:
+        if "tool_name" in tool_res:
+            usage.append((tool_res["tool_name"], name_to_usage[tool_res["tool_name"]]))
+
+    usage_str = ""
+    for tool_name, tool_usage in usage:
+        usage_str += f"{tool_name} - {tool_usage}\n"
+    return usage_str
 
 
 def topological_sort(tasks: List[Dict]) -> List[Dict]:
@@ -255,7 +268,8 @@ def self_reflect(
 ) -> str:
     prompt = VISION_AGENT_REFLECTION.format(
         question=question,
-        tools=format_tools(tools),
+        tools=format_tools({k: v["description"] for k, v in tools.items()}),
+        tool_usage=format_tool_usage(tools, tool_result),
         tool_results=str(tool_result),
         final_answer=final_answer,
     )
@@ -268,41 +282,28 @@ def self_reflect(
     return reflect_model(prompt)
 
 
-def parse_reflect(reflect: str) -> bool:
-    # GPT-4V has a hard time following directions, so make the criteria less strict
-    return (
+def parse_reflect(reflect: str) -> Any:
+    reflect = reflect.strip()
+    try:
+        return parse_json(reflect)
+    except Exception:
+        _LOGGER.error(f"Failed parse json reflection: {reflect}")
+    # LMMs have a hard time following directions, so make the criteria less strict
+    finish = (
         "finish" in reflect.lower() and len(reflect) < 100
     ) or "finish" in reflect.lower()[-10:]
+    return {"Finish": finish, "Reflection": reflect}
 
 
-def visualize_result(all_tool_results: List[Dict]) -> List[str]:
-    image_to_data: Dict[str, Dict] = {}
-    for tool_result in all_tool_results:
-        if tool_result["tool_name"] not in ["grounding_sam_", "grounding_dino_"]:
-            continue
-
-        parameters = tool_result["parameters"]
-        # parameters can either be a dictionary or list, parameters can also be malformed
-        # becaus the LLM builds them
-        if isinstance(parameters, dict):
-            if "image" not in parameters:
-                continue
-            parameters = [parameters]
-        elif isinstance(tool_result["parameters"], list):
-            if len(tool_result["parameters"]) < 1 or (
-                "image" not in tool_result["parameters"][0]
-            ):
-                continue
-
-        for param, call_result in zip(parameters, tool_result["call_results"]):
-            # calls can fail, so we need to check if the call was successful
-            if not isinstance(call_result, dict):
-                continue
-            if "bboxes" not in call_result:
-                continue
-
-            # if the call was successful, then we can add the image data
-            image = param["image"]
+def _handle_extract_frames(
+    image_to_data: Dict[str, Dict], tool_result: Dict
+) -> Dict[str, Dict]:
+    image_to_data = image_to_data.copy()
+    # handle extract_frames_ case, useful if it extracts frames but doesn't do
+    # any following processing
+    for video_file_output in tool_result["call_results"]:
+        for frame, _ in video_file_output:
+            image = frame
             if image not in image_to_data:
                 image_to_data[image] = {
                     "bboxes": [],
@@ -310,17 +311,72 @@ def visualize_result(all_tool_results: List[Dict]) -> List[str]:
                     "labels": [],
                     "scores": [],
                 }
+    return image_to_data
 
-            image_to_data[image]["bboxes"].extend(call_result["bboxes"])
-            image_to_data[image]["labels"].extend(call_result["labels"])
-            image_to_data[image]["scores"].extend(call_result["scores"])
-            if "masks" in call_result:
-                image_to_data[image]["masks"].extend(call_result["masks"])
+
+def _handle_viz_tools(
+    image_to_data: Dict[str, Dict], tool_result: Dict
+) -> Dict[str, Dict]:
+    image_to_data = image_to_data.copy()
+
+    # handle grounding_sam_ and grounding_dino_
+    parameters = tool_result["parameters"]
+    # parameters can either be a dictionary or list, parameters can also be malformed
+    # becaus the LLM builds them
+    if isinstance(parameters, dict):
+        if "image" not in parameters:
+            return image_to_data
+        parameters = [parameters]
+    elif isinstance(tool_result["parameters"], list):
+        if len(tool_result["parameters"]) < 1 or (
+            "image" not in tool_result["parameters"][0]
+        ):
+            return image_to_data
+
+    for param, call_result in zip(parameters, tool_result["call_results"]):
+        # calls can fail, so we need to check if the call was successful
+        if not isinstance(call_result, dict) or "bboxes" not in call_result:
+            return image_to_data
+
+        # if the call was successful, then we can add the image data
+        image = param["image"]
+        if image not in image_to_data:
+            image_to_data[image] = {
+                "bboxes": [],
+                "masks": [],
+                "labels": [],
+                "scores": [],
+            }
+
+        image_to_data[image]["bboxes"].extend(call_result["bboxes"])
+        image_to_data[image]["labels"].extend(call_result["labels"])
+        image_to_data[image]["scores"].extend(call_result["scores"])
+        if "masks" in call_result:
+            image_to_data[image]["masks"].extend(call_result["masks"])
+
+    return image_to_data
+
+
+def visualize_result(all_tool_results: List[Dict]) -> List[str]:
+    image_to_data: Dict[str, Dict] = {}
+    for tool_result in all_tool_results:
+        # only handle bbox/mask tools or frame extraction
+        if tool_result["tool_name"] not in [
+            "grounding_sam_",
+            "grounding_dino_",
+            "extract_frames_",
+        ]:
+            continue
+
+        if tool_result["tool_name"] == "extract_frames_":
+            image_to_data = _handle_extract_frames(image_to_data, tool_result)
+        else:
+            image_to_data = _handle_viz_tools(image_to_data, tool_result)
 
     visualized_images = []
-    for image in image_to_data:
-        image_path = Path(image)
-        image_data = image_to_data[image]
+    for image_str in image_to_data:
+        image_path = Path(image_str)
+        image_data = image_to_data[image_str]
         image = overlay_masks(image_path, image_data)
         image = overlay_bboxes(image, image_data)
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
@@ -374,7 +430,9 @@ class VisionAgent(Agent):
             OpenAILLM(temperature=0.1) if answer_model is None else answer_model
         )
         self.reflect_model = (
-            OpenAILMM(temperature=0.1) if reflect_model is None else reflect_model
+            OpenAILMM(json_mode=True, temperature=0.1)
+            if reflect_model is None
+            else reflect_model
         )
         self.max_retries = max_retries
         self.tools = TOOLS
@@ -470,11 +528,12 @@ class VisionAgent(Agent):
                 visualized_output[0] if len(visualized_output) > 0 else image,
             )
             self.log_progress(f"Reflection: {reflection}")
-            if parse_reflect(reflection):
+            parsed_reflection = parse_reflect(reflection)
+            if parsed_reflection["Finish"]:
                 break
             else:
-                reflections += "\n" + reflection
-        # '<END>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
+                reflections += "\n" + parsed_reflection["Reflection"]
+        # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
             f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
         )
