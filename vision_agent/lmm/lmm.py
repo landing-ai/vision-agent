@@ -30,12 +30,16 @@ def encode_image(image: Union[str, Path]) -> str:
 
 class LMM(ABC):
     @abstractmethod
-    def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
+    def generate(
+        self, prompt: str, images: Optional[List[Union[str, Path]]] = None
+    ) -> str:
         pass
 
     @abstractmethod
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        images: Optional[List[Union[str, Path]]] = None,
     ) -> str:
         pass
 
@@ -43,7 +47,7 @@ class LMM(ABC):
     def __call__(
         self,
         input: Union[str, List[Dict[str, str]]],
-        image: Optional[Union[str, Path]] = None,
+        images: Optional[List[Union[str, Path]]] = None,
     ) -> str:
         pass
 
@@ -57,27 +61,29 @@ class LLaVALMM(LMM):
     def __call__(
         self,
         input: Union[str, List[Dict[str, str]]],
-        image: Optional[Union[str, Path]] = None,
+        images: Optional[List[Union[str, Path]]] = None,
     ) -> str:
         if isinstance(input, str):
-            return self.generate(input, image)
-        return self.chat(input, image)
+            return self.generate(input, images)
+        return self.chat(input, images)
 
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        images: Optional[List[Union[str, Path]]] = None,
     ) -> str:
         raise NotImplementedError("Chat not supported for LLaVA")
 
     def generate(
         self,
         prompt: str,
-        image: Optional[Union[str, Path]] = None,
+        images: Optional[List[Union[str, Path]]] = None,
         temperature: float = 0.1,
         max_new_tokens: int = 1500,
     ) -> str:
         data = {"prompt": prompt}
-        if image:
-            data["image"] = encode_image(image)
+        if images and len(images) > 0:
+            data["image"] = encode_image(images[0])
         data["temperature"] = temperature  # type: ignore
         data["max_new_tokens"] = max_new_tokens  # type: ignore
         res = requests.post(
@@ -121,14 +127,16 @@ class OpenAILMM(LMM):
     def __call__(
         self,
         input: Union[str, List[Dict[str, str]]],
-        image: Optional[Union[str, Path]] = None,
+        images: Optional[List[Union[str, Path]]] = None,
     ) -> str:
         if isinstance(input, str):
-            return self.generate(input, image)
-        return self.chat(input, image)
+            return self.generate(input, images)
+        return self.chat(input, images)
 
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self,
+        chat: List[Dict[str, str]],
+        images: Optional[List[Union[str, Path]]] = None,
     ) -> str:
         fixed_chat = []
         for c in chat:
@@ -136,25 +144,26 @@ class OpenAILMM(LMM):
             fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
             fixed_chat.append(fixed_c)
 
-        if image:
-            extension = Path(image).suffix
-            if extension.lower() == ".jpeg" or extension.lower() == ".jpg":
-                extension = "jpg"
-            elif extension.lower() == ".png":
-                extension = "png"
-            else:
-                raise ValueError(f"Unsupported image extension: {extension}")
+        if images and len(images) > 0:
+            for image in images:
+                extension = Path(image).suffix
+                if extension.lower() == ".jpeg" or extension.lower() == ".jpg":
+                    extension = "jpg"
+                elif extension.lower() == ".png":
+                    extension = "png"
+                else:
+                    raise ValueError(f"Unsupported image extension: {extension}")
 
-            encoded_image = encode_image(image)
-            fixed_chat[0]["content"].append(  # type: ignore
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/{extension};base64,{encoded_image}",
-                        "detail": "low",
+                encoded_image = encode_image(image)
+                fixed_chat[0]["content"].append(  # type: ignore
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/{extension};base64,{encoded_image}",
+                            "detail": "low",
+                        },
                     },
-                },
-            )
+                )
 
         response = self.client.chat.completions.create(
             model=self.model_name, messages=fixed_chat, **self.kwargs  # type: ignore
@@ -162,7 +171,11 @@ class OpenAILMM(LMM):
 
         return cast(str, response.choices[0].message.content)
 
-    def generate(self, prompt: str, image: Optional[Union[str, Path]] = None) -> str:
+    def generate(
+        self,
+        prompt: str,
+        images: Optional[List[Union[str, Path]]] = None,
+    ) -> str:
         message: List[Dict[str, Any]] = [
             {
                 "role": "user",
@@ -171,18 +184,19 @@ class OpenAILMM(LMM):
                 ],
             }
         ]
-        if image:
-            extension = Path(image).suffix
-            encoded_image = encode_image(image)
-            message[0]["content"].append(
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/{extension};base64,{encoded_image}",
-                        "detail": "low",
+        if images and len(images) > 0:
+            for image in images:
+                extension = Path(image).suffix
+                encoded_image = encode_image(image)
+                message[0]["content"].append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/{extension};base64,{encoded_image}",
+                            "detail": "low",
+                        },
                     },
-                },
-            )
+                )
 
         response = self.client.chat.completions.create(
             model=self.model_name, messages=message, **self.kwargs  # type: ignore
