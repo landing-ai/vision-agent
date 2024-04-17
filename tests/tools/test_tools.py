@@ -4,7 +4,7 @@ import tempfile
 import numpy as np
 from PIL import Image
 
-from vision_agent.tools.tools import BboxIoU, SegArea, SegIoU
+from vision_agent.tools.tools import BboxIoU, BoxDistance, SegArea, SegIoU
 
 
 def test_bbox_iou():
@@ -42,3 +42,26 @@ def test_seg_area_2():
         mask_path = os.path.join(tmpdir, "mask.png")
         Image.fromarray(mask).save(mask_path)
         assert SegArea()(mask_path) == 4.0
+
+
+def test_box_distance():
+    box_dist = BoxDistance()
+    # horizontal dist
+    box1 = [0, 0, 2, 2]
+    box2 = [4, 1, 6, 3]
+    assert box_dist(box1, box2) == 2.0
+
+    # vertical dist
+    box1 = [0, 0, 2, 2]
+    box2 = [1, 4, 3, 6]
+    assert box_dist(box1, box2) == 2.0
+
+    # vertical and horizontal
+    box1 = [0, 0, 2, 2]
+    box2 = [3, 3, 5, 5]
+    assert box_dist(box1, box2) == 1.41
+
+    # overlap
+    box1 = [0, 0, 2, 2]
+    box2 = [1, 1, 3, 3]
+    assert box_dist(box1, box2) == 0.0

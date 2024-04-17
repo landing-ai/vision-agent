@@ -238,12 +238,20 @@ class Reflexion(Agent):
                     self._build_agent_prompt(question, reflections, scratchpad)
                 )
             )
-        return format_step(
-            self.action_agent(
-                self._build_agent_prompt(question, reflections, scratchpad),
-                image=image,
+        elif isinstance(self.action_agent, LMM):
+            return format_step(
+                self.action_agent(
+                    self._build_agent_prompt(question, reflections, scratchpad),
+                    images=[image] if image is not None else None,
+                )
             )
-        )
+        elif isinstance(self.action_agent, Agent):
+            return format_step(
+                self.action_agent(
+                    self._build_agent_prompt(question, reflections, scratchpad),
+                    image=image,
+                )
+            )
 
     def prompt_reflection(
         self,
@@ -261,7 +269,7 @@ class Reflexion(Agent):
         return format_step(
             self.self_reflect_model(
                 self._build_reflect_prompt(question, context, scratchpad),
-                image=image,
+                images=[image] if image is not None else None,
             )
         )
 

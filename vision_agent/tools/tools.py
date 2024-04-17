@@ -1,7 +1,6 @@
 import logging
 import tempfile
 from abc import ABC
-from collections import Counter as CounterClass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union, cast
 
@@ -488,33 +487,6 @@ class AgentGroundingSAM(GroundingSAM):
         return rets
 
 
-class Counter(Tool):
-    r"""Counter detects and counts the number of objects in an image given an input such as a category name or referring expression."""
-
-    name = "counter_"
-    description = "'counter_' detects and counts the number of objects in an image given an input such as a category name or referring expression. It returns a dictionary containing the labels and their counts."
-    usage = {
-        "required_parameters": [
-            {"name": "prompt", "type": "str"},
-            {"name": "image", "type": "str"},
-        ],
-        "examples": [
-            {
-                "scenario": "Can you count the number of cars in this image? Image name image.jpg",
-                "parameters": {"prompt": "car", "image": "image.jpg"},
-            },
-            {
-                "scenario": "Can you count the number of people? Image name: people.png",
-                "parameters": {"prompt": "person", "image": "people.png"},
-            },
-        ],
-    }
-
-    def __call__(self, prompt: str, image: Union[str, ImageType]) -> Dict:
-        resp = GroundingDINO()(prompt, image)
-        return dict(CounterClass(resp["labels"]))
-
-
 class Crop(Tool):
     r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
 
@@ -665,11 +637,42 @@ class SegIoU(Tool):
         return cast(float, round(iou, 2))
 
 
+class BoxDistance(Tool):
+    name = "box_distance_"
+    description = (
+        "'box_distance_' returns the minimum distance between two bounding boxes."
+    )
+    usage = {
+        "required_parameters": [
+            {"name": "bbox1", "type": "List[int]"},
+            {"name": "bbox2", "type": "List[int]"},
+        ],
+        "examples": [
+            {
+                "scenario": "If you want to calculate the distance between the bounding boxes [0.2, 0.21, 0.34, 0.42] and [0.3, 0.31, 0.44, 0.52]",
+                "parameters": {
+                    "bbox1": [0.2, 0.21, 0.34, 0.42],
+                    "bbox2": [0.3, 0.31, 0.44, 0.52],
+                },
+            }
+        ],
+    }
+
+    def __call__(self, bbox1: List[int], bbox2: List[int]) -> float:
+        x11, y11, x12, y12 = bbox1
+        x21, y21, x22, y22 = bbox2
+
+        horizontal_dist = np.max([0, x21 - x12, x11 - x22])
+        vertical_dist = np.max([0, y21 - y12, y11 - y22])
+
+        return cast(float, round(np.sqrt(horizontal_dist**2 + vertical_dist**2), 2))
+
+
 class ExtractFrames(Tool):
     r"""Extract frames from a video."""
 
     name = "extract_frames_"
-    description = "'extract_frames_' extracts frames where there is motion detected in a video, returns a list of tuples (frame, timestamp), where timestamp is the relative time in seconds where teh frame was captured. The frame is a local image file path."
+    description = "'extract_frames_' extracts frames from a video, returns a list of tuples (frame, timestamp), where timestamp is the relative time in seconds where the frame was captured. The frame is a local image file path."
     usage = {
         "required_parameters": [{"name": "video_uri", "type": "str"}],
         "examples": [
@@ -742,12 +745,12 @@ TOOLS = {
             GroundingDINO,
             AgentGroundingSAM,
             ExtractFrames,
-            Counter,
             Crop,
             BboxArea,
             SegArea,
             BboxIoU,
             SegIoU,
+            BoxDistance,
             Calculator,
         ]
     )

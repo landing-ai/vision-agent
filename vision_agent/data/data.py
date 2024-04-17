@@ -63,9 +63,9 @@ class DataStore:
 
         self.df[name] = self.df["image_paths"].progress_apply(  # type: ignore
             lambda x: (
-                func(self.lmm.generate(prompt, image=x))
+                func(self.lmm.generate(prompt, images=[x]))
                 if func
-                else self.lmm.generate(prompt, image=x)
+                else self.lmm.generate(prompt, images=[x])
             )
         )
         return self
