@@ -392,7 +392,7 @@ class DINOv(Tool):
     _ENDPOINT = "https://rkgkjvqgh7vbzjdb23tr7eay4a0vczdo.lambda-url.us-east-2.on.aws"
 
     name = "dinov_"
-    description = "'dinov_' is a tool that can detect and segment similar objects with the given input segmentation masks."
+    description = "'dinov_' is a tool that can detect and segment similar objects given a reference segmentation mask."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "List[Dict[str, str]]"},
@@ -403,17 +403,17 @@ class DINOv(Tool):
                 "scenario": "Can you find all the balloons in this image that is similar to the provided masked area?",
                 "parameters": {
                     "prompt": [
-                        {"mask": "balloon_mask1.jpg", "image": "balloon.jpg"},
-                        {"mask": "balloon_mask2.jpg", "image": "balloon.jpg"},
+                        {"mask": "reference_balloon_mask1.jpg", "image": "balloon.jpg"},
+                        {"mask": "reference_balloon_mask2.jpg", "image": "balloon.jpg"},
                     ],
                     "image": "input.jpg",
                 },
             },
             {
-                "scenario": "Count all the objects in this image that is similar to the provided masked area? image: input.jpg, mask: mask.jpg, mask_image: background.jpg",
+                "scenario": "Count all the objects in this image that is similar to the provided masked area? Image name: input.jpg, Reference mask: mask.jpg, Mask image: background.jpg",
                 "parameters": {
                     "prompt": [
-                        {"mask": "obj_mask1.jpg", "image": "background.jpg"},
+                        {"mask": "reference_obj_mask1.jpg", "image": "background.jpg"},
                     ],
                     "image": "input.jpg",
                 },
