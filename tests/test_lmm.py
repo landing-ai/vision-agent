@@ -27,7 +27,7 @@ def create_temp_image(image_format="jpeg"):
 def test_generate_with_mock(openai_lmm_mock):  # noqa: F811
     temp_image = create_temp_image()
     lmm = OpenAILMM()
-    response = lmm.generate("test prompt", image=temp_image)
+    response = lmm.generate("test prompt", images=[temp_image])
     assert response == "mocked response"
     assert (
         "image_url"

@@ -15,7 +15,7 @@ _CLIP_LENGTH = 30.0
 
 
 def extract_frames_from_video(
-    video_uri: str, fps: int = 2, motion_detection_threshold: float = 0.06
+    video_uri: str, fps: float = 0.5, motion_detection_threshold: float = 0.0
 ) -> List[Tuple[np.ndarray, float]]:
     """Extract frames from a video
 
@@ -25,7 +25,8 @@ def extract_frames_from_video(
         motion_detection_threshold: The threshold to detect motion between
             changes/frames. A value between 0-1, which represents the percentage change
             required for the frames to be considered in motion. For example, a lower
-            value means more frames will be extracted.
+            value means more frames will be extracted. A non-positive value will disable
+            motion detection and extract all frames.
 
     Returns:
         a list of tuples containing the extracted frame and the timestamp in seconds.
@@ -119,18 +120,19 @@ def _extract_frames_by_clip(
             total=processable_frames, desc=f"Extracting frames from clip {start}-{end}"
         )
         for i, frame in enumerate(clip.iter_frames(fps=fps, dtype="uint8")):
-            curr_processed_frame = _preprocess_frame(frame)
             total_count += 1
             pbar.update(1)
-            # Skip the frame if it is similar to the previous one
-            if prev_processed_frame is not None and _similar_frame(
-                prev_processed_frame,
-                curr_processed_frame,
-                threshold=motion_detection_threshold,
-            ):
-                skipped_count += 1
-                continue
-            prev_processed_frame = curr_processed_frame
+            if motion_detection_threshold > 0:
+                curr_processed_frame = _preprocess_frame(frame)
+                # Skip the frame if it is similar to the previous one
+                if prev_processed_frame is not None and _similar_frame(
+                    prev_processed_frame,
+                    curr_processed_frame,
+                    threshold=motion_detection_threshold,
+                ):
+                    skipped_count += 1
+                    continue
+                prev_processed_frame = curr_processed_frame
             ts = round(clip.reader.pos / source_fps, 3)
             frames.append((frame, ts))
 
