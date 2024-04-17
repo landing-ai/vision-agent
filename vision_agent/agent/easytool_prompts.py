@@ -56,6 +56,7 @@ Example 2: {{"Parameters":[{{"input": [1,2,3]}}, {{"input": [2,3,4]}}]}}
 
 These are logs of previous questions and answers:
 {previous_log}
+
 This is the current user's question: {question}
 This is the API tool documentation: {tool_usage}
 Output: """
@@ -67,15 +68,22 @@ Please note that:
 2. We will not show the API response to the user, thus you need to make full use of the response and give the information in the response that can satisfy the user's question in as much detail as possible.
 3. If the API tool does not provide useful information in the response, please answer with your knowledge.
 4. The question may have dependencies on answers of other questions, so we will provide logs of previous questions and answers.
+
 These are logs of previous questions and answers:
 {previous_log}
+
 This is the user's question: {question}
+
 This is the response output by the API tool:
 {call_results}
+
 We will not show the API response to the user, thus you need to make full use of the response and give the information in the response that can satisfy the user's question in as much detail as possible.
 Output: """
 
 ANSWER_SUMMARIZE = """We break down a complex user's problems into simple subtasks and provide answers to each simple subtask. You need to organize these answers to each subtask and form a self-consistent final answer to the user's question.
 This is the user's question: {question}
-These are subtasks and their answers: {answers}
+
+These are subtasks and their answers:
+{answers}
+
 Final answer: """
