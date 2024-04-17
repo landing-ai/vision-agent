@@ -547,7 +547,9 @@ class SegIoU(Tool):
 
 class BoxDistance(Tool):
     name = "box_distance_"
-    description = "'box_distance_' returns the distance between two bounding boxes."
+    description = (
+        "'box_distance_' returns the minimum distance between two bounding boxes."
+    )
     usage = {
         "required_parameters": [
             {"name": "bbox1", "type": "List[int]"},
@@ -564,8 +566,14 @@ class BoxDistance(Tool):
         ],
     }
 
-    def __call__(self, box1: List[int], box2: List[int]) -> float:
-        raise NotImplementedError("Not implemented yet.")
+    def __call__(self, bbox1: List[int], bbox2: List[int]) -> float:
+        x11, y11, x12, y12 = bbox1
+        x21, y21, x22, y22 = bbox2
+
+        horizontal_dist = np.max([0, x21 - x12, x11 - x22])
+        vertical_dist = np.max([0, y21 - y12, y11 - y22])
+
+        return cast(float, round(np.sqrt(horizontal_dist**2 + vertical_dist**2), 2))
 
 
 class ExtractFrames(Tool):
@@ -650,6 +658,7 @@ TOOLS = {
             SegArea,
             BboxIoU,
             SegIoU,
+            BoxDistance,
             Calculator,
         ]
     )
