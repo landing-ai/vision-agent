@@ -398,22 +398,21 @@ class DINOv(Tool):
         ],
         "examples": [
             {
-                "scenario": "Can you find all the balloons in this image that is similar to the provided masked area?",
+                "scenario": "Can you find all the balloons in this image that is similar to the provided masked area? Image name: input.jpg Reference image: balloon.jpg Reference mask: balloon_mask.jpg",
                 "parameters": {
                     "prompt": [
-                        {"mask": "reference_balloon_mask1.jpg", "image": "balloon.jpg"},
-                        {"mask": "reference_balloon_mask2.jpg", "image": "balloon.jpg"},
+                        {"mask": "balloon_mask.jpg", "image": "balloon.jpg"},
                     ],
                     "image": "input.jpg",
                 },
             },
             {
-                "scenario": "Count all the objects in this image that is similar to the provided masked area? Image name: input.jpg, Reference mask: mask.jpg, Mask image: background.jpg",
+                "scenario": "Detect all the objects in this image that are similar to the provided mask. Image name: original.jpg Reference image: mask.png Reference mask: background.png",
                 "parameters": {
                     "prompt": [
-                        {"mask": "reference_obj_mask1.jpg", "image": "background.jpg"},
+                        {"mask": "mask.png", "image": "background.png"},
                     ],
-                    "image": "input.jpg",
+                    "image": "original.jpg",
                 },
             },
         ],

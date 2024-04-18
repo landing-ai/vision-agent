@@ -365,6 +365,7 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
             "grounding_sam_",
             "grounding_dino_",
             "extract_frames_",
+            "dinov_",
         ]:
             continue
 
@@ -469,11 +470,18 @@ class VisionAgent(Agent):
         self,
         chat: List[Dict[str, str]],
         image: Optional[Union[str, Path]] = None,
+        reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
     ) -> Tuple[str, List[Dict]]:
         question = chat[0]["content"]
         if image:
             question += f" Image name: {image}"
+        if reference_data:
+            if not ("image" in reference_data and "mask" in reference_data):
+                raise ValueError(
+                    f"Reference data must contain 'image' and 'mask'. but got {reference_data}"
+                )
+            question += f" Reference image: {reference_data['image']}, Reference mask: {reference_data['mask']}"
 
         reflections = ""
         final_answer = ""
