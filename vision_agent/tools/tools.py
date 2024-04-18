@@ -442,10 +442,13 @@ class DINOv(Tool):
         }
         data: Dict[str, Any] = _send_inference_request(request_data, "dinov")
         if "bboxes" in data:
-            data["bboxes"] = [normalize_bbox(box, data["mask_shape"]) for box in data["bboxes"]]
+            data["bboxes"] = [
+                normalize_bbox(box, data["mask_shape"]) for box in data["bboxes"]
+            ]
         if "masks" in data:
             data["masks"] = [
-                rle_decode(mask_rle=mask, shape=data["mask_shape"]) for mask in data["masks"]
+                rle_decode(mask_rle=mask, shape=data["mask_shape"])
+                for mask in data["masks"]
             ]
         data["labels"] = ["visual prompt" for _ in range(len(data["masks"]))]
         return data
