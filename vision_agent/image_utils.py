@@ -103,7 +103,7 @@ def overlay_bboxes(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(bboxes["labels"])}
+    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(set(bboxes["labels"]))}
 
     width, height = image.size
     fontsize = max(12, int(min(width, height) / 40))
