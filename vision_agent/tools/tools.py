@@ -372,6 +372,104 @@ class GroundingSAM(Tool):
         return ret_pred
 
 
+class DINOv(Tool):
+    r"""DINOv is a tool that can detect and segment similar objects with the given input masks.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> t = va.tools.DINOv()
+        >>> t(prompt=[{"mask":"balloon_mask.jpg", "image": "balloon.jpg"}], image="balloon.jpg"])
+        [{'scores': [0.512, 0.212],
+        'masks': [array([[0, 0, 0, ..., 0, 0, 0],
+           ...,
+           [0, 0, 0, ..., 0, 0, 0]], dtype=uint8)},
+        array([[0, 0, 0, ..., 0, 0, 0],
+           ...,
+           [1, 1, 1, ..., 1, 1, 1]], dtype=uint8)]}]
+    """
+
+    name = "dinov_"
+    description = "'dinov_' is a tool that can detect and segment similar objects given a reference segmentation mask."
+    usage = {
+        "required_parameters": [
+            {"name": "prompt", "type": "List[Dict[str, str]]"},
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you find all the balloons in this image that is similar to the provided masked area? Image name: input.jpg Reference image: balloon.jpg Reference mask: balloon_mask.jpg",
+                "parameters": {
+                    "prompt": [
+                        {"mask": "balloon_mask.jpg", "image": "balloon.jpg"},
+                    ],
+                    "image": "input.jpg",
+                },
+            },
+            {
+                "scenario": "Detect all the objects in this image that are similar to the provided mask. Image name: original.jpg Reference image: mask.png Reference mask: background.png",
+                "parameters": {
+                    "prompt": [
+                        {"mask": "mask.png", "image": "background.png"},
+                    ],
+                    "image": "original.jpg",
+                },
+            },
+        ],
+    }
+
+    def __call__(
+        self, prompt: List[Dict[str, str]], image: Union[str, ImageType]
+    ) -> Dict:
+        """Invoke the DINOv model.
+
+        Parameters:
+            prompt: a list of visual prompts in the form of {'mask': 'MASK_FILE_PATH', 'image': 'IMAGE_FILE_PATH'}.
+            image: the input image to segment.
+
+        Returns:
+            A dictionary of the below keys: 'scores', 'masks' and 'mask_shape', which stores a list of detected segmentation masks and its scores.
+        """
+        image_b64 = convert_to_b64(image)
+        for p in prompt:
+            p["mask"] = convert_to_b64(p["mask"])
+            p["image"] = convert_to_b64(p["image"])
+        request_data = {
+            "prompt": prompt,
+            "image": image_b64,
+            "tool": "dinov",
+        }
+        data: Dict[str, Any] = _send_inference_request(request_data, "dinov")
+        if "bboxes" in data:
+            data["bboxes"] = [
+                normalize_bbox(box, data["mask_shape"]) for box in data["bboxes"]
+            ]
+        if "masks" in data:
+            data["masks"] = [
+                rle_decode(mask_rle=mask, shape=data["mask_shape"])
+                for mask in data["masks"]
+            ]
+        data["labels"] = ["visual prompt" for _ in range(len(data["masks"]))]
+        return data
+
+
+class AgentDINOv(DINOv):
+    def __call__(
+        self,
+        prompt: List[Dict[str, str]],
+        image: Union[str, ImageType],
+    ) -> Dict:
+        rets = super().__call__(prompt, image)
+        mask_files = []
+        for mask in rets["masks"]:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                file_name = Path(tmp.name).with_suffix(".mask.png")
+                Image.fromarray(mask * 255).save(file_name)
+                mask_files.append(str(file_name))
+        rets["masks"] = mask_files
+        return rets
+
+
 class AgentGroundingSAM(GroundingSAM):
     r"""AgentGroundingSAM is the same as GroundingSAM but it saves the masks as files
     returns the file name. This makes it easier for agents to use.
@@ -775,6 +873,7 @@ TOOLS = {
             AgentGroundingSAM,
             ZeroShotCounting,
             VisualPromptCounting,
+            AgentDINOv,
             ExtractFrames,
             Crop,
             BboxArea,
