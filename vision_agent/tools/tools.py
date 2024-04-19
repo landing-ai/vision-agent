@@ -395,6 +395,127 @@ class AgentGroundingSAM(GroundingSAM):
         return rets
 
 
+class ZeroShotCounting(Tool):
+    r"""ZeroShotCounting is a tool that can count total number of instances of an object
+    present in an image belonging to same class without a text or visual prompt.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> zshot_count = va.tools.ZeroShotCounting()
+        >>> zshot_count("image1.jpg")
+        {'count': 45}
+    """
+
+    name = "zero_shot_counting_"
+    description = """'zero_shot_counting_' is a tool that can count total number of instances of an object present in an image belonging to the same class without a text or visual prompt.
+    It returns the total count of the objects."""
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg"},
+            },
+            {
+                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "parameters": {"image": "tray.jpg"},
+            },
+            {
+                "scenario": "Can you build me an object counting tool ? Image name: shirts.jpg",
+                "parameters": {
+                    "image": "shirts.jpg",
+                },
+            },
+        ],
+    }
+
+    # TODO: Add support for input multiple images, which aligns with the output type.
+    def __call__(self, image: Union[str, ImageType]) -> Dict:
+        """Invoke the Image captioning model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
+        """
+        image_b64 = convert_to_b64(image)
+        data = {
+            "image": image_b64,
+            "tool": "zero_shot_counting",
+        }
+        return _send_inference_request(data, "tools")
+
+
+class VisualPromptCounting(Tool):
+    r"""VisualPromptCounting is a tool that can count total number of instances of an object
+    present in an image belonging to same class with help of an visual prompt which is a bounding box.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> prompt_count = va.tools.VisualPromptCounting()
+        >>> prompt_count(image="image1.jpg", prompt="100, 100, 200, 250")
+        {'count': 23}
+    """
+
+    name = "visual_prompt_counting_"
+    description = """'visual_prompt_counting_' is a tool that can count total number of instances of an object present in an image belonging to the same class given an
+    example bounding box around a single instance. It returns the total count of the objects."""
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+            {"name": "prompt", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Here is an example of a lid '200, 200, 250, 300', Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg", "prompt": "200, 200, 250, 300"},
+            },
+            {
+                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "parameters": {"image": "tray.jpg", "prompt": "100, 100, 200, 250"},
+            },
+            {
+                "scenario": "Can you build me a few shot object counting tool ? Image name: shirts.jpg",
+                "parameters": {
+                    "image": "shirts.jpg",
+                    "prompt": "100, 100, 200, 250",
+                },
+            },
+            {
+                "scenario": "Can you build me a counting tool based on an example prompt ? Image name: shoes.jpg",
+                "parameters": {
+                    "image": "shoes.jpg",
+                    "prompt": "150, 100, 500, 550",
+                },
+            },
+        ],
+    }
+
+    # TODO: Add support for input multiple images, which aligns with the output type.
+    def __call__(self, image: Union[str, ImageType], prompt: str) -> Dict:
+        """Invoke the Image captioning model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
+        """
+        image_b64 = convert_to_b64(image)
+        data = {
+            "image": image_b64,
+            "prompt": prompt,
+            "tool": "few_shot_counting",
+        }
+        return _send_inference_request(data, "tools")
+
+
 class Crop(Tool):
     r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
 
@@ -652,6 +773,8 @@ TOOLS = {
             ImageCaption,
             GroundingDINO,
             AgentGroundingSAM,
+            ZeroShotCounting,
+            VisualPromptCounting,
             ExtractFrames,
             Crop,
             BboxArea,
