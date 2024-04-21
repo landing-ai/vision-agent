@@ -506,8 +506,8 @@ class ZeroShotCounting(Tool):
     """
 
     name = "zero_shot_counting_"
-    description = """'zero_shot_counting_' is a tool that can count total number of instances of an object present in an image belonging to the same class without a text or visual prompt.
-    It returns the total count of the objects."""
+    description = "'zero_shot_counting_' is a tool that counts and returns the total number of instances of an object present in an image belonging to the same class without a text or visual prompt."
+
     usage = {
         "required_parameters": [
             {"name": "image", "type": "str"},
@@ -561,8 +561,7 @@ class VisualPromptCounting(Tool):
     """
 
     name = "visual_prompt_counting_"
-    description = """'visual_prompt_counting_' is a tool that can count total number of instances of an object present in an image belonging to the same class given an
-    example bounding box around a single instance. It returns the total count of the objects."""
+    description = "'visual_prompt_counting_' is a tool that can count and return total number of instances of an object present in an image belonging to the same class given an example bounding box."
 
     usage = {
         "required_parameters": [
