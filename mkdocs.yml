@@ -37,7 +37,5 @@ nav:
     - vision_agent.tools: api/tools.md
     - vision_agent.llm: api/llm.md
     - vision_agent.lmm: api/lmm.md
-    - vision_agent.data: api/data.md
-    - vision_agent.emb: api/emb.md
     - vision_agent.image_utils: api/image_utils.md
   - Old documentation: old.md
