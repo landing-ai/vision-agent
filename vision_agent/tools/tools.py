@@ -358,9 +358,7 @@ class GroundingSAM(Tool):
         }
         data: Dict[str, Any] = _send_inference_request(request_data, "tools")
         if "bboxes" in data:
-            data["bboxes"] = [
-                normalize_bbox(box, image_size) for box in data["bboxes"]
-            ]
+            data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
         if "masks" in data:
             data["masks"] = [
                 rle_decode(mask_rle=mask, shape=data["mask_shape"])
@@ -660,7 +658,8 @@ class BboxContains(Tool):
                     "region": [0.3, 0.31, 0.44, 0.52],
                     "region_class": "couch",
                 },
-            },            {
+            },
+            {
                 "scenario": "Check if the kid is in the pool? bounding box of the kid: [0.2, 0.21, 0.34, 0.42], bounding box of the pool: [0.3, 0.31, 0.44, 0.52]",
                 "parameters": {
                     "target": [0.2, 0.21, 0.34, 0.42],
@@ -668,11 +667,13 @@ class BboxContains(Tool):
                     "region": [0.3, 0.31, 0.44, 0.52],
                     "region_class": "pool",
                 },
-            }
+            },
         ],
     }
 
-    def __call__(self, target: List[int], target_class: str, region: List[int], region_class: str) -> Dict[str, Union[str, float]]:
+    def __call__(
+        self, target: List[int], target_class: str, region: List[int], region_class: str
+    ) -> Dict[str, Union[str, float]]:
         x1, y1, x2, y2 = target
         x3, y3, x4, y4 = region
         xA = max(x1, x3)
