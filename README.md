@@ -11,7 +11,7 @@
 
 Vision Agent is a library that helps you utilize agent frameworks for your vision tasks.
 Many current vision problems can easily take hours or days to solve, you need to find the
-right model, figure out how to use it, possibly write programming logic around it to 
+right model, figure out how to use it, possibly write programming logic around it to
 accomplish the task you want or even more expensive, train your own model. Vision Agent
 aims to provide an in-seconds experience by allowing users to describe their problem in
 text and utilizing agent frameworks to solve the task for them. Check out our discord
@@ -108,6 +108,9 @@ you. For example:
 | BboxIoU | BboxIoU returns the intersection over union of two bounding boxes normalized to 2 decimal places. |
 | SegIoU | SegIoU returns the intersection over union of two segmentation masks normalized to 2 decimal places. |
 | ExtractFrames | ExtractFrames extracts frames with motion from a video. |
+| ExtractFrames | ExtractFrames extracts frames with motion from a video. |
+| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image |
+| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt |
 
 
 It also has a basic set of calculate tools such as add, subtract, multiply and divide.

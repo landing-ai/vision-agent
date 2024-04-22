@@ -9,42 +9,19 @@ import requests
 from PIL import Image
 from PIL.Image import Image as ImageType
 
-from vision_agent.image_utils import convert_to_b64, get_image_size
+from vision_agent.image_utils import (
+    convert_to_b64,
+    get_image_size,
+    rle_decode,
+    normalize_bbox,
+    denormalize_bbox,
+)
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key
 _LND_API_URL = "https://api.dev.landing.ai/v1/agent"
-
-
-def normalize_bbox(
-    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
-) -> List[float]:
-    r"""Normalize the bounding box coordinates to be between 0 and 1."""
-    x1, y1, x2, y2 = bbox
-    x1 = round(x1 / image_size[1], 2)
-    y1 = round(y1 / image_size[0], 2)
-    x2 = round(x2 / image_size[1], 2)
-    y2 = round(y2 / image_size[0], 2)
-    return [x1, y1, x2, y2]
-
-
-def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
-    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
-
-    Parameters:
-        mask_rle: Run-length as string formated (start length)
-        shape: The (height, width) of array to return
-    """
-    s = mask_rle.split()
-    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
-    starts -= 1
-    ends = starts + lengths
-    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
-    for lo, hi in zip(starts, ends):
-        img[lo:hi] = 1
-    return img.reshape(shape)
 
 
 class Tool(ABC):
@@ -489,6 +466,130 @@ class AgentGroundingSAM(GroundingSAM):
         return rets
 
 
+class ZeroShotCounting(Tool):
+    r"""ZeroShotCounting is a tool that can count total number of instances of an object
+    present in an image belonging to same class without a text or visual prompt.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> zshot_count = va.tools.ZeroShotCounting()
+        >>> zshot_count("image1.jpg")
+        {'count': 45}
+    """
+
+    name = "zero_shot_counting_"
+    description = "'zero_shot_counting_' is a tool that counts and returns the total number of instances of an object present in an image belonging to the same class without a text or visual prompt."
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg"},
+            },
+            {
+                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "parameters": {"image": "tray.jpg"},
+            },
+            {
+                "scenario": "Can you build me an object counting tool ? Image name: shirts.jpg",
+                "parameters": {
+                    "image": "shirts.jpg",
+                },
+            },
+        ],
+    }
+
+    # TODO: Add support for input multiple images, which aligns with the output type.
+    def __call__(self, image: Union[str, ImageType]) -> Dict:
+        """Invoke the Image captioning model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
+        """
+        image_b64 = convert_to_b64(image)
+        data = {
+            "image": image_b64,
+            "tool": "zero_shot_counting",
+        }
+        return _send_inference_request(data, "tools")
+
+
+class VisualPromptCounting(Tool):
+    r"""VisualPromptCounting is a tool that can count total number of instances of an object
+    present in an image belonging to same class with help of an visual prompt which is a bounding box.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> prompt_count = va.tools.VisualPromptCounting()
+        >>> prompt_count(image="image1.jpg", prompt="0.1, 0.1, 0.4, 0.42")
+        {'count': 23}
+    """
+
+    name = "visual_prompt_counting_"
+    description = "'visual_prompt_counting_' is a tool that can count and return total number of instances of an object present in an image belonging to the same class given an example bounding box."
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+            {"name": "prompt", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Here is an example of a lid '0.1, 0.1, 0.14, 0.2', Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg", "prompt": "0.1, 0.1, 0.14, 0.2"},
+            },
+            {
+                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "parameters": {"image": "tray.jpg", "prompt": "0.1, 0.1, 0.2, 0.25"},
+            },
+            {
+                "scenario": "Can you build me a few shot object counting tool ? Image name: shirts.jpg",
+                "parameters": {
+                    "image": "shirts.jpg",
+                    "prompt": "0.1, 0.15, 0.2, 0.2",
+                },
+            },
+            {
+                "scenario": "Can you build me a counting tool based on an example prompt ? Image name: shoes.jpg",
+                "parameters": {
+                    "image": "shoes.jpg",
+                    "prompt": "0.1, 0.1, 0.6, 0.65",
+                },
+            },
+        ],
+    }
+
+    # TODO: Add support for input multiple images, which aligns with the output type.
+    def __call__(self, image: Union[str, ImageType], prompt: str) -> Dict:
+        """Invoke the Image captioning model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
+        """
+        image_size = get_image_size(image)
+        bbox = [float(x) for x in prompt.split(",")]
+        prompt = ", ".join(map(str, denormalize_bbox(bbox, image_size)))
+        image_b64 = convert_to_b64(image)
+
+        data = {
+            "image": image_b64,
+            "prompt": prompt,
+            "tool": "few_shot_counting",
+        }
+        return _send_inference_request(data, "tools")
+
+
 class Crop(Tool):
     r"""Crop crops an image given a bounding box and returns a file name of the cropped image."""
 
@@ -798,6 +899,8 @@ TOOLS = {
             ImageCaption,
             GroundingDINO,
             AgentGroundingSAM,
+            ZeroShotCounting,
+            VisualPromptCounting,
             AgentDINOv,
             ExtractFrames,
             Crop,
