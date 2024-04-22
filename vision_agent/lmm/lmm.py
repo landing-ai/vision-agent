@@ -16,7 +16,6 @@ from vision_agent.tools import (
     GroundingDINO,
     GroundingSAM,
     ZeroShotCounting,
-    VisualPromptCounting,
 )
 
 _LOGGER = logging.getLogger(__name__)
