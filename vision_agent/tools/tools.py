@@ -9,42 +9,19 @@ import requests
 from PIL import Image
 from PIL.Image import Image as ImageType
 
-from vision_agent.image_utils import convert_to_b64, get_image_size
+from vision_agent.image_utils import (
+    convert_to_b64,
+    get_image_size,
+    rle_decode,
+    normalize_bbox,
+    denormalize_bbox,
+)
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key
 _LND_API_URL = "https://api.dev.landing.ai/v1/agent"
-
-
-def normalize_bbox(
-    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
-) -> List[float]:
-    r"""Normalize the bounding box coordinates to be between 0 and 1."""
-    x1, y1, x2, y2 = bbox
-    x1 = round(x1 / image_size[1], 2)
-    y1 = round(y1 / image_size[0], 2)
-    x2 = round(x2 / image_size[1], 2)
-    y2 = round(y2 / image_size[0], 2)
-    return [x1, y1, x2, y2]
-
-
-def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
-    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
-
-    Parameters:
-        mask_rle: Run-length as string formated (start length)
-        shape: The (height, width) of array to return
-    """
-    s = mask_rle.split()
-    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
-    starts -= 1
-    ends = starts + lengths
-    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
-    for lo, hi in zip(starts, ends):
-        img[lo:hi] = 1
-    return img.reshape(shape)
 
 
 class Tool(ABC):
@@ -556,7 +533,7 @@ class VisualPromptCounting(Tool):
     -------
         >>> import vision_agent as va
         >>> prompt_count = va.tools.VisualPromptCounting()
-        >>> prompt_count(image="image1.jpg", prompt="100, 100, 200, 250")
+        >>> prompt_count(image="image1.jpg", prompt="0.1, 0.1, 0.4, 0.42")
         {'count': 23}
     """
 
@@ -570,25 +547,25 @@ class VisualPromptCounting(Tool):
         ],
         "examples": [
             {
-                "scenario": "Here is an example of a lid '200, 200, 250, 300', Can you count the lids in the image ? Image name: lids.jpg",
-                "parameters": {"image": "lids.jpg", "prompt": "200, 200, 250, 300"},
+                "scenario": "Here is an example of a lid '0.1, 0.1, 0.14, 0.2', Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg", "prompt": "0.1, 0.1, 0.14, 0.2"},
             },
             {
                 "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
-                "parameters": {"image": "tray.jpg", "prompt": "100, 100, 200, 250"},
+                "parameters": {"image": "tray.jpg", "prompt": "0.1, 0.1, 0.2, 0.25"},
             },
             {
                 "scenario": "Can you build me a few shot object counting tool ? Image name: shirts.jpg",
                 "parameters": {
                     "image": "shirts.jpg",
-                    "prompt": "100, 100, 200, 250",
+                    "prompt": "0.1, 0.15, 0.2, 0.2",
                 },
             },
             {
                 "scenario": "Can you build me a counting tool based on an example prompt ? Image name: shoes.jpg",
                 "parameters": {
                     "image": "shoes.jpg",
-                    "prompt": "150, 100, 500, 550",
+                    "prompt": "0.1, 0.1, 0.6, 0.65",
                 },
             },
         ],
@@ -604,7 +581,11 @@ class VisualPromptCounting(Tool):
         Returns:
             A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
         """
+        image_size = get_image_size(image)
+        bbox = [float(x) for x in prompt.split(",")]
+        prompt = ", ".join(map(str, denormalize_bbox(bbox, image_size)))
         image_b64 = convert_to_b64(image)
+
         data = {
             "image": image_b64,
             "prompt": prompt,

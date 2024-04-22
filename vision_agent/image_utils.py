@@ -4,7 +4,7 @@ import base64
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, List
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -32,6 +32,35 @@ COLORS = [
     (255, 127, 14),
     (31, 119, 180),
 ]
+
+
+def normalize_bbox(
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
+    r"""Normalize the bounding box coordinates to be between 0 and 1."""
+    x1, y1, x2, y2 = bbox
+    x1 = round(x1 / image_size[1], 2)
+    y1 = round(y1 / image_size[0], 2)
+    x2 = round(x2 / image_size[1], 2)
+    y2 = round(y2 / image_size[0], 2)
+    return [x1, y1, x2, y2]
+
+
+def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
+    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
+
+    Parameters:
+        mask_rle: Run-length as string formated (start length)
+        shape: The (height, width) of array to return
+    """
+    s = mask_rle.split()
+    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
+    starts -= 1
+    ends = starts + lengths
+    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
+    for lo, hi in zip(starts, ends):
+        img[lo:hi] = 1
+    return img.reshape(shape)
 
 
 def b64_to_pil(b64_str: str) -> ImageType:
@@ -84,6 +113,26 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
     else:
         arr_bytes = data.tobytes()
         return base64.b64encode(arr_bytes).decode("utf-8")
+
+
+def denormalize_bbox(
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
+    r"""DeNormalize the bounding box coordinates so that they are in absolute values."""
+
+    if len(bbox) != 4:
+        raise ValueError("Bounding box must be of length 4.")
+
+    arr = np.array(bbox)
+    if np.all((arr >= 0) & (arr <= 1)):
+        x1, y1, x2, y2 = bbox
+        x1 = round(x1 * image_size[1])
+        y1 = round(y1 * image_size[0])
+        x2 = round(x2 * image_size[1])
+        y2 = round(y2 * image_size[0])
+        return [x1, y1, x2, y2]
+    else:
+        return bbox
 
 
 def overlay_bboxes(
