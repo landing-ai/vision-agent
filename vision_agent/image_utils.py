@@ -4,7 +4,7 @@ import base64
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, List
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -32,6 +32,35 @@ COLORS = [
     (255, 127, 14),
     (31, 119, 180),
 ]
+
+
+def normalize_bbox(
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
+    r"""Normalize the bounding box coordinates to be between 0 and 1."""
+    x1, y1, x2, y2 = bbox
+    x1 = round(x1 / image_size[1], 2)
+    y1 = round(y1 / image_size[0], 2)
+    x2 = round(x2 / image_size[1], 2)
+    y2 = round(y2 / image_size[0], 2)
+    return [x1, y1, x2, y2]
+
+
+def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
+    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
+
+    Parameters:
+        mask_rle: Run-length as string formated (start length)
+        shape: The (height, width) of array to return
+    """
+    s = mask_rle.split()
+    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
+    starts -= 1
+    ends = starts + lengths
+    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
+    for lo, hi in zip(starts, ends):
+        img[lo:hi] = 1
+    return img.reshape(shape)
 
 
 def b64_to_pil(b64_str: str) -> ImageType:
@@ -86,6 +115,26 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
         return base64.b64encode(arr_bytes).decode("utf-8")
 
 
+def denormalize_bbox(
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
+    r"""DeNormalize the bounding box coordinates so that they are in absolute values."""
+
+    if len(bbox) != 4:
+        raise ValueError("Bounding box must be of length 4.")
+
+    arr = np.array(bbox)
+    if np.all((arr >= 0) & (arr <= 1)):
+        x1, y1, x2, y2 = bbox
+        x1 = round(x1 * image_size[1])
+        y1 = round(y1 * image_size[0])
+        x2 = round(x2 * image_size[1])
+        y2 = round(y2 * image_size[0])
+        return [x1, y1, x2, y2]
+    else:
+        return bbox
+
+
 def overlay_bboxes(
     image: Union[str, Path, np.ndarray, ImageType], bboxes: Dict
 ) -> ImageType:
@@ -103,6 +152,9 @@ def overlay_bboxes(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
+    if "bboxes" not in bboxes:
+        return image.convert("RGB")
+
     color = {
         label: COLORS[i % len(COLORS)] for i, label in enumerate(set(bboxes["labels"]))
     }
@@ -114,8 +166,6 @@ def overlay_bboxes(
         str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
         fontsize,
     )
-    if "bboxes" not in bboxes:
-        return image.convert("RGB")
 
     for label, box, scores in zip(bboxes["labels"], bboxes["bboxes"], bboxes["scores"]):
         box = [
@@ -150,11 +200,15 @@ def overlay_masks(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
+    if "masks" not in masks:
+        return image.convert("RGB")
+
+    if "labels" not in masks:
+        masks["labels"] = [""] * len(masks["masks"])
+
     color = {
         label: COLORS[i % len(COLORS)] for i, label in enumerate(set(masks["labels"]))
     }
-    if "masks" not in masks:
-        return image.convert("RGB")
 
     for label, mask in zip(masks["labels"], masks["masks"]):
         if isinstance(mask, str):
@@ -164,3 +218,40 @@ def overlay_masks(
         mask_img = Image.fromarray(np_mask.astype(np.uint8))
         image = Image.alpha_composite(image.convert("RGBA"), mask_img)
     return image.convert("RGB")
+
+
+def overlay_heat_map(
+    image: Union[str, Path, np.ndarray, ImageType], masks: Dict, alpha: float = 0.8
+) -> ImageType:
+    r"""Plots heat map on to an image.
+
+    Parameters:
+        image: the input image
+        masks: the heatmap to overlay
+        alpha: the transparency of the overlay
+
+    Returns:
+        The image with the heatmap overlayed
+    """
+    if isinstance(image, (str, Path)):
+        image = Image.open(image)
+    elif isinstance(image, np.ndarray):
+        image = Image.fromarray(image)
+
+    if "masks" not in masks:
+        return image.convert("RGB")
+
+    # Only one heat map per image, so no need to loop through masks
+    image = image.convert("L")
+
+    if isinstance(masks["masks"][0], str):
+        mask = b64_to_pil(masks["masks"][0])
+
+    overlay = Image.new("RGBA", mask.size)
+    odraw = ImageDraw.Draw(overlay)
+    odraw.bitmap(
+        (0, 0), mask, fill=(255, 0, 0, round(alpha * 255))
+    )  # fill=(R, G, B, Alpha)
+    combined = Image.alpha_composite(image.convert("RGBA"), overlay.resize(image.size))
+
+    return combined.convert("RGB")

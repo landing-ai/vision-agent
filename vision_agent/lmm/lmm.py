@@ -15,6 +15,7 @@ from vision_agent.tools import (
     SYSTEM_PROMPT,
     GroundingDINO,
     GroundingSAM,
+    ZeroShotCounting,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -271,6 +272,9 @@ class OpenAILMM(LMM):
             raise ValueError("Failed to decode response")
 
         return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
+
+    def generate_zero_shot_counter(self, question: str) -> Callable:
+        return lambda x: ZeroShotCounting()(**{"image": x})
 
 
 class AzureOpenAILMM(OpenAILMM):

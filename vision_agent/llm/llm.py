@@ -11,6 +11,7 @@ from vision_agent.tools import (
     SYSTEM_PROMPT,
     GroundingDINO,
     GroundingSAM,
+    ZeroShotCounting,
 )
 
 
@@ -126,6 +127,9 @@ class OpenAILLM(LLM):
         ]
 
         return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
+
+    def generate_zero_shot_counter(self, question: str) -> Callable:
+        return lambda x: ZeroShotCounting()(**{"image": x})
 
 
 class AzureOpenAILLM(OpenAILLM):
