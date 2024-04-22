@@ -414,7 +414,7 @@ class VisionAgent(Agent):
     ):
         """VisionAgent constructor.
 
-        Parameters
+        Parameters:
             task_model: the model to use for task decomposition.
             answer_model: the model to use for reasoning and concluding the answer.
             reflect_model: the model to use for self reflection.
@@ -479,6 +479,21 @@ class VisionAgent(Agent):
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
     ) -> Tuple[str, List[Dict]]:
+        """Chat with the vision agent and return the final answer and all tool results.
+
+        Parameters:
+            chat: a conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}].
+            image: the input image referenced in the chat parameter.
+            reference_data: a dictionary containing the reference image and mask. in the
+                format of {"image": "image.jpg", "mask": "mask.jpg}
+            visualize_output: whether to visualize the output.
+
+        Returns:
+            A tuple where the first item is the final answer and the second item is a
+            list of all the tool results. The last item in the tool results also
+            contains the visualized output.
+        """
         question = chat[0]["content"]
         if image:
             question += f" Image name: {image}"
