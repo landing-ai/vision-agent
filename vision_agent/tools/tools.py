@@ -480,15 +480,15 @@ class ZeroShotCounting(Tool):
         ],
         "examples": [
             {
-                "scenario": "Can you count the lids in the image ? Image name: lids.jpg",
+                "scenario": "Can you count the lids in the image? Image name: lids.jpg",
                 "parameters": {"image": "lids.jpg"},
             },
             {
-                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "scenario": "Can you count the total number of objects in this image? Image name: tray.jpg",
                 "parameters": {"image": "tray.jpg"},
             },
             {
-                "scenario": "Can you build me an object counting tool ? Image name: shirts.jpg",
+                "scenario": "Can you build me an object counting tool? Image name: shirts.jpg",
                 "parameters": {
                     "image": "shirts.jpg",
                 },
