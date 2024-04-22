@@ -9,42 +9,19 @@ import requests
 from PIL import Image
 from PIL.Image import Image as ImageType
 
-from vision_agent.image_utils import convert_to_b64, get_image_size
+from vision_agent.image_utils import (
+    convert_to_b64,
+    get_image_size,
+    rle_decode,
+    normalize_bbox,
+    denormalize_bbox,
+)
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key
 _LND_API_URL = "https://api.dev.landing.ai/v1/agent"
-
-
-def normalize_bbox(
-    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
-) -> List[float]:
-    r"""Normalize the bounding box coordinates to be between 0 and 1."""
-    x1, y1, x2, y2 = bbox
-    x1 = round(x1 / image_size[1], 2)
-    y1 = round(y1 / image_size[0], 2)
-    x2 = round(x2 / image_size[1], 2)
-    y2 = round(y2 / image_size[0], 2)
-    return [x1, y1, x2, y2]
-
-
-def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
-    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
-
-    Parameters:
-        mask_rle: Run-length as string formated (start length)
-        shape: The (height, width) of array to return
-    """
-    s = mask_rle.split()
-    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
-    starts -= 1
-    ends = starts + lengths
-    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
-    for lo, hi in zip(starts, ends):
-        img[lo:hi] = 1
-    return img.reshape(shape)
 
 
 class Tool(ABC):
@@ -243,7 +220,7 @@ class GroundingDINO(Tool):
             iou_threshold: the threshold for intersection over union used in nms algorithm. It will suppress the boxes which have iou greater than this threshold.
 
         Returns:
-            A list of dictionaries containing the labels, scores, and bboxes. Each dictionary contains the detection result for an image.
+            A dictionary containing the labels, scores, and bboxes, which is the detection result for the input image.
         """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
@@ -339,7 +316,7 @@ class GroundingSAM(Tool):
             iou_threshold: the threshold for intersection over union used in nms algorithm. It will suppress the boxes which have iou greater than this threshold.
 
         Returns:
-            A list of dictionaries containing the labels, scores, bboxes and masks. Each dictionary contains the segmentation result for an image.
+            A dictionary containing the labels, scores, bboxes and masks for the input image.
         """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
@@ -350,19 +327,15 @@ class GroundingSAM(Tool):
             "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
         }
         data: Dict[str, Any] = _send_inference_request(request_data, "tools")
-        ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
         if "bboxes" in data:
-            ret_pred["bboxes"] = [
-                normalize_bbox(box, image_size) for box in data["bboxes"]
-            ]
+            data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
         if "masks" in data:
-            ret_pred["masks"] = [
+            data["masks"] = [
                 rle_decode(mask_rle=mask, shape=data["mask_shape"])
                 for mask in data["masks"]
             ]
-        ret_pred["labels"] = data["labels"]
-        ret_pred["scores"] = data["scores"]
-        return ret_pred
+        data.pop("mask_shape", None)
+        return data
 
 
 class DINOv(Tool):
@@ -484,6 +457,130 @@ class AgentGroundingSAM(GroundingSAM):
                 mask_files.append(str(file_name))
         rets["masks"] = mask_files
         return rets
+
+
+class ZeroShotCounting(Tool):
+    r"""ZeroShotCounting is a tool that can count total number of instances of an object
+    present in an image belonging to same class without a text or visual prompt.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> zshot_count = va.tools.ZeroShotCounting()
+        >>> zshot_count("image1.jpg")
+        {'count': 45}
+    """
+
+    name = "zero_shot_counting_"
+    description = "'zero_shot_counting_' is a tool that counts and returns the total number of instances of an object present in an image belonging to the same class without a text or visual prompt."
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg"},
+            },
+            {
+                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "parameters": {"image": "tray.jpg"},
+            },
+            {
+                "scenario": "Can you build me an object counting tool ? Image name: shirts.jpg",
+                "parameters": {
+                    "image": "shirts.jpg",
+                },
+            },
+        ],
+    }
+
+    # TODO: Add support for input multiple images, which aligns with the output type.
+    def __call__(self, image: Union[str, ImageType]) -> Dict:
+        """Invoke the Image captioning model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
+        """
+        image_b64 = convert_to_b64(image)
+        data = {
+            "image": image_b64,
+            "tool": "zero_shot_counting",
+        }
+        return _send_inference_request(data, "tools")
+
+
+class VisualPromptCounting(Tool):
+    r"""VisualPromptCounting is a tool that can count total number of instances of an object
+    present in an image belonging to same class with help of an visual prompt which is a bounding box.
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> prompt_count = va.tools.VisualPromptCounting()
+        >>> prompt_count(image="image1.jpg", prompt="0.1, 0.1, 0.4, 0.42")
+        {'count': 23}
+    """
+
+    name = "visual_prompt_counting_"
+    description = "'visual_prompt_counting_' is a tool that can count and return total number of instances of an object present in an image belonging to the same class given an example bounding box."
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+            {"name": "prompt", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Here is an example of a lid '0.1, 0.1, 0.14, 0.2', Can you count the lids in the image ? Image name: lids.jpg",
+                "parameters": {"image": "lids.jpg", "prompt": "0.1, 0.1, 0.14, 0.2"},
+            },
+            {
+                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "parameters": {"image": "tray.jpg", "prompt": "0.1, 0.1, 0.2, 0.25"},
+            },
+            {
+                "scenario": "Can you build me a few shot object counting tool ? Image name: shirts.jpg",
+                "parameters": {
+                    "image": "shirts.jpg",
+                    "prompt": "0.1, 0.15, 0.2, 0.2",
+                },
+            },
+            {
+                "scenario": "Can you build me a counting tool based on an example prompt ? Image name: shoes.jpg",
+                "parameters": {
+                    "image": "shoes.jpg",
+                    "prompt": "0.1, 0.1, 0.6, 0.65",
+                },
+            },
+        ],
+    }
+
+    # TODO: Add support for input multiple images, which aligns with the output type.
+    def __call__(self, image: Union[str, ImageType], prompt: str) -> Dict:
+        """Invoke the Image captioning model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'count' and the count as value. E.g. {count: 12}
+        """
+        image_size = get_image_size(image)
+        bbox = [float(x) for x in prompt.split(",")]
+        prompt = ", ".join(map(str, denormalize_bbox(bbox, image_size)))
+        image_b64 = convert_to_b64(image)
+
+        data = {
+            "image": image_b64,
+            "prompt": prompt,
+            "tool": "few_shot_counting",
+        }
+        return _send_inference_request(data, "tools")
 
 
 class Crop(Tool):
@@ -636,6 +733,58 @@ class SegIoU(Tool):
         return cast(float, round(iou, 2))
 
 
+class BboxContains(Tool):
+    name = "bbox_contains_"
+    description = "Given two bounding boxes, a target bounding box and a region bounding box, 'bbox_contains_' returns the intersection of the two bounding boxes over the target bounding box, reflects the percentage area of the target bounding box overlaps with the region bounding box. This is a good tool for determining if the region object contains the target object."
+    usage = {
+        "required_parameters": [
+            {"name": "target", "type": "List[int]"},
+            {"name": "target_class", "type": "str"},
+            {"name": "region", "type": "List[int]"},
+            {"name": "region_class", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Determine if the dog on the couch, bounding box of the dog: [0.2, 0.21, 0.34, 0.42], bounding box of the couch: [0.3, 0.31, 0.44, 0.52]",
+                "parameters": {
+                    "target": [0.2, 0.21, 0.34, 0.42],
+                    "target_class": "dog",
+                    "region": [0.3, 0.31, 0.44, 0.52],
+                    "region_class": "couch",
+                },
+            },
+            {
+                "scenario": "Check if the kid is in the pool? bounding box of the kid: [0.2, 0.21, 0.34, 0.42], bounding box of the pool: [0.3, 0.31, 0.44, 0.52]",
+                "parameters": {
+                    "target": [0.2, 0.21, 0.34, 0.42],
+                    "target_class": "kid",
+                    "region": [0.3, 0.31, 0.44, 0.52],
+                    "region_class": "pool",
+                },
+            },
+        ],
+    }
+
+    def __call__(
+        self, target: List[int], target_class: str, region: List[int], region_class: str
+    ) -> Dict[str, Union[str, float]]:
+        x1, y1, x2, y2 = target
+        x3, y3, x4, y4 = region
+        xA = max(x1, x3)
+        yA = max(y1, y3)
+        xB = min(x2, x4)
+        yB = min(y2, y4)
+        inter_area = max(0, xB - xA) * max(0, yB - yA)
+        boxa_area = (x2 - x1) * (y2 - y1)
+        iou = inter_area / float(boxa_area)
+        area = round(iou, 2)
+        return {
+            "target_class": target_class,
+            "region_class": region_class,
+            "intersection": area,
+        }
+
+
 class BoxDistance(Tool):
     name = "box_distance_"
     description = (
@@ -743,6 +892,8 @@ TOOLS = {
             ImageCaption,
             GroundingDINO,
             AgentGroundingSAM,
+            ZeroShotCounting,
+            VisualPromptCounting,
             AgentDINOv,
             ExtractFrames,
             Crop,
@@ -750,6 +901,7 @@ TOOLS = {
             SegArea,
             BboxIoU,
             SegIoU,
+            BboxContains,
             BoxDistance,
             Calculator,
         ]
