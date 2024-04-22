@@ -33,6 +33,7 @@ from .vision_agent_prompts import (
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
+_MAX_TABULATE_COL_WIDTH = 80
 
 
 def parse_json(s: str) -> Any:
@@ -614,7 +615,7 @@ class VisionAgent(Agent):
 
         self.log_progress(
             f"""Going to run the following tool(s) in sequence:
-{tabulate([tool_results], headers="keys", tablefmt="mixed_grid")}"""
+{tabulate(tabular_data=[tool_results], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
         )
 
         def parse_tool_results(result: Dict[str, Union[Dict, List]]) -> Any:
@@ -660,6 +661,6 @@ class VisionAgent(Agent):
             task_list = []
         self.log_progress(
             f"""Planned tasks:
-{tabulate(task_list, headers="keys", tablefmt="mixed_grid")}"""
+{tabulate(task_list, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
         )
         return task_list
