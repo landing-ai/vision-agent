@@ -14,4 +14,5 @@ from .tools import (  # Counter,
     SegArea,
     SegIoU,
     Tool,
+    register_tool,
 )

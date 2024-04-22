@@ -2,7 +2,7 @@ import logging
 import tempfile
 from abc import ABC
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Tuple, Type, Union, cast
 
 import numpy as np
 import requests
@@ -763,6 +763,30 @@ TOOLS = {
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
 }
+
+
+def register_tool(tool: Type[Tool]) -> None:
+    r"""Add a tool to the list of available tools.
+
+    Parameters:
+        tool: The tool to add.
+    """
+
+    if (
+        not hasattr(tool, "name")
+        or not hasattr(tool, "description")
+        or not hasattr(tool, "usage")
+    ):
+        raise ValueError(
+            "The tool must have 'name', 'description' and 'usage' attributes."
+        )
+
+    TOOLS[len(TOOLS)] = {
+        "name": tool.name,
+        "description": tool.description,
+        "usage": tool.usage,
+        "class": tool,
+    }
 
 
 def _send_inference_request(
