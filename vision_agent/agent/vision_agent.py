@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from PIL import Image
 from tabulate import tabulate
 
-from vision_agent.image_utils import overlay_bboxes, overlay_masks
+from vision_agent.image_utils import overlay_bboxes, overlay_masks, overlay_heat_map
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOLS
@@ -336,7 +336,9 @@ def _handle_viz_tools(
 
     for param, call_result in zip(parameters, tool_result["call_results"]):
         # calls can fail, so we need to check if the call was successful
-        if not isinstance(call_result, dict) or "bboxes" not in call_result:
+        if not isinstance(call_result, dict) or (
+            "bboxes" not in call_result and "masks" not in call_result
+        ):
             return image_to_data
 
         # if the call was successful, then we can add the image data
@@ -349,11 +351,12 @@ def _handle_viz_tools(
                 "scores": [],
             }
 
-        image_to_data[image]["bboxes"].extend(call_result["bboxes"])
-        image_to_data[image]["labels"].extend(call_result["labels"])
-        image_to_data[image]["scores"].extend(call_result["scores"])
-        if "masks" in call_result:
-            image_to_data[image]["masks"].extend(call_result["masks"])
+        image_to_data[image]["bboxes"].extend(call_result.get("bboxes", []))
+        image_to_data[image]["labels"].extend(call_result.get("labels", []))
+        image_to_data[image]["scores"].extend(call_result.get("scores", []))
+        image_to_data[image]["masks"].extend(call_result.get("masks", []))
+        if "mask_shape" in call_result:
+            image_to_data[image]["mask_shape"] = call_result["mask_shape"]
 
     return image_to_data
 
@@ -367,6 +370,8 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
             "grounding_dino_",
             "extract_frames_",
             "dinov_",
+            "zero_shot_counting_",
+            "visual_prompt_counting_",
         ]:
             continue
 
@@ -379,8 +384,11 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
     for image_str in image_to_data:
         image_path = Path(image_str)
         image_data = image_to_data[image_str]
-        image = overlay_masks(image_path, image_data)
-        image = overlay_bboxes(image, image_data)
+        if "_counting_" in tool_result["tool_name"]:
+            image = overlay_heat_map(image_path, image_data)
+        else:
+            image = overlay_masks(image_path, image_data)
+            image = overlay_bboxes(image, image_data)
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             image.save(f.name)
             visualized_images.append(f.name)
@@ -484,11 +492,21 @@ class VisionAgent(Agent):
         if image:
             question += f" Image name: {image}"
         if reference_data:
-            if not ("image" in reference_data and "mask" in reference_data):
+            if not (
+                "image" in reference_data
+                and ("mask" in reference_data or "bbox" in reference_data)
+            ):
                 raise ValueError(
-                    f"Reference data must contain 'image' and 'mask'. but got {reference_data}"
+                    f"Reference data must contain 'image' and a visual prompt which can be 'mask' or 'bbox'. but got {reference_data}"
                 )
-            question += f" Reference image: {reference_data['image']}, Reference mask: {reference_data['mask']}"
+            visual_prompt_data = (
+                f"Reference mask: {reference_data['mask']}"
+                if "mask" in reference_data
+                else f"Reference bbox: {reference_data['bbox']}"
+            )
+            question += (
+                f" Reference image: {reference_data['image']}, {visual_prompt_data}"
+            )
 
         reflections = ""
         final_answer = ""
@@ -531,7 +549,6 @@ class VisionAgent(Agent):
             final_answer = answer_summarize(
                 self.answer_model, question, answers, reflections
             )
-
             visualized_output = visualize_result(all_tool_results)
             all_tool_results.append({"visualized_output": visualized_output})
             if len(visualized_output) > 0:
