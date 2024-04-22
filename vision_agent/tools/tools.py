@@ -250,7 +250,7 @@ class GroundingDINO(Tool):
             iou_threshold: the threshold for intersection over union used in nms algorithm. It will suppress the boxes which have iou greater than this threshold.
 
         Returns:
-            A list of dictionaries containing the labels, scores, and bboxes. Each dictionary contains the detection result for an image.
+            A dictionary containing the labels, scores, and bboxes, which is the detection result for the input image.
         """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
@@ -346,7 +346,7 @@ class GroundingSAM(Tool):
             iou_threshold: the threshold for intersection over union used in nms algorithm. It will suppress the boxes which have iou greater than this threshold.
 
         Returns:
-            A list of dictionaries containing the labels, scores, bboxes and masks. Each dictionary contains the segmentation result for an image.
+            A dictionary containing the labels, scores, bboxes and masks for the input image.
         """
         image_size = get_image_size(image)
         image_b64 = convert_to_b64(image)
@@ -357,19 +357,15 @@ class GroundingSAM(Tool):
             "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
         }
         data: Dict[str, Any] = _send_inference_request(request_data, "tools")
-        ret_pred: Dict[str, List] = {"labels": [], "bboxes": [], "masks": []}
         if "bboxes" in data:
-            ret_pred["bboxes"] = [
-                normalize_bbox(box, image_size) for box in data["bboxes"]
-            ]
+            data["bboxes"] = [normalize_bbox(box, image_size) for box in data["bboxes"]]
         if "masks" in data:
-            ret_pred["masks"] = [
+            data["masks"] = [
                 rle_decode(mask_rle=mask, shape=data["mask_shape"])
                 for mask in data["masks"]
             ]
-        ret_pred["labels"] = data["labels"]
-        ret_pred["scores"] = data["scores"]
-        return ret_pred
+        data.pop("mask_shape", None)
+        return data
 
 
 class DINOv(Tool):
@@ -643,6 +639,58 @@ class SegIoU(Tool):
         return cast(float, round(iou, 2))
 
 
+class BboxContains(Tool):
+    name = "bbox_contains_"
+    description = "Given two bounding boxes, a target bounding box and a region bounding box, 'bbox_contains_' returns the intersection of the two bounding boxes over the target bounding box, reflects the percentage area of the target bounding box overlaps with the region bounding box. This is a good tool for determining if the region object contains the target object."
+    usage = {
+        "required_parameters": [
+            {"name": "target", "type": "List[int]"},
+            {"name": "target_class", "type": "str"},
+            {"name": "region", "type": "List[int]"},
+            {"name": "region_class", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Determine if the dog on the couch, bounding box of the dog: [0.2, 0.21, 0.34, 0.42], bounding box of the couch: [0.3, 0.31, 0.44, 0.52]",
+                "parameters": {
+                    "target": [0.2, 0.21, 0.34, 0.42],
+                    "target_class": "dog",
+                    "region": [0.3, 0.31, 0.44, 0.52],
+                    "region_class": "couch",
+                },
+            },
+            {
+                "scenario": "Check if the kid is in the pool? bounding box of the kid: [0.2, 0.21, 0.34, 0.42], bounding box of the pool: [0.3, 0.31, 0.44, 0.52]",
+                "parameters": {
+                    "target": [0.2, 0.21, 0.34, 0.42],
+                    "target_class": "kid",
+                    "region": [0.3, 0.31, 0.44, 0.52],
+                    "region_class": "pool",
+                },
+            },
+        ],
+    }
+
+    def __call__(
+        self, target: List[int], target_class: str, region: List[int], region_class: str
+    ) -> Dict[str, Union[str, float]]:
+        x1, y1, x2, y2 = target
+        x3, y3, x4, y4 = region
+        xA = max(x1, x3)
+        yA = max(y1, y3)
+        xB = min(x2, x4)
+        yB = min(y2, y4)
+        inter_area = max(0, xB - xA) * max(0, yB - yA)
+        boxa_area = (x2 - x1) * (y2 - y1)
+        iou = inter_area / float(boxa_area)
+        area = round(iou, 2)
+        return {
+            "target_class": target_class,
+            "region_class": region_class,
+            "intersection": area,
+        }
+
+
 class BoxDistance(Tool):
     name = "box_distance_"
     description = (
@@ -757,6 +805,7 @@ TOOLS = {
             SegArea,
             BboxIoU,
             SegIoU,
+            BboxContains,
             BoxDistance,
             Calculator,
         ]
