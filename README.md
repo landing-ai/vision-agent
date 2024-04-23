@@ -136,6 +136,7 @@ to pick it based on the tool description and use it based on the usage provided.
 | ExtractFrames | ExtractFrames extracts frames with motion from a video. |
 | ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image |
 | VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt |
+| OCR | OCR returns the text detected in an image along with the location. |
 
 
 It also has a basic set of calculate tools such as add, subtract, multiply and divide.

@@ -377,6 +377,7 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
             "dinov_",
             "zero_shot_counting_",
             "visual_prompt_counting_",
+            "ocr_",
         ]:
             continue
 
