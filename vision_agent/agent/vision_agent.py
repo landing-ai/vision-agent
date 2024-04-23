@@ -593,10 +593,12 @@ class VisionAgent(Agent):
         )
 
         if visualize_output:
-            viz_images = all_tool_results[-1]["visualized_output"]
+            viz_images: Sequence[Union[str, Path]] = all_tool_results[-1][
+                "visualized_output"
+            ]
             self._report_visualization_via_callback(viz_images)
-            for image in viz_images:
-                Image.open(image).show()
+            for img in viz_images:
+                Image.open(img).show()
 
         return final_answer, all_tool_results
 
