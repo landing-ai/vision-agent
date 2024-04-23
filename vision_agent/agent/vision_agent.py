@@ -8,7 +8,12 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from PIL import Image
 from tabulate import tabulate
 
-from vision_agent.image_utils import overlay_bboxes, overlay_heat_map, overlay_masks
+from vision_agent.image_utils import (
+    convert_to_b64,
+    overlay_bboxes,
+    overlay_heat_map,
+    overlay_masks,
+)
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOLS
@@ -481,6 +486,17 @@ class VisionAgent(Agent):
         if self.report_progress_callback:
             self.report_progress_callback(description)
 
+    def _report_visualization_via_callback(
+        self, images: Sequence[Union[str, Path]]
+    ) -> None:
+        """This is intended for streaming the visualization images via the callback to the client side."""
+        if self.report_progress_callback:
+            self.report_progress_callback("<VIZ>")
+            if images:
+                for img in images:
+                    self.report_progress_callback(f"<IMG>{convert_to_b64(img)}</IMG>")
+            self.report_progress_callback("</VIZ>")
+
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
@@ -577,9 +593,12 @@ class VisionAgent(Agent):
         )
 
         if visualize_output:
-            visualized_output = all_tool_results[-1]["visualized_output"]
-            for image in visualized_output:
-                Image.open(image).show()
+            viz_images: Sequence[Union[str, Path]] = all_tool_results[-1][
+                "visualized_output"
+            ]
+            self._report_visualization_via_callback(viz_images)
+            for img in viz_images:
+                Image.open(img).show()
 
         return final_answer, all_tool_results
 
