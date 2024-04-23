@@ -486,14 +486,16 @@ class VisionAgent(Agent):
         if self.report_progress_callback:
             self.report_progress_callback(description)
 
-    def _report_visualization_via_callback(self, images: List[Union[str, Path]]) -> None:
+    def _report_visualization_via_callback(
+        self, images: Sequence[Union[str, Path]]
+    ) -> None:
         """This is intended for streaming the visualization images via the callback to the client side."""
         if self.report_progress_callback:
-            self.report_progress_callback("<VIZ>" )
+            self.report_progress_callback("<VIZ>")
             if images:
                 for img in images:
                     self.report_progress_callback(f"<IMG>{convert_to_b64(img)}</IMG>")
-            self.report_progress_callback("</VIZ>" )
+            self.report_progress_callback("</VIZ>")
 
     def chat_with_workflow(
         self,
