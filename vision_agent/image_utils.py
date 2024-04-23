@@ -4,7 +4,7 @@ import base64
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Tuple, Union, List
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont

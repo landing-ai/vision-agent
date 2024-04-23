@@ -11,10 +11,10 @@ from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import (
     convert_to_b64,
-    get_image_size,
-    rle_decode,
-    normalize_bbox,
     denormalize_bbox,
+    get_image_size,
+    normalize_bbox,
+    rle_decode,
 )
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
