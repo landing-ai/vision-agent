@@ -905,7 +905,7 @@ class OCR(Tool):
             raise ValueError(f"Request failed: {res.text}")
 
         data = res.json()
-        output = {"labels": [], "bboxes": [], "scores": []}
+        output: Dict[str, List] = {"labels": [], "bboxes": [], "scores": []}
         for det in data[0]:
             output["labels"].append(det["text"])
             box = [

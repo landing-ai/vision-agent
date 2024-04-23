@@ -1,8 +1,8 @@
+from template_match import template_matching_with_rotation
+
 import vision_agent as va
 from vision_agent.image_utils import get_image_size, normalize_bbox
 from vision_agent.tools import Tool, register_tool
-
-from template_match import template_matching_with_rotation
 
 
 @register_tool
