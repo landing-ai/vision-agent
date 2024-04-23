@@ -4,7 +4,7 @@ import base64
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Tuple, Union, List
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -108,7 +108,7 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
         data = Image.open(data)
     if isinstance(data, Image.Image):
         buffer = BytesIO()
-        data.convert("RGB").save(buffer, format="JPEG")
+        data.convert("RGB").save(buffer, format="PNG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     else:
         arr_bytes = data.tobytes()
