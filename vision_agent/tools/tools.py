@@ -52,6 +52,9 @@ class Tool(ABC):
     description: str
     usage: Dict
 
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError
+
 
 class NoOp(Tool):
     name = "noop_"
@@ -765,7 +768,7 @@ TOOLS = {
 }
 
 
-def register_tool(tool: Type[Tool]) -> None:
+def register_tool(tool: Type[Tool]) -> Type[Tool]:
     r"""Add a tool to the list of available tools.
 
     Parameters:
@@ -787,6 +790,7 @@ def register_tool(tool: Type[Tool]) -> None:
         "usage": tool.usage,
         "class": tool,
     }
+    return tool
 
 
 def _send_inference_request(
