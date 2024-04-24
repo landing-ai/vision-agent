@@ -1,8 +1,9 @@
+import io
 import logging
 import tempfile
 from abc import ABC
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Tuple, Type, Union, cast
 
 import numpy as np
 import requests
@@ -11,10 +12,10 @@ from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import (
     convert_to_b64,
-    get_image_size,
-    rle_decode,
-    normalize_bbox,
     denormalize_bbox,
+    get_image_size,
+    normalize_bbox,
+    rle_decode,
 )
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
@@ -28,6 +29,9 @@ class Tool(ABC):
     name: str
     description: str
     usage: Dict
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        raise NotImplementedError
 
 
 class NoOp(Tool):
@@ -858,6 +862,57 @@ class ExtractFrames(Tool):
         return result
 
 
+class OCR(Tool):
+    name = "ocr_"
+    description = "'ocr_' extracts text from an image."
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Can you extract the text from this image? Image name: image.png",
+                "parameters": {"image": "image.png"},
+            },
+        ],
+    }
+    _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
+    _URL = "https://app.landing.ai/ocr/v1/detect-text"
+
+    def __call__(self, image: str) -> dict:
+        pil_image = Image.open(image).convert("RGB")
+        image_size = pil_image.size[::-1]
+        image_buffer = io.BytesIO()
+        pil_image.save(image_buffer, format="PNG")
+        buffer_bytes = image_buffer.getvalue()
+        image_buffer.close()
+
+        res = requests.post(
+            self._URL,
+            files={"images": buffer_bytes},
+            data={"language": "en"},
+            headers={"contentType": "multipart/form-data", "apikey": self._API_KEY},
+        )
+        if res.status_code != 200:
+            _LOGGER.error(f"Request failed: {res.text}")
+            raise ValueError(f"Request failed: {res.text}")
+
+        data = res.json()
+        output: Dict[str, List] = {"labels": [], "bboxes": [], "scores": []}
+        for det in data[0]:
+            output["labels"].append(det["text"])
+            box = [
+                det["location"][0]["x"],
+                det["location"][0]["y"],
+                det["location"][2]["x"],
+                det["location"][2]["y"],
+            ]
+            box = normalize_bbox(box, image_size)
+            output["bboxes"].append(box)
+            output["scores"].append(round(det["score"], 2))
+        return output
+
+
 class Calculator(Tool):
     r"""Calculator is a tool that can perform basic arithmetic operations."""
 
@@ -903,11 +958,37 @@ TOOLS = {
             SegIoU,
             BboxContains,
             BoxDistance,
+            OCR,
             Calculator,
         ]
     )
     if (hasattr(c, "name") and hasattr(c, "description") and hasattr(c, "usage"))
 }
+
+
+def register_tool(tool: Type[Tool]) -> Type[Tool]:
+    r"""Add a tool to the list of available tools.
+
+    Parameters:
+        tool: The tool to add.
+    """
+
+    if (
+        not hasattr(tool, "name")
+        or not hasattr(tool, "description")
+        or not hasattr(tool, "usage")
+    ):
+        raise ValueError(
+            "The tool must have 'name', 'description' and 'usage' attributes."
+        )
+
+    TOOLS[len(TOOLS)] = {
+        "name": tool.name,
+        "description": tool.description,
+        "usage": tool.usage,
+        "class": tool,
+    }
+    return tool
 
 
 def _send_inference_request(

@@ -31,7 +31,7 @@ pip install vision-agent
 ```
 
 Ensure you have an OpenAI API key and set it as an environment variable (if you are
-using Azure OpenAI please see the additional setup section):
+using Azure OpenAI please see the Azure setup section):
 
 ```bash
 export OPENAI_API_KEY="your-api-key"
@@ -96,6 +96,31 @@ you. For example:
 }]
 ```
 
+#### Custom Tools
+You can also add your own custom tools for your vision agent to use:
+    
+```python
+>>> from vision_agent.tools import Tool, register_tool
+>>> @register_tool
+>>> class NumItems(Tool):
+>>>    name = "num_items_"
+>>>    description = "Returns the number of items in a list."
+>>>    usage = {
+>>>        "required_parameters": [{"name": "prompt", "type": "list"}],
+>>>        "examples": [
+>>>            {
+>>>                "scenario": "How many items are in this list? ['a', 'b', 'c']",
+>>>                "parameters": {"prompt": "['a', 'b', 'c']"},
+>>>            }
+>>>        ],
+>>>    }
+>>>    def __call__(self, prompt: list[str]) -> int:
+>>>        return len(prompt)
+```
+This will register it with the list of tools Vision Agent has access to. It will be able
+to pick it based on the tool description and use it based on the usage provided.
+
+#### Tool List
 | Tool | Description |
 | --- | --- |
 | CLIP | CLIP is a tool that can classify or tag any image given a set of input classes or tags. |
@@ -114,11 +139,12 @@ you. For example:
 | ExtractFrames | ExtractFrames extracts frames with motion from a video. |
 | ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image |
 | VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt |
+| OCR | OCR returns the text detected in an image along with the location. |
 
 
 It also has a basic set of calculate tools such as add, subtract, multiply and divide.
 
-### Additional Setup
+### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:
 
 ```bash
