@@ -639,7 +639,7 @@ class VisualQuestionAnswering(Tool):
         ],
     }
 
-    def __call__(self, image: str, prompt: str) -> Dict
+    def __call__(self, image: str, prompt: str) -> Dict:
         """Invoke the visual question answering model.
 
         Parameters:
