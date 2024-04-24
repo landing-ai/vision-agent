@@ -1,6 +1,7 @@
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (  # Counter,
     CLIP,
+    OCR,
     TOOLS,
     BboxArea,
     BboxIoU,
@@ -18,4 +19,5 @@ from .tools import (  # Counter,
     SegArea,
     SegIoU,
     Tool,
+    register_tool,
 )
