@@ -132,6 +132,12 @@ class OpenAILLM(LLM):
         return lambda x: ZeroShotCounting()(**{"image": x})
 
 
+def generate_image_qa_tool(self, question: str) -> Callable:
+    from vision_agent.tools import ImageQuestionAnswering
+
+    return lambda x: ImageQuestionAnswering()(**{"prompt": question, "image": x})
+
+
 class AzureOpenAILLM(OpenAILLM):
     def __init__(
         self,
