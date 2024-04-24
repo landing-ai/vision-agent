@@ -114,7 +114,7 @@ You can also add your own custom tools for your vision agent to use:
 >>>            }
 >>>        ],
 >>>    }
->>>    def __call__(self, prompt: str) -> int:
+>>>    def __call__(self, prompt: list[str]) -> int:
 >>>        return len(prompt)
 ```
 This will register it with the list of tools Vision Agent has access to. It will be able
