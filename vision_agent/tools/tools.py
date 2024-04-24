@@ -19,6 +19,7 @@ from vision_agent.image_utils import (
 )
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
+from vision_agent.lmm import OpenAILMM
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key
@@ -502,7 +503,7 @@ class ZeroShotCounting(Tool):
 
     # TODO: Add support for input multiple images, which aligns with the output type.
     def __call__(self, image: Union[str, ImageType]) -> Dict:
-        """Invoke the Image captioning model.
+        """Invoke the Zero shot counting model.
 
         Parameters:
             image: the input image.
@@ -566,7 +567,7 @@ class VisualPromptCounting(Tool):
 
     # TODO: Add support for input multiple images, which aligns with the output type.
     def __call__(self, image: Union[str, ImageType], prompt: str) -> Dict:
-        """Invoke the Image captioning model.
+        """Invoke the few shot counting model.
 
         Parameters:
             image: the input image.
@@ -584,6 +585,144 @@ class VisualPromptCounting(Tool):
             "prompt": prompt,
             "tool": "few_shot_counting",
         }
+        return _send_inference_request(data, "tools")
+
+
+class VisualQuestionAnswering(Tool):
+    r"""VisualQuestionAnswering is a tool that can explain contents of an image and answer questions about the same
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> vqa_tool = va.tools.VisualQuestionAnswering()
+        >>> vqa_tool(image="image1.jpg", prompt="describe this image in detail")
+        {'text': "The image contains a cat sitting on a table with a bowl of milk."}
+    """
+
+    name = "visual_question_answering_"
+    description = "'visual_question_answering_' is a tool that can describe the contents of the image and it can also answer basic questions about the image."
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+            {"name": "prompt", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Describe this image in detail. Image name: cat.jpg",
+                "parameters": {
+                    "image": "cats.jpg",
+                    "prompt": "Describe this image in detail",
+                },
+            },
+            {
+                "scenario": "Can you help me with this street sign in this image ? What does it say ? Image name: sign.jpg",
+                "parameters": {
+                    "image": "sign.jpg",
+                    "prompt": "Can you help me with this street sign ? What does it say ?",
+                },
+            },
+            {
+                "scenario": "Describe the weather in the image for me ? Image name: weather.jpg",
+                "parameters": {
+                    "image": "weather.jpg",
+                    "prompt": "Describe the weather in the image for me ",
+                },
+            },
+            {
+                "scenario": "Which 2 are the least frequent bins in this histogram ? Image name: chart.jpg",
+                "parameters": {
+                    "image": "chart.jpg",
+                    "prompt": "Which 2 are the least frequent bins in this histogram",
+                },
+            },
+        ],
+    }
+
+    def __call__(self, image: str, prompt: str) -> Dict:
+        """Invoke the visual question answering model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'text' and the answer to the prompt. E.g. {'text': 'This image contains a cat sitting on a table with a bowl of milk.'}
+        """
+
+        gpt = OpenAILMM()
+        return {"text": gpt(input=prompt, images=[image])}
+
+
+class ImageQuestionAnswering(Tool):
+    r"""ImageQuestionAnswering is a tool that can explain contents of an image and answer questions about the same
+    It is same as VisualQuestionAnswering but this tool is not used by agents. It is used when user requests a tool for VQA using generate_image_qa_tool function.
+    It is also useful if the user wants the data to be not exposed to OpenAI endpoints
+
+    Example
+    -------
+        >>> import vision_agent as va
+        >>> vqa_tool = va.tools.ImageQuestionAnswering()
+        >>> vqa_tool(image="image1.jpg", prompt="describe this image in detail")
+        {'text': "The image contains a cat sitting on a table with a bowl of milk."}
+    """
+
+    name = "image_question_answering_"
+    description = "'image_question_answering_' is a tool that can describe the contents of the image and it can also answer basic questions about the image."
+
+    usage = {
+        "required_parameters": [
+            {"name": "image", "type": "str"},
+            {"name": "prompt", "type": "str"},
+        ],
+        "examples": [
+            {
+                "scenario": "Describe this image in detail. Image name: cat.jpg",
+                "parameters": {
+                    "image": "cats.jpg",
+                    "prompt": "Describe this image in detail",
+                },
+            },
+            {
+                "scenario": "Can you help me with this street sign in this image ? What does it say ? Image name: sign.jpg",
+                "parameters": {
+                    "image": "sign.jpg",
+                    "prompt": "Can you help me with this street sign ? What does it say ?",
+                },
+            },
+            {
+                "scenario": "Describe the weather in the image for me ? Image name: weather.jpg",
+                "parameters": {
+                    "image": "weather.jpg",
+                    "prompt": "Describe the weather in the image for me ",
+                },
+            },
+            {
+                "scenario": "Can you generate an image question answering tool ? Image name: chart.jpg, prompt: Which 2 are the least frequent bins in this histogram",
+                "parameters": {
+                    "image": "chart.jpg",
+                    "prompt": "Which 2 are the least frequent bins in this histogram",
+                },
+            },
+        ],
+    }
+
+    def __call__(self, image: Union[str, ImageType], prompt: str) -> Dict:
+        """Invoke the visual question answering model.
+
+        Parameters:
+            image: the input image.
+
+        Returns:
+            A dictionary containing the key 'text' and the answer to the prompt. E.g. {'text': 'This image contains a cat sitting on a table with a bowl of milk.'}
+        """
+
+        image_b64 = convert_to_b64(image)
+        data = {
+            "image": image_b64,
+            "prompt": prompt,
+            "tool": "image_question_answering",
+        }
+
         return _send_inference_request(data, "tools")
 
 
@@ -944,11 +1083,11 @@ TOOLS = {
         [
             NoOp,
             CLIP,
-            ImageCaption,
             GroundingDINO,
             AgentGroundingSAM,
             ZeroShotCounting,
             VisualPromptCounting,
+            VisualQuestionAnswering,
             AgentDINOv,
             ExtractFrames,
             Crop,
