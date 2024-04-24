@@ -108,8 +108,7 @@ class CLIP(Tool):
 
 
 class ImageCaption(Tool):
-    r"""ImageCaption is a tool that can caption an image based on its contents
-    or tags.
+    r"""ImageCaption is a tool that can caption an image based on its contents or tags.
 
     Example
     -------
@@ -120,25 +119,19 @@ class ImageCaption(Tool):
     """
 
     name = "image_caption_"
-    description = "'image_caption_' is a tool that can caption an image based on its contents or tags. It returns a text describing the image"
+    description = "'image_caption_' is a tool that can caption an image based on its contents or tags. It returns a text describing the image."
     usage = {
         "required_parameters": [
             {"name": "image", "type": "str"},
         ],
         "examples": [
             {
-                "scenario": "Can you describe this image ? Image name: cat.jpg",
+                "scenario": "Can you describe this image? Image name: cat.jpg",
                 "parameters": {"image": "cat.jpg"},
             },
             {
-                "scenario": "Can you caption this image with their main contents ? Image name: cat_dog.jpg",
+                "scenario": "Can you caption this image with their main contents? Image name: cat_dog.jpg",
                 "parameters": {"image": "cat_dog.jpg"},
-            },
-            {
-                "scenario": "Can you build me a image captioning tool ? Image name: shirts.jpg",
-                "parameters": {
-                    "image": "shirts.jpg",
-                },
             },
         ],
     }
@@ -487,15 +480,15 @@ class ZeroShotCounting(Tool):
         ],
         "examples": [
             {
-                "scenario": "Can you count the lids in the image ? Image name: lids.jpg",
+                "scenario": "Can you count the lids in the image? Image name: lids.jpg",
                 "parameters": {"image": "lids.jpg"},
             },
             {
-                "scenario": "Can you count the total number of objects in this image ? Image name: tray.jpg",
+                "scenario": "Can you count the total number of objects in this image? Image name: tray.jpg",
                 "parameters": {"image": "tray.jpg"},
             },
             {
-                "scenario": "Can you build me an object counting tool ? Image name: shirts.jpg",
+                "scenario": "Can you build me an object counting tool? Image name: shirts.jpg",
                 "parameters": {
                     "image": "shirts.jpg",
                 },
