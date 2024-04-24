@@ -916,7 +916,7 @@ class OCR(Tool):
             ]
             box = normalize_bbox(box, image_size)
             output["bboxes"].append(box)
-            output["scores"].append(det["score"])
+            output["scores"].append(round(det["score"], 2))
         return output
 
 
