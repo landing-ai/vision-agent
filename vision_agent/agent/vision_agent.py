@@ -377,6 +377,7 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
             "dinov_",
             "zero_shot_counting_",
             "visual_prompt_counting_",
+            "ocr_",
         ]:
             continue
 
@@ -523,20 +524,20 @@ class VisionAgent(Agent):
         if image:
             question += f" Image name: {image}"
         if reference_data:
-            if not (
-                "image" in reference_data
-                and ("mask" in reference_data or "bbox" in reference_data)
-            ):
-                raise ValueError(
-                    f"Reference data must contain 'image' and a visual prompt which can be 'mask' or 'bbox'. but got {reference_data}"
-                )
-            visual_prompt_data = (
-                f"Reference mask: {reference_data['mask']}"
-                if "mask" in reference_data
-                else f"Reference bbox: {reference_data['bbox']}"
+            question += (
+                f" Reference image: {reference_data['image']}"
+                if "image" in reference_data
+                else ""
             )
             question += (
-                f" Reference image: {reference_data['image']}, {visual_prompt_data}"
+                f" Reference mask: {reference_data['mask']}"
+                if "mask" in reference_data
+                else ""
+            )
+            question += (
+                f" Reference bbox: {reference_data['bbox']}"
+                if "bbox" in reference_data
+                else ""
             )
 
         reflections = ""

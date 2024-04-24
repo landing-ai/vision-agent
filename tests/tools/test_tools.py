@@ -2,8 +2,10 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 from PIL import Image
 
+from vision_agent.tools import TOOLS, Tool, register_tool
 from vision_agent.tools.tools import BboxIoU, BoxDistance, SegArea, SegIoU
 
 
@@ -65,3 +67,71 @@ def test_box_distance():
     box1 = [0, 0, 2, 2]
     box2 = [1, 1, 3, 3]
     assert box_dist(box1, box2) == 0.0
+
+
+def test_register_tool():
+    assert TOOLS[len(TOOLS) - 1]["name"] != "test_tool_"
+
+    @register_tool
+    class TestTool(Tool):
+        name = "test_tool_"
+        description = "Test Tool"
+        usage = {
+            "required_parameters": [{"name": "prompt", "type": "str"}],
+            "examples": [
+                {
+                    "scenario": "Test",
+                    "parameters": {"prompt": "Test Prompt"},
+                }
+            ],
+        }
+
+        def __call__(self, prompt: str) -> str:
+            return prompt
+
+    assert TOOLS[len(TOOLS) - 1]["name"] == "test_tool_"
+
+
+def test_register_tool_incorrect():
+    with pytest.raises(ValueError):
+
+        @register_tool
+        class NoAttributes(Tool):
+            pass
+
+    with pytest.raises(ValueError):
+
+        @register_tool
+        class NoName(Tool):
+            description = "Test Tool"
+            usage = {
+                "required_parameters": [{"name": "prompt", "type": "str"}],
+                "examples": [
+                    {
+                        "scenario": "Test",
+                        "parameters": {"prompt": "Test Prompt"},
+                    }
+                ],
+            }
+
+    with pytest.raises(ValueError):
+
+        @register_tool
+        class NoDescription(Tool):
+            name = "test_tool_"
+            usage = {
+                "required_parameters": [{"name": "prompt", "type": "str"}],
+                "examples": [
+                    {
+                        "scenario": "Test",
+                        "parameters": {"prompt": "Test Prompt"},
+                    }
+                ],
+            }
+
+    with pytest.raises(ValueError):
+
+        @register_tool
+        class NoUsage(Tool):
+            name = "test_tool_"
+            description = "Test Tool"
