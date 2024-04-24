@@ -642,7 +642,7 @@ class VisualQuestionAnswering(Tool):
         ],
     }
 
-    def __call__(self, image: Union[str, ImageType], prompt: str) -> Dict:
+    def __call__(self, image: str, prompt: str) -> Dict
         """Invoke the visual question answering model.
 
         Parameters:
@@ -653,7 +653,7 @@ class VisualQuestionAnswering(Tool):
         """
 
         gpt = OpenAILMM()
-        return gpt(input=prompt, images=[image])
+        return {"text": gpt(input=prompt, images=[image])}
 
 
 class ImageQuestionAnswering(Tool):
