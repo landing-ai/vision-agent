@@ -340,9 +340,13 @@ def _handle_viz_tools(
             return image_to_data
 
     for param, call_result in zip(parameters, tool_result["call_results"]):
-        # calls can fail, so we need to check if the call was successful
+        # Calls can fail, so we need to check if the call was successful. It can either:
+        # 1. return a str or some error that's not a dictionary
+        # 2. return a dictionary but not have the necessary keys
         if not isinstance(call_result, dict) or (
-            "bboxes" not in call_result and "masks" not in call_result
+            "bboxes" not in call_result
+            and "masks" not in call_result
+            and "heat_map" not in call_result
         ):
             return image_to_data
 
@@ -352,6 +356,7 @@ def _handle_viz_tools(
             image_to_data[image] = {
                 "bboxes": [],
                 "masks": [],
+                "heat_map": [],
                 "labels": [],
                 "scores": [],
             }
@@ -360,6 +365,8 @@ def _handle_viz_tools(
         image_to_data[image]["labels"].extend(call_result.get("labels", []))
         image_to_data[image]["scores"].extend(call_result.get("scores", []))
         image_to_data[image]["masks"].extend(call_result.get("masks", []))
+        # only single heatmap is returned
+        image_to_data[image]["heat_map"].append(call_result.get("heat_map", []))
         if "mask_shape" in call_result:
             image_to_data[image]["mask_shape"] = call_result["mask_shape"]
 
