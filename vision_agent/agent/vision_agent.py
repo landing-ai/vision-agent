@@ -314,6 +314,7 @@ def _handle_extract_frames(
                 image_to_data[image] = {
                     "bboxes": [],
                     "masks": [],
+                    "heat_map": [],
                     "labels": [],
                     "scores": [],
                 }
@@ -343,10 +344,9 @@ def _handle_viz_tools(
         # Calls can fail, so we need to check if the call was successful. It can either:
         # 1. return a str or some error that's not a dictionary
         # 2. return a dictionary but not have the necessary keys
+
         if not isinstance(call_result, dict) or (
-            "bboxes" not in call_result
-            and "masks" not in call_result
-            and "heat_map" not in call_result
+            "bboxes" not in call_result and "heat_map" not in call_result
         ):
             return image_to_data
 

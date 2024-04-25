@@ -238,7 +238,7 @@ def overlay_heat_map(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    if "masks" not in heat_map:
+    if "heat_map" not in heat_map:
         return image.convert("RGB")
 
     image = image.convert("L")
