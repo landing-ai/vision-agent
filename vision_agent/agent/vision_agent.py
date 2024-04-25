@@ -369,14 +369,16 @@ def _handle_viz_tools(
 def sample_n_evenly_spaced(lst: Sequence, n: int) -> Sequence:
     if n <= 0:
         return []
-
-    if len(lst) <= n:
+    elif len(lst) == 0:
+        return []
+    elif n == 1:
+        return [lst[0]]
+    elif n >= len(lst):
         return lst
 
-    interval = len(lst) // n if len(lst) % 2 == 0 else len(lst) // n + 1
-    indices = list(range(len(lst)))
-    picked_indices = sorted([indices[(i * interval) % len(lst)] for i in range(n)])
-    return [lst[i] for i in picked_indices]
+    spacing = (len(lst) - 1) / (n - 1)
+    return [lst[round(spacing * i)] for i in range(n)]
+
 
 
 def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]:
