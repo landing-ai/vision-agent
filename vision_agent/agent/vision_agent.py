@@ -380,7 +380,6 @@ def sample_n_evenly_spaced(lst: Sequence, n: int) -> Sequence:
     return [lst[round(spacing * i)] for i in range(n)]
 
 
-
 def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]:
     image_to_data: Dict[str, Dict] = {}
     for tool_result in all_tool_results:
