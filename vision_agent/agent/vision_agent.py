@@ -521,7 +521,7 @@ class VisionAgent(Agent):
             self.report_progress_callback("<VIZ>")
             if images:
                 for img in images:
-                    self.report_progress_callback(f"<IMG>{convert_to_b64(img)}</IMG>")
+                    self.report_progress_callback(f"<IMG>base:64{convert_to_b64(img)}</IMG>")
             self.report_progress_callback("</VIZ>")
 
     def chat_with_workflow(
