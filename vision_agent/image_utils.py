@@ -211,7 +211,7 @@ def overlay_masks(
     }
 
     for label, mask in zip(masks["labels"], masks["masks"]):
-        if isinstance(mask, str):
+        if isinstance(mask, str) or isinstance(mask, Path):
             mask = np.array(Image.open(mask))
         np_mask = np.zeros((image.size[1], image.size[0], 4))
         np_mask[mask > 0, :] = color[label] + (255 * alpha,)
@@ -221,7 +221,7 @@ def overlay_masks(
 
 
 def overlay_heat_map(
-    image: Union[str, Path, np.ndarray, ImageType], masks: Dict, alpha: float = 0.8
+    image: Union[str, Path, np.ndarray, ImageType], heat_map: Dict, alpha: float = 0.8
 ) -> ImageType:
     r"""Plots heat map on to an image.
 
@@ -238,14 +238,12 @@ def overlay_heat_map(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    if "masks" not in masks:
+    if "heat_map" not in heat_map:
         return image.convert("RGB")
 
-    # Only one heat map per image, so no need to loop through masks
     image = image.convert("L")
-
-    if isinstance(masks["masks"][0], str):
-        mask = b64_to_pil(masks["masks"][0])
+    # Only one heat map per image, so no need to loop through masks
+    mask = Image.fromarray(heat_map["heat_map"][0])
 
     overlay = Image.new("RGBA", mask.size)
     odraw = ImageDraw.Draw(overlay)

@@ -11,6 +11,7 @@ from PIL import Image
 from PIL.Image import Image as ImageType
 
 from vision_agent.image_utils import (
+    b64_to_pil,
     convert_to_b64,
     denormalize_bbox,
     get_image_size,
@@ -516,7 +517,9 @@ class ZeroShotCounting(Tool):
             "image": image_b64,
             "tool": "zero_shot_counting",
         }
-        return _send_inference_request(data, "tools")
+        resp_data = _send_inference_request(data, "tools")
+        resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
+        return resp_data
 
 
 class VisualPromptCounting(Tool):
@@ -585,7 +588,9 @@ class VisualPromptCounting(Tool):
             "prompt": prompt,
             "tool": "few_shot_counting",
         }
-        return _send_inference_request(data, "tools")
+        resp_data = _send_inference_request(data, "tools")
+        resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
+        return resp_data
 
 
 class VisualQuestionAnswering(Tool):
