@@ -588,7 +588,9 @@ class VisualPromptCounting(Tool):
             "prompt": prompt,
             "tool": "few_shot_counting",
         }
-        return _send_inference_request(data, "tools")
+        resp_data = _send_inference_request(data, "tools")
+        resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
+        return resp_data
 
 
 class VisualQuestionAnswering(Tool):
