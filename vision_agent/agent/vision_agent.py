@@ -346,7 +346,9 @@ def _handle_viz_tools(
         # 2. return a dictionary but not have the necessary keys
 
         if not isinstance(call_result, dict) or (
-            "bboxes" not in call_result and "heat_map" not in call_result
+            "bboxes" not in call_result
+            and "mask" not in call_result
+            and "heat_map" not in call_result
         ):
             return image_to_data
 
