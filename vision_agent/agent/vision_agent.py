@@ -314,6 +314,7 @@ def _handle_extract_frames(
                 image_to_data[image] = {
                     "bboxes": [],
                     "masks": [],
+                    "heat_map": [],
                     "labels": [],
                     "scores": [],
                 }
@@ -340,9 +341,12 @@ def _handle_viz_tools(
             return image_to_data
 
     for param, call_result in zip(parameters, tool_result["call_results"]):
-        # calls can fail, so we need to check if the call was successful
+        # Calls can fail, so we need to check if the call was successful. It can either:
+        # 1. return a str or some error that's not a dictionary
+        # 2. return a dictionary but not have the necessary keys
+
         if not isinstance(call_result, dict) or (
-            "bboxes" not in call_result and "masks" not in call_result
+            "bboxes" not in call_result and "heat_map" not in call_result
         ):
             return image_to_data
 
@@ -352,6 +356,7 @@ def _handle_viz_tools(
             image_to_data[image] = {
                 "bboxes": [],
                 "masks": [],
+                "heat_map": [],
                 "labels": [],
                 "scores": [],
             }
@@ -360,6 +365,8 @@ def _handle_viz_tools(
         image_to_data[image]["labels"].extend(call_result.get("labels", []))
         image_to_data[image]["scores"].extend(call_result.get("scores", []))
         image_to_data[image]["masks"].extend(call_result.get("masks", []))
+        # only single heatmap is returned
+        image_to_data[image]["heat_map"].append(call_result.get("heat_map", []))
         if "mask_shape" in call_result:
             image_to_data[image]["mask_shape"] = call_result["mask_shape"]
 
@@ -480,9 +487,14 @@ class VisionAgent(Agent):
         """Invoke the vision agent.
 
         Parameters:
-            input: a prompt that describe the task or a conversation in the format of
+            chat: A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}].
-            image: the input image referenced in the prompt parameter.
+            image: The input image referenced in the chat parameter.
+            reference_data: A dictionary containing the reference image, mask or bounding
+                box in the format of:
+                {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
+                where the bounding box coordinates are normalized.
+            visualize_output: Whether to visualize the output.
 
         Returns:
             The result of the vision agent in text.
@@ -522,12 +534,14 @@ class VisionAgent(Agent):
         """Chat with the vision agent and return the final answer and all tool results.
 
         Parameters:
-            chat: a conversation in the format of
+            chat: A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}].
-            image: the input image referenced in the chat parameter.
-            reference_data: a dictionary containing the reference image and mask. in the
-                format of {"image": "image.jpg", "mask": "mask.jpg}
-            visualize_output: whether to visualize the output.
+            image: The input image referenced in the chat parameter.
+            reference_data: A dictionary containing the reference image, mask or bounding
+                box in the format of:
+                {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
+                where the bounding box coordinates are normalized.
+            visualize_output: Whether to visualize the output.
 
         Returns:
             A tuple where the first item is the final answer and the second item is a
