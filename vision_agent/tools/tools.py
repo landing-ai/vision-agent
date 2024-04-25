@@ -17,9 +17,9 @@ from vision_agent.image_utils import (
     normalize_bbox,
     rle_decode,
 )
+from vision_agent.lmm import OpenAILMM
 from vision_agent.tools.video import extract_frames_from_video
 from vision_agent.type_defs import LandingaiAPIKey
-from vision_agent.lmm import OpenAILMM
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key

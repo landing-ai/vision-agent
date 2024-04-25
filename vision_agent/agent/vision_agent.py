@@ -366,6 +366,20 @@ def _handle_viz_tools(
     return image_to_data
 
 
+def sample_n_evenly_spaced(lst: Sequence, n: int) -> Sequence:
+    if n <= 0:
+        return []
+    elif len(lst) == 0:
+        return []
+    elif n == 1:
+        return [lst[0]]
+    elif n >= len(lst):
+        return lst
+
+    spacing = (len(lst) - 1) / (n - 1)
+    return [lst[round(spacing * i)] for i in range(n)]
+
+
 def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]:
     image_to_data: Dict[str, Dict] = {}
     for tool_result in all_tool_results:
@@ -584,7 +598,7 @@ class VisionAgent(Agent):
             visualized_output = visualize_result(all_tool_results)
             all_tool_results.append({"visualized_output": visualized_output})
             if len(visualized_output) > 0:
-                reflection_images = visualized_output
+                reflection_images = sample_n_evenly_spaced(visualized_output, 3)
             elif image is not None:
                 reflection_images = [image]
             else:
