@@ -9,10 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, cast
 import requests
 from openai import AzureOpenAI, OpenAI
 
-from vision_agent.tools import (
-    CHOOSE_PARAMS,
-    SYSTEM_PROMPT,
-)
+from vision_agent.tools import CHOOSE_PARAMS, SYSTEM_PROMPT
 
 _LOGGER = logging.getLogger(__name__)
 
