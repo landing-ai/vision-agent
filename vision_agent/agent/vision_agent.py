@@ -473,9 +473,14 @@ class VisionAgent(Agent):
         """Invoke the vision agent.
 
         Parameters:
-            input: a prompt that describe the task or a conversation in the format of
+            chat: A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}].
-            image: the input image referenced in the prompt parameter.
+            image: The input image referenced in the chat parameter.
+            reference_data: A dictionary containing the reference image, mask or bounding
+                box in the format of:
+                {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
+                where the bounding box coordinates are normalized.
+            visualize_output: Whether to visualize the output.
 
         Returns:
             The result of the vision agent in text.
@@ -515,12 +520,14 @@ class VisionAgent(Agent):
         """Chat with the vision agent and return the final answer and all tool results.
 
         Parameters:
-            chat: a conversation in the format of
+            chat: A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}].
-            image: the input image referenced in the chat parameter.
-            reference_data: a dictionary containing the reference image and mask. in the
-                format of {"image": "image.jpg", "mask": "mask.jpg}
-            visualize_output: whether to visualize the output.
+            image: The input image referenced in the chat parameter.
+            reference_data: A dictionary containing the reference image, mask or bounding
+                box in the format of:
+                {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
+                where the bounding box coordinates are normalized.
+            visualize_output: Whether to visualize the output.
 
         Returns:
             A tuple where the first item is the final answer and the second item is a
