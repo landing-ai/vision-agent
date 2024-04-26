@@ -26,22 +26,24 @@ Final answer:
 
 Reflection: """
 
-TASK_DECOMPOSE = """You need to decompose a user's complex question into some simple subtasks and let the model execute it step by step.
+TASK_DECOMPOSE = """You need to decompose a user's complex question into one or more simple subtasks and let the model execute it step by step.
 This is the user's question: {question}
 This is the tool list:
 {tools}
 
 Please note that:
-1. You should only decompose this user's complex question into some simple subtasks which can be executed easily by using one single tool in the tool list.
-2. If one subtask needs the results from another subtask, you should write clearly. For example:
+1. If the given task is simple and the answer can be provided by executing one tool, you should only use that tool to provide the answer.
+2. If the given task is complex, You should decompose this user's complex question into simple subtasks which can only be executed easily by using one single tool in the tool list.
+3. You should try to decompose the complex question into least number of subtasks.
+4. If one subtask needs the results from another subtask, you should write clearly. For example:
 {{"Tasks": ["Convert 23 km/h to X km/min by 'divide_'", "Multiply X km/min by 45 min to get Y by 'multiply_'"]}}
-3. You must ONLY output in a parsible JSON format. An example output looks like:
+5. You must ONLY output in a parsible JSON format. An example output looks like:
 
 {{"Tasks": ["Task 1", "Task 2", ...]}}
 
 Output: """
 
-TASK_DECOMPOSE_DEPENDS = """You need to decompose a user's complex question into some simple subtasks and let the model execute it step by step.
+TASK_DECOMPOSE_DEPENDS = """You need to decompose a user's complex question into one or more simple subtasks and let the model execute it step by step.
 This is the user's question: {question}
 
 This is the tool list:
@@ -51,10 +53,12 @@ This is a reflection from a previous failed attempt:
 {reflections}
 
 Please note that:
-1. You should only decompose this user's complex question into some simple subtasks which can be executed easily by using one single tool in the tool list.
-2. If one subtask needs the results from another subtask, you should write clearly. For example:
+1. If the given task is simple and the answer can be provided by executing one tool, you should only use that tool to provide the answer.
+2. If the given task is complex, You should decompose this user's complex question into simple subtasks which can only be executed easily by using one single tool in the tool list.
+3. You should try to decompose the complex question into least number of subtasks.
+4. If one subtask needs the results from another subtask, you should write clearly. For example:
 {{"Tasks": ["Convert 23 km/h to X km/min by 'divide_'", "Multiply X km/min by 45 min to get Y by 'multiply_'"]}}
-3. You must ONLY output in a parsible JSON format. An example output looks like:
+5. You must ONLY output in a parsible JSON format. An example output looks like:
 
 {{"Tasks": ["Task 1", "Task 2", ...]}}
 
@@ -65,8 +69,10 @@ These are the tools you can select to solve the question:
 {tools}
 
 Please note that:
-1. You should only choose one tool from the Tool List to solve this question.
-2. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
+1. You should only choose one tool from the Tool List to solve this question and it should have maximum chance of solving the question.
+2. You should only choose the tool whose parameters are most relevant to the user's question and are availale as part of the question.
+3. You should choose the tool whose return type is most relevant to the answer of the user's question.
+4. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
 
 Example 1: {{"ID": 1}}
 Example 2: {{"ID": 2}}
@@ -81,8 +87,10 @@ This is a reflection from a previous failed attempt:
 {reflections}
 
 Please note that:
-1. You should only choose one tool from the Tool List to solve this question.
-2. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
+1. You should only choose one tool from the Tool List to solve this question and it should have maximum chance of solving the question.
+2. You should only choose the tool whose parameters are most relevant to the user's question and are availale as part of the question.
+3. You should choose the tool whose return type is most relevant to the answer of the user's question.
+4. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
 
 Example 1: {{"ID": 1}}
 Example 2: {{"ID": 2}}
@@ -91,7 +99,7 @@ Output: """
 
 CHOOSE_PARAMETER_DEPENDS = """Given a user's question and an API tool documentation, you need to output parameters according to the API tool documentation to successfully call the API to solve the user's question.
 Please note that:
-1. The Example in the API tool documentation can help you better understand the use of the API.
+1. The Example in the API tool documentation can help you better understand the use of the API. Pay attention to the examples which show how to parse the question and extract tool parameters such as prompts and visual inputs.
 2. Ensure the parameters you output are correct. The output must contain the required parameters, and can contain the optional parameters based on the question. If there are no paremters in the required parameters and optional parameters, just leave it as {{"Parameters":{{}}}}
 3. If the user's question mentions other APIs, you should ONLY consider the API tool documentation I give and do not consider other APIs.
 4. The question may have dependencies on answers of other questions, so we will provide logs of previous questions and answers for your reference.
