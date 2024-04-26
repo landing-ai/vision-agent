@@ -100,7 +100,7 @@ agent(
 ```
 Here, `reference_mask.png` and `reference_image.png` in `reference_data` could be any
 image with it's corresponding mask that is the object you want to detect in `image.jpg`.
-You can find a demo app to generate masks for DINOv [here](examples/mask_app/)
+You can find a demo app to generate masks for DINOv [here](examples/mask_app/).
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
