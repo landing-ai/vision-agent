@@ -582,7 +582,7 @@ class VisionAgent(Agent):
                 self.task_model, question, self.tools, reflections
             )
 
-            task_depend = {"Original Quesiton": question}
+            task_depend = {"Original Question": question}
             previous_log = ""
             answers = []
             for task in task_list:

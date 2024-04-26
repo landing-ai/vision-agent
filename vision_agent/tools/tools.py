@@ -19,12 +19,10 @@ from vision_agent.image_utils import (
     rle_decode,
 )
 from vision_agent.lmm import OpenAILMM
+from vision_agent.tools.tool_utils import _send_inference_request
 from vision_agent.tools.video import extract_frames_from_video
-from vision_agent.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
-_LND_API_KEY = LandingaiAPIKey().api_key
-_LND_API_URL = "https://api.dev.landing.ai/v1/agent"
 
 
 class Tool(ABC):
@@ -1133,20 +1131,3 @@ def register_tool(tool: Type[Tool]) -> Type[Tool]:
         "class": tool,
     }
     return tool
-
-
-def _send_inference_request(
-    payload: Dict[str, Any], endpoint_name: str
-) -> Dict[str, Any]:
-    res = requests.post(
-        f"{_LND_API_URL}/model/{endpoint_name}",
-        headers={
-            "Content-Type": "application/json",
-            "apikey": _LND_API_KEY,
-        },
-        json=payload,
-    )
-    if res.status_code != 200:
-        _LOGGER.error(f"Request failed: {res.text}")
-        raise ValueError(f"Request failed: {res.text}")
-    return res.json()["data"]  # type: ignore
