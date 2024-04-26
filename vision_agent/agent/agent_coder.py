@@ -127,7 +127,7 @@ class AgentCoder(Agent):
         for _ in range(self.max_turns):
             code = write_program(question, feedback, self.coder_agent)
             _LOGGER.info(f"code:\n{code}")
-            debug = write_debug(question, code, feedback, self.coder_agent)
+            debug = write_debug(question, code, feedback, self.tester_agent)
             _LOGGER.info(f"debug:\n{debug}")
             results = execute_tests(code, debug)
             _LOGGER.info(
