@@ -143,7 +143,7 @@ class NumItems(Tool):
 ```
 This will register it with the list of tools Vision Agent has access to. It will be able
 to pick it based on the tool description and use it based on the usage provided. You can
-find an example that creates a custom tool for template matching [here](examples/custom_tool/README.md).
+find an example that creates a custom tool for template matching [here](examples/custom_tools/).
 
 #### Tool List
 | Tool | Description |
