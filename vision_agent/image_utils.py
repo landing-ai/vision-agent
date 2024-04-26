@@ -238,7 +238,7 @@ def overlay_heat_map(
     elif isinstance(image, np.ndarray):
         image = Image.fromarray(image)
 
-    if "heat_map" not in heat_map:
+    if "heat_map" not in heat_map or len(heat_map["heat_map"]) == 0:
         return image.convert("RGB")
 
     image = image.convert("L")
