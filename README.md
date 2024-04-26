@@ -137,8 +137,10 @@ to pick it based on the tool description and use it based on the usage provided.
 | BoxDistance | BoxDistance returns the minimum distance between two bounding boxes normalized to 2 decimal places. |
 | BboxContains | BboxContains returns the intersection of two boxes over the target box area. It is good for check if one box is contained within another box. |
 | ExtractFrames | ExtractFrames extracts frames with motion from a video. |
-| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image |
-| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt |
+| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image. |
+| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt. |
+| VisualQuestionAnswering | VisualQuestionAnswering is a tool that can explain the contents of an image and answer questions about the image. |
+| ImageQuestionAnswering | ImageQuestionAnswering is similar to VisualQuestionAnswering but does not rely on OpenAI and instead uses a dedicated model for the task. |
 | OCR | OCR returns the text detected in an image along with the location. |
 
 
