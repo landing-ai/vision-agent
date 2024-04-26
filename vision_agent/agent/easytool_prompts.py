@@ -44,7 +44,7 @@ Output: """
 
 CHOOSE_PARAMETER = """Given a user's question and an API tool documentation, you need to output parameters according to the API tool documentation to successfully call the API to solve the user's question.
 Please note that:
-1. The Example in the API tool documentation can help you better understand the use of the API.
+1. The Example in the API tool documentation can help you better understand the use of the API. Pay attention to the examples which show how to parse the question and extract tool parameters such as prompts and visual inputs.
 2. Ensure the parameters you output are correct. The output must contain the required parameters, and can contain the optional parameters based on the question. If there are no paremters in the required parameters and optional parameters, just leave it as {{"Parameters":{{}}}}
 3. If the user's question mentions other APIs, you should ONLY consider the API tool documentation I give and do not consider other APIs.
 4. The question may have dependencies on answers of other questions, so we will provide logs of previous questions and answers for your reference.

@@ -308,6 +308,9 @@ def _handle_extract_frames(
     # handle extract_frames_ case, useful if it extracts frames but doesn't do
     # any following processing
     for video_file_output in tool_result["call_results"]:
+        # When the video tool is run with wrong parameters, exit the loop
+        if len(video_file_output) < 2:
+            break
         for frame, _ in video_file_output:
             image = frame
             if image not in image_to_data:
@@ -447,7 +450,7 @@ class VisionAgent(Agent):
         task_model: Optional[Union[LLM, LMM]] = None,
         answer_model: Optional[Union[LLM, LMM]] = None,
         reflect_model: Optional[Union[LLM, LMM]] = None,
-        max_retries: int = 3,
+        max_retries: int = 2,
         verbose: bool = False,
         report_progress_callback: Optional[Callable[[str], None]] = None,
     ):

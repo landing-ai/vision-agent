@@ -175,7 +175,7 @@ class GroundingDINO(Tool):
     """
 
     name = "grounding_dino_"
-    description = "'grounding_dino_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and associated probability scores."
+    description = "'grounding_dino_' is a tool that can detect and count objects given a text prompt such as category names or referring expressions. It returns a list and count of bounding boxes, label names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -186,6 +186,13 @@ class GroundingDINO(Tool):
             {"name": "iou_threshold", "type": "float"},
         ],
         "examples": [
+            {
+                "scenario": "Can you detect and count the giraffes and zebras in this image? Image name: animal.jpg",
+                "parameters": {
+                    "prompt": "giraffe. zebra",
+                    "image": "person.jpg",
+                },
+            },
             {
                 "scenario": "Can you build me a car detector?",
                 "parameters": {"prompt": "car", "image": ""},
@@ -198,7 +205,7 @@ class GroundingDINO(Tool):
                 },
             },
             {
-                "scenario": "Detect the red shirts and green shirst. Image name: shirts.jpg",
+                "scenario": "Detect the red shirts and green shirt. Image name: shirts.jpg",
                 "parameters": {
                     "prompt": "red shirt. green shirt",
                     "image": "shirts.jpg",
@@ -271,7 +278,7 @@ class GroundingSAM(Tool):
     """
 
     name = "grounding_sam_"
-    description = "'grounding_sam_' is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. It returns a list of bounding boxes, label names and masks file names and associated probability scores."
+    description = "'grounding_sam_' is a tool that can detect and segment objects given a text prompt such as category names or referring expressions. It returns a list of bounding boxes, label names and masks file names and associated probability scores."
     usage = {
         "required_parameters": [
             {"name": "prompt", "type": "str"},
@@ -282,6 +289,13 @@ class GroundingSAM(Tool):
             {"name": "iou_threshold", "type": "float"},
         ],
         "examples": [
+            {
+                "scenario": "Can you segment the apples and grapes in this image? Image name: fruits.jpg",
+                "parameters": {
+                    "prompt": "apple. grape",
+                    "image": "fruits.jpg",
+                },
+            },
             {
                 "scenario": "Can you build me a car segmentor?",
                 "parameters": {"prompt": "car", "image": ""},
@@ -478,7 +492,7 @@ class ZeroShotCounting(Tool):
     """
 
     name = "zero_shot_counting_"
-    description = "'zero_shot_counting_' is a tool that counts and returns the total number of instances of an object present in an image belonging to the same class without a text or visual prompt."
+    description = "'zero_shot_counting_' is a tool that counts foreground items given only an image and no other information. It returns only the count of the objects in the image"
 
     usage = {
         "required_parameters": [
@@ -486,7 +500,7 @@ class ZeroShotCounting(Tool):
         ],
         "examples": [
             {
-                "scenario": "Can you count the lids in the image? Image name: lids.jpg",
+                "scenario": "Can you count the items in the image? Image name: lids.jpg",
                 "parameters": {"image": "lids.jpg"},
             },
             {
@@ -535,7 +549,7 @@ class VisualPromptCounting(Tool):
     """
 
     name = "visual_prompt_counting_"
-    description = "'visual_prompt_counting_' is a tool that can count and return total number of instances of an object present in an image belonging to the same class given an example bounding box."
+    description = "'visual_prompt_counting_' is a tool that counts foreground items in an image given a visual prompt which is a bounding box describing the object. It returns only the count of the objects in the image."
 
     usage = {
         "required_parameters": [
@@ -544,7 +558,7 @@ class VisualPromptCounting(Tool):
         ],
         "examples": [
             {
-                "scenario": "Here is an example of a lid '0.1, 0.1, 0.14, 0.2', Can you count the lids in the image ? Image name: lids.jpg",
+                "scenario": "Here is an example of a lid '0.1, 0.1, 0.14, 0.2', Can you count the items in the image ? Image name: lids.jpg",
                 "parameters": {"image": "lids.jpg", "prompt": "0.1, 0.1, 0.14, 0.2"},
             },
             {
@@ -552,7 +566,7 @@ class VisualPromptCounting(Tool):
                 "parameters": {"image": "tray.jpg", "prompt": "0.1, 0.1, 0.2, 0.25"},
             },
             {
-                "scenario": "Can you build me a few shot object counting tool ? Image name: shirts.jpg",
+                "scenario": "Can you count this item based on an example, reference_data: '0.1, 0.15, 0.2, 0.2' ? Image name: shirts.jpg",
                 "parameters": {
                     "image": "shirts.jpg",
                     "prompt": "0.1, 0.15, 0.2, 0.2",
@@ -605,7 +619,7 @@ class VisualQuestionAnswering(Tool):
     """
 
     name = "visual_question_answering_"
-    description = "'visual_question_answering_' is a tool that can describe the contents of the image and it can also answer basic questions about the image."
+    description = "'visual_question_answering_' is a tool that can answer basic questions about the image given a question and an image. It returns a text describing the image and the answer to the question"
 
     usage = {
         "required_parameters": [
@@ -672,7 +686,7 @@ class ImageQuestionAnswering(Tool):
     """
 
     name = "image_question_answering_"
-    description = "'image_question_answering_' is a tool that can describe the contents of the image and it can also answer basic questions about the image."
+    description = "'image_question_answering_' is a tool that can answer basic questions about the image given a question and an image. It returns a text describing the image and the answer to the question"
 
     usage = {
         "required_parameters": [
@@ -773,7 +787,7 @@ class BboxArea(Tool):
     r"""BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places."""
 
     name = "bbox_area_"
-    description = "'bbox_area_' returns the area of the bounding box in pixels normalized to 2 decimal places."
+    description = "'bbox_area_' returns the area of the given bounding box in pixels normalized to 2 decimal places."
     usage = {
         "required_parameters": [{"name": "bboxes", "type": "List[int]"}],
         "examples": [
@@ -803,7 +817,7 @@ class SegArea(Tool):
     r"""SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places."""
 
     name = "seg_area_"
-    description = "'seg_area_' returns the area of the segmentation mask in pixels normalized to 2 decimal places."
+    description = "'seg_area_' returns the area of the given segmentation mask in pixels normalized to 2 decimal places."
     usage = {
         "required_parameters": [{"name": "masks", "type": "str"}],
         "examples": [
@@ -883,7 +897,7 @@ class SegIoU(Tool):
 
 class BboxContains(Tool):
     name = "bbox_contains_"
-    description = "Given two bounding boxes, a target bounding box and a region bounding box, 'bbox_contains_' returns the intersection of the two bounding boxes over the target bounding box, reflects the percentage area of the target bounding box overlaps with the region bounding box. This is a good tool for determining if the region object contains the target object."
+    description = "Given two bounding boxes, a target bounding box and a region bounding box, 'bbox_contains_' returns the intersection of the two bounding boxes which is the percentage area of the target bounding box overlaps with the region bounding box. This is a good tool for determining if the region object contains the target object."
     usage = {
         "required_parameters": [
             {"name": "target", "type": "List[int]"},
@@ -935,9 +949,7 @@ class BboxContains(Tool):
 
 class BoxDistance(Tool):
     name = "box_distance_"
-    description = (
-        "'box_distance_' returns the minimum distance between two bounding boxes."
-    )
+    description = "'box_distance_' calculates distance between two bounding boxes. It returns the minumum distance between the given bounding boxes"
     usage = {
         "required_parameters": [
             {"name": "bbox1", "type": "List[int]"},
@@ -945,7 +957,7 @@ class BoxDistance(Tool):
         ],
         "examples": [
             {
-                "scenario": "If you want to calculate the distance between the bounding boxes [0.2, 0.21, 0.34, 0.42] and [0.3, 0.31, 0.44, 0.52]",
+                "scenario": "Calculate the distance between the bounding boxes [0.2, 0.21, 0.34, 0.42] and [0.3, 0.31, 0.44, 0.52]",
                 "parameters": {
                     "bbox1": [0.2, 0.21, 0.34, 0.42],
                     "bbox2": [0.3, 0.31, 0.44, 0.52],
@@ -1008,7 +1020,7 @@ class ExtractFrames(Tool):
 
 class OCR(Tool):
     name = "ocr_"
-    description = "'ocr_' extracts text from an image."
+    description = "'ocr_' extracts text from an image. It returns a list of detected text, bounding boxes, and confidence scores."
     usage = {
         "required_parameters": [
             {"name": "image", "type": "str"},
