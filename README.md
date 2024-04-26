@@ -78,6 +78,30 @@ the individual steps and tools to get the answer:
 {"visualize_output": "final_output.png"}]
 ```
 
+You can also provide reference data for the model to utilize. For example, if you want
+to utilize VisualPromptCounting:
+
+```python
+agent(
+    "How many apples are in this image?",
+    image="apples.jpg",
+    reference_data={"bbox": [0.1, 0.11, 0.24, 0.25]},
+)
+```
+Where `[0.1, 0.11, 0.24, 0.25]` is the normalized bounding box coordinates of an apple.
+Similarly for DINOv you can provide a reference image and mask:
+
+```python
+agent(
+    "Can you detect all of the objects similar to the mask I've provided?",
+    image="image.jpg",
+    reference_data={"mask": "reference_mask.png", "image": "reference_image.png"},
+)
+```
+Here, `reference_mask.png` and `reference_image.png` in `reference_data` could be any
+image with it's corresponding mask that is the object you want to detect in `image.jpg`.
+You can find a demo app to generate masks for DINOv [here](examples/mask_app/).
+
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
 while others are hosted for you. You can also ask an LLM directly to build a tool for
@@ -100,25 +124,26 @@ you. For example:
 You can also add your own custom tools for your vision agent to use:
     
 ```python
->>> from vision_agent.tools import Tool, register_tool
->>> @register_tool
->>> class NumItems(Tool):
->>>    name = "num_items_"
->>>    description = "Returns the number of items in a list."
->>>    usage = {
->>>        "required_parameters": [{"name": "prompt", "type": "list"}],
->>>        "examples": [
->>>            {
->>>                "scenario": "How many items are in this list? ['a', 'b', 'c']",
->>>                "parameters": {"prompt": "['a', 'b', 'c']"},
->>>            }
->>>        ],
->>>    }
->>>    def __call__(self, prompt: list[str]) -> int:
->>>        return len(prompt)
+from vision_agent.tools import Tool, register_tool
+@register_tool
+class NumItems(Tool):
+   name = "num_items_"
+   description = "Returns the number of items in a list."
+   usage = {
+       "required_parameters": [{"name": "prompt", "type": "list"}],
+       "examples": [
+           {
+               "scenario": "How many items are in this list? ['a', 'b', 'c']",
+               "parameters": {"prompt": "['a', 'b', 'c']"},
+           }
+       ],
+   }
+   def __call__(self, prompt: list[str]) -> int:
+       return len(prompt)
 ```
 This will register it with the list of tools Vision Agent has access to. It will be able
-to pick it based on the tool description and use it based on the usage provided.
+to pick it based on the tool description and use it based on the usage provided. You can
+find an example that creates a custom tool for template matching [here](examples/custom_tools/).
 
 #### Tool List
 | Tool | Description |
@@ -137,8 +162,10 @@ to pick it based on the tool description and use it based on the usage provided.
 | BoxDistance | BoxDistance returns the minimum distance between two bounding boxes normalized to 2 decimal places. |
 | BboxContains | BboxContains returns the intersection of two boxes over the target box area. It is good for check if one box is contained within another box. |
 | ExtractFrames | ExtractFrames extracts frames with motion from a video. |
-| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image |
-| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt |
+| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image. |
+| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt. |
+| VisualQuestionAnswering | VisualQuestionAnswering is a tool that can explain the contents of an image and answer questions about the image. |
+| ImageQuestionAnswering | ImageQuestionAnswering is similar to VisualQuestionAnswering but does not rely on OpenAI and instead uses a dedicated model for the task. |
 | OCR | OCR returns the text detected in an image along with the location. |
 
 
