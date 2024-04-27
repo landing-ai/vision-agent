@@ -9,7 +9,7 @@ import numpy as np
 import requests
 from PIL import Image
 from PIL.Image import Image as ImageType
-from scipy.spatial import distance
+from scipy.spatial import distance  # type: ignore
 
 from vision_agent.image_utils import (
     b64_to_pil,
@@ -603,12 +603,12 @@ class VisualPromptCounting(Tool):
         """
         image_size = get_image_size(image)
         bbox = prompt["bbox"]
-        prompt = ", ".join(map(str, denormalize_bbox(bbox, image_size)))
+        bbox_str = ", ".join(map(str, denormalize_bbox(bbox, image_size)))
         image_b64 = convert_to_b64(image)
 
         data = {
             "image": image_b64,
-            "prompt": prompt,
+            "prompt": bbox_str,
             "tool": "few_shot_counting",
         }
         resp_data = _send_inference_request(data, "tools")
