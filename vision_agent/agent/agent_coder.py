@@ -27,8 +27,8 @@ def write_tests(question: str, code: str, model: LLM) -> str:
 
 
 def preprocess_data(code: str) -> str:
-    if f"```python" in code:
-        code = code[code.find(f"```python") + len(f"```python") :]
+    if "```python" in code:
+        code = code[code.find("```python") + len("```python") :]
         code = code[: code.find("```")]
     return code
 
