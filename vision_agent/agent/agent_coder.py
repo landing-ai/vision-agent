@@ -82,6 +82,17 @@ def fix_bugs(code: str, tests: str, result: str, feedback: str, model: LLM) -> s
 
 
 class AgentCoder(Agent):
+    """AgentCoder is based off of the AgentCoder paper https://arxiv.org/abs/2312.13010
+    and it's open source code https://github.com/huangd1999/AgentCoder with some key
+    differences. AgentCoder comprises of 3 components: a coder agent, a tester agent,
+    and an executor. The tester agents writes code to test the code written by the coder
+    agent, but in our case because we are solving a vision task it's difficult to write
+    testing code. We instead have the tester agent write code to visualize the output
+    of the code written by the coder agent. If the code fails, we pass it back to the
+    coder agent to fix the bug, if it succeeds we pass it to a visual tester agent, which
+    is an LMM model like GPT4V, to visually inspect the output and make sure it looks
+    good."""
+
     def __init__(
         self,
         coder_agent: Optional[LLM] = None,
