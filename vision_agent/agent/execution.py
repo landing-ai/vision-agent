@@ -1,6 +1,4 @@
-"""This code is based off of code from CodeGeeX https://github.com/THUDM/CodeGeeX
-
-"""
+"""This code is based off of code from CodeGeeX https://github.com/THUDM/CodeGeeX"""
 
 import contextlib
 import faulthandler
