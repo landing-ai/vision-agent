@@ -1,7 +1,7 @@
 import inspect
 import tempfile
 from importlib import resources
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -112,8 +112,8 @@ def save_image(image: np.ndarray) -> str:
     """
 
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-        image = Image.fromarray(image)
-        image.save(f, "PNG")
+        pil_image = Image.fromarray(image.astype(np.uint8))
+        pil_image.save(f, "PNG")
     return f.name
 
 
@@ -133,7 +133,7 @@ def display_bounding_boxes(
     -------
     >>> image_with_bboxes = display_bounding_boxes(image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}])
     """
-    pil_image = Image.fromarray(image)
+    pil_image = Image.fromarray(image.astype(np.uint8))
 
     color = {
         label: COLORS[i % len(COLORS)]
@@ -167,7 +167,7 @@ def display_bounding_boxes(
     return np.array(pil_image.convert("RGB"))
 
 
-def get_tool_documentation(funcs):
+def get_tool_documentation(funcs: List[Callable]) -> str:
     docstrings = ""
     for func in funcs:
         docstrings += f"{func.__name__}: {inspect.signature(func)}\n{func.__doc__}\n\n"

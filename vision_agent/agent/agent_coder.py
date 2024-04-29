@@ -72,7 +72,8 @@ def run_visual_tests(
         feedback=feedback,
     )
     completion = model(prompt, images=[viz_file])
-    return json.loads(completion)
+    # type is from the prompt
+    return json.loads(completion)  # type: ignore
 
 
 def fix_bugs(code: str, tests: str, result: str, feedback: str, model: LLM) -> str:
@@ -147,7 +148,7 @@ class AgentCoder(Agent):
 
             if not results["passed"]:
                 code = fix_bugs(
-                    code, debug, results["result"].strip(), feedback, self.coder_agent
+                    code, debug, results["result"].strip(), feedback, self.coder_agent  # type: ignore
                 )
                 _LOGGER.info(f"fixed code:\n{code}")
             else:
