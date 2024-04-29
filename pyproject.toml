@@ -28,6 +28,7 @@ moviepy = "1.*"
 opencv-python-headless = "4.*"
 tabulate = "^0.9.0"
 pydantic-settings = "^2.2.1"
+scipy = "1.13.*"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
