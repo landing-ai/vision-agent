@@ -20,10 +20,10 @@ def execute(image_path: str):
 {feedback}
 
 **Instructions**:
-1. **Understand and Clarify**: Make sure you understand the task. 
+1. **Understand and Clarify**: Make sure you understand the task.
 2. **Algorithm/Method Selection**: Decide on the most efficient way.
-3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode. 
-4. **Code Generation**: Translate your pseudocode into executable Python code. 
+3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
+4. **Code Generation**: Translate your pseudocode into executable Python code.
 """
 
 DEBUG = """
@@ -64,7 +64,7 @@ This is the documentation for the functions you have access to. You may call any
 
 
 **Input Code Snippet**:
-This is the code that 
+This is the code that
 ```python
 {code}
 ```
