@@ -1,12 +1,13 @@
 import os
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pytest
 from PIL import Image
 
 from vision_agent.tools import TOOLS, Tool, register_tool
-from vision_agent.tools.tools import BboxIoU, BoxDistance, SegArea, SegIoU
+from vision_agent.tools.tools import BboxIoU, BoxDistance, SegArea, SegIoU, MaskDistance
 
 
 def test_bbox_iou():
@@ -67,6 +68,34 @@ def test_box_distance():
     box1 = [0, 0, 2, 2]
     box2 = [1, 1, 3, 3]
     assert box_dist(box1, box2) == 0.0
+
+
+def test_mask_distance():
+    # Create two binary masks
+    mask1 = np.zeros((100, 100))
+    mask1[:10, :10] = 1  # Top left
+    mask2 = np.zeros((100, 100))
+    mask2[-10:, -10:] = 1  # Bottom right
+
+    # Save the masks as image files
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mask1_path = os.path.join(tmpdir, "mask1.png")
+        mask2_path = os.path.join(tmpdir, "mask2.png")
+        Image.fromarray((mask1 * 255).astype(np.uint8)).save(mask1_path)
+        Image.fromarray((mask2 * 255).astype(np.uint8)).save(mask2_path)
+
+        # Calculate the distance between the masks
+        tool = MaskDistance()
+        distance = tool(mask1_path, mask2_path)
+        print(f"Distance between the masks: {distance}")
+
+        # Check the result
+        assert np.isclose(
+            distance,
+            np.sqrt(2) * 81,
+            atol=1e-2,
+        ), f"Expected {np.sqrt(2) * 81}, got {distance}"
 
 
 def test_register_tool():

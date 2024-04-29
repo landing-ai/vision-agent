@@ -956,6 +956,46 @@ class BboxContains(Tool):
         }
 
 
+class ObjectDistance(Tool):
+    name = "object_distance_"
+    description = "'object_distance_' calculates the distance between two objects in an image. It returns the minimum distance between the two objects."
+    usage = {
+        "required_parameters": [
+            {"name": "object1", "type": "Dict[str, Any]"},
+            {"name": "object2", "type": "Dict[str, Any]"},
+        ],
+        "examples": [
+            {
+                "scenario": "Calculate the distance between these two objects {bboxes: [0.2, 0.21, 0.34, 0.42], masks: 'mask_file1.png'}, {bboxes: [0.3, 0.31, 0.44, 0.52], masks: 'mask_file2.png'}",
+                "parameters": {
+                    "object1": {
+                        "bboxes": [0.2, 0.21, 0.34, 0.42],
+                        "scores": 0.54,
+                        "masks": "mask_file1.png",
+                    },
+                    "object2": {
+                        "bboxes": [0.3, 0.31, 0.44, 0.52],
+                        "scores": 0.66,
+                        "masks": "mask_file2.png",
+                    },
+                },
+            }
+        ],
+    }
+
+    def __call__(self, object1: Dict[str, Any], object2: Dict[str, Any]) -> float:
+        if "masks" in object1 and "masks" in object2:
+            mask1 = object1["masks"]
+            mask2 = object2["masks"]
+            return MaskDistance()(mask1, mask2)
+        elif "bboxes" in object1 and "bboxes" in object2:
+            bbox1 = object1["bboxes"]
+            bbox2 = object2["bboxes"]
+            return BoxDistance()(bbox1, bbox2)
+        else:
+            raise ValueError("Either of the objects should have masks or bboxes")
+
+
 class BoxDistance(Tool):
     name = "box_distance_"
     description = "'box_distance_' calculates distance between two bounding boxes. It returns the minumum distance between the given bounding boxes"
@@ -966,7 +1006,7 @@ class BoxDistance(Tool):
         ],
         "examples": [
             {
-                "scenario": "Calculate the distance between the bounding boxes [0.2, 0.21, 0.34, 0.42] and [0.3, 0.31, 0.44, 0.52]",
+                "scenario": "Calculate the distance between these two bounding boxes [0.2, 0.21, 0.34, 0.42] and [0.3, 0.31, 0.44, 0.52]",
                 "parameters": {
                     "bbox1": [0.2, 0.21, 0.34, 0.42],
                     "bbox2": [0.3, 0.31, 0.44, 0.52],
@@ -1006,6 +1046,7 @@ class MaskDistance(Tool):
         pil_mask2 = Image.open(str(mask2))
         np_mask1 = np.clip(np.array(pil_mask1), 0, 1)
         np_mask2 = np.clip(np.array(pil_mask2), 0, 1)
+
         mask1_points = np.transpose(np.nonzero(np_mask1))
         mask2_points = np.transpose(np.nonzero(np_mask2))
         dist_matrix = distance.cdist(mask1_points, mask2_points, "euclidean")
@@ -1146,10 +1187,9 @@ TOOLS = {
             Crop,
             BboxArea,
             SegArea,
-            SegIoU,
-            MaskDistance,
+            ObjectDistance,
             BboxContains,
-            BoxDistance,
+            SegIoU,
             OCR,
             Calculator,
         ]
