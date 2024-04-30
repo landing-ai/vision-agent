@@ -187,15 +187,13 @@ def time_limit(seconds: float) -> Generator[None, None, None]:
     def signal_handler(signum, frame):  # type: ignore
         raise TimeoutError("Timed out!")
 
-    if platform.uname().system == "Windows":
-        raise NotImplementedError("Timeouts are not supported on Windows.")
-
-    signal.setitimer(signal.ITIMER_REAL, seconds)
-    signal.signal(signal.SIGALRM, signal_handler)
-    try:
-        yield
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
+    if platform.uname().system != "Windows":
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+        signal.signal(signal.SIGALRM, signal_handler)
+        try:
+            yield
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
@@ -212,21 +210,19 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
     """
 
     if maximum_memory_bytes is not None:
-        import resource
+        if platform.uname().system != "Windows":
+            import resource
 
-        if platform.uname().system == "Windows":
-            raise NotImplementedError("Memory limits are not supported on Windows.")
-
-        resource.setrlimit(
-            resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)
-        )
-        resource.setrlimit(
-            resource.RLIMIT_DATA, (maximum_memory_bytes, maximum_memory_bytes)
-        )
-        if not platform.uname().system == "Darwin":
             resource.setrlimit(
-                resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes)
+                resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)
             )
+            resource.setrlimit(
+                resource.RLIMIT_DATA, (maximum_memory_bytes, maximum_memory_bytes)
+            )
+            if not platform.uname().system == "Darwin":
+                resource.setrlimit(
+                    resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes)
+                )
 
     faulthandler.disable()
 
