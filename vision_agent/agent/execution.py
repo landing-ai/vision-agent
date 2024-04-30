@@ -187,12 +187,12 @@ def time_limit(seconds: float) -> Generator[None, None, None]:
     def signal_handler(signum, frame):  # type: ignore
         raise TimeoutError("Timed out!")
 
-    signal.setitimer(signal.ITIMER_REAL, seconds)  # type: ignore
-    signal.signal(signal.SIGALRM, signal_handler)  # type: ignore
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    signal.signal(signal.SIGALRM, signal_handler)
     try:
         yield
     finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)  # type: ignore
+        signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
@@ -211,15 +211,15 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
     if maximum_memory_bytes is not None:
         import resource
 
-        resource.setrlimit(  # type: ignore
-            resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)  # type: ignore
+        resource.setrlimit(
+            resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)
         )
-        resource.setrlimit(  # type: ignore
-            resource.RLIMIT_DATA, (maximum_memory_bytes, maximum_memory_bytes)  # type: ignore
+        resource.setrlimit(
+            resource.RLIMIT_DATA, (maximum_memory_bytes, maximum_memory_bytes)
         )
         if not platform.uname().system == "Darwin":
-            resource.setrlimit(  # type: ignore
-                resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes)  # type: ignore
+            resource.setrlimit(
+                resource.RLIMIT_STACK, (maximum_memory_bytes, maximum_memory_bytes)
             )
 
     faulthandler.disable()
