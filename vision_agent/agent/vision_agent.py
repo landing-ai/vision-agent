@@ -489,7 +489,7 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
-        self_reflect: Optional[bool] = True,
+        self_reflection: Optional[bool] = True,
     ) -> str:
         """Invoke the vision agent.
 
@@ -502,7 +502,7 @@ class VisionAgent(Agent):
                 {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
                 where the bounding box coordinates are normalized.
             visualize_output: Whether to visualize the output.
-            self_reflect: boolean to enable and disable self reflection.
+            self_reflection: boolean to enable and disable self reflection.
 
         Returns:
             The result of the vision agent in text.
@@ -514,7 +514,7 @@ class VisionAgent(Agent):
             image=image,
             visualize_output=visualize_output,
             reference_data=reference_data,
-            self_reflect=self_reflect,
+            self_reflection=self_reflection,
         )
 
     def log_progress(self, description: str) -> None:
@@ -541,7 +541,7 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
-        self_reflect: Optional[bool] = True,
+        self_reflection: Optional[bool] = True,
     ) -> Tuple[str, List[Dict]]:
         """Chat with the vision agent and return the final answer and all tool results.
 
@@ -554,7 +554,7 @@ class VisionAgent(Agent):
                 {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
                 where the bounding box coordinates are normalized.
             visualize_output: Whether to visualize the output.
-            self_reflect: boolean to enable and disable self reflection.
+            self_reflection: boolean to enable and disable self reflection.
 
         Returns:
             A tuple where the first item is the final answer and the second item is a
@@ -631,7 +631,7 @@ class VisionAgent(Agent):
             else:
                 reflection_images = None
 
-            if self_reflect:
+            if self_reflection:
                 reflection = self_reflect(
                     self.reflect_model,
                     question,
@@ -670,14 +670,14 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
-        self_reflect: Optional[bool] = True,
+        self_reflection: Optional[bool] = True,
     ) -> str:
         answer, _ = self.chat_with_workflow(
             chat,
             image=image,
             visualize_output=visualize_output,
             reference_data=reference_data,
-            self_reflect=self_reflect,
+            self_reflection=self_reflection,
         )
         return answer
 
