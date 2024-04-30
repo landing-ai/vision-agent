@@ -187,6 +187,9 @@ def time_limit(seconds: float) -> Generator[None, None, None]:
     def signal_handler(signum, frame):  # type: ignore
         raise TimeoutError("Timed out!")
 
+    if platform.uname().system == "Windows":
+        raise NotImplementedError("Timeouts are not supported on Windows.")
+
     signal.setitimer(signal.ITIMER_REAL, seconds)
     signal.signal(signal.SIGALRM, signal_handler)
     try:
@@ -210,6 +213,11 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
 
     if maximum_memory_bytes is not None:
         import resource
+
+        if platform.uname().system == "Windows":
+            raise NotImplementedError(
+                "Memory limits are not supported on Windows."
+            )
 
         resource.setrlimit(
             resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)
