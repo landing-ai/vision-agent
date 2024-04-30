@@ -122,7 +122,7 @@ you. For example:
 
 #### Custom Tools
 You can also add your own custom tools for your vision agent to use:
-    
+
 ```python
 from vision_agent.tools import Tool, register_tool
 @register_tool
@@ -160,6 +160,7 @@ find an example that creates a custom tool for template matching [here](examples
 | BboxIoU | BboxIoU returns the intersection over union of two bounding boxes normalized to 2 decimal places. |
 | SegIoU | SegIoU returns the intersection over union of two segmentation masks normalized to 2 decimal places. |
 | BoxDistance | BoxDistance returns the minimum distance between two bounding boxes normalized to 2 decimal places. |
+| MaskDistance | MaskDistance returns the minimum distance between two segmentation masks in pixel units |
 | BboxContains | BboxContains returns the intersection of two boxes over the target box area. It is good for check if one box is contained within another box. |
 | ExtractFrames | ExtractFrames extracts frames with motion from a video. |
 | ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image. |
