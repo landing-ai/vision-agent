@@ -489,6 +489,7 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
+        reflect_output: Optional[bool] = True,
     ) -> str:
         """Invoke the vision agent.
 
@@ -538,6 +539,7 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
+        reflect_output: Optional[bool] = True,
     ) -> Tuple[str, List[Dict]]:
         """Chat with the vision agent and return the final answer and all tool results.
 
@@ -625,20 +627,25 @@ class VisionAgent(Agent):
                 reflection_images = [image]
             else:
                 reflection_images = None
-            reflection = self_reflect(
-                self.reflect_model,
-                question,
-                self.tools,
-                all_tool_results,
-                final_answer,
-                reflection_images,
-            )
-            self.log_progress(f"Reflection: {reflection}")
-            parsed_reflection = parse_reflect(reflection)
-            if parsed_reflection["Finish"]:
-                break
+
+            if reflect_output:
+                reflection = self_reflect(
+                    self.reflect_model,
+                    question,
+                    self.tools,
+                    all_tool_results,
+                    final_answer,
+                    reflection_images,
+                )
+                self.log_progress(f"Reflection: {reflection}")
+                parsed_reflection = parse_reflect(reflection)
+                if parsed_reflection["Finish"]:
+                    break
+                else:
+                    reflections += "\n" + parsed_reflection["Reflection"]
             else:
-                reflections += "\n" + parsed_reflection["Reflection"]
+                self.log_progress("Reflection skipped based on user request.")
+                break
         # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
             f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
@@ -660,12 +667,14 @@ class VisionAgent(Agent):
         image: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
+        reflect_output: Optional[bool] = True,
     ) -> str:
         answer, _ = self.chat_with_workflow(
             chat,
             image=image,
             visualize_output=visualize_output,
             reference_data=reference_data,
+            reflect_output=reflect_output,
         )
         return answer
 
