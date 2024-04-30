@@ -9,6 +9,7 @@ import platform
 import signal
 import tempfile
 import traceback
+import typing
 from pathlib import Path
 from typing import Dict, Generator, List, Optional, Union
 
@@ -182,6 +183,7 @@ def swallow_io() -> Generator[WriteOnlyStringIO, None, None]:
                 yield stream
 
 
+@typing.no_type_check
 @contextlib.contextmanager
 def time_limit(seconds: float) -> Generator[None, None, None]:
     def signal_handler(signum, frame):  # type: ignore
@@ -196,6 +198,7 @@ def time_limit(seconds: float) -> Generator[None, None, None]:
             signal.setitimer(signal.ITIMER_REAL, 0)
 
 
+@typing.no_type_check
 def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
     """
     This disables various destructive functions and prevents the generated code
