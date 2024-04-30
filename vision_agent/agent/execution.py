@@ -215,9 +215,7 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None) -> None:
         import resource
 
         if platform.uname().system == "Windows":
-            raise NotImplementedError(
-                "Memory limits are not supported on Windows."
-            )
+            raise NotImplementedError("Memory limits are not supported on Windows.")
 
         resource.setrlimit(
             resource.RLIMIT_AS, (maximum_memory_bytes, maximum_memory_bytes)
