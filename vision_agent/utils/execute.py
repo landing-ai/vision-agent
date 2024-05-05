@@ -3,8 +3,8 @@ from typing import Dict, List, Tuple
 
 import nbformat
 from nbclient import NotebookClient
-from nbclient.util import run_sync
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
+from nbclient.util import run_sync
 from nbformat import NotebookNode
 from nbformat.v4 import new_code_cell
 
@@ -37,13 +37,13 @@ class Execute:
         self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
 
     def build(self) -> None:
-        if self.nb_client.kc is None or not run_sync(self.nb_client.kc.is_alive)(): # type: ignore
+        if self.nb_client.kc is None or not run_sync(self.nb_client.kc.is_alive)():  # type: ignore
             self.nb_client.create_kernel_manager()
             self.nb_client.start_new_kernel()
             self.nb_client.start_new_kernel_client()
 
     def terminate(self) -> None:
-        if self.nb_client.km is not None and run_sync(self.nb_client.km.is_alive)(): # type: ignore
+        if self.nb_client.km is not None and run_sync(self.nb_client.km.is_alive)():  # type: ignore
             run_sync(self.nb_client.km.shutdown_kernel)(now=True)
             run_sync(self.nb_client.km.cleanup_resources)()
 
@@ -71,7 +71,7 @@ class Execute:
             self.nb_client.execute_cell(cell, cell_index)
             return parse_outputs(self.nb.cells[-1].outputs)
         except CellTimeoutError:
-            run_sync(self.nb_client.km.interrupt_kernel)() # type: ignore
+            run_sync(self.nb_client.km.interrupt_kernel)()  # type: ignore
             return False, "Cell execution timed out."
         except DeadKernelError:
             self.reset()
