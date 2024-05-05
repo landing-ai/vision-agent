@@ -422,7 +422,6 @@ class DINOv(Tool):
         request_data = {
             "prompt": prompt,
             "image": image_b64,
-            "tool": "dinov",
         }
         data: Dict[str, Any] = _send_inference_request(request_data, "dinov")
         if "bboxes" in data:
