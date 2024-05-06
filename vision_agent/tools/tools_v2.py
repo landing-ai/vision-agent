@@ -1,13 +1,18 @@
 import inspect
+import io
 import tempfile
 from importlib import resources
-from typing import Any, Callable, Dict, List
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Union, Tuple
 
 import numpy as np
+import pandas as pd
+import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from vision_agent.image_utils import convert_to_b64, normalize_bbox, rle_decode
+from vision_agent.utils.image_utils import convert_to_b64, normalize_bbox, rle_decode
 from vision_agent.tools.tool_utils import _send_inference_request
+from vision_agent.utils import extract_frames_from_video
 
 COLORS = [
     (158, 218, 229),
@@ -31,6 +36,8 @@ COLORS = [
     (255, 127, 14),
     (31, 119, 180),
 ]
+_API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
+_OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
 
 
 def grounding_dino(
@@ -142,6 +149,86 @@ def grounding_sam(
             }
         )
     return return_data
+
+
+def extract_frames(
+    video_uri: Union[str, Path], fps: float = 0.5
+) -> List[Tuple[np.ndarray, float]]:
+    """'extract_frames' extracts frames from a video, returns a list of tuples (frame,
+    timestamp), where timestamp is the relative time in seconds where the frame was
+    captured. The frame is a local image file path.
+
+    Parameters:
+        video_uri (Union[str, Path]): The path to the video file.
+        fps (float, optional): The frame rate per second to extract the frames. Defaults
+            to 0.5.
+
+    Returns:
+        List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
+        and the timestamp in seconds.
+
+    Example
+    -------
+    >>> extract_frames("path/to/video.mp4")
+    [(frame1, 0.0), (frame2, 0.5), ...]
+    """
+
+    return extract_frames_from_video(str(video_uri), fps)
+
+
+def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'ocr' extracts text from an image. It returns a list of detected text, bounding
+    boxes, and confidence scores.
+
+    Parameters:
+        image (np.ndarray): The image to extract text from.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the detected text, bbox,
+        and confidence score.
+
+    Example
+    -------
+    >>> ocr(image)
+    [
+        {'label': 'some text', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
+    ]
+    """
+
+    pil_image = Image.fromarray(image).convert("RGB")
+    image_size = pil_image.size[::-1]
+    image_buffer = io.BytesIO()
+    pil_image.save(image_buffer, format="PNG")
+    buffer_bytes = image_buffer.getvalue()
+    image_buffer.close()
+
+    res = requests.post(
+        _OCR_URL,
+        files={"images": buffer_bytes},
+        data={"language": "en"},
+        headers={"contentType": "multipart/form-data", "apikey": _API_KEY},
+    )
+
+    if res.status_code != 200:
+        raise ValueError(f"OCR request failed with status code {res.status_code}")
+
+    data = res.json()
+    output = []
+    for det in data[0]:
+        label = det["text"]
+        box = [
+            det["location"][0]["x"],
+            det["location"][0]["y"],
+            det["location"][2]["x"],
+            det["location"][2]["y"],
+        ]
+        box = normalize_bbox(box, image_size)
+        output.append({"label": label, "bbox": box, "score": round(det["score"], 2)})
+
+    return output
+
+
+# Utility and visualization functions
 
 
 def load_image(image_path: str) -> np.ndarray:
@@ -298,23 +385,43 @@ def get_tool_descriptions(funcs: List[Callable]) -> str:
             description = ""
 
         description = (
-            description[: description.find("Parameters")].replace("\n", " ").strip()
+            description[: description.find("Parameters:")].replace("\n", " ").strip()
         )
         description = " ".join(description.split())
         descriptions += f"- {func.__name__}{inspect.signature(func)}: {description}\n"
     return descriptions
 
 
+def get_tools_df(funcs: List[Callable]) -> pd.DataFrame:
+    data = {"desc": [], "doc": []}
+
+    for func in funcs:
+        desc = func.__doc__
+        if desc is None:
+            desc = ""
+        desc = desc[: desc.find("Parameters:")].replace("\n", " ").strip()
+        desc = " ".join(desc.split())
+
+        doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
+        data["desc"].append(desc)
+        data["doc"].append(doc)
+
+    return pd.DataFrame(data)
+
+
 TOOLS = [
-    load_image,
     grounding_dino,
     grounding_sam,
+    extract_frames,
+    ocr,
+    load_image,
     save_image,
     display_bounding_boxes,
     display_segmentation_masks,
 ]
-TOOLS_DOCSTRING = get_tool_documentation(TOOLS)
+TOOLS_DF = get_tools_df(TOOLS)
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)
+TOOL_DOCSTRING = get_tool_documentation(TOOLS)
 UTILITIES_DOCSTRING = get_tool_documentation(
     [load_image, save_image, display_bounding_boxes]
 )

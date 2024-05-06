@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from PIL import Image
 from tabulate import tabulate
 
-from vision_agent.image_utils import (
+from vision_agent.utils.image_utils import (
     convert_to_b64,
     overlay_bboxes,
     overlay_heat_map,
@@ -561,6 +561,9 @@ class VisionAgent(Agent):
             list of all the tool results. The last item in the tool results also
             contains the visualized output.
         """
+        if len(chat) == 0:
+            raise ValueError("Input cannot be empty.")
+
         question = chat[0]["content"]
         if image:
             question += f" Image name: {image}"
