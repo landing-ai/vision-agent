@@ -59,7 +59,7 @@ class OpenAILLM(LLM):
 
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=messages,
+            messages=messages,  # type: ignore
             **self.kwargs,
         )
 

@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Sequence, Union
 
 import pandas as pd
 from openai import Client
-from scipy.spatial.distance import cosine
+from scipy.spatial.distance import cosine  # type: ignore
 
 client = Client()
 

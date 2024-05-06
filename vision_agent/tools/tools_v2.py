@@ -369,7 +369,7 @@ def display_segmentation_masks(
     return np.array(pil_image.convert("RGB"))
 
 
-def get_tool_documentation(funcs: List[Callable]) -> str:
+def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
     docstrings = ""
     for func in funcs:
         docstrings += f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}\n\n"
@@ -377,7 +377,7 @@ def get_tool_documentation(funcs: List[Callable]) -> str:
     return docstrings
 
 
-def get_tool_descriptions(funcs: List[Callable]) -> str:
+def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
     descriptions = ""
     for func in funcs:
         description = func.__doc__
@@ -392,8 +392,8 @@ def get_tool_descriptions(funcs: List[Callable]) -> str:
     return descriptions
 
 
-def get_tools_df(funcs: List[Callable]) -> pd.DataFrame:
-    data = {"desc": [], "doc": []}
+def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
+    data: Dict[str, List[str]] = {"desc": [], "doc": []}
 
     for func in funcs:
         desc = func.__doc__
@@ -406,7 +406,7 @@ def get_tools_df(funcs: List[Callable]) -> pd.DataFrame:
         data["desc"].append(desc)
         data["doc"].append(doc)
 
-    return pd.DataFrame(data)
+    return pd.DataFrame(data)  # type: ignore
 
 
 TOOLS = [
@@ -419,9 +419,9 @@ TOOLS = [
     display_bounding_boxes,
     display_segmentation_masks,
 ]
-TOOLS_DF = get_tools_df(TOOLS)
-TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)
-TOOL_DOCSTRING = get_tool_documentation(TOOLS)
+TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
+TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
+TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
     [load_image, save_image, display_bounding_boxes]
 )

@@ -45,7 +45,7 @@ def write_plan(
     context = USER_REQ_CONTEXT.format(user_requirement=user_requirements)
     prompt = PLAN.format(context=context, plan="", tool_desc=tool_desc)
     plan = json.loads(model(prompt).replace("```", "").strip())
-    return plan["plan"]
+    return plan["plan"]  # type: ignore
 
 
 def write_code(
@@ -217,7 +217,6 @@ class AutomatedVisionAgent(Agent):
             self.tool_recommender = Sim(TOOLS_DF, sim_key="desc")
         else:
             self.tool_recommender = tool_recommender
-        self.long_term_memory = []
         self.verbose = verbose
         if self.verbose:
             _LOGGER.setLevel(logging.INFO)
