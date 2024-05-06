@@ -84,13 +84,23 @@ you. For example:
 | Tool | Description |
 | --- | --- |
 | CLIP | CLIP is a tool that can classify or tag any image given a set of input classes or tags. |
+| ImageCaption| ImageCaption is a tool that can generate a caption for an image. |
 | GroundingDINO | GroundingDINO is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. |
 | GroundingSAM | GroundingSAM is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. |
-| Counter | Counter detects and counts the number of objects in an image given an input such as a category name or referring expression. |
+| DINOv | DINOv is a tool that can detect arbitrary objects with using a referring mask. |
 | Crop | Crop crops an image given a bounding box and returns a file name of the cropped image. |
 | BboxArea | BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places. |
 | SegArea | SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places. |
-| ExtractFrames | ExtractFrames extracts image frames from the input video. |
-
+| BboxIoU | BboxIoU returns the intersection over union of two bounding boxes normalized to 2 decimal places. |
+| SegIoU | SegIoU returns the intersection over union of two segmentation masks normalized to 2 decimal places. |
+| BoxDistance | BoxDistance returns the minimum distance between two bounding boxes normalized to 2 decimal places. |
+| MaskDistance | MaskDistance returns the minimum distance between two segmentation masks in pixel units |
+| BboxContains | BboxContains returns the intersection of two boxes over the target box area. It is good for check if one box is contained within another box. |
+| ExtractFrames | ExtractFrames extracts frames with motion from a video. |
+| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image. |
+| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt. |
+| VisualQuestionAnswering | VisualQuestionAnswering is a tool that can explain the contents of an image and answer questions about the image. |
+| ImageQuestionAnswering | ImageQuestionAnswering is similar to VisualQuestionAnswering but does not rely on OpenAI and instead uses a dedicated model for the task. |
+| OCR | OCR returns the text detected in an image along with the location. |
 
 It also has a basic set of calculate tools such as add, subtract, multiply and divide.
