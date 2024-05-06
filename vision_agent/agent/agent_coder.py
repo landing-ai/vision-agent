@@ -8,13 +8,34 @@ from typing import Dict, List, Optional, Union
 from vision_agent.agent import Agent
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools.tools_v2 import TOOLS_DOCSTRING, UTILITIES_DOCSTRING
+from vision_agent.tools.tools_v2 import TOOL_DOCSTRING, UTILITIES_DOCSTRING
+from vision_agent.utils import Execute
 
 from .agent_coder_prompts import DEBUG, FIX_BUG, PROGRAM, TEST, VISUAL_TEST
-from .execution import IMPORT_HELPER, check_correctness
 
+
+IMPORT_HELPER = """
+import math
+import re
+import sys
+import copy
+import datetime
+import itertools
+import collections
+import heapq
+import statistics
+import functools
+import hashlib
+import numpy
+import numpy as np
+import string
+from typing import *
+from collections import *
+from vision_agent.tools.tools_v2 import *
+"""
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
+_EXECUTE = Execute()
 
 
 def write_tests(question: str, code: str, model: LLM) -> str:
@@ -40,7 +61,7 @@ def parse_file_name(s: str) -> str:
 
 def write_program(question: str, feedback: str, model: LLM) -> str:
     prompt = PROGRAM.format(
-        docstring=TOOLS_DOCSTRING, question=question, feedback=feedback
+        docstring=TOOL_DOCSTRING, question=question, feedback=feedback
     )
     completion = model(prompt)
     return preprocess_data(completion)
@@ -59,14 +80,15 @@ def write_debug(question: str, code: str, feedback: str, model: LLM) -> str:
 
 def execute_tests(code: str, tests: str) -> Dict[str, Union[str, bool]]:
     full_code = f"{IMPORT_HELPER}\n{code}\n{tests}"
-    return check_correctness(full_code, 20.0)
+    success, result = _EXECUTE.run_isolation(full_code)
+    return {"code": code, "result": result, "passed": success}
 
 
 def run_visual_tests(
     question: str, code: str, viz_file: str, feedback: str, model: LMM
 ) -> Dict[str, Union[str, bool]]:
     prompt = VISUAL_TEST.format(
-        docstring=TOOLS_DOCSTRING,
+        docstring=TOOL_DOCSTRING,
         code=code,
         question=question,
         feedback=feedback,
