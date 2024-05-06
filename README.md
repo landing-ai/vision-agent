@@ -153,7 +153,6 @@ find an example that creates a custom tool for template matching [here](examples
 | GroundingDINO | GroundingDINO is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. |
 | GroundingSAM | GroundingSAM is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. |
 | DINOv | DINOv is a tool that can detect arbitrary objects with using a referring mask. |
-| ExtractFrames | ExtractFrames extracts frames with motion from a video. |
 | Crop | Crop crops an image given a bounding box and returns a file name of the cropped image. |
 | BboxArea | BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places. |
 | SegArea | SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places. |
