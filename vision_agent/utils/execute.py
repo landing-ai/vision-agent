@@ -1,3 +1,5 @@
+import base64 as b64
+import io
 import re
 from typing import Dict, List, Tuple
 
@@ -7,6 +9,7 @@ from nbclient.exceptions import CellTimeoutError, DeadKernelError
 from nbclient.util import run_sync
 from nbformat import NotebookNode
 from nbformat.v4 import new_code_cell
+from PIL import Image
 
 
 def remove_escape_and_color_codes(input_str: str) -> str:
@@ -18,10 +21,15 @@ def remove_escape_and_color_codes(input_str: str) -> str:
 def parse_outputs(outputs: List[Dict]) -> Tuple[bool, str]:
     success, parsed_output = True, []
     for output in outputs:
+        # TODO: add parse image data
         if output["output_type"] == "stream":
             parsed_output.append(output["text"])
         elif output["output_type"] == "text/plain":
             parsed_output.append(output["data"]["text/plain"])
+        elif output["output_type"] == "display_data":
+            if "image/png" in output["data"]:
+                image_bytes = b64.b64decode(output["data"]["image/png"])
+                Image.open(io.BytesIO(image_bytes)).show()
         elif output["output_type"] == "error":
             success = False
             output_text = remove_escape_and_color_codes("\n".join(output["traceback"]))
