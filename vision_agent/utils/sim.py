@@ -17,16 +17,25 @@ class Sim:
     def __init__(
         self,
         df: pd.DataFrame,
-        key: Optional[str] = None,
+        sim_key: Optional[str] = None,
         model: str = "text-embedding-3-small",
     ) -> None:
+        """Creates a similarity object that can be used to find similar items in a
+        dataframe.
+
+        Parameters:
+            df: pd.DataFrame: The dataframe to use for similarity.
+            sim_key: Optional[str]: The column name that you want to use to construct
+                the embeddings.
+            model: str: The model to use for embeddings.
+        """
         self.df = df
         self.model = model
-        if "embs" not in df.columns and key is None:
+        if "embs" not in df.columns and sim_key is None:
             raise ValueError("key is required if no column 'embs' is present.")
 
-        if key is not None:
-            self.df["embs"] = self.df[key].apply(
+        if sim_key is not None:
+            self.df["embs"] = self.df[sim_key].apply(
                 lambda x: get_embedding(x, model=self.model)
             )
 
@@ -34,10 +43,20 @@ class Sim:
         self.df.to_csv(sim_file, index=False)
 
     def top_k(self, query: str, k: int = 5) -> Sequence[Dict]:
+        """Returns the top k most similar items to the query.
+
+        Parameters:
+            query: str: The query to compare to.
+            k: int: The number of items to return.
+
+        Returns:
+            Sequence[Dict]: The top k most similar items.
+        """
+
         embedding = get_embedding(query, model=self.model)
         self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
         res = self.df.sort_values("sim", ascending=False).head(k)
-        return res[[c for c in res.columsn if c != "embs"]].to_dict(orient="records")
+        return res[[c for c in res.columns if c != "embs"]].to_dict(orient="records")
 
 
 def load_sim(sim_file: Union[str, Path]) -> Sim:
