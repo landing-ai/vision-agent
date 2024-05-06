@@ -48,9 +48,13 @@ def write_plan(
     return plan["plan"]
 
 
-def write_code(user_req: str, subtask: str, tool_info: str, code: str, model: LLM) -> str:
+def write_code(
+    user_req: str, subtask: str, tool_info: str, code: str, model: LLM
+) -> str:
     prompt = CODE.format(
-        context=USER_REQ_SUBTASK_CONTEXT.format(user_requirement=user_req, subtask=subtask),
+        context=USER_REQ_SUBTASK_CONTEXT.format(
+            user_requirement=user_req, subtask=subtask
+        ),
         tool_info=tool_info,
         code=code,
     )
@@ -62,9 +66,13 @@ def write_code(user_req: str, subtask: str, tool_info: str, code: str, model: LL
     return extract_code(code)
 
 
-def write_test(user_req: str, subtask: str, tool_info: str, code: str, model: LLM) -> str:
+def write_test(
+    user_req: str, subtask: str, tool_info: str, code: str, model: LLM
+) -> str:
     prompt = TEST.format(
-        context=USER_REQ_SUBTASK_CONTEXT.format(user_requirement=user_req, subtask=subtask),
+        context=USER_REQ_SUBTASK_CONTEXT.format(
+            user_requirement=user_req, subtask=subtask
+        ),
         tool_info=tool_info,
         code=code,
     )
@@ -164,7 +172,9 @@ def run_plan(
             f"""
 {tabulate(tabular_data=[task], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
         )
-        tool_info = "\n".join([e["doc"] for e in tool_recommender.top_k(task["instruction"])])
+        tool_info = "\n".join(
+            [e["doc"] for e in tool_recommender.top_k(task["instruction"])]
+        )
         success, code, result, task_memory = write_and_exec_code(
             user_req,
             task["instruction"],

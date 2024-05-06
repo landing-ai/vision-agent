@@ -13,7 +13,6 @@ from vision_agent.utils import Execute
 
 from .agent_coder_prompts import DEBUG, FIX_BUG, PROGRAM, TEST, VISUAL_TEST
 
-
 IMPORT_HELPER = """
 import math
 import re

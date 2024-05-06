@@ -3,16 +3,16 @@ import io
 import tempfile
 from importlib import resources
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Union, Tuple
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from vision_agent.utils.image_utils import convert_to_b64, normalize_bbox, rle_decode
 from vision_agent.tools.tool_utils import _send_inference_request
 from vision_agent.utils import extract_frames_from_video
+from vision_agent.utils.image_utils import convert_to_b64, normalize_bbox, rle_decode
 
 COLORS = [
     (158, 218, 229),

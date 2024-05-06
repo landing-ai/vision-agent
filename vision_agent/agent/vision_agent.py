@@ -8,15 +8,15 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from PIL import Image
 from tabulate import tabulate
 
+from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.lmm import LMM, OpenAILMM
+from vision_agent.tools import TOOLS
 from vision_agent.utils.image_utils import (
     convert_to_b64,
     overlay_bboxes,
     overlay_heat_map,
     overlay_masks,
 )
-from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools import TOOLS
 
 from .agent import Agent
 from .easytool_prompts import (

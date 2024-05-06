@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Sequence, Union, Dict
+from typing import Dict, List, Optional, Sequence, Union
 
 import pandas as pd
 from openai import Client
