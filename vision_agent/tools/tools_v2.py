@@ -60,7 +60,8 @@ def grounding_dino(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-        bounding box of the detected objects with normalized coordinates.
+        bounding box of the detected objects with normalized coordinates
+        (x1, y1, x2, y2).
 
     Example
     -------
@@ -111,7 +112,8 @@ def grounding_sam(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-        bounding box, and mask of the detected objects with normalized coordinates.
+        bounding box, and mask of the detected objects with normalized coordinates
+        (x1, y1, x2, y2).
 
     Example
     -------
