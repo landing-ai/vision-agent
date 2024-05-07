@@ -1,6 +1,6 @@
 import os
 
-from vision_agent.type_defs import LandingaiAPIKey
+from vision_agent.utils.type_defs import LandingaiAPIKey
 
 
 def test_load_api_credential_from_env_var():
