@@ -1,3 +1,6 @@
+"""This code is adapted from MetaGPT's https://github.com/geekan/MetaGPT/blob/main/metagpt/actions/di/execute_nb_code.py
+"""
+
 import base64 as b64
 import io
 import re

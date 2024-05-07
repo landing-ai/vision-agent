@@ -47,7 +47,7 @@ Output a list of jsons in the following format:
 """
 
 
-CODE_SYS_MSG = """You are an AI Python assistant. You need to help user to achieve their goal by implementing a function. Your code will be run in a jupyter notebook environment so don't use asyncio.run. Instead, use await if you need to call an async function. Do not use 'display' for showing images."""
+CODE_SYS_MSG = """You are an AI Python assistant. You need to help user to achieve their goal by implementing a function. Your code will be run in a jupyter notebook environment so don't use asyncio.run. Instead, use await if you need to call an async function. Do not use 'display' for showing images, instead use matplotlib or PIL."""
 
 
 CODE = """

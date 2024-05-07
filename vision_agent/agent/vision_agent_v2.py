@@ -12,7 +12,7 @@ from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF
 from vision_agent.utils import Execute, Sim
 
-from .automated_vision_agent_prompt import (
+from .vision_agent_v2_prompt import (
     CODE,
     CODE_SYS_MSG,
     DEBUG,
@@ -164,9 +164,11 @@ def run_plan(
     code: str,
     tool_recommender: Sim,
     verbose: bool = False,
-) -> Tuple[str, List[Dict[str, Any]]]:
+) -> Tuple[str, str, List[Dict[str, Any]], Dict[str, List[str]]]:
     active_plan = [e for e in plan if "success" not in e or not e["success"]]
     working_memory: Dict[str, List[str]] = {}
+    current_code = code
+    current_test = ""
     for task in active_plan:
         _LOGGER.info(
             f"""
@@ -178,13 +180,18 @@ def run_plan(
         success, code, result, task_memory = write_and_exec_code(
             user_req,
             task["instruction"],
-            code,
+            current_code,
             write_code if task["type"] == "code" else write_test,
             coder,
             tool_info,
             exec,
             verbose,
         )
+        if task["type"] == "code":
+            current_code = code
+        else:
+            current_test = code
+
         working_memory.update(task_memory)
 
         if verbose:
@@ -200,10 +207,27 @@ def run_plan(
         if not success:
             break
 
-    return code, plan
+    return current_code, current_test, plan, working_memory
 
 
-class AutomatedVisionAgent(Agent):
+class VisionAgentV2(Agent):
+    """Vision Agent is an AI agentic framework geared towards outputting Python code to
+    solve vision tasks. It is inspired by MetaGPT's Data Interpreter
+    https://arxiv.org/abs/2402.18679. Vision Agent has several key features to help it
+    generate code:
+    - A planner to generate a plan of tasks to solve a user requirement. The planner
+    can output code tasks or test tasks, where test tasks are used to verify the code.
+    - Automatic debugging, if a task fails, the agent will attempt to debug the code
+    using the failed output to fix it.
+    - A tool recommender to recommend tools to use for a given task. LLM performance
+    on tool retrieval starts to decrease as you add more tools, tool retrieval helps
+    keep the number of tools to choose from low.
+    - Memory retrieval, the agent can remember previous iterations on tasks to help it
+    with new tasks.
+    - Dynamic replanning, the agent can ask for feedback and replan remaining tasks
+    based off of that feedback.
+    """
+
     def __init__(
         self,
         timeout: int = 600,
@@ -225,7 +249,7 @@ class AutomatedVisionAgent(Agent):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-    ) -> str:
+    ) -> Tuple[str, str]:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         return self.chat(input, image)
@@ -234,7 +258,7 @@ class AutomatedVisionAgent(Agent):
         self,
         chat: List[Dict[str, str]],
         image: Optional[Union[str, Path]] = None,
-    ) -> str:
+    ) -> Tuple[str, str]:
         if len(chat) == 0:
             raise ValueError("Input cannot be empty.")
 
@@ -254,7 +278,7 @@ class AutomatedVisionAgent(Agent):
         success = False
 
         while not success:
-            working_code, plan = run_plan(
+            working_code, working_test, plan, working_memory_i = run_plan(
                 user_req,
                 plan,
                 self.coder,
@@ -264,11 +288,13 @@ class AutomatedVisionAgent(Agent):
                 self.verbose,
             )
             success = all(task["success"] for task in plan)
+            working_memory.update(working_memory_i)
 
             if not success:
-                pass
+                # TODO: ask for feedback and replan
+                break
 
-        return working_code
+        return working_code, working_test
 
     def log_progress(self, description: str) -> None:
         pass
