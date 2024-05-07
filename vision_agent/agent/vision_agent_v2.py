@@ -249,12 +249,13 @@ class VisionAgentV2(Agent):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-    ) -> Tuple[str, str]:
+    ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image)
+        code, _ = self.chat_with_tests(input, image)
+        return code
 
-    def chat(
+    def chat_with_tests(
         self,
         chat: List[Dict[str, str]],
         image: Optional[Union[str, Path]] = None,
