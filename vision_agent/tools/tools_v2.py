@@ -272,7 +272,7 @@ def save_image(image: np.ndarray) -> str:
     return f.name
 
 
-def display_bounding_boxes(
+def overlay_bounding_boxes(
     image: np.ndarray, bboxes: List[Dict[str, Any]]
 ) -> np.ndarray:
     """'display_bounding_boxes' is a utility function that displays bounding boxes on
@@ -326,7 +326,7 @@ def display_bounding_boxes(
     return np.array(pil_image.convert("RGB"))
 
 
-def display_segmentation_masks(
+def overlay_segmentation_masks(
     image: np.ndarray, masks: List[Dict[str, Any]]
 ) -> np.ndarray:
     """'display_segmentation_masks' is a utility function that displays segmentation
@@ -418,12 +418,12 @@ TOOLS = [
     ocr,
     load_image,
     save_image,
-    display_bounding_boxes,
-    display_segmentation_masks,
+    overlay_bounding_boxes,
+    overlay_segmentation_masks,
 ]
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
-    [load_image, save_image, display_bounding_boxes]
+    [load_image, save_image, overlay_bounding_boxes]
 )
