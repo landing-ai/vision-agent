@@ -1,5 +1,6 @@
 import inspect
 import io
+import logging
 import tempfile
 from importlib import resources
 from pathlib import Path
@@ -38,6 +39,8 @@ COLORS = [
 ]
 _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
 _OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
+logging.basicConfig(level=logging.INFO)
+_LOGGER = logging.getLogger(__name__)
 
 
 def grounding_dino(
@@ -294,6 +297,11 @@ def overlay_bounding_boxes(
     """
     pil_image = Image.fromarray(image.astype(np.uint8))
 
+    if len(set([box["label"] for box in bboxes])) > len(COLORS):
+        _LOGGER.warning(
+            "Number of unique labels exceeds the number of available colors. Some labels may have the same color."
+        )
+
     color = {
         label: COLORS[i % len(COLORS)]
         for i, label in enumerate(set([box["label"] for box in bboxes]))
@@ -355,6 +363,11 @@ def overlay_segmentation_masks(
     )
     """
     pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGBA")
+
+    if len(set([mask["label"] for mask in masks])) > len(COLORS):
+        _LOGGER.warning(
+            "Number of unique labels exceeds the number of available colors. Some labels may have the same color."
+        )
 
     color = {
         label: COLORS[i % len(COLORS)]
