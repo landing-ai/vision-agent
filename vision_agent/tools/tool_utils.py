@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import requests
 
-from vision_agent.type_defs import LandingaiAPIKey
+from vision_agent.utils.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key

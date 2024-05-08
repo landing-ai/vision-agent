@@ -1,4 +1,4 @@
-from vision_agent.tools.video import extract_frames_from_video
+from vision_agent.utils.video import extract_frames_from_video
 
 
 def test_extract_frames_from_video():
