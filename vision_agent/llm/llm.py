@@ -37,6 +37,7 @@ class OpenAILLM(LLM):
         model_name: str = "gpt-4-turbo",
         api_key: Optional[str] = None,
         json_mode: bool = False,
+        system_prompt: Optional[str] = None,
         **kwargs: Any
     ):
         if not api_key:
@@ -45,22 +46,29 @@ class OpenAILLM(LLM):
             self.client = OpenAI(api_key=api_key)
 
         self.model_name = model_name
+        self.system_prompt = system_prompt
         self.kwargs = kwargs
         if json_mode:
             self.kwargs["response_format"] = {"type": "json_object"}
 
     def generate(self, prompt: str) -> str:
+        messages = []
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=[
-                {"role": "user", "content": prompt},
-            ],
+            messages=messages,  # type: ignore
             **self.kwargs,
         )
 
         return cast(str, response.choices[0].message.content)
 
     def chat(self, chat: List[Dict[str, str]]) -> str:
+        if self.system_prompt and not any(msg["role"] == "system" for msg in chat):
+            chat.insert(0, {"role": "system", "content": self.system_prompt})
+
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=chat,  # type: ignore

@@ -11,7 +11,10 @@ from PIL import Image
 from PIL.Image import Image as ImageType
 from scipy.spatial import distance  # type: ignore
 
-from vision_agent.image_utils import (
+from vision_agent.lmm import OpenAILMM
+from vision_agent.tools.tool_utils import _send_inference_request
+from vision_agent.utils import extract_frames_from_video
+from vision_agent.utils.image_utils import (
     b64_to_pil,
     convert_to_b64,
     denormalize_bbox,
@@ -19,9 +22,6 @@ from vision_agent.image_utils import (
     normalize_bbox,
     rle_decode,
 )
-from vision_agent.lmm import OpenAILMM
-from vision_agent.tools.tool_utils import _send_inference_request
-from vision_agent.tools.video import extract_frames_from_video
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -422,7 +422,6 @@ class DINOv(Tool):
         request_data = {
             "prompt": prompt,
             "image": image_b64,
-            "tool": "dinov",
         }
         data: Dict[str, Any] = _send_inference_request(request_data, "dinov")
         if "bboxes" in data:

@@ -8,18 +8,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from PIL import Image
 from tabulate import tabulate
 
-from vision_agent.image_utils import (
-    convert_to_b64,
-    overlay_bboxes,
-    overlay_heat_map,
-    overlay_masks,
-)
-from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools import TOOLS
-
-from .agent import Agent
-from .easytool_prompts import (
+from vision_agent.agent.agent import Agent
+from vision_agent.agent.easytool_prompts import (
     ANSWER_GENERATE,
     ANSWER_SUMMARIZE,
     CHOOSE_PARAMETER,
@@ -27,13 +17,22 @@ from .easytool_prompts import (
     TASK_DECOMPOSE,
     TASK_TOPOLOGY,
 )
-from .vision_agent_prompts import (
+from vision_agent.agent.vision_agent_prompts import (
     ANSWER_GENERATE_DEPENDS,
     ANSWER_SUMMARIZE_DEPENDS,
     CHOOSE_PARAMETER_DEPENDS,
     CHOOSE_TOOL_DEPENDS,
     TASK_DECOMPOSE_DEPENDS,
     VISION_AGENT_REFLECTION,
+)
+from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.lmm import LMM, OpenAILMM
+from vision_agent.tools import TOOLS
+from vision_agent.utils.image_utils import (
+    convert_to_b64,
+    overlay_bboxes,
+    overlay_heat_map,
+    overlay_masks,
 )
 
 logging.basicConfig(stream=sys.stdout)
@@ -561,6 +560,9 @@ class VisionAgent(Agent):
             list of all the tool results. The last item in the tool results also
             contains the visualized output.
         """
+        if len(chat) == 0:
+            raise ValueError("Input cannot be empty.")
+
         question = chat[0]["content"]
         if image:
             question += f" Image name: {image}"
