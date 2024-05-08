@@ -8,11 +8,7 @@ from rich.syntax import Syntax
 from tabulate import tabulate
 
 from vision_agent.agent import Agent
-from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF
-from vision_agent.utils import Execute, Sim
-
-from .vision_agent_v2_prompt import (
+from vision_agent.agent.vision_agent_v2_prompt import (
     CODE,
     CODE_SYS_MSG,
     DEBUG,
@@ -25,6 +21,9 @@ from .vision_agent_v2_prompt import (
     USER_REQ_CONTEXT,
     USER_REQ_SUBTASK_CONTEXT,
 )
+from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF
+from vision_agent.utils import Execute, Sim
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)

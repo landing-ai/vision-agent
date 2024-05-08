@@ -6,12 +6,17 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from vision_agent.agent import Agent
+from vision_agent.agent.agent_coder_prompts import (
+    DEBUG,
+    FIX_BUG,
+    PROGRAM,
+    TEST,
+    VISUAL_TEST,
+)
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools.tools_v2 import TOOL_DOCSTRING, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
-
-from .agent_coder_prompts import DEBUG, FIX_BUG, PROGRAM, TEST, VISUAL_TEST
 
 IMPORT_HELPER = """
 import math
