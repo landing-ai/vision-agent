@@ -806,16 +806,24 @@ class BboxStats(Tool):
         "examples": [
             {
                 "scenario": "Calculate the width and height of the bounding box [0.2, 0.21, 0.34, 0.42]",
-                "parameters": {"bboxes": [[0.2, 0.21, 0.34, 0.42]], "image_size": (500, 1200)},
+                "parameters": {
+                    "bboxes": [[0.2, 0.21, 0.34, 0.42]],
+                    "image_size": (500, 1200),
+                },
             },
             {
                 "scenario": "Calculate the area of the bounding box [0.2, 0.21, 0.34, 0.42]",
-                "parameters": {"bboxes": [[0.2, 0.21, 0.34, 0.42]], "image_size": (640, 480)},
-            }
+                "parameters": {
+                    "bboxes": [[0.2, 0.21, 0.34, 0.42]],
+                    "image_size": (640, 480),
+                },
+            },
         ],
     }
 
-    def __call__(self, bboxes: List[List[int]], image_size: Tuple[int, int]) -> List[Dict]:
+    def __call__(
+        self, bboxes: List[List[int]], image_size: Tuple[int, int]
+    ) -> List[Dict]:
         areas = []
         height, width = image_size
         for bbox in bboxes:
@@ -1082,7 +1090,9 @@ class ExtractFrames(Tool):
         ],
     }
 
-    def __call__(self, video_uri: str, frames_every: float = 2) -> List[Tuple[str, float]]:
+    def __call__(
+        self, video_uri: str, frames_every: float = 2
+    ) -> List[Tuple[str, float]]:
         """Extract frames from a video.
 
 
@@ -1092,7 +1102,7 @@ class ExtractFrames(Tool):
         Returns:
             a list of tuples containing the extracted frame and the timestamp in seconds. E.g. [(path_to_frame1, 0.0), (path_to_frame2, 0.5), ...]. The timestamp is the time in seconds from the start of the video. E.g. 12.125 means 12.125 seconds from the start of the video. The frames are sorted by the timestamp in ascending order.
         """
-        frames = extract_frames_from_video(video_uri, fps=round(1/frames_every, 2))
+        frames = extract_frames_from_video(video_uri, fps=round(1 / frames_every, 2))
         result = []
         _LOGGER.info(
             f"Extracted {len(frames)} frames from video {video_uri}. Temporarily saving them as images to disk for downstream tasks."
