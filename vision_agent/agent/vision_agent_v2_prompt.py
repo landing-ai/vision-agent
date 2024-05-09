@@ -1,3 +1,8 @@
+USER_REQ_CONTEXT = """
+## User Requirement
+{user_requirement}
+"""
+
 USER_REQ_SUBTASK_CONTEXT = """
 ## User Requirement
 {user_requirement}
@@ -6,11 +11,16 @@ USER_REQ_SUBTASK_CONTEXT = """
 {subtask}
 """
 
-USER_REQ_CONTEXT = """
+USER_REQ_SUBTASK_WM_CONTEXT = """
 ## User Requirement
 {user_requirement}
-"""
 
+## Current Subtask
+{subtask}
+
+## Previous Task
+{working_memory}
+"""
 
 PLAN = """
 # Context
@@ -61,8 +71,9 @@ CODE = """
 {code}
 
 # Constraints
-- Write a function that accomplishes the User Requirement. You are supplied code from a previous task, feel free to copy over that code into your own implementation if you need it.
-- Always prioritize using pre-defined tools or code for the same functionality. You have access to all these tools through the `from vision_agent.tools.tools_v2 import *` import.
+- Write a function that accomplishes the 'User Requirement'. You are supplied code from a previous task under 'Previous Code', feel free to copy over that code into your own implementation if you need it.
+- Always prioritize using pre-defined tools or code for the same functionality from 'Tool Info for Current Subtask'. You have access to all these tools through the `from vision_agent.tools.tools_v2 import *` import.
+- You may recieve previous trials and errors under 'Previous Task', this is code, output and reflections from previous tasks. You can use these to avoid running in to the same issues when writing your code.
 - Write clean, readable, and well-documented code.
 
 # Output
@@ -102,6 +113,7 @@ def add(a: int, b: int) -> int:
 
 
 PREV_CODE_CONTEXT = """
+[previous impl]
 ```python
 {code}
 ```
@@ -112,18 +124,20 @@ PREV_CODE_CONTEXT = """
 
 
 PREV_CODE_CONTEXT_WITH_REFLECTION = """
+[reflection on previous impl]
+{reflection}
+
+[new impl]
 ```python
 {code}
 ```
 
-[previous output]
+[new output]
 {result}
 
-[reflection on previous impl]
-{reflection}
 """
 
-
+# don't need [previous impl] because it will come from PREV_CODE_CONTEXT or PREV_CODE_CONTEXT_WITH_REFLECTION
 DEBUG = """
 [example]
 Here is an example of debugging with reflection.
@@ -133,7 +147,6 @@ Here is an example of debugging with reflection.
 [context]
 {context}
 
-[previous impl]
 {previous_impl}
 
 [instruction]
@@ -158,7 +171,7 @@ TEST = """
 {code}
 
 # Constraints
-- Write code to test the functionality of the provided code according to the Current Subtask. If you cannot test the code, then write code to visualize the result by calling the code.
+- Write code to test the functionality of the provided code according to the 'Current Subtask'. If you cannot test the code, then write code to visualize the result by calling the code.
 - Always prioritize using pre-defined tools for the same functionality.
 - Write clean, readable, and well-documented code.
 
