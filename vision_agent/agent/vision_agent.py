@@ -308,7 +308,7 @@ def _handle_extract_frames(
     # any following processing
     for video_file_output in tool_result["call_results"]:
         # When the video tool is run with wrong parameters, exit the loop
-        if len(video_file_output) < 2:
+        if not isinstance(video_file_output, tuple) or len(video_file_output) < 2:
             break
         for frame, _ in video_file_output:
             image = frame
