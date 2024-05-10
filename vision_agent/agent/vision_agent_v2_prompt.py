@@ -37,11 +37,13 @@ Based on the context and the tools you have available, write a plan of subtasks 
 - For each subtask, you should provide a short instruction on what to do. Ensure the subtasks are large enough to be meaningful, encompassing multiple lines of code.
 - You do not need to have the agent rewrite any tool functionality you already have, you should instead instruct it to utilize one or more of those tools in each subtask.
 - You can have agents either write coding tasks, to code some functionality or testing tasks to test previous functionality.
+- If a current plan exists, examine each item in the plan to determine if it was successful. If there was an item that failed, i.e. 'success': False, then you should rewrite that item and all subsequent items to ensure that the rewritten plan is successful.
 
 Output a list of jsons in the following format:
 
 ```json
 {{
+    "user_req": str, # "a summarized version of the user requirement"
     "plan":
         [
             {{
