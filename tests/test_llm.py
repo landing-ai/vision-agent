@@ -37,13 +37,13 @@ def test_chat_with_mock(openai_llm_mock):  # noqa: F811
 
 
 @pytest.mark.parametrize(
-    "openai_llm_mock", ["mocked response"], indirect=["openai_llm_mock"]
+    "openai_llm_mock_turbo", ["mocked response"], indirect=["openai_llm_mock_turbo"]
 )
-def test_chat_with_mock(openai_llm_mock):  # noqa: F811
+def openai_llm_mock_turbo(openai_llm_mock_2):  # noqa: F811
     llm = OpenAILLM()
     response = llm.chat([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
-    openai_llm_mock.chat.completions.create.assert_called_once_with(
+    openai_llm_mock_turbo.chat.completions.create.assert_called_once_with(
         model="gpt-4-turbo",
         messages=[{"role": "user", "content": "test prompt"}],
     )
