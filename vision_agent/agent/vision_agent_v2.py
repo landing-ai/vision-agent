@@ -46,6 +46,8 @@ def extract_code(code: str) -> str:
     if "```python" in code:
         code = code[code.find("```python") + len("```python") :]
         code = code[: code.find("```")]
+    if code.startswith("python\n"):
+        code = code[len("python\n") :]
     return code
 
 
