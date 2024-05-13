@@ -14,14 +14,13 @@ _LND_API_URL = "https://api.dev.landing.ai/v1/agent"
 def _send_inference_request(
     payload: Dict[str, Any], endpoint_name: str
 ) -> Dict[str, Any]:
-    # runtime_tag is used to differentiate different internal callers
-    runtime_tag = os.environ.get("RUNTIME_TAG", "")
+    if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
+        payload["runtime_tag"] = runtime_tag
     res = requests.post(
         f"{_LND_API_URL}/model/{endpoint_name}",
         headers={
             "Content-Type": "application/json",
             "apikey": _LND_API_KEY,
-            "runtime-tag": runtime_tag,
         },
         json=payload,
     )
