@@ -51,7 +51,7 @@ def test_call_with_mock(openai_llm_mock):  # noqa: F811
     response = llm([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
     openai_llm_mock.chat.completions.create.assert_called_with(
-        model="gpt-4-turbo",
+        model="gpt-4o",
         messages=[{"role": "user", "content": "test prompt"}],
     )
 
