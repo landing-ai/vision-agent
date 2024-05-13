@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
+import numpy as np
 import pandas as pd
 from openai import Client
 from scipy.spatial.distance import cosine  # type: ignore
@@ -46,7 +47,14 @@ class Sim:
             )
 
     def save(self, sim_file: Union[str, Path]) -> None:
-        self.df.to_csv(sim_file, index=False)
+        sim_file = Path(sim_file)
+        sim_file.mkdir(parents=True, exist_ok=True)
+
+        df = self.df.copy()
+        embs = np.array(df.embs.tolist())
+        np.save(sim_file / "embs.npy", embs)
+        df = df.drop("embs", axis=1)
+        df.to_csv(sim_file / "df.csv", index=False)
 
     def top_k(self, query: str, k: int = 5) -> Sequence[Dict]:
         """Returns the top k most similar items to the query.
@@ -65,6 +73,13 @@ class Sim:
         return res[[c for c in res.columns if c != "embs"]].to_dict(orient="records")
 
 
+def merge_sim(sim1: Sim, sim2: Sim) -> Sim:
+    return Sim(pd.concat([sim1.df, sim2.df], ignore_index=True))
+
+
 def load_sim(sim_file: Union[str, Path]) -> Sim:
-    df = pd.read_csv(sim_file)
+    sim_file = Path(sim_file)
+    df = pd.read_csv(sim_file / "df.csv")
+    embs = np.load(sim_file / "embs.npy")
+    df["embs"] = list(embs)
     return Sim(df)
