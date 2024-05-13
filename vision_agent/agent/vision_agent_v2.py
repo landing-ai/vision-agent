@@ -93,12 +93,7 @@ def write_code(
 
 
 def write_test(
-    user_req: str,
-    subtask: str,
-    tool_info: str,
-    _: str,
-    code: str,
-    model: LLM
+    user_req: str, subtask: str, tool_info: str, _: str, code: str, model: LLM
 ) -> str:
     prompt = TEST.format(
         context=USER_REQ_SUBTASK_CONTEXT.format(
