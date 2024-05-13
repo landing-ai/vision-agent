@@ -34,7 +34,7 @@ class OpenAILLM(LLM):
 
     def __init__(
         self,
-        model_name: str = "gpt-4-turbo",
+        model_name: str = "gpt-4o",
         api_key: Optional[str] = None,
         json_mode: bool = False,
         system_prompt: Optional[str] = None,
