@@ -10,7 +10,7 @@ def test_grounding_dino():
         prompt="coin",
         image=img,
     )
-    assert result["labels"] == ["coin"] * 24
+    assert [l.strip() for l in result["labels"]] == ["coin"] * 24
     assert len(result["bboxes"]) == 24
     assert len(result["scores"]) == 24
 
