@@ -230,7 +230,7 @@ def run_plan(
             user_req,
             task["instruction"],
             current_code,
-            write_code if task["type"] == "code" else write_test,  # type: ignore
+            write_code if task["type"] == "code" else write_test,
             coder,
             tool_info,
             exec,
