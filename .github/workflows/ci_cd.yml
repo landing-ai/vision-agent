@@ -12,6 +12,8 @@ jobs:
         python-version: [3.9, 3.11]
         os: [ ubuntu-22.04, windows-2022, macos-12 ]
     runs-on: ${{ matrix.os }}
+    env:
+      RUNTIME_TAG: ci_job
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
