@@ -63,7 +63,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
             # get the last ``` not one from an intermediate string
             json_str = json_str[: json_str.find("}```")]
         json_dict = json.loads(json_str)
-    return json_dict  # type: ignore
+    return json_dict
 
 
 def write_plan(
@@ -80,8 +80,8 @@ def write_plan(
     context = USER_REQ_CONTEXT.format(user_requirement=user_requirements)
     prompt = PLAN.format(context=context, plan=str(plan), tool_desc=tool_desc)
     chat[-1]["content"] = prompt
-    new_plan = extract_json(model.chat(chat))
-    return new_plan["user_req"], new_plan["plan"]
+    plan = extract_json(model.chat(chat))
+    return plan["user_req"], plan["plan"]  # type: ignore
 
 
 def write_code(
