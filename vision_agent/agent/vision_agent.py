@@ -464,15 +464,17 @@ class VisionAgent(Agent):
             report_progress_callback: a callback to report the progress of the agent. This is useful for streaming logs in a web application where multiple VisionAgent instances are running in parallel. This callback ensures that the progress are not mixed up.
         """
         self.task_model = (
-            OpenAILLM(json_mode=True, temperature=0.1)
+            OpenAILLM(model_name="gpt-4-turbo", json_mode=True, temperature=0.0)
             if task_model is None
             else task_model
         )
         self.answer_model = (
-            OpenAILLM(temperature=0.1) if answer_model is None else answer_model
+            OpenAILLM(model_name="gpt-4-turbo", temperature=0.0)
+            if answer_model is None
+            else answer_model
         )
         self.reflect_model = (
-            OpenAILMM(json_mode=True, temperature=0.1)
+            OpenAILMM(model_name="gpt-4-turbo", json_mode=True, temperature=0.0)
             if reflect_model is None
             else reflect_model
         )
