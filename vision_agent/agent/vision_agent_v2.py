@@ -18,7 +18,6 @@ from vision_agent.agent.vision_agent_v2_prompt import (
     PLAN,
     PREV_CODE_CONTEXT,
     PREV_CODE_CONTEXT_WITH_REFLECTION,
-    REPLAN,
     TEST,
     USER_REQ_CONTEXT,
     USER_REQ_SUBTASK_CONTEXT,

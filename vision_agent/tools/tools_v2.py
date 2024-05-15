@@ -300,7 +300,7 @@ def save_json(data: Any, file_path: str) -> None:
     """
 
     class NumpyEncoder(json.JSONEncoder):
-        def default(self, obj):
+        def default(self, obj: Any):  # type: ignore
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
             elif isinstance(obj, np.bool_):
