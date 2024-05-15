@@ -64,6 +64,7 @@ class Sim:
         Parameters:
             query: str: The query to compare to.
             k: int: The number of items to return.
+            thresh: Optional[float]: The minimum similarity threshold.
 
         Returns:
             Sequence[Dict]: The top k most similar items.
