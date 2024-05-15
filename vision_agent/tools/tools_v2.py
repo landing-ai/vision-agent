@@ -4,7 +4,7 @@ import logging
 import tempfile
 from importlib import resources
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -255,7 +255,7 @@ def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
     mask1_points = np.transpose(np.nonzero(mask1))
     mask2_points = np.transpose(np.nonzero(mask2))
     dist_matrix = distance.cdist(mask1_points, mask2_points, "euclidean")
-    return np.min(dist_matrix)
+    return cast(float, np.min(dist_matrix))
 
 
 def closest_box_distance(box1: List[float], box2: List[float]) -> float:
@@ -276,10 +276,10 @@ def closest_box_distance(box1: List[float], box2: List[float]) -> float:
 
     x11, y11, x12, y12 = box1
     x21, y21, x22, y22 = box2
-    
+
     horizontal_distance = np.max([0, x21 - x12, x11 - x22])
     vertical_distance = np.max([0, y21 - y12, y11 - y22])
-    return np.sqrt(horizontal_distance ** 2 + vertical_distance ** 2)
+    return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
 # Utility and visualization functions
