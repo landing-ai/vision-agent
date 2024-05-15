@@ -4,6 +4,8 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+from rich.console import Console
+from rich.syntax import Syntax
 
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_coder_prompts import (
@@ -40,6 +42,7 @@ from vision_agent.tools.tools_v2 import *
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _EXECUTE = Execute()
+_CONSOLE = Console()
 
 
 def write_tests(question: str, code: str, model: LLM) -> str:
@@ -103,7 +106,7 @@ def run_visual_tests(
 
 
 def fix_bugs(code: str, tests: str, result: str, feedback: str, model: LLM) -> str:
-    prompt = FIX_BUG.format(completion=code, test_case=tests, result=result)
+    prompt = FIX_BUG.format(code=code, tests=tests, result=result, feedback=feedback)
     completion = model(prompt)
     return preprocess_data(completion)
 
@@ -139,7 +142,8 @@ class AgentCoder(Agent):
             else visual_tester_agent
         )
         self.max_turns = 3
-        if verbose:
+        self.verbose = verbose
+        if self.verbose:
             _LOGGER.setLevel(logging.INFO)
 
     def __call__(
@@ -164,9 +168,11 @@ class AgentCoder(Agent):
         feedback = ""
         for _ in range(self.max_turns):
             code = write_program(question, feedback, self.coder_agent)
-            _LOGGER.info(f"code:\n{code}")
+            if self.verbose:
+                _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
             debug = write_debug(question, code, feedback, self.tester_agent)
-            _LOGGER.info(f"debug:\n{debug}")
+            if self.verbose:
+                _CONSOLE.print(Syntax(debug, "python", theme="gruvbox-dark", line_numbers=True))
             results = execute_tests(code, debug)
             _LOGGER.info(
                 f"execution results: passed: {results['passed']}\n{results['result']}"
@@ -176,7 +182,8 @@ class AgentCoder(Agent):
                 code = fix_bugs(
                     code, debug, results["result"].strip(), feedback, self.coder_agent  # type: ignore
                 )
-                _LOGGER.info(f"fixed code:\n{code}")
+                if self.verbose:
+                    _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
             else:
                 # TODO: Sometimes it prints nothing, so we need to handle that case
                 # TODO: The visual agent reflection does not work very well, needs more testing
