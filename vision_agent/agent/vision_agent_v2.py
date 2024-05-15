@@ -379,7 +379,9 @@ class VisionAgentV2(Agent):
                 self.long_term_memory,
                 self.verbosity,
             )
-            success = all(task["success"] if "success" in task else False for task in plan)
+            success = all(
+                task["success"] if "success" in task else False for task in plan
+            )
             working_memory.update(working_memory_i)
 
             if not success:

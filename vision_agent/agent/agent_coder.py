@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+
 from rich.console import Console
 from rich.syntax import Syntax
 
@@ -169,10 +170,14 @@ class AgentCoder(Agent):
         for _ in range(self.max_turns):
             code = write_program(question, feedback, self.coder_agent)
             if self.verbose:
-                _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
+                _CONSOLE.print(
+                    Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
+                )
             debug = write_debug(question, code, feedback, self.tester_agent)
             if self.verbose:
-                _CONSOLE.print(Syntax(debug, "python", theme="gruvbox-dark", line_numbers=True))
+                _CONSOLE.print(
+                    Syntax(debug, "python", theme="gruvbox-dark", line_numbers=True)
+                )
             results = execute_tests(code, debug)
             _LOGGER.info(
                 f"execution results: passed: {results['passed']}\n{results['result']}"
@@ -183,7 +188,9 @@ class AgentCoder(Agent):
                     code, debug, results["result"].strip(), feedback, self.coder_agent  # type: ignore
                 )
                 if self.verbose:
-                    _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
+                    _CONSOLE.print(
+                        Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
+                    )
             else:
                 # TODO: Sometimes it prints nothing, so we need to handle that case
                 # TODO: The visual agent reflection does not work very well, needs more testing

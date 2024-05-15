@@ -56,7 +56,9 @@ class Sim:
         df = df.drop("embs", axis=1)
         df.to_csv(sim_file / "df.csv", index=False)
 
-    def top_k(self, query: str, k: int = 5, thresh: Optional[float] = None) -> Sequence[Dict]:
+    def top_k(
+        self, query: str, k: int = 5, thresh: Optional[float] = None
+    ) -> Sequence[Dict]:
         """Returns the top k most similar items to the query.
 
         Parameters:
