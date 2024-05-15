@@ -18,6 +18,7 @@ from vision_agent.agent.vision_agent_v2_prompt import (
     PLAN,
     PREV_CODE_CONTEXT,
     PREV_CODE_CONTEXT_WITH_REFLECTION,
+    REPLAN,
     TEST,
     USER_REQ_CONTEXT,
     USER_REQ_SUBTASK_CONTEXT,
@@ -235,7 +236,7 @@ def run_plan(
             f"""
 {tabulate(tabular_data=[task], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
         )
-        tools = tool_recommender.top_k(task["instruction"])
+        tools = tool_recommender.top_k(task["instruction"], thresh=0.3)
         tool_info = "\n".join([e["doc"] for e in tools])
 
         if verbosity == 2:
@@ -285,6 +286,7 @@ class VisionAgentV2(Agent):
     solve vision tasks. It is inspired by MetaGPT's Data Interpreter
     https://arxiv.org/abs/2402.18679. Vision Agent has several key features to help it
     generate code:
+
     - A planner to generate a plan of tasks to solve a user requirement. The planner
     can output code tasks or test tasks, where test tasks are used to verify the code.
     - Automatic debugging, if a task fails, the agent will attempt to debug the code
@@ -377,7 +379,7 @@ class VisionAgentV2(Agent):
                 self.long_term_memory,
                 self.verbosity,
             )
-            success = all(task["success"] for task in plan)
+            success = all(task["success"] if "success" in task else False for task in plan)
             working_memory.update(working_memory_i)
 
             if not success:
