@@ -235,9 +235,11 @@ def run_plan(
             f"""
 {tabulate(tabular_data=[task], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
         )
-        tool_info = "\n".join(
-            [e["doc"] for e in tool_recommender.top_k(task["instruction"])]
-        )
+        tools = tool_recommender.top_k(task["instruction"])
+        tool_info = "\n".join([e["doc"] for e in tools])
+
+        if verbosity == 2:
+            _LOGGER.info(f"Tools retrieved: {[e['desc'] for e in tools]}")
 
         if long_term_memory is not None:
             retrieved_ltm = "\n".join(
