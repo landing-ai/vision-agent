@@ -2,6 +2,7 @@ import inspect
 import io
 import logging
 import tempfile
+import json
 from importlib import resources
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple, Union, cast
@@ -285,6 +286,31 @@ def closest_box_distance(box1: List[float], box2: List[float]) -> float:
 # Utility and visualization functions
 
 
+def save_json(data: Any, file_path: str) -> None:
+    """'save_json' is a utility function that saves data as a JSON file. It is helpful
+    for saving data that contains NumPy arrays which are not JSON serializable.
+
+    Parameters:
+        data (Any): The data to save.
+        file_path (str): The path to save the JSON file.
+
+    Example
+    -------
+    >>> save_json(data, "path/to/file.json")
+    """
+
+    class NumpyEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            return json.JSONEncoder.default(self, obj)
+
+    with open(file_path, "w") as f:
+        json.dump(data, f, cls=NumpyEncoder)
+
+
 def load_image(image_path: str) -> np.ndarray:
     """'load_image' is a utility function that loads an image from the given path.
 
@@ -480,6 +506,7 @@ TOOLS = [
     ocr,
     closest_mask_distance,
     closest_box_distance,
+    save_json,
     load_image,
     save_image,
     overlay_bounding_boxes,
@@ -489,5 +516,5 @@ TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
-    [load_image, save_image, overlay_bounding_boxes]
+    [save_json, load_image, save_image, overlay_bounding_boxes]
 )
