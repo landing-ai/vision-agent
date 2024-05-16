@@ -56,12 +56,15 @@ class Sim:
         df = df.drop("embs", axis=1)
         df.to_csv(sim_file / "df.csv", index=False)
 
-    def top_k(self, query: str, k: int = 5) -> Sequence[Dict]:
+    def top_k(
+        self, query: str, k: int = 5, thresh: Optional[float] = None
+    ) -> Sequence[Dict]:
         """Returns the top k most similar items to the query.
 
         Parameters:
             query: str: The query to compare to.
             k: int: The number of items to return.
+            thresh: Optional[float]: The minimum similarity threshold.
 
         Returns:
             Sequence[Dict]: The top k most similar items.
@@ -70,6 +73,8 @@ class Sim:
         embedding = get_embedding(self.client, query, model=self.model)
         self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
         res = self.df.sort_values("sim", ascending=False).head(k)
+        if thresh is not None:
+            res = res[res.sim > thresh]
         return res[[c for c in res.columns if c != "embs"]].to_dict(orient="records")
 
 

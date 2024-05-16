@@ -34,7 +34,7 @@ PLAN = """
 
 # Task:
 Based on the context and the tools you have available, write a plan of subtasks to achieve the user request that adhere to the following requirements:
-- For each subtask, you should provide a short instruction on what to do. Ensure the subtasks are large enough to be meaningful, encompassing multiple lines of code.
+- For each subtask, you should provide instructions on what to do. Write detailed subtasks, ensure they are large enough to be meaningful, encompassing multiple lines of code.
 - You do not need to have the agent rewrite any tool functionality you already have, you should instead instruct it to utilize one or more of those tools in each subtask.
 - You can have agents either write coding tasks, to code some functionality or testing tasks to test previous functionality.
 - If a current plan exists, examine each item in the plan to determine if it was successful. If there was an item that failed, i.e. 'success': False, then you should rewrite that item and all subsequent items to ensure that the rewritten plan is successful.
@@ -73,9 +73,10 @@ CODE = """
 {code}
 
 # Constraints
-- Write a function that accomplishes the 'User Requirement'. You are supplied code from a previous task under 'Previous Code', feel free to copy over that code into your own implementation if you need it.
-- Always prioritize using pre-defined tools or code for the same functionality from 'Tool Info for Current Subtask'. You have access to all these tools through the `from vision_agent.tools.tools_v2 import *` import.
+- Write a function that accomplishes the 'Current Subtask'. You are supplied code from a previous task under 'Previous Code', do not delete or change previous code unless it contains a bug or it is necessary to complete the 'Current Subtask'.
+- Always prioritize using pre-defined tools or code for the same functionality from 'Tool Info' when working on 'Current Subtask'. You have access to all these tools through the `from vision_agent.tools.tools_v2 import *` import.
 - You may recieve previous trials and errors under 'Previous Task', this is code, output and reflections from previous tasks. You can use these to avoid running in to the same issues when writing your code.
+- Use the `save_json` function from `vision_agent.tools.tools_v2` to save your output as a json file.
 - Write clean, readable, and well-documented code.
 
 # Output
