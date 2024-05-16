@@ -56,7 +56,7 @@ def grounding_dino(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.20,
-    iou_threshold: float = 0.75,
+    iou_threshold: float = 0.20,
 ) -> List[Dict[str, Any]]:
     """'grounding_dino' is a tool that can detect and count objects given a text prompt
     such as category names or referring expressions. It returns a list and count of
@@ -84,7 +84,7 @@ def grounding_dino(
     ]
     """
     image_size = image.shape[:2]
-    image_b64 = convert_to_b64(Image.fromarray(image))
+    image_b64 = convert_to_b64(image)
     request_data = {
         "prompt": prompt,
         "image": image_b64,
@@ -108,7 +108,7 @@ def grounding_sam(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.20,
-    iou_threshold: float = 0.75,
+    iou_threshold: float = 0.20,
 ) -> List[Dict[str, Any]]:
     """'grounding_sam' is a tool that can detect and segment objects given a text
     prompt such as category names or referring expressions. It returns a list of
@@ -144,7 +144,7 @@ def grounding_sam(
     ]
     """
     image_size = image.shape[:2]
-    image_b64 = convert_to_b64(Image.fromarray(image))
+    image_b64 = convert_to_b64(image)
     request_data = {
         "prompt": prompt,
         "image": image_b64,
@@ -242,7 +242,7 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     return output
 
 
-def zero_shot_counting(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
+def zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
     """'zero_shot_counting' is a tool that counts the dominant foreground object given an image and no other information about the content.
     It returns only the count of the objects in the image.
 
@@ -305,7 +305,7 @@ def visual_prompt_counting(
 
 def image_question_answering(image: np.ndarray, prompt: str) -> str:
     """'image_question_answering_' is a tool that can answer questions about the visual contents of an image given a question and an image.
-    It returns a text describing the image and the answer to the question
+    It returns an answer to the question
 
     Parameters:
         image (np.ndarray): The reference image used for the question
@@ -317,7 +317,7 @@ def image_question_answering(image: np.ndarray, prompt: str) -> str:
     Example
     -------
     >>> image_question_answering(image, 'What is the cat doing ?')
-    'This image contains a cat sitting on a table with a bowl of milk.'
+    'drinking milk'
 
     """
 
@@ -328,7 +328,8 @@ def image_question_answering(image: np.ndarray, prompt: str) -> str:
         "tool": "image_question_answering",
     }
 
-    return _send_inference_request(data, "tools")["text"]
+    answer = _send_inference_request(data, "tools")
+    return answer["text"][0]
 
 
 def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
@@ -351,13 +352,40 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
 
     image_b64 = convert_to_b64(image)
     data = {
-        "prompt": classes,
+        "prompt": ",".join(classes),
         "image": image_b64,
         "tool": "closed_set_image_classification",
     }
     resp_data = _send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
     return resp_data
+
+
+def image_caption(image: np.ndarray) -> str:
+    """'image_caption' is a tool that can caption an image based on its contents.
+    It returns a text describing the image.
+
+    Parameters:
+        image (np.ndarray): The image to caption
+
+    Returns:
+       str: A string which is the caption for the given image.
+
+    Example
+    -------
+    >>> image_caption(image)
+    'This image contains a cat sitting on a table with a bowl of milk.'
+
+    """
+
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "image_captioning",
+    }
+
+    answer = _send_inference_request(data, "tools")
+    return answer["text"][0]
 
 
 def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
@@ -633,6 +661,7 @@ TOOLS = [
     zero_shot_counting,
     visual_prompt_counting,
     image_question_answering,
+    image_caption,
     closest_mask_distance,
     closest_box_distance,
     save_json,
