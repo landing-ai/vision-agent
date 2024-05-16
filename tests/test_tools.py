@@ -1,6 +1,4 @@
 import skimage as ski
-from PIL import Image
-
 
 from vision_agent.tools.tools_v2 import (
     clip,
