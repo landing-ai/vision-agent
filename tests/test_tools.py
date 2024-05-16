@@ -15,7 +15,7 @@ from vision_agent.tools.tools_v2 import (
 
 
 def test_grounding_dino():
-    img = Image.fromarray(ski.data.coins())
+    img = ski.data.coins()
     result = grounding_dino(
         prompt="coin",
         image=img,
@@ -26,7 +26,7 @@ def test_grounding_dino():
 
 
 def test_grounding_sam():
-    img = Image.fromarray(ski.data.coins())
+    img = ski.data.coins()
     result = grounding_sam(
         prompt="coin",
         image=img,
