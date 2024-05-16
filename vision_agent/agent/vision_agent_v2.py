@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import pandas as pd
+from langsmith import traceable
 from rich.console import Console
 from rich.syntax import Syntax
 from tabulate import tabulate
-from langsmith import traceable
 
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_v2_prompt import (
