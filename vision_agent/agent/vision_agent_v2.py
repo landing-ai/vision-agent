@@ -7,6 +7,7 @@ import pandas as pd
 from rich.console import Console
 from rich.syntax import Syntax
 from tabulate import tabulate
+from langsmith import traceable
 
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_v2_prompt import (
@@ -66,6 +67,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
     return json_dict  # type: ignore
 
 
+@traceable(name="planning")
 def write_plan(
     chat: List[Dict[str, str]],
     plan: Optional[List[Dict[str, Any]]],
@@ -214,6 +216,7 @@ def write_and_exec_code(
     return success, code, result, working_memory
 
 
+@traceable(name="plan execution")
 def run_plan(
     user_req: str,
     plan: List[Dict[str, Any]],
@@ -333,6 +336,7 @@ class VisionAgentV2(Agent):
         results = self.chat_with_workflow(input, image, plan)
         return results["code"]  # type: ignore
 
+    @traceable
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],

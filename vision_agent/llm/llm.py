@@ -2,7 +2,7 @@ import json
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
-
+from langsmith.wrappers import wrap_openai
 from openai import AzureOpenAI, OpenAI
 
 from vision_agent.tools import (
@@ -41,9 +41,9 @@ class OpenAILLM(LLM):
         **kwargs: Any
     ):
         if not api_key:
-            self.client = OpenAI()
+            self.client = wrap_openai(OpenAI())
         else:
-            self.client = OpenAI(api_key=api_key)
+            self.client = wrap_openai(OpenAI(api_key=api_key))
 
         self.model_name = model_name
         self.system_prompt = system_prompt
@@ -165,8 +165,10 @@ class AzureOpenAILLM(OpenAILLM):
         if not azure_endpoint:
             raise ValueError("Azure OpenAI endpoint is required.")
 
-        self.client = AzureOpenAI(
-            api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+        self.client = wrap_openai(
+            AzureOpenAI(
+                api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+            )
         )
         self.model_name = model_name
         self.kwargs = kwargs
