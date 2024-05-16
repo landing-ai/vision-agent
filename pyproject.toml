@@ -16,7 +16,7 @@ packages = [{include = "vision_agent"}]
 "documentation" = "https://github.com/landing-ai/vision-agent"
 
 [tool.poetry.dependencies]  # main dependency group
-python = ">=3.9"
+python = ">=3.9,<4.0"
 numpy = ">=1.21.0,<2.0.0"
 pillow = "10.*"
 requests = "2.*"
@@ -32,6 +32,7 @@ scipy = "1.13.*"
 nbclient = "^0.10.0"
 nbformat = "^5.10.4"
 rich = "^13.7.1"
+langsmith = "^0.1.58"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
