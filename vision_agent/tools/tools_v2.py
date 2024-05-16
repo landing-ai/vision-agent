@@ -329,7 +329,7 @@ def image_question_answering(image: np.ndarray, prompt: str) -> str:
     }
 
     answer = _send_inference_request(data, "tools")
-    return answer["text"][0]
+    return answer["text"][0]  # type: ignore
 
 
 def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
@@ -385,7 +385,7 @@ def image_caption(image: np.ndarray) -> str:
     }
 
     answer = _send_inference_request(data, "tools")
-    return answer["text"][0]
+    return answer["text"][0]  # type: ignore
 
 
 def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
