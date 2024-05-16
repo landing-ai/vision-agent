@@ -9,7 +9,7 @@ from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
 def openai_llm_mock(request):
     content = request.param
     # Note the path here is adjusted to where OpenAI is used, not where it's defined
-    with patch("vision_agent.llm.llm.OpenAI") as mock:
+    with patch("vision_agent.llm.llm.wrap_openai") as mock:
         # Setup a mock response structure that matches what your code expects
         mock_instance = mock.return_value
         mock_instance.chat.completions.create.return_value = MagicMock(
