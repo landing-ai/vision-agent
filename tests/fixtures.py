@@ -19,6 +19,13 @@ def openai_llm_mock(request):
 
 
 @pytest.fixture
+def langsmith_wrap_oepnai_mock(request, openai_llm_mock):
+    with patch("vision_agent.llm.llm.wrap_openai") as mock:
+        mock.return_value = openai_llm_mock
+        yield mock
+
+
+@pytest.fixture
 def openai_lmm_mock(request):
     content = request.param
     # Note the path here is adjusted to where OpenAI is used, not where it's defined

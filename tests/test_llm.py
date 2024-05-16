@@ -6,6 +6,7 @@ from .fixtures import (  # noqa: F401
     clip_mock,
     grounding_dino_mock,
     grounding_sam_mock,
+    langsmith_wrap_oepnai_mock,
     openai_llm_mock,
 )
 
@@ -13,7 +14,7 @@ from .fixtures import (  # noqa: F401
 @pytest.mark.parametrize(
     "openai_llm_mock", ["mocked response"], indirect=["openai_llm_mock"]
 )
-def test_generate_with_mock(openai_llm_mock):  # noqa: F811
+def test_generate_with_mock(openai_llm_mock, langsmith_wrap_oepnai_mock):  # noqa: F811
     llm = OpenAILLM()
     response = llm.generate("test prompt")
     assert response == "mocked response"
@@ -26,7 +27,7 @@ def test_generate_with_mock(openai_llm_mock):  # noqa: F811
 @pytest.mark.parametrize(
     "openai_llm_mock", ["mocked response"], indirect=["openai_llm_mock"]
 )
-def test_chat_with_mock(openai_llm_mock):  # noqa: F811
+def test_chat_with_mock(openai_llm_mock, langsmith_wrap_oepnai_mock):  # noqa: F811
     llm = OpenAILLM()
     response = llm.chat([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
@@ -52,7 +53,7 @@ def openai_llm_mock_turbo(openai_llm_mock_2):  # noqa: F811
 @pytest.mark.parametrize(
     "openai_llm_mock", ["mocked response"], indirect=["openai_llm_mock"]
 )
-def test_call_with_mock(openai_llm_mock):  # noqa: F811
+def test_call_with_mock(openai_llm_mock, langsmith_wrap_oepnai_mock):  # noqa: F811
     llm = OpenAILLM()
     response = llm("test prompt")
     assert response == "mocked response"
