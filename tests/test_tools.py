@@ -18,9 +18,8 @@ def test_grounding_dino():
         prompt="coin",
         image=img,
     )
-    assert result["labels"] == ["coin"] * 24
-    assert len(result["bboxes"]) == 24
-    assert len(result["scores"]) == 24
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
 
 
 def test_grounding_sam():
@@ -29,10 +28,9 @@ def test_grounding_sam():
         prompt="coin",
         image=img,
     )
-    assert result["labels"] == ["coin"] * 24
-    assert len(result["bboxes"]) == 24
-    assert len(result["scores"]) == 24
-    assert len(result["masks"]) == 24
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
+    assert len([res["mask"] for res in result]) == 24
 
 
 def test_clip():

@@ -68,12 +68,13 @@ def grounding_dino(
         box_threshold (float, optional): The threshold for the box detection. Defaults
             to 0.20.
         iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.75.
+            (IoU). Defaults to 0.20.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
         bounding box of the detected objects with normalized coordinates
-        (x1, y1, x2, y2).
+        (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left and
+        xmax and ymax are the coordinates of the bottom-right of the bounding box.
 
     Example
     -------
@@ -120,12 +121,15 @@ def grounding_sam(
         box_threshold (float, optional): The threshold for the box detection. Defaults
             to 0.20.
         iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.75.
+            (IoU). Defaults to 0.20.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
         bounding box, and mask of the detected objects with normalized coordinates
-        (x1, y1, x2, y2).
+        (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left and
+        xmax and ymax are the coordinates of the bottom-right of the bounding box.
+        The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+        the background.
 
     Example
     -------
