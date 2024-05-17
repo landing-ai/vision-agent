@@ -53,7 +53,7 @@ class NoOp(Tool):
 
 
 class CLIP(Tool):
-    r"""CLIP is a tool that can classify or tag any image given a set if input classes
+    r"""CLIP is a tool that can classify or tag any image given a set of input classes
     or tags.
 
     Example
