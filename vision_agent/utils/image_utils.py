@@ -104,15 +104,20 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
     """
     if data is None:
         raise ValueError(f"Invalid input image: {data}. Input image can't be None.")
+
     if isinstance(data, (str, Path)):
         data = Image.open(data)
+    elif isinstance(data, np.ndarray):
+        data = Image.fromarray(data)
+
     if isinstance(data, Image.Image):
         buffer = BytesIO()
         data.convert("RGB").save(buffer, format="PNG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     else:
-        arr_bytes = data.tobytes()
-        return base64.b64encode(arr_bytes).decode("utf-8")
+        raise ValueError(
+            f"Invalid input image: {data}. Input image must be a PIL Image or a numpy array."
+        )
 
 
 def denormalize_bbox(
