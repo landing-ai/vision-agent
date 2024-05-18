@@ -16,12 +16,12 @@ from scipy.spatial import distance  # type: ignore
 from vision_agent.tools.tool_utils import _send_inference_request
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.image_utils import (
+    b64_to_pil,
     convert_to_b64,
+    denormalize_bbox,
+    get_image_size,
     normalize_bbox,
     rle_decode,
-    b64_to_pil,
-    get_image_size,
-    denormalize_bbox,
 )
 
 COLORS = [

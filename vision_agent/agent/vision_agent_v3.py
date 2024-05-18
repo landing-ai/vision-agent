@@ -284,9 +284,7 @@ class VisionAgentV3(Agent):
             reflection = reflect(chat, plan_i_str, code, test, self.planner)
             feedback = cast(str, reflection["feedback"])
             success = cast(bool, reflection["success"])
-            working_memory.append(
-                {"code": f"{code}\n{test}", "feedback": feedback}
-            )
+            working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
 
         return {
             "code": code,
