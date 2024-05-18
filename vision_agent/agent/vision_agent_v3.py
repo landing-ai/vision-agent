@@ -79,7 +79,7 @@ def write_plan(
     context = USER_REQ.format(user_request=user_request)
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))["plan"]
+    return extract_json(model.chat(chat))["plan"]  # type: ignore
 
 
 def reflect(
@@ -186,8 +186,8 @@ def retrieve_tools(
         tool_desc.extend([e["desc"] for e in tools])
     if verbosity == 2:
         _LOGGER.info(f"Tools: {tool_desc}")
-    tool_info = set(tool_info)
-    return "\n\n".join(tool_info)
+    tool_info_set = set(tool_info)
+    return "\n\n".join(tool_info_set)
 
 
 class VisionAgentV3(Agent):
@@ -243,7 +243,7 @@ class VisionAgentV3(Agent):
 
         code = ""
         test = ""
-        working_memory = []
+        working_memory: List[Dict[str, str]] = []
         results = {"code": "", "test": "", "plan": []}
         plan = []
         success = False
@@ -278,13 +278,14 @@ class VisionAgentV3(Agent):
             success = cast(bool, results["success"])
             code = cast(str, results["code"])
             test = cast(str, results["test"])
-            working_memory.extend(results["working_memory"])
+            working_memory.extend(results["working_memory"])  # type: ignore
             plan.append({"code": code, "test": test, "plan": plan_i})
 
             reflection = reflect(chat, plan_i_str, code, test, self.planner)
+            feedback = cast(str, reflection["feedback"])
             success = cast(bool, reflection["success"])
             working_memory.append(
-                {"code": f"{code}\n{test}", "feedback": reflection["feedback"]}
+                {"code": f"{code}\n{test}", "feedback": feedback}
             )
 
         return {
