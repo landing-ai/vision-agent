@@ -107,7 +107,7 @@ def detect_cats_and_dogs(image_path: str) -> Dict[str, List[List[float]]]:
     \""" Detects cats and dogs in an image. Returns a dictionary with
     {{
         "cats": [[x1, y1, x2, y2], ...], "dogs": [[x1, y1, x2, y2], ...]
-    }} 
+    }}
     \"""
 ```
 

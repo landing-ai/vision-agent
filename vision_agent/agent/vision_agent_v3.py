@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from rich.console import Console
 from rich.syntax import Syntax
@@ -124,7 +124,7 @@ def write_and_test_code(
 
     success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
     if verbosity == 2:
-        _LOGGER.info(f"First code and tests:")
+        _LOGGER.info("First code and tests:")
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
         )
