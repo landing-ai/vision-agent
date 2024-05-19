@@ -17,7 +17,6 @@ from vision_agent.agent.vision_agent_v3_prompts import (
     PLAN,
     REFLECT,
     SIMPLE_TEST,
-    TEST,
     USER_REQ,
 )
 from vision_agent.llm import LLM, OpenAILLM
