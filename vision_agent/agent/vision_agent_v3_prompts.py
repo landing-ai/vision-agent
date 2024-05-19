@@ -3,6 +3,12 @@ USER_REQ = """
 {user_request}
 """
 
+FEEDBACK = """
+## This contains code and feedback from previous runs and is used for providing context so you do not make the same mistake again.
+
+{feedback}
+"""
+
 
 PLAN = """
 **Context**
@@ -22,7 +28,7 @@ Based on the context and tools you have available, write a plan of subtasks to a
     "plan":
         [
             {{
-                "instruction": str # what you should do in this task, one short phrase or sentence
+                "instructions": str # what you should do in this task, one short phrase or sentence
             }}
         ]
 }}
@@ -147,6 +153,9 @@ This is the documentation for the functions you have access to. You may call any
 {code}
 ```
 
+**Previous Feedback**:
+{feedback}
+
 **Instructions**:
 1. Verify the fundamental functionality under normal conditions.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
@@ -187,7 +196,7 @@ Please fix the bug by follow the error information and return a JSON object with
 
 
 REFLECT = """
-**Role**: You are a reflection agent. Your job is to look at the original user request and the code and test cases produced and determine if they meet the user's request. If they do not, you must provide feedback on how to improve the code and test cases.
+**Role**: You are a reflection agent. Your job is to look at the original user request and the code produced and determine if it meets the user's request. If it does not, you must provide feedback on how to improve the code and test cases.
 
 **Context**:
 {context}
@@ -198,10 +207,12 @@ REFLECT = """
 **Code**:
 {code}
 
-**Test Cases**:
-{test}
-
 **Instructions**:
+1. **Understand the User Request**: Read the user request and understand what the user is asking for.
+2. **Review the Plan**: Check the plan to see if it is a good approach to solving the user request.
+3. **Review the Code**: Check the code to see if it follows the plan and solves the user request.
+4. Do no add reflections on test cases, these are taken care of.
+
 Respond in JSON format with the following structure:
 {{
     "feedback": str # the feedback you would give to the coder and tester

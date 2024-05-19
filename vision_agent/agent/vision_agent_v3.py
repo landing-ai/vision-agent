@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 import sys
@@ -11,6 +12,7 @@ from tabulate import tabulate
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_v3_prompts import (
     CODE,
+    FEEDBACK,
     FIX_BUG,
     PLAN,
     REFLECT,
@@ -31,8 +33,13 @@ _CONSOLE = Console()
 
 
 def format_memory(memory: List[Dict[str, str]]) -> str:
-    return "\n\n".join(
-        [f"Code: {m['code']}\nFeedback: {m['feedback']}" for m in memory]
+    return FEEDBACK.format(
+        feedback="\n".join(
+            [
+                f"Feedback {i}:\nCode: {m['code']}\nFeedback: {m['feedback']}\n"
+                for i, m in enumerate(memory)
+            ]
+        )
     )
 
 
@@ -72,7 +79,7 @@ def write_plan(
     working_memory: str,
     model: LLM,
 ) -> List[Dict[str, str]]:
-    chat = chat.copy()
+    chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
         raise ValueError("Last chat message must be from the user.")
 
@@ -87,16 +94,15 @@ def reflect(
     chat: List[Dict[str, str]],
     plan: str,
     code: str,
-    test: str,
     model: LLM,
 ) -> Dict[str, Union[str, bool]]:
-    chat = chat.copy()
+    chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
         raise ValueError("Last chat message must be from the user.")
 
     user_request = chat[-1]["content"]
     context = USER_REQ.format(user_request=user_request)
-    prompt = REFLECT.format(context=context, plan=plan, code=code, test=test)
+    prompt = REFLECT.format(context=context, plan=plan, code=code)
     chat[-1]["content"] = prompt
     return extract_json(model.chat(chat))
 
@@ -182,7 +188,7 @@ def retrieve_tools(
     tool_info = []
     tool_desc = []
     for task in plan:
-        tools = tool_recommender.top_k(task["instruction"], k=2, thresh=0.3)
+        tools = tool_recommender.top_k(task["instructions"], k=2, thresh=0.3)
         tool_info.extend([e["doc"] for e in tools])
         tool_desc.extend([e["desc"] for e in tools])
     if verbosity == 2:
@@ -251,10 +257,11 @@ class VisionAgentV3(Agent):
         retries = 0
 
         while not success and retries < self.max_retries:
+            __import__("ipdb").set_trace()
             plan_i = write_plan(
                 chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner
             )
-            plan_i_str = "\n-".join([e["instruction"] for e in plan_i])
+            plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
             if self.verbosity == 1 or self.verbosity == 2:
                 _LOGGER.info(
                     f"""
@@ -282,7 +289,9 @@ class VisionAgentV3(Agent):
             working_memory.extend(results["working_memory"])  # type: ignore
             plan.append({"code": code, "test": test, "plan": plan_i})
 
-            reflection = reflect(chat, plan_i_str, code, test, self.planner)
+            reflection = reflect(chat, plan_i_str, code, self.planner)
+            if self.verbosity > 0:
+                _LOGGER.info(f"Reflection: {reflection}")
             feedback = cast(str, reflection["feedback"])
             success = cast(bool, reflection["success"])
             working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
