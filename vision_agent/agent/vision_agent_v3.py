@@ -14,6 +14,7 @@ from vision_agent.agent.vision_agent_v3_prompts import (
     FIX_BUG,
     PLAN,
     REFLECT,
+    SIMPLE_TEST,
     TEST,
     USER_REQ,
 )
@@ -116,7 +117,7 @@ def write_and_test_code(
     )
     test = extract_code(
         tester(
-            TEST.format(
+            SIMPLE_TEST.format(
                 docstring=tool_utils, question=task, code=code, feedback=working_memory
             )
         )

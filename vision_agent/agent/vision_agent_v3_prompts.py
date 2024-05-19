@@ -74,18 +74,11 @@ This is the documentation for the functions you have access to. You may call any
 {code}
 ```
 
-**1. Basic Test Cases**:
-- **Objective**: To verify the fundamental functionality under normal conditions.
-
-**2. Edge Test Cases**:
-- **Objective**: To evaluate the function's behavior under extreme or unusual conditions.
-
 **Instructions**:
-1. Implement a comprehensive set of test cases following the guidelines above and testing each of the user's instructions.
+1. Verify the fundamental functionality under normal conditions.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
-3. Pay special attention to edge cases as they often reveal hidden bugs.
-4. DO NOT use any files that are not provided by the user's instructions, your test must be run and will crash if it tries to load a non-existent file.
-5. If it is a vision task, you can visualize the output to ensure it is correct.
+3. DO NOT use any files that are not provided by the user's instructions, your test must be run and will crash if it tries to load a non-existent file.
+4. DO NOT mock any functions, you must test their functionality as is.
 
 You should format your test cases at the end of your response wrapped in ```python ``` tags like in the following example:
 ```python
@@ -100,7 +93,7 @@ output = function(input)
 visualize(output)
 ```
 
-**Examples**
+**Examples**:
 ## Prompt 1:
 ```python
 def detect_cats_and_dogs(image_path: str) -> Dict[str, List[List[float]]]:
@@ -134,6 +127,31 @@ def find_text(image_path: str, text: str) -> str:
 found_text = find_text("image.jpg", "Hello World")
 print(found_text)
 ```
+"""
+
+
+SIMPLE_TEST = """
+**Role**: As a tester, your task is to create a simple test case for the provided code. This test case should verify the fundamental functionality under normal conditions.
+
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`. You do not need to test these functions, only the code provided by the user.
+
+{docstring}
+
+**User Instructions**:
+{question}
+
+**Input Code Snippet**:
+```python
+### Please decided how would you want to generate test cases. Based on incomplete code or completed version.
+{code}
+```
+
+**Instructions**:
+1. Verify the fundamental functionality under normal conditions.
+2. Ensure each test case is well-documented with comments explaining the scenario it covers.
+3. DO NOT use any files that are not provided by the user's instructions, your test must be run and will crash if it tries to load a non-existent file.
+4. DO NOT mock any functions, you must test their functionality as is.
 """
 
 
