@@ -167,6 +167,7 @@ def write_and_exec_code(
     retrieved_ltm: str,
     max_retry: int = 3,
     verbosity: int = 0,
+    log_progress: Callable[..., str] = None,
 ) -> Tuple[bool, str, str, Dict[str, List[str]]]:
     success = False
     counter = 0
@@ -178,6 +179,7 @@ def write_and_exec_code(
     success, result = exec.run_isolation(code)
     if verbosity == 2:
         _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
+        log_progress(f"\tCode success: {success}\n\tResult: {str(result)}", code)
         _LOGGER.info(f"\tCode success: {success}, result: {str(result)}")
     working_memory: Dict[str, List[str]] = {}
     while not success and counter < max_retry:
@@ -204,6 +206,7 @@ def write_and_exec_code(
             _CONSOLE.print(
                 Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
             )
+            log_progress(f"\tDebugging reflection: {reflection}\n\tResult: {result}")
             _LOGGER.info(f"\tDebugging reflection: {reflection}, result: {result}")
 
         if success:
@@ -226,6 +229,7 @@ def run_plan(
     tool_recommender: Sim,
     long_term_memory: Optional[Sim] = None,
     verbosity: int = 0,
+    log_progress: Callable[..., str] = None,
 ) -> Tuple[str, str, List[Dict[str, Any]], Dict[str, List[str]]]:
     active_plan = [e for e in plan if "success" not in e or not e["success"]]
     current_code = code
@@ -234,6 +238,10 @@ def run_plan(
     working_memory: Dict[str, List[str]] = {}
 
     for task in active_plan:
+        log_progress(
+            f"""Going to run the following task(s) in sequence:
+{tabulate(tabular_data=[task], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
+        )
         _LOGGER.info(
             f"""
 {tabulate(tabular_data=[task], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
@@ -242,6 +250,7 @@ def run_plan(
         tool_info = "\n".join([e["doc"] for e in tools])
 
         if verbosity == 2:
+            log_progress(f"Tools retrieved: {[e['desc'] for e in tools]}")
             _LOGGER.info(f"Tools retrieved: {[e['desc'] for e in tools]}")
 
         if long_term_memory is not None:
@@ -259,6 +268,7 @@ def run_plan(
             exec,
             retrieved_ltm,
             verbosity=verbosity,
+            log_progress=log_progress,
         )
         if task["type"] == "code":
             current_code = code
@@ -271,6 +281,8 @@ def run_plan(
             _CONSOLE.print(
                 Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
             )
+
+        log_progress(f"\tCode success: {success}\n\tResult: {str(result)}")
         _LOGGER.info(f"\tCode success: {success} result: {str(result)}")
 
         task["success"] = success
@@ -308,10 +320,12 @@ class VisionAgentV2(Agent):
         tool_recommender: Optional[Sim] = None,
         long_term_memory: Optional[Sim] = None,
         verbosity: int = 0,
+        report_progress_callback: Optional[Callable[..., Any]] = None,
     ) -> None:
         self.planner = OpenAILLM(temperature=0.0, json_mode=True)
         self.coder = OpenAILLM(temperature=0.0)
         self.exec = Execute(timeout=timeout)
+        self.report_progress_callback = report_progress_callback
         if tool_recommender is None:
             self.tool_recommender = Sim(TOOLS_DF, sim_key="desc")
         else:
@@ -361,6 +375,10 @@ class VisionAgentV2(Agent):
                     working_code = task["code"]
 
         user_req, plan = write_plan(chat, plan, TOOL_DESCRIPTIONS, self.planner)
+        self.log_progress(
+            f"""Plan:
+{tabulate(tabular_data=plan, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
+        )
         _LOGGER.info(
             f"""Plan:
 {tabulate(tabular_data=plan, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
@@ -381,6 +399,7 @@ class VisionAgentV2(Agent):
                 self.tool_recommender,
                 self.long_term_memory,
                 self.verbosity,
+                self.log_progress,
             )
             success = all(
                 task["success"] if "success" in task else False for task in plan
@@ -393,6 +412,9 @@ class VisionAgentV2(Agent):
 
             retries += 1
 
+        self.log_progress(f"The Vision Agent V2 has concluded this chat.")
+        self.log_progress(f"<ANSWER>Plan success: {success}</ANSWER>")
+
         return {
             "code": working_code,
             "test": working_test,
@@ -401,5 +423,7 @@ class VisionAgentV2(Agent):
             "plan": plan,
         }
 
-    def log_progress(self, description: str) -> None:
+    def log_progress(self, description: str, code: Optional[str] = "") -> None:
+        if self.report_progress_callback is not None:
+            self.report_progress_callback(description, code)
         pass
