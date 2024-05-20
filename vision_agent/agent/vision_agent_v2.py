@@ -267,8 +267,8 @@ def run_plan(
             tool_info,
             exec,
             retrieved_ltm,
+            log_progress,
             verbosity=verbosity,
-            log_progress=log_progress,
         )
         if task["type"] == "code":
             current_code = code
@@ -397,9 +397,9 @@ class VisionAgentV2(Agent):
                 self.exec,
                 working_code,
                 self.tool_recommender,
+                self.log_progress,
                 self.long_term_memory,
                 self.verbosity,
-                self.log_progress,
             )
             success = all(
                 task["success"] if "success" in task else False for task in plan
