@@ -21,7 +21,7 @@ PLAN = """
 {feedback}
 
 **Instructions**:
-Based on the context and tools you have available, write a plan of subtasks to achieve the user request utilizing tools when necessary. Output a list of jsons in the following format:
+Based on the context and tools you have available, write a plan of subtasks to achieve the user request utilizing given tools when necessary. Output a list of jsons in the following format:
 
 ```json
 {{
@@ -38,7 +38,7 @@ Based on the context and tools you have available, write a plan of subtasks to a
 CODE = """
 **Role**: You are a software programmer.
 
-**Task**: As a programmer, you are required to complete the function. Use a Chain-of-Thought approach to break down the problem, create pseudocode, and then write the code in Python language. Ensure that your code is efficient, readable, and well-commented. Return the requested information from the function you create. Do no call your code unnecessarily, a test will be run after it is submitted.
+**Task**: As a programmer, you are required to complete the function. Use a Chain-of-Thought approach to break down the problem, create pseudocode, and then write the code in Python language. Ensure that your code is efficient, readable, and well-commented. Return the requested information from the function you create. Do not call your code, a test will be run after the code is submitted.
 
 **Documentation**:
 This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`.
@@ -67,7 +67,7 @@ TEST = """
 **Role**: As a tester, your task is to create comprehensive test cases for the provided code. These test cases should encompass Basic and Edge case scenarios to ensure the code's robustness and reliability if possible.
 
 **Documentation**:
-This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`. You do not need to test these functions, only the code provided by the user.
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`. You do not need to test these functions. Test only the code provided by the user.
 
 {docstring}
 
