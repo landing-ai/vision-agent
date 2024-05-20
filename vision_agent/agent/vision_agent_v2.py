@@ -165,9 +165,9 @@ def write_and_exec_code(
     tool_info: str,
     exec: Execute,
     retrieved_ltm: str,
+    log_progress: Callable[..., str],
     max_retry: int = 3,
     verbosity: int = 0,
-    log_progress: Callable[..., str] = None,
 ) -> Tuple[bool, str, str, Dict[str, List[str]]]:
     success = False
     counter = 0
@@ -227,9 +227,9 @@ def run_plan(
     exec: Execute,
     code: str,
     tool_recommender: Sim,
+    log_progress: Callable[..., str],
     long_term_memory: Optional[Sim] = None,
     verbosity: int = 0,
-    log_progress: Callable[..., str] = None,
 ) -> Tuple[str, str, List[Dict[str, Any]], Dict[str, List[str]]]:
     active_plan = [e for e in plan if "success" not in e or not e["success"]]
     current_code = code
