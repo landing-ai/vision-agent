@@ -256,7 +256,6 @@ class VisionAgentV3(Agent):
         retries = 0
 
         while not success and retries < self.max_retries:
-            __import__("ipdb").set_trace()
             plan_i = write_plan(
                 chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner
             )
