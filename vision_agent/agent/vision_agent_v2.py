@@ -412,9 +412,7 @@ class VisionAgentV2(Agent):
 
             retries += 1
 
-        self.log_progress(
-            "The Vision Agent V2 has concluded this chat."
-        )
+        self.log_progress("The Vision Agent V2 has concluded this chat.")
         self.log_progress(f"<ANSWER>Plan success: {success}</ANSWER>")
 
         return {
