@@ -196,7 +196,7 @@ Please fix the bug by follow the error information and return a JSON object with
 
 
 REFLECT = """
-**Role**: You are a reflection agent. Your job is to look at the original user request and the code produced and determine if it meets the user's request. If it does not, you must provide feedback on how to improve the code and test cases.
+**Role**: You are a reflection agent. Your job is to look at the original user request and the code produced and determine if the code satisfies the user's request. If it does not, you must provide feedback on how to improve the code. You are concerned only if the code meets the user request, not if the code is good or bad.
 
 **Context**:
 {context}
@@ -209,9 +209,9 @@ REFLECT = """
 
 **Instructions**:
 1. **Understand the User Request**: Read the user request and understand what the user is asking for.
-2. **Review the Plan**: Check the plan to see if it is a good approach to solving the user request.
-3. **Review the Code**: Check the code to see if it follows the plan and solves the user request.
-4. Do no add reflections on test cases, these are taken care of.
+2. **Review the Plan**: Check the plan to see if it is a viable approach to solving the user request.
+3. **Review the Code**: Check the code to see if it solves the user request.
+4. DO NOT add any reflections for test cases, these are taken care of.
 
 Respond in JSON format with the following structure:
 {{

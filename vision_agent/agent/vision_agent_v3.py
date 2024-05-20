@@ -35,7 +35,7 @@ def format_memory(memory: List[Dict[str, str]]) -> str:
     return FEEDBACK.format(
         feedback="\n".join(
             [
-                f"Feedback {i}:\nCode: {m['code']}\nFeedback: {m['feedback']}\n"
+                f"### Feedback {i}:\nCode: ```python\n{m['code']}\n```\nFeedback: {m['feedback']}\n"
                 for i, m in enumerate(memory)
             ]
         )
