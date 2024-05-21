@@ -8,7 +8,7 @@ from vision_agent.utils.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key
-_LND_API_URL = "https://api.dev.landing.ai/v1/agent"
+_LND_API_URL = "https://api.staging.landing.ai/v1/agent"
 
 
 def _send_inference_request(
