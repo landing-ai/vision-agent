@@ -10,7 +10,7 @@ from rich.syntax import Syntax
 from tabulate import tabulate
 
 from vision_agent.agent import Agent
-from vision_agent.agent.vision_agent_v2_prompt import (
+from vision_agent.agent.vision_agent_v2_prompts import (
     CODE,
     CODE_SYS_MSG,
     DEBUG,

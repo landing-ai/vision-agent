@@ -4,6 +4,7 @@
 import base64 as b64
 import io
 import re
+from time import sleep
 from typing import Dict, List, Tuple
 
 import nbformat
@@ -75,6 +76,7 @@ class Execute:
         self.terminate()
         self.nb = nbformat.v4.new_notebook()
         self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
+        sleep(1)
         self.build()
 
     def run_cell(self, cell: NotebookNode, cell_index: int) -> Tuple[bool, str]:
@@ -83,6 +85,7 @@ class Execute:
             return parse_outputs(self.nb.cells[-1].outputs)
         except CellTimeoutError:
             run_sync(self.nb_client.km.interrupt_kernel)()  # type: ignore
+            sleep(1)
             return False, "Cell execution timed out."
         except DeadKernelError:
             self.reset()
