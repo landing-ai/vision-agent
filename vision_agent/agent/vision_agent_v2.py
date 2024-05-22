@@ -256,7 +256,7 @@ def run_plan(
 
     for task in active_plan:
         log_progress({
-            "log": f"Going to run the following task(s) in sequence:\n",
+            "log": "Going to run the following task(s) in sequence:",
             "task": task
         })
         _LOGGER.info(
