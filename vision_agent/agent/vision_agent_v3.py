@@ -212,7 +212,7 @@ def retrieve_tools(
         tool_desc.extend([e["desc"] for e in tools])
     if verbosity == 2:
         log_progress({
-            "log": f"Retrieved tools:",
+            "log": "Retrieved tools:",
             "tools": tool_desc,
         })
         _LOGGER.info(f"Tools: {tool_desc}")
@@ -288,7 +288,7 @@ class VisionAgentV3(Agent):
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
             if self.verbosity == 1 or self.verbosity == 2:
                 self.log_progress({
-                    "log": f"Going to run the following plan(s) in sequence:\n",
+                    "log": "Going to run the following plan(s) in sequence:\n",
                     "plan": plan_i,
                 })
                 _LOGGER.info(
