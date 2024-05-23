@@ -50,10 +50,10 @@ def extract_code(code: str) -> str:
     else:
         return code
 
-    code = code[code.find(start) + len(start):]
+    code = code[code.find(start) + len(start) :]
     code = code[: code.find("```")]
     if code.startswith("python\n"):
-        code = code[len("python\n"):]
+        code = code[len("python\n") :]
     return code
 
 
@@ -62,10 +62,10 @@ def extract_json(json_str: str) -> Dict[str, Any]:
         json_dict = json.loads(json_str)
     except json.JSONDecodeError:
         if "```json" in json_str:
-            json_str = json_str[json_str.find("```json") + len("```json"):]
+            json_str = json_str[json_str.find("```json") + len("```json") :]
             json_str = json_str[: json_str.find("```")]
         elif "```" in json_str:
-            json_str = json_str[json_str.find("```") + len("```"):]
+            json_str = json_str[json_str.find("```") + len("```") :]
             # get the last ``` not one from an intermediate string
             json_str = json_str[: json_str.find("}```")]
         json_dict = json.loads(json_str)
@@ -172,7 +172,7 @@ def write_and_test_code(
             log_progress(
                 {
                     "log": f"Debug attempt {count + 1}, reflection:",
-                    "reflection": fixed_code_and_test['reflections'],
+                    "reflection": fixed_code_and_test["reflections"],
                 }
             )
             _LOGGER.info(
