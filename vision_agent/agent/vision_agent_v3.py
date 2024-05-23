@@ -125,7 +125,11 @@ def write_and_test_code(
     test = extract_code(
         tester(
             SIMPLE_TEST.format(
-                docstring=tool_utils, question=task, code=code, feedback=working_memory, media=input,
+                docstring=tool_utils,
+                question=task,
+                code=code,
+                feedback=working_memory,
+                media=input,
             )
         )
     )
@@ -268,7 +272,6 @@ class VisionAgentV3(Agent):
         self.verbosity = verbosity
         self.max_retries = 2
         self.report_progress_callback = report_progress_callback
-
 
     def __call__(
         self,
