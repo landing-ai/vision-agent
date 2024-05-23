@@ -277,12 +277,12 @@ class VisionAgentV3(Agent):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, Any]:  # type: ignore
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, image)
         results.pop("working_memory")
-        return results
+        return results  # type: ignore
 
     def chat_with_workflow(
         self,
