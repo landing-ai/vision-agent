@@ -39,7 +39,7 @@ def build_working_memory(working_memory: Mapping[str, List[str]]) -> Sim:
     for key, value in working_memory.items():
         data["desc"].append(key)
         data["doc"].append("\n".join(value))
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(data)  # type: ignore
     return Sim(df, sim_key="desc")
 
 

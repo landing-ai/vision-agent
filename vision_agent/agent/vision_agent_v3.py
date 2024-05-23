@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast, Callable
+from typing import Any, Dict, List, Optional, Union, cast, Callable, no_type_check
 
 from rich.console import Console
 from rich.syntax import Syntax
@@ -273,16 +273,17 @@ class VisionAgentV3(Agent):
         self.max_retries = 2
         self.report_progress_callback = report_progress_callback
 
+    @no_type_check
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-    ) -> Dict[str, Any]:  # type: ignore
+    ) -> Dict[str, Any]:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, image)
         results.pop("working_memory")
-        return results  # type: ignore
+        return results
 
     def chat_with_workflow(
         self,
