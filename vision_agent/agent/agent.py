@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 
 class Agent(ABC):
@@ -13,7 +13,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def log_progress(self, description: str) -> None:
+    def log_progress(self, data: Dict[str, Any]) -> None:
         """Log the progress of the agent.
         This is a hook that is intended for reporting the progress of the agent.
         """

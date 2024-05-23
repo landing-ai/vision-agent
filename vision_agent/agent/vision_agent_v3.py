@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast, Callable
 
 from rich.console import Console
 from rich.syntax import Syntax
@@ -115,6 +115,7 @@ def write_and_test_code(
     coder: LLM,
     tester: LLM,
     debugger: LLM,
+    log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
 ) -> Dict[str, Any]:
@@ -132,8 +133,26 @@ def write_and_test_code(
     success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
     if verbosity == 2:
         _LOGGER.info("Initial code and tests:")
+        log_progress(
+            {
+                "log": "Code:",
+                "code": code,
+            }
+        )
+        log_progress(
+            {
+                "log": "Test:",
+                "code": test,
+            }
+        )
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
+        )
+        log_progress(
+            {
+                "log": "Result:",
+                "result": result,
+            }
         )
         _LOGGER.info(f"Initial result: {result}")
 
@@ -157,6 +176,12 @@ def write_and_test_code(
 
         success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
         if verbosity == 2:
+            log_progress(
+                {
+                    "log": f"Debug attempt {count + 1}, reflection:",
+                    "result": fixed_code_and_test["reflections"],
+                }
+            )
             _LOGGER.info(
                 f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
@@ -164,6 +189,12 @@ def write_and_test_code(
                 Syntax(
                     f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True
                 )
+            )
+            log_progress(
+                {
+                    "log": "Debug result:",
+                    "result": result,
+                }
             )
             _LOGGER.info(f"Debug result: {result}")
         count += 1
@@ -185,7 +216,10 @@ def write_and_test_code(
 
 
 def retrieve_tools(
-    plan: List[Dict[str, str]], tool_recommender: Sim, verbosity: int = 0
+    plan: List[Dict[str, str]],
+    tool_recommender: Sim,
+    log_progress: Callable[[Dict[str, Any]], None],
+    verbosity: int = 0,
 ) -> str:
     tool_info = []
     tool_desc = []
@@ -194,6 +228,12 @@ def retrieve_tools(
         tool_info.extend([e["doc"] for e in tools])
         tool_desc.extend([e["desc"] for e in tools])
     if verbosity == 2:
+        log_progress(
+            {
+                "log": "Retrieved tools:",
+                "tools": tool_desc,
+            }
+        )
         _LOGGER.info(f"Tools: {tool_desc}")
     tool_info_set = set(tool_info)
     return "\n\n".join(tool_info_set)
@@ -209,6 +249,7 @@ class VisionAgentV3(Agent):
         debugger: Optional[LLM] = None,
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
+        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         self.planner = (
             OpenAILLM(temperature=0.0, json_mode=True) if planner is None else planner
@@ -226,6 +267,8 @@ class VisionAgentV3(Agent):
         )
         self.verbosity = verbosity
         self.max_retries = 2
+        self.report_progress_callback = report_progress_callback
+
 
     def __call__(
         self,
@@ -267,6 +310,13 @@ class VisionAgentV3(Agent):
             )
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
             if self.verbosity >= 1:
+                self.log_progress(
+                    {
+                        "log": "Going to run the following plan(s) in sequence:\n",
+                        "plan": plan_i,
+                    }
+                )
+
                 _LOGGER.info(
                     f"""
 {tabulate(tabular_data=plan_i, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
@@ -275,6 +325,7 @@ class VisionAgentV3(Agent):
             tool_info = retrieve_tools(
                 plan_i,
                 self.tool_recommender,
+                self.log_progress,
                 self.verbosity,
             )
             results = write_and_test_code(
@@ -286,6 +337,7 @@ class VisionAgentV3(Agent):
                 self.coder,
                 self.tester,
                 self.debugger,
+                self.log_progress,
                 verbosity=self.verbosity,
             )
             success = cast(bool, results["success"])
@@ -297,10 +349,23 @@ class VisionAgentV3(Agent):
             if self_reflection:
                 reflection = reflect(chat, plan_i_str, code, self.planner)
                 if self.verbosity > 0:
+                    self.log_progress(
+                        {
+                            "log": "Reflection:",
+                            "reflection": reflection,
+                        }
+                    )
                     _LOGGER.info(f"Reflection: {reflection}")
                 feedback = cast(str, reflection["feedback"])
                 success = cast(bool, reflection["success"])
                 working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
+
+        self.log_progress(
+            {
+                "log": f"The Vision Agent V3 has concluded this chat.\nSuccess: {success}",
+                "finished": True,
+            }
+        )
 
         return {
             "code": code,
@@ -310,5 +375,7 @@ class VisionAgentV3(Agent):
             "working_memory": working_memory,
         }
 
-    def log_progress(self, description: str) -> None:
+    def log_progress(self, data: Dict[str, Any]) -> None:
+        if self.report_progress_callback is not None:
+            self.report_progress_callback(data)
         pass

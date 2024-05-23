@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 from rich.console import Console
 from rich.syntax import Syntax
@@ -206,5 +206,5 @@ class AgentCoder(Agent):
 
         return f"{IMPORT_HELPER}\n{code}"
 
-    def log_progress(self, description: str) -> None:
-        _LOGGER.info(description)
+    def log_progress(self, data: Dict[str, Any]) -> None:
+        _LOGGER.info(data)
