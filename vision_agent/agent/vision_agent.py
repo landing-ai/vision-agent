@@ -451,7 +451,7 @@ class VisionAgent(Agent):
         reflect_model: Optional[Union[LLM, LMM]] = None,
         max_retries: int = 2,
         verbose: bool = False,
-        report_progress_callback: Optional[Callable[[str], None]] = None,
+        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ):
         """VisionAgent constructor.
 
@@ -518,23 +518,23 @@ class VisionAgent(Agent):
             self_reflection=self_reflection,
         )
 
-    def log_progress(self, description: str) -> None:
-        _LOGGER.info(description)
+    def log_progress(self, data: Dict[str, Any]) -> None:
+        _LOGGER.info(data)
         if self.report_progress_callback:
-            self.report_progress_callback(description)
+            self.report_progress_callback(data)
 
     def _report_visualization_via_callback(
         self, images: Sequence[Union[str, Path]]
     ) -> None:
         """This is intended for streaming the visualization images via the callback to the client side."""
         if self.report_progress_callback:
-            self.report_progress_callback("<VIZ>")
+            self.report_progress_callback({"log": "<VIZ>"})
             if images:
                 for img in images:
                     self.report_progress_callback(
-                        f"<IMG>base:64{convert_to_b64(img)}</IMG>"
+                        {"log": f"<IMG>base:64{convert_to_b64(img)}</IMG>"}
                     )
-            self.report_progress_callback("</VIZ>")
+            self.report_progress_callback({"log": "</VIZ>"})
 
     def chat_with_workflow(
         self,
@@ -618,8 +618,8 @@ class VisionAgent(Agent):
                 tool_results["answer"] = answer
                 all_tool_results.append(tool_results)
 
-                self.log_progress(f"\tCall Result: {call_results}")
-                self.log_progress(f"\tAnswer: {answer}")
+                self.log_progress({"log": f"\tCall Result: {call_results}"})
+                self.log_progress({"log": f"\tAnswer: {answer}"})
                 answers.append({"task": task_str, "answer": answer})
                 task_depend[task["id"]]["answer"] = answer  # type: ignore
                 task_depend[task["id"]]["call_result"] = call_results  # type: ignore
@@ -644,18 +644,22 @@ class VisionAgent(Agent):
                     final_answer,
                     reflection_images,
                 )
-                self.log_progress(f"Reflection: {reflection}")
+                self.log_progress({"log": f"Reflection: {reflection}"})
                 parsed_reflection = parse_reflect(reflection)
                 if parsed_reflection["Finish"]:
                     break
                 else:
                     reflections += "\n" + parsed_reflection["Reflection"]
             else:
-                self.log_progress("Self Reflection skipped based on user request.")
+                self.log_progress(
+                    {"log": "Self Reflection skipped based on user request."}
+                )
                 break
         # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
-            f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
+            {
+                "log": f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
+            }
         )
 
         if visualize_output:
@@ -718,8 +722,10 @@ class VisionAgent(Agent):
         }
 
         self.log_progress(
-            f"""Going to run the following tool(s) in sequence:
+            {
+                "log": f"""Going to run the following tool(s) in sequence:
 {tabulate(tabular_data=[tool_results], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
+            }
         )
 
         def parse_tool_results(result: Dict[str, Union[Dict, List]]) -> Any:
@@ -764,7 +770,9 @@ class VisionAgent(Agent):
         else:
             task_list = []
         self.log_progress(
-            f"""Planned tasks:
-{tabulate(task_list, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
+            {
+                "log": "Planned tasks:",
+                "plan": task_list,
+            }
         )
         return task_list

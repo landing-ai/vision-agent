@@ -254,7 +254,7 @@ def run_plan(
     exec: Execute,
     code: str,
     tool_recommender: Sim,
-    log_progress: Callable[[Dict[str, str]], None],
+    log_progress: Callable[[Dict[str, Any]], None],
     long_term_memory: Optional[Sim] = None,
     verbosity: int = 0,
 ) -> Tuple[str, str, List[Dict[str, Any]], Dict[str, List[str]]]:
