@@ -176,8 +176,7 @@ def write_and_test_code(
                 }
             )
             _LOGGER.info(
-                f"Debug attempt {
-                    count + 1}, reflection: {fixed_code_and_test['reflections']}"
+                f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
             _CONSOLE.print(
                 Syntax(
