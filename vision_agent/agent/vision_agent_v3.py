@@ -107,7 +107,6 @@ def reflect(
 
 
 def write_and_test_code(
-    input: Union[str, Path],
     task: str,
     tool_info: str,
     tool_utils: str,
@@ -118,6 +117,7 @@ def write_and_test_code(
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
+    input_media: Optional[Union[str, Path]] = None,
 ) -> Dict[str, Any]:
     code = extract_code(
         coder(CODE.format(docstring=tool_info, question=task, feedback=working_memory))
@@ -129,7 +129,7 @@ def write_and_test_code(
                 question=task,
                 code=code,
                 feedback=working_memory,
-                media=input,
+                media=input_media,
             )
         )
     )
@@ -277,13 +277,12 @@ class VisionAgentV3(Agent):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-        self_reflection: bool = False,
     ) -> Dict[str, Any]:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        results = self.chat_with_workflow(input, image, self_reflection)
+        results = self.chat_with_workflow(input, image)
         results.pop("working_memory")
-        return results  # type: ignore
+        return results
 
     def chat_with_workflow(
         self,
@@ -332,7 +331,6 @@ class VisionAgentV3(Agent):
                 self.verbosity,
             )
             results = write_and_test_code(
-                image,
                 plan_i_str,
                 tool_info,
                 UTILITIES_DOCSTRING,
@@ -342,6 +340,7 @@ class VisionAgentV3(Agent):
                 self.debugger,
                 self.log_progress,
                 verbosity=self.verbosity,
+                input_media=image,
             )
             success = cast(bool, results["success"])
             code = cast(str, results["code"])
