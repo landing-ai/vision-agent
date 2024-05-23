@@ -149,7 +149,7 @@ def write_and_test_code(
         )
         log_progress(
             {
-                "log": "First result:",
+                "log": "Result:",
                 "result": result,
             }
         )
@@ -178,7 +178,7 @@ def write_and_test_code(
             log_progress(
                 {
                     "log": f"Debug attempt {count + 1}, reflection:",
-                    "reflection": fixed_code_and_test["reflections"],
+                    "result": fixed_code_and_test["reflections"],
                 }
             )
             _LOGGER.info(
@@ -339,6 +339,12 @@ class VisionAgentV3(Agent):
 
             reflection = reflect(chat, plan_i_str, code, self.planner)
             if self.verbosity > 0:
+                self.log_progress(
+                    {
+                        "log": "Reflection:",
+                        "reflection": reflection,
+                    }
+                )
                 _LOGGER.info(f"Reflection: {reflection}")
             feedback = cast(str, reflection["feedback"])
             success = cast(bool, reflection["success"])
