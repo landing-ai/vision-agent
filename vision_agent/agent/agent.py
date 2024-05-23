@@ -9,7 +9,7 @@ class Agent(ABC):
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         pass
 
     @abstractmethod
