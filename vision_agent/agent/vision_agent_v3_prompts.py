@@ -149,7 +149,7 @@ This is the documentation for the functions you have access to. You may call any
 
 **Input Code Snippet**:
 ```python
-### Please decided how would you want to generate test cases. Based on incomplete code or completed version.
+### Please decide how would you want to generate test cases. Based on incomplete code or completed version.
 {code}
 ```
 
@@ -159,8 +159,10 @@ This is the documentation for the functions you have access to. You may call any
 **Instructions**:
 1. Verify the fundamental functionality under normal conditions.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
-3. DO NOT use any files that are not provided by the user's instructions, your test must be run and will crash if it tries to load a non-existent file.
+3. Your test case MUST run only on the given image which is {media}
+4. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
 4. DO NOT mock any functions, you must test their functionality as is.
+5. DO NOT assert the output value, run the code and verify it runs without any errors and assert only the output format or data structure.
 """
 
 

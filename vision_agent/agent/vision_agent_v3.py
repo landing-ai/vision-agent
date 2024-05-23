@@ -107,6 +107,7 @@ def reflect(
 
 
 def write_and_test_code(
+    input: Union[str, Path],
     task: str,
     tool_info: str,
     tool_utils: str,
@@ -123,18 +124,18 @@ def write_and_test_code(
     test = extract_code(
         tester(
             SIMPLE_TEST.format(
-                docstring=tool_utils, question=task, code=code, feedback=working_memory
+                docstring=tool_utils, question=task, code=code, feedback=working_memory, media=input,
             )
         )
     )
 
     success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
     if verbosity == 2:
-        _LOGGER.info("First code and tests:")
+        _LOGGER.info("Initial code and tests:")
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
         )
-        _LOGGER.info(f"First result: {result}")
+        _LOGGER.info(f"Initial result: {result}")
 
     count = 0
     new_working_memory = []
@@ -167,16 +168,18 @@ def write_and_test_code(
             _LOGGER.info(f"Debug result: {result}")
         count += 1
 
-    if verbosity == 1:
+    if verbosity >= 1:
+        _LOGGER.info("Final code and tests:")
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
         )
-        _LOGGER.info(f"Result: {result}")
+        _LOGGER.info(f"Final Result: {result}")
 
     return {
         "code": code,
         "test": test,
         "success": success,
+        "test_result": result,
         "working_memory": new_working_memory,
     }
 
@@ -222,22 +225,25 @@ class VisionAgentV3(Agent):
             else tool_recommender
         )
         self.verbosity = verbosity
-        self.max_retries = 3
+        self.max_retries = 2
 
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
         image: Optional[Union[str, Path]] = None,
-    ) -> str:
+        self_reflection: bool = False,
+    ) -> Dict[str, Any]:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        results = self.chat_with_workflow(input, image)
-        return results["code"]  # type: ignore
+        results = self.chat_with_workflow(input, image, self_reflection)
+        results.pop("working_memory")
+        return results  # type: ignore
 
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
         image: Optional[Union[str, Path]] = None,
+        self_reflection: bool = False,
     ) -> Dict[str, Any]:
         if len(chat) == 0:
             raise ValueError("Chat cannot be empty.")
@@ -260,7 +266,7 @@ class VisionAgentV3(Agent):
                 chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner
             )
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
-            if self.verbosity == 1 or self.verbosity == 2:
+            if self.verbosity >= 1:
                 _LOGGER.info(
                     f"""
 {tabulate(tabular_data=plan_i, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
@@ -272,6 +278,7 @@ class VisionAgentV3(Agent):
                 self.verbosity,
             )
             results = write_and_test_code(
+                image,
                 plan_i_str,
                 tool_info,
                 UTILITIES_DOCSTRING,
@@ -287,16 +294,18 @@ class VisionAgentV3(Agent):
             working_memory.extend(results["working_memory"])  # type: ignore
             plan.append({"code": code, "test": test, "plan": plan_i})
 
-            reflection = reflect(chat, plan_i_str, code, self.planner)
-            if self.verbosity > 0:
-                _LOGGER.info(f"Reflection: {reflection}")
-            feedback = cast(str, reflection["feedback"])
-            success = cast(bool, reflection["success"])
-            working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
+            if self_reflection:
+                reflection = reflect(chat, plan_i_str, code, self.planner)
+                if self.verbosity > 0:
+                    _LOGGER.info(f"Reflection: {reflection}")
+                feedback = cast(str, reflection["feedback"])
+                success = cast(bool, reflection["success"])
+                working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
 
         return {
             "code": code,
             "test": test,
+            "test_result": results["test_result"],
             "plan": plan,
             "working_memory": working_memory,
         }
