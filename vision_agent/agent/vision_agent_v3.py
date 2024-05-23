@@ -114,7 +114,7 @@ def write_and_test_code(
     coder: LLM,
     tester: LLM,
     debugger: LLM,
-    log_progress: Callable[[Dict[str, str]], None],
+    log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
 ) -> Dict[str, Any]:
@@ -209,7 +209,7 @@ def write_and_test_code(
 def retrieve_tools(
     plan: List[Dict[str, str]],
     tool_recommender: Sim,
-    log_progress: Callable[[Dict[str, str]], None],
+    log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
 ) -> str:
     tool_info = []
@@ -352,7 +352,7 @@ class VisionAgentV3(Agent):
             "working_memory": working_memory,
         }
 
-    def log_progress(self, data: Dict[str, any]) -> None:
+    def log_progress(self, data: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
         pass

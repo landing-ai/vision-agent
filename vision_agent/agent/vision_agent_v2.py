@@ -465,7 +465,7 @@ class VisionAgentV2(Agent):
             "plan": plan,
         }
 
-    def log_progress(self, data: Dict[str, any]) -> None:
+    def log_progress(self, data: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
         pass
