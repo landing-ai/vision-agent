@@ -134,8 +134,14 @@ def write_and_test_code(
         _LOGGER.info("First code and tests:")
         log_progress(
             {
-                "log": "First code and tests:",
-                "code": f"{code}\n{test}",
+                "log": "Code:",
+                "code": code,
+            }
+        )
+        log_progress(
+            {
+                "log": "Test:",
+                "code": test,
             }
         )
         _CONSOLE.print(
