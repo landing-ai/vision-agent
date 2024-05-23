@@ -179,17 +179,23 @@ def write_and_exec_code(
     success, result = exec.run_isolation(code)
     if verbosity == 2:
         _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
-        log_progress({
-            "log": f"Code success: {success}",
-        })
-        log_progress({
-            "log": "Code:",
-            "code": code,
-        })
-        log_progress({
-            "log": "Result:",
-            "result": str(result),
-        })
+        log_progress(
+            {
+                "log": f"Code success: {success}",
+            }
+        )
+        log_progress(
+            {
+                "log": "Code:",
+                "code": code,
+            }
+        )
+        log_progress(
+            {
+                "log": "Result:",
+                "result": str(result),
+            }
+        )
         _LOGGER.info(f"\tCode success: {success}, result: {str(result)}")
     working_memory: Dict[str, List[str]] = {}
     while not success and counter < max_retry:
@@ -216,14 +222,18 @@ def write_and_exec_code(
             _CONSOLE.print(
                 Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
             )
-            log_progress({
-                "log": "Debugging reflection:",
-                "reflection": reflection,
-            })
-            log_progress({
-                "log": "Result:",
-                "result": result,
-            })
+            log_progress(
+                {
+                    "log": "Debugging reflection:",
+                    "reflection": reflection,
+                }
+            )
+            log_progress(
+                {
+                    "log": "Result:",
+                    "result": result,
+                }
+            )
             _LOGGER.info(f"\tDebugging reflection: {reflection}, result: {result}")
 
         if success:
@@ -255,10 +265,9 @@ def run_plan(
     working_memory: Dict[str, List[str]] = {}
 
     for task in active_plan:
-        log_progress({
-            "log": "Going to run the following task(s) in sequence:",
-            "task": task
-        })
+        log_progress(
+            {"log": "Going to run the following task(s) in sequence:", "task": task}
+        )
         _LOGGER.info(
             f"""
 {tabulate(tabular_data=[task], headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
@@ -267,9 +276,7 @@ def run_plan(
         tool_info = "\n".join([e["doc"] for e in tools])
 
         if verbosity == 2:
-            log_progress({
-                "log": f"Tools retrieved: {[e['desc'] for e in tools]}"
-            })
+            log_progress({"log": f"Tools retrieved: {[e['desc'] for e in tools]}"})
             _LOGGER.info(f"Tools retrieved: {[e['desc'] for e in tools]}")
 
         if long_term_memory is not None:
@@ -301,13 +308,17 @@ def run_plan(
                 Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
             )
 
-        log_progress({
-            "log": f"Code success: {success}",
-        })
-        log_progress({
-            "log": "Result:",
-            "result": str(result),
-        })
+        log_progress(
+            {
+                "log": f"Code success: {success}",
+            }
+        )
+        log_progress(
+            {
+                "log": "Result:",
+                "result": str(result),
+            }
+        )
         _LOGGER.info(f"\tCode success: {success} result: {str(result)}")
 
         task["success"] = success
@@ -400,10 +411,12 @@ class VisionAgentV2(Agent):
                     working_code = task["code"]
 
         user_req, plan = write_plan(chat, plan, TOOL_DESCRIPTIONS, self.planner)
-        self.log_progress({
-            "log": "Plans:",
-            "plan": plan,
-        })
+        self.log_progress(
+            {
+                "log": "Plans:",
+                "plan": plan,
+            }
+        )
         _LOGGER.info(
             f"""Plan:
 {tabulate(tabular_data=plan, headers="keys", tablefmt="mixed_grid", maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"""
@@ -437,10 +450,12 @@ class VisionAgentV2(Agent):
 
             retries += 1
 
-        self.log_progress({
-            "log": f"The Vision Agent V2 has concluded this chat.\nSuccess: {success}",
-            "finished": True,
-        })
+        self.log_progress(
+            {
+                "log": f"The Vision Agent V2 has concluded this chat.\nSuccess: {success}",
+                "finished": True,
+            }
+        )
 
         return {
             "code": working_code,
