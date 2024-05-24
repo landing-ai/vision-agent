@@ -416,12 +416,15 @@ def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
     return cast(float, np.min(dist_matrix))
 
 
-def closest_box_distance(box1: List[float], box2: List[float]) -> float:
+def closest_box_distance(
+    box1: List[float], box2: List[float], image_size: Tuple[int, int]
+) -> float:
     """'closest_box_distance' calculates the closest distance between two bounding boxes.
 
     Parameters:
         box1 (List[float]): The first bounding box.
         box2 (List[float]): The second bounding box.
+        image_size (Tuple[int, int]): The size of the image given as (height, width).
 
     Returns:
         float: The closest distance between the two bounding boxes.
@@ -432,8 +435,8 @@ def closest_box_distance(box1: List[float], box2: List[float]) -> float:
     141.42
     """
 
-    x11, y11, x12, y12 = box1
-    x21, y21, x22, y22 = box2
+    x11, y11, x12, y12 = denormalize_bbox(box1, image_size)
+    x21, y21, x22, y22 = denormalize_bbox(box2, image_size)
 
     horizontal_distance = np.max([0, x21 - x12, x11 - x22])
     vertical_distance = np.max([0, y21 - y12, y11 - y22])
