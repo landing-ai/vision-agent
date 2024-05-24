@@ -363,6 +363,8 @@ class VisionAgentV3(Agent):
                 success = cast(bool, reflection["success"])
                 working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
 
+            retries += 1
+
         self.log_progress(
             {
                 "log": f"The Vision Agent V3 has concluded this chat.\nSuccess: {success}",

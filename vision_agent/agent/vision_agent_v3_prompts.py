@@ -61,6 +61,7 @@ This is the documentation for the functions you have access to. You may call any
 2. **Algorithm/Method Selection**: Decide on the most efficient way.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code.
+5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools.tools_v2 import *`. Use a debug flag in the function parameters to toggle logging on and off.
 """
 
 TEST = """
@@ -161,8 +162,10 @@ This is the documentation for the functions you have access to. You may call any
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
 3. Your test case MUST run only on the given image which is {media}
 4. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
-4. DO NOT mock any functions, you must test their functionality as is.
-5. DO NOT assert the output value, run the code and verify it runs without any errors and assert only the output format or data structure.
+5. DO NOT mock any functions, you must test their functionality as is.
+6. DO NOT assert the output value, run the code and verify it runs without any errors and assert only the output format or data structure.
+7. DO NOT import the testing function as it will available in the testing environment.
+8. Print the output of the function that is being tested.
 """
 
 
