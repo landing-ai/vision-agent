@@ -186,6 +186,18 @@ def write_and_test_code(
                     "result": fixed_code_and_test["reflections"],
                 }
             )
+            log_progress(
+                {
+                    "log": "Debug code:",
+                    "code": code,
+                }
+            )
+            log_progress(
+                {
+                    "log": "Debug test:",
+                    "code": test,
+                }
+            )
             _LOGGER.info(
                 f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
@@ -207,6 +219,32 @@ def write_and_test_code(
         _LOGGER.info("Final code and tests:")
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
+        )
+
+        if count == max_retries:
+            log_progress(
+                {
+                    "log": f"{max_retries} max retries reached.",
+                }
+            )
+
+        log_progress(
+            {
+                "log": "Final code:",
+                "code": code,
+            }
+        )
+        log_progress(
+            {
+                "log": "Final test:",
+                "code": test,
+            }
+        )
+        log_progress(
+            {
+                "log": "Final result:",
+                "result": result,
+            }
         )
         _LOGGER.info(f"Final Result: {result}")
 
@@ -367,7 +405,7 @@ class VisionAgentV3(Agent):
 
         self.log_progress(
             {
-                "log": f"The Vision Agent V3 has concluded this chat.\nSuccess: {success}",
+                "log": f"The Vision Agent V3 has concluded this chat.",
                 "finished": True,
             }
         )
