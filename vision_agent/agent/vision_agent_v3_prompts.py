@@ -3,6 +3,14 @@ USER_REQ = """
 {user_request}
 """
 
+FULL_TASK = """
+## User Request
+{user_request}
+
+## Subtasks
+{subtasks}
+"""
+
 FEEDBACK = """
 ## This contains code and feedback from previous runs and is used for providing context so you do not make the same mistake again.
 
@@ -171,7 +179,7 @@ This is the documentation for the functions you have access to. You may call any
 
 
 FIX_BUG = """
-**Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so feel free to run !pip install to install missing packages.
+**Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so you can run !pip install to install missing packages.
 
 **Instructions**:
 Please re-complete the code to fix the error message. Here is the previous version:
