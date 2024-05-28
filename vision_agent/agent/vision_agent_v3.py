@@ -333,7 +333,7 @@ class VisionAgentV3(Agent):
                 self.verbosity,
             )
             results = write_and_test_code(
-                FULL_TASK.format(user_request=chat[0]["content"], subtasks=plan_i_str),  # type: ignore
+                FULL_TASK.format(user_request=chat[0]["content"], subtasks=plan_i_str),
                 tool_info,
                 UTILITIES_DOCSTRING,
                 format_memory(working_memory),
