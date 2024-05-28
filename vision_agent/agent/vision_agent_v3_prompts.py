@@ -61,8 +61,7 @@ This is the documentation for the functions you have access to. You may call any
 2. **Algorithm/Method Selection**: Decide on the most efficient way.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code.
-5. **Initialization**: Initialize the variables with values provided in the question - {question}.
-6.. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools.tools_v2 import *`. Use a debug flag in the function parameters to toggle logging on and off.
+5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools.tools_v2 import *`. Use a debug flag in the function parameters to toggle logging on and off.
 """
 
 TEST = """
