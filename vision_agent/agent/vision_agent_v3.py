@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast, Callable, no_type_check
+from typing import Any, Callable, Dict, List, Optional, Union, cast, no_type_check
 
 from rich.console import Console
 from rich.syntax import Syntax
@@ -14,6 +14,7 @@ from vision_agent.agent.vision_agent_v3_prompts import (
     CODE,
     FEEDBACK,
     FIX_BUG,
+    FULL_TASK,
     PLAN,
     REFLECT,
     SIMPLE_TEST,
@@ -332,7 +333,7 @@ class VisionAgentV3(Agent):
                 self.verbosity,
             )
             results = write_and_test_code(
-                plan_i_str,
+                FULL_TASK.format(user_request=chat[0]["content"], subtasks=plan_i_str),  # type: ignore
                 tool_info,
                 UTILITIES_DOCSTRING,
                 format_memory(working_memory),
@@ -350,7 +351,14 @@ class VisionAgentV3(Agent):
             plan.append({"code": code, "test": test, "plan": plan_i})
 
             if self_reflection:
-                reflection = reflect(chat, plan_i_str, code, self.planner)
+                reflection = reflect(
+                    chat,
+                    FULL_TASK.format(
+                        user_request=chat[0]["content"], subtasks=plan_i_str
+                    ),
+                    code,
+                    self.planner,
+                )
                 if self.verbosity > 0:
                     self.log_progress(
                         {
