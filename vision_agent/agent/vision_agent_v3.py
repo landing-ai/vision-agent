@@ -20,6 +20,7 @@ from vision_agent.agent.vision_agent_v3_prompts import (
     USER_REQ,
 )
 from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
 from vision_agent.utils.sim import Sim
@@ -76,7 +77,8 @@ def write_plan(
     chat: List[Dict[str, str]],
     tool_desc: str,
     working_memory: str,
-    model: LLM,
+    model: Union[LLM, LMM],
+    images: Optional[List[Union[str, Path]]] = None,
 ) -> List[Dict[str, str]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -86,7 +88,10 @@ def write_plan(
     context = USER_REQ.format(user_request=user_request)
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))["plan"]  # type: ignore
+    if isinstance(model, OpenAILMM):
+        return extract_json(model.chat(chat, images=images))["plan"]  # type: ignore
+    else:
+        return extract_json(model.chat(chat))["plan"]  # type: ignore
 
 
 def reflect(
@@ -309,7 +314,7 @@ class VisionAgentV3(Agent):
 
         while not success and retries < self.max_retries:
             plan_i = write_plan(
-                chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner
+                chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner, images=[image]
             )
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
             if self.verbosity >= 1:
