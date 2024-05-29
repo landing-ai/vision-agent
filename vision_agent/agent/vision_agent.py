@@ -21,6 +21,7 @@ from vision_agent.agent.vision_agent_prompts import (
     USER_REQ,
 )
 from vision_agent.llm import LLM, OpenAILLM
+from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOL_DESCRIPTIONS, TOOLS_DF, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
 from vision_agent.utils.sim import Sim
@@ -77,7 +78,8 @@ def write_plan(
     chat: List[Dict[str, str]],
     tool_desc: str,
     working_memory: str,
-    model: LLM,
+    model: Union[LLM, LMM],
+    media: Optional[List[Union[str, Path]]] = None,
 ) -> List[Dict[str, str]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -87,7 +89,10 @@ def write_plan(
     context = USER_REQ.format(user_request=user_request)
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))["plan"]  # type: ignore
+    if isinstance(model, OpenAILMM):
+        return extract_json(model.chat(chat, images=media))["plan"]  # type: ignore
+    else:
+        return extract_json(model.chat(chat))["plan"]  # type: ignore
 
 
 def reflect(
@@ -324,7 +329,7 @@ class VisionAgent(Agent):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, media)
         results.pop("working_memory")
-        return results["code"]  # type: ignore
+        return results  # type: ignore
 
     def chat_with_workflow(
         self,
@@ -363,7 +368,11 @@ class VisionAgent(Agent):
 
         while not success and retries < self.max_retries:
             plan_i = write_plan(
-                chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner
+                chat,
+                TOOL_DESCRIPTIONS,
+                format_memory(working_memory),
+                self.planner,
+                media=[media] if media else None,
             )
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
             if self.verbosity >= 1:
