@@ -173,9 +173,9 @@ This is the documentation for the functions you have access to. You may call any
 5. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
 6. DO NOT mock any functions, you must test their functionality as is.
 7. DO NOT assert the output value, run the code and assert only the output format or data structure.
-9. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
-8. DO NOT import the testing function as it will available in the testing environment.
-9. Print the output of the function that is being tested.
+8. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
+9. DO NOT import the testing function as it will available in the testing environment.
+10. Print the output of the function that is being tested.
 """
 
 
