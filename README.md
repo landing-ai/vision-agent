@@ -9,13 +9,12 @@
 ![version](https://img.shields.io/pypi/pyversions/vision-agent)
 </div>
 
-Vision Agent is a library that helps you utilize agent frameworks for your vision tasks.
-Many current vision problems can easily take hours or days to solve, you need to find the
-right model, figure out how to use it, possibly write programming logic around it to
-accomplish the task you want or even more expensive, train your own model. Vision Agent
-aims to provide an in-seconds experience by allowing users to describe their problem in
-text and utilizing agent frameworks to solve the task for them. Check out our discord
-for updates and roadmaps!
+Vision Agent is a library that helps you utilize agent frameworks to generate code to
+solve your vision task. Many current vision problems can easily take hours or days to
+solve, you need to find the right model, figure out how to use it and program it to
+accomplish the task you want. Vision Agent aims to provide an in-seconds experience by
+allowing users to describe their problem in text and have the agent framework generate
+code to solve the task for them. Check out our discord for updates and roadmaps!
 
 ## Documentation
 
@@ -37,70 +36,71 @@ using Azure OpenAI please see the Azure setup section):
 export OPENAI_API_KEY="your-api-key"
 ```
 
-### Vision Agents
-You can interact with the agents as you would with any LLM or LMM model:
+### Vision Agent
+You can interact with the agent as you would with any LLM or LMM model:
 
 ```python
 >>> from vision_agent.agent import VisionAgent
 >>> agent = VisionAgent()
->>> agent("What percentage of the area of this jar is filled with coffee beans?", image="jar.jpg")
-"The percentage of area of the jar filled with coffee beans is 25%."
+>>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
 ```
 
-To better understand how the model came up with it's answer, you can also run it in
-debug mode by passing in the verbose argument:
+Which produces the following code:
+```python
+from vision_agent.tools import load_image, grounding_sam
+
+def calculate_filled_percentage(image_path: str) -> float:
+    # Step 1: Load the image
+    image = load_image(image_path)
+    
+    # Step 2: Segment the jar
+    jar_segments = grounding_sam(prompt="jar", image=image)
+    
+    # Step 3: Segment the coffee beans
+    coffee_beans_segments = grounding_sam(prompt="coffee beans", image=image)
+    
+    # Step 4: Calculate the area of the segmented jar
+    jar_area = 0
+    for segment in jar_segments:
+        jar_area += segment['mask'].sum()
+    
+    # Step 5: Calculate the area of the segmented coffee beans
+    coffee_beans_area = 0
+    for segment in coffee_beans_segments:
+        coffee_beans_area += segment['mask'].sum()
+    
+    # Step 6: Compute the percentage of the jar area that is filled with coffee beans
+    if jar_area == 0:
+        return 0.0  # To avoid division by zero
+    filled_percentage = (coffee_beans_area / jar_area) * 100
+    
+    # Step 7: Return the computed percentage
+    return filled_percentage
+```
+
+To better understand how the model came up with it's answer, you can run it in debug
+mode by passing in the verbose argument:
 
 ```python
->>> agent = VisionAgent(verbose=True)
+>>> agent = VisionAgent(verbose=2)
 ```
 
-You can also have it return the workflow it used to complete the task along with all
-the individual steps and tools to get the answer:
+You can also have it return more information by calling `chat_with_workflow`:
 
 ```python
->>> resp, workflow = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of this jar is filled with coffee beans?"}], image="jar.jpg")
->>> print(workflow)
-[{"task": "Segment the jar using 'grounding_sam_'.",
-  "tool": "grounding_sam_",
-  "parameters": {"prompt": "jar", "image": "jar.jpg"},
-  "call_results": [[
-    {
-      "labels": ["jar"],
-      "scores": [0.99],
-      "bboxes": [
-        [0.58, 0.2, 0.72, 0.45],
-      ],
-      "masks": "mask.png"
-    }
-  ]],
-  "answer": "The jar is located at [0.58, 0.2, 0.72, 0.45].",
-},
-{"visualize_output": "final_output.png"}]
+>>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?"}], media="jar.jpg")
+>>> print(results)
+{
+    "code": "from vision_agent.tools import ..."
+    "test": "calculate_filled_percentage('jar.jpg')",
+    "test_result": "...",
+    "plan": [{"code": "...", "test": "...", "plan": "..."}, ...],
+    "working_memory": ...,
+}
 ```
 
-You can also provide reference data for the model to utilize. For example, if you want
-to utilize VisualPromptCounting:
-
-```python
-agent(
-    "How many apples are in this image?",
-    image="apples.jpg",
-    reference_data={"bbox": [0.1, 0.11, 0.24, 0.25]},
-)
-```
-Where `[0.1, 0.11, 0.24, 0.25]` is the normalized bounding box coordinates of an apple.
-Similarly for DINOv you can provide a reference image and mask:
-
-```python
-agent(
-    "Can you detect all of the objects similar to the mask I've provided?",
-    image="image.jpg",
-    reference_data={"mask": "reference_mask.png", "image": "reference_image.png"},
-)
-```
-Here, `reference_mask.png` and `reference_image.png` in `reference_data` could be any
-image with it's corresponding mask that is the object you want to detect in `image.jpg`.
-You can find a demo app to generate masks for DINOv [here](examples/mask_app/).
+With this you can examine more detailed information such as the etesting code, testing
+results, plan or working memory it used to complete the task.
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
@@ -119,57 +119,6 @@ you. For example:
   ]
 }]
 ```
-
-#### Custom Tools
-You can also add your own custom tools for your vision agent to use:
-
-```python
-from vision_agent.tools import Tool, register_tool
-@register_tool
-class NumItems(Tool):
-   name = "num_items_"
-   description = "Returns the number of items in a list."
-   usage = {
-       "required_parameters": [{"name": "prompt", "type": "list"}],
-       "examples": [
-           {
-               "scenario": "How many items are in this list? ['a', 'b', 'c']",
-               "parameters": {"prompt": "['a', 'b', 'c']"},
-           }
-       ],
-   }
-   def __call__(self, prompt: list[str]) -> int:
-       return len(prompt)
-```
-This will register it with the list of tools Vision Agent has access to. It will be able
-to pick it based on the tool description and use it based on the usage provided. You can
-find an example that creates a custom tool for template matching [here](examples/custom_tools/).
-
-#### Tool List
-| Tool | Description |
-| --- | --- |
-| CLIP | CLIP is a tool that can classify or tag any image given a set of input classes or tags. |
-| ImageCaption| ImageCaption is a tool that can generate a caption for an image. |
-| GroundingDINO | GroundingDINO is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. |
-| GroundingSAM | GroundingSAM is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. |
-| DINOv | DINOv is a tool that can detect arbitrary objects with using a referring mask. |
-| Crop | Crop crops an image given a bounding box and returns a file name of the cropped image. |
-| BboxArea | BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places. |
-| SegArea | SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places. |
-| BboxIoU | BboxIoU returns the intersection over union of two bounding boxes normalized to 2 decimal places. |
-| SegIoU | SegIoU returns the intersection over union of two segmentation masks normalized to 2 decimal places. |
-| BoxDistance | BoxDistance returns the minimum distance between two bounding boxes normalized to 2 decimal places. |
-| MaskDistance | MaskDistance returns the minimum distance between two segmentation masks in pixel units |
-| BboxContains | BboxContains returns the intersection of two boxes over the target box area. It is good for check if one box is contained within another box. |
-| ExtractFrames | ExtractFrames extracts frames with motion from a video. |
-| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image. |
-| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt. |
-| VisualQuestionAnswering | VisualQuestionAnswering is a tool that can explain the contents of an image and answer questions about the image. |
-| ImageQuestionAnswering | ImageQuestionAnswering is similar to VisualQuestionAnswering but does not rely on OpenAI and instead uses a dedicated model for the task. |
-| OCR | OCR returns the text detected in an image along with the location. |
-
-
-It also has a basic set of calculate tools such as add, subtract, multiply and divide.
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:
