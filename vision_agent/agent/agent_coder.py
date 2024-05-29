@@ -67,11 +67,15 @@ def parse_file_name(s: str) -> str:
     return "".join([p for p in s.split(" ") if p.endswith(".png")])
 
 
-def write_program(question: str, feedback: str, model: LLM) -> str:
+def write_program(question: str, feedback: str, model: LLM, media: Optional[Union[str, Path]] = None) -> str:
     prompt = PROGRAM.format(
         docstring=TOOL_DOCSTRING, question=question, feedback=feedback
     )
-    completion = model(prompt)
+    if isinstance(model, OpenAILMM):
+        completion = model(prompt, images=[media] if media else None)
+    else:
+        completion = model(prompt)
+
     return preprocess_data(completion)
 
 
@@ -168,7 +172,7 @@ class AgentCoder(Agent):
         code = ""
         feedback = ""
         for _ in range(self.max_turns):
-            code = write_program(question, feedback, self.coder_agent)
+            code = write_program(question, feedback, self.coder_agent, media=media)
             if self.verbose:
                 _CONSOLE.print(
                     Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)
