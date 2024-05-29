@@ -25,7 +25,7 @@ from vision_agent.agent.data_interpreter_prompts import (
     USER_REQ_SUBTASK_WM_CONTEXT,
 )
 from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF
+from vision_agent.tools import TOOL_DESCRIPTIONS, TOOLS_DF
 from vision_agent.utils import Execute, Sim
 
 logging.basicConfig(level=logging.INFO)

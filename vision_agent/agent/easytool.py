@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM
-from vision_agent.tools import TOOLS
+from vision_agent.tools.easytool_tools import TOOLS
 
 from .agent import Agent
 from .easytool_prompts import (

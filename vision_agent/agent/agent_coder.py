@@ -18,7 +18,7 @@ from vision_agent.agent.agent_coder_prompts import (
 )
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools.tools_v2 import TOOL_DOCSTRING, UTILITIES_DOCSTRING
+from vision_agent.tools import TOOL_DOCSTRING, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
 
 IMPORT_HELPER = """
@@ -38,7 +38,7 @@ import numpy as np
 import string
 from typing import *
 from collections import *
-from vision_agent.tools.tools_v2 import *
+from vision_agent.tools import *
 """
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)

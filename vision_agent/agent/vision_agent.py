@@ -21,7 +21,7 @@ from vision_agent.agent.vision_agent_prompts import (
     USER_REQ,
 )
 from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF, UTILITIES_DOCSTRING
+from vision_agent.tools import TOOL_DESCRIPTIONS, TOOLS_DF, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
 from vision_agent.utils.sim import Sim
 

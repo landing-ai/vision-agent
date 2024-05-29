@@ -27,7 +27,7 @@ from vision_agent.agent.easytool_v2_prompts import (
 )
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools import TOOLS
+from vision_agent.tools.easytool_tools import TOOLS
 from vision_agent.utils.image_utils import (
     convert_to_b64,
     overlay_bboxes,

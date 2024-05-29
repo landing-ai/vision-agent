@@ -49,7 +49,7 @@ CODE = """
 **Task**: As a programmer, you are required to complete the function. Use a Chain-of-Thought approach to break down the problem, create pseudocode, and then write the code in Python language. Ensure that your code is efficient, readable, and well-commented. Return the requested information from the function you create. Do not call your code, a test will be run after the code is submitted.
 
 **Documentation**:
-This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`.
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
 
 {docstring}
 
@@ -69,14 +69,14 @@ This is the documentation for the functions you have access to. You may call any
 2. **Algorithm/Method Selection**: Decide on the most efficient way.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code.
-5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools.tools_v2 import *`. Use a debug flag in the function parameters to toggle logging on and off.
+5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools import *`. Use a debug flag in the function parameters to toggle logging on and off.
 """
 
 TEST = """
 **Role**: As a tester, your task is to create comprehensive test cases for the provided code. These test cases should encompass Basic and Edge case scenarios to ensure the code's robustness and reliability if possible.
 
 **Documentation**:
-This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`. You do not need to test these functions. Test only the code provided by the user.
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`. You do not need to test these functions. Test only the code provided by the user.
 
 {docstring}
 
@@ -149,7 +149,7 @@ SIMPLE_TEST = """
 **Role**: As a tester, your task is to create a simple test case for the provided code. This test case should verify the fundamental functionality under normal conditions.
 
 **Documentation**:
-This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools.tools_v2 import *`. You do not need to test these functions, only the code provided by the user.
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`. You do not need to test these functions, only the code provided by the user.
 
 {docstring}
 

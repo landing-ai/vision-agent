@@ -6,14 +6,13 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
 from langsmith.wrappers import wrap_openai
 from openai import AzureOpenAI, OpenAI
 
-from vision_agent.tools import (
-    CHOOSE_PARAMS,
+from vision_agent.tools.easytool_tools import (
     CLIP,
-    SYSTEM_PROMPT,
     GroundingDINO,
     GroundingSAM,
     ZeroShotCounting,
 )
+from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 
 
 class LLM(ABC):
@@ -141,7 +140,7 @@ class OpenAILLM(LLM):
         return lambda x: ZeroShotCounting()(**{"image": x})
 
     def generate_image_qa_tool(self, question: str) -> Callable:
-        from vision_agent.tools import ImageQuestionAnswering
+        from vision_agent.tools.easytool_tools import ImageQuestionAnswering
 
         return lambda x: ImageQuestionAnswering()(**{"prompt": question, "image": x})
 
