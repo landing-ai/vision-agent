@@ -140,29 +140,23 @@ def write_and_test_code(
         _LOGGER.info("Initial code and tests:")
         log_progress(
             {
-                "log": "Code:",
-                "code": code,
-            }
-        )
-        log_progress(
-            {
-                "log": "Test:",
-                "code": test,
+                "type": "initial_attempt",
+                "payload": {
+                    "code": code,
+                    "test": test,
+                    "result": result,
+                    "success": success,
+                },
             }
         )
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
         )
-        log_progress(
-            {
-                "log": "Result:",
-                "result": result,
-            }
-        )
         _LOGGER.info(f"Initial result: {result}")
 
     count = 0
     new_working_memory = []
+
     while not success and count < max_retries:
         fixed_code_and_test = extract_json(
             debugger(
@@ -183,20 +177,15 @@ def write_and_test_code(
         if verbosity == 2:
             log_progress(
                 {
-                    "log": f"Debug attempt {count + 1}, reflection:",
-                    "result": fixed_code_and_test["reflections"],
-                }
-            )
-            log_progress(
-                {
-                    "log": "Debug code:",
-                    "code": code,
-                }
-            )
-            log_progress(
-                {
-                    "log": "Debug test:",
-                    "code": test,
+                    "type": "debug_attempt",
+                    "payload": {
+                        "count": count + 1,
+                        "code": code,
+                        "test": test,
+                        "result": result,
+                        "success": success,
+                        "reflection": fixed_code_and_test["reflections"],
+                    },
                 }
             )
             _LOGGER.info(
@@ -207,12 +196,6 @@ def write_and_test_code(
                     f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True
                 )
             )
-            log_progress(
-                {
-                    "log": "Debug result:",
-                    "result": result,
-                }
-            )
             _LOGGER.info(f"Debug result: {result}")
         count += 1
 
@@ -221,30 +204,13 @@ def write_and_test_code(
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
         )
-
-        if count == max_retries:
-            log_progress(
-                {
-                    "log": f"{max_retries} max retries reached.",
-                }
-            )
-
         log_progress(
             {
-                "log": "Final code:",
-                "code": code,
-            }
-        )
-        log_progress(
-            {
-                "log": "Final test:",
-                "code": test,
-            }
-        )
-        log_progress(
-            {
-                "log": "Final result:",
-                "result": result,
+                "type": "final_result",
+                "payload": {
+                    "success": success,
+                    "reach_max_retries": count == max_retries,
+                },
             }
         )
         _LOGGER.info(f"Final Result: {result}")
@@ -273,8 +239,8 @@ def retrieve_tools(
     if verbosity == 2:
         log_progress(
             {
-                "log": "Retrieved tools:",
-                "tools": tool_desc,
+                "type": "tools",
+                "payload": tool_desc,
             }
         )
         _LOGGER.info(f"Tools: {tool_desc}")
@@ -354,8 +320,8 @@ class VisionAgentV3(Agent):
             if self.verbosity >= 1:
                 self.log_progress(
                     {
-                        "log": "Going to run the following plan(s) in sequence:\n",
-                        "plan": plan_i,
+                        "type": "plans",
+                        "payload": plan_i,
                     }
                 )
 
@@ -400,7 +366,7 @@ class VisionAgentV3(Agent):
                 if self.verbosity > 0:
                     self.log_progress(
                         {
-                            "log": "Reflection:",
+                            "type": "final_reflection",
                             "reflection": reflection,
                         }
                     )
@@ -413,8 +379,7 @@ class VisionAgentV3(Agent):
 
         self.log_progress(
             {
-                "log": f"The Vision Agent V3 has concluded this chat.",
-                "finished": True,
+                "type": "agent_conclusion",
             }
         )
 
