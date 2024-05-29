@@ -169,11 +169,13 @@ This is the documentation for the functions you have access to. You may call any
 1. Verify the fundamental functionality under normal conditions.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
 3. Your test case MUST run only on the given image which is {media}
-4. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
-5. DO NOT mock any functions, you must test their functionality as is.
-6. DO NOT assert the output value, run the code and verify it runs without any errors and assert only the output format or data structure.
-7. DO NOT import the testing function as it will available in the testing environment.
-8. Print the output of the function that is being tested.
+4. Your test case MUST run only with the given values which is available in the question - {question}
+5. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
+6. DO NOT mock any functions, you must test their functionality as is.
+7. DO NOT assert the output value, run the code and assert only the output format or data structure.
+8. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
+9. DO NOT import the testing function as it will available in the testing environment.
+10. Print the output of the function that is being tested.
 """
 
 
