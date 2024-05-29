@@ -257,6 +257,7 @@ class VisionAgent(Agent):
         >>> agent = VisionAgent()
         >>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
     """
+
     def __init__(
         self,
         planner: Optional[LLM] = None,
@@ -283,6 +284,7 @@ class VisionAgent(Agent):
                 VisionAgent instances are running in parallel. This callback ensures
                 that the progress are not mixed up.
         """
+
         self.planner = (
             OpenAILLM(temperature=0.0, json_mode=True) if planner is None else planner
         )
@@ -317,6 +319,7 @@ class VisionAgent(Agent):
         Returns:
             str: The code output by the Vision Agent.
         """
+
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, media)
@@ -341,6 +344,7 @@ class VisionAgent(Agent):
             Dict[str, Any]: A dictionary containing the code, test, test result, plan,
                 and working memory of the agent.
         """
+
         if len(chat) == 0:
             raise ValueError("Chat cannot be empty.")
 
