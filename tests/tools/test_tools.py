@@ -5,13 +5,15 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from vision_agent.tools.easytool_tools import TOOLS, Tool, register_tool
 from vision_agent.tools.easytool_tools import (
+    TOOLS,
     BboxIoU,
     BoxDistance,
     MaskDistance,
     SegArea,
     SegIoU,
+    Tool,
+    register_tool,
 )
 
 

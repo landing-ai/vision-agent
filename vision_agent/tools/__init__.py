@@ -16,6 +16,7 @@ from .tools import (
     load_image,
     ocr,
     overlay_bounding_boxes,
+    overlay_heat_map,
     overlay_segmentation_masks,
     save_image,
     save_json,
