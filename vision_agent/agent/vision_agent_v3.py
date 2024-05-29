@@ -315,7 +315,11 @@ class VisionAgentV3(Agent):
 
         while not success and retries < self.max_retries:
             plan_i = write_plan(
-                chat, TOOL_DESCRIPTIONS, format_memory(working_memory), self.planner, images=[image] if image else None
+                chat,
+                TOOL_DESCRIPTIONS,
+                format_memory(working_memory),
+                self.planner,
+                images=[image] if image else None,
             )
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
             if self.verbosity >= 1:
