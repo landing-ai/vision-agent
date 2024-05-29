@@ -734,5 +734,12 @@ TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
-    [save_json, load_image, save_image, overlay_bounding_boxes]
+    [
+        save_json,
+        load_image,
+        save_image,
+        overlay_bounding_boxes,
+        overlay_segmentation_masks,
+        overlay_heat_map,
+    ]
 )
