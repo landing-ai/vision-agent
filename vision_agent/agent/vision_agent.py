@@ -273,17 +273,16 @@ class VisionAgent(Agent):
         self.max_retries = 2
         self.report_progress_callback = report_progress_callback
 
-    @no_type_check
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
         media: Optional[Union[str, Path]] = None,
-    ) -> Dict[str, Any]:
+    ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, media)
         results.pop("working_memory")
-        return results
+        return results["code"]  # type: ignore
 
     def chat_with_workflow(
         self,
