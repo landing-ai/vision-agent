@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.syntax import Syntax
 from tabulate import tabulate
 
+import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
     CODE,
@@ -22,7 +23,6 @@ from vision_agent.agent.vision_agent_prompts import (
 )
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools import TOOL_DESCRIPTIONS, TOOLS_DF, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
 from vision_agent.utils.sim import Sim
 
@@ -300,7 +300,7 @@ class VisionAgent(Agent):
         )
 
         self.tool_recommender = (
-            Sim(TOOLS_DF, sim_key="desc")
+            Sim(T.TOOLS_DF, sim_key="desc")
             if tool_recommender is None
             else tool_recommender
         )
@@ -369,7 +369,7 @@ class VisionAgent(Agent):
         while not success and retries < self.max_retries:
             plan_i = write_plan(
                 chat,
-                TOOL_DESCRIPTIONS,
+                T.TOOL_DESCRIPTIONS,
                 format_memory(working_memory),
                 self.planner,
                 media=[media] if media else None,
@@ -397,7 +397,7 @@ class VisionAgent(Agent):
             results = write_and_test_code(
                 FULL_TASK.format(user_request=chat[0]["content"], subtasks=plan_i_str),
                 tool_info,
-                UTILITIES_DOCSTRING,
+                T.UTILITIES_DOCSTRING,
                 format_memory(working_memory),
                 self.coder,
                 self.tester,
