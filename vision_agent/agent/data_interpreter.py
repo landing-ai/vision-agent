@@ -332,10 +332,10 @@ def run_plan(
 
 
 class DataInterpreter(Agent):
-    """Data Interpreter is an AI agentic framework geared towards outputting Python
-    code to solve vision tasks. It is inspired by MetaGPT's Data Interpreter
-    https://arxiv.org/abs/2402.18679. Vision Agent has several key features to help it
-    generate code:
+    """This version of Data Interpreter is an AI agentic framework geared towards
+    outputting Python code to solve vision tasks. It is inspired by MetaGPT's Data
+    Interpreter https://arxiv.org/abs/2402.18679. This version of Data Interpreter has
+    several key features to help it generate code:
 
     - A planner to generate a plan of tasks to solve a user requirement. The planner
     can output code tasks or test tasks, where test tasks are used to verify the code.

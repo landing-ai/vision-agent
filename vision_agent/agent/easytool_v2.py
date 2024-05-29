@@ -17,7 +17,7 @@ from vision_agent.agent.easytool_prompts import (
     TASK_DECOMPOSE,
     TASK_TOPOLOGY,
 )
-from vision_agent.agent.vision_agent_prompts import (
+from vision_agent.agent.easytool_v2_prompts import (
     ANSWER_GENERATE_DEPENDS,
     ANSWER_SUMMARIZE_DEPENDS,
     CHOOSE_PARAMETER_DEPENDS,
@@ -427,9 +427,9 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
     return visualized_images
 
 
-class VisionAgent(Agent):
-    r"""Vision Agent is an agent framework that utilizes tools as well as self
-    reflection to accomplish tasks, in particular vision tasks. Vision Agent is based
+class EasyToolV2(Agent):
+    r"""EasyToolV2 is an agent framework that utilizes tools as well as self
+    reflection to accomplish tasks, in particular vision tasks. EasyToolV2 is based
     off of EasyTool https://arxiv.org/abs/2401.06201 and Reflexion
     https://arxiv.org/abs/2303.11366 where it will attempt to complete a task and then
     reflect on whether or not it was able to accomplish the task based off of the plan
@@ -437,8 +437,8 @@ class VisionAgent(Agent):
 
     Example
     -------
-        >>> from vision_agent.agent import VisionAgent
-        >>> agent = VisionAgent()
+        >>> from vision_agent.agent import EasyToolV2
+        >>> agent = EasyToolV2()
         >>> resp = agent("If red tomatoes cost $5 each and yellow tomatoes cost $2.50 each, what is the total cost of all the tomatoes in the image?", image="tomatoes.jpg")
         >>> print(resp)
         "The total cost is $57.50."
@@ -453,7 +453,7 @@ class VisionAgent(Agent):
         verbose: bool = False,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ):
-        """VisionAgent constructor.
+        """EasyToolV2 constructor.
 
         Parameters:
             task_model: the model to use for task decomposition.
@@ -461,7 +461,7 @@ class VisionAgent(Agent):
             reflect_model: the model to use for self reflection.
             max_retries: maximum number of retries to attempt to complete the task.
             verbose: whether to print more logs.
-            report_progress_callback: a callback to report the progress of the agent. This is useful for streaming logs in a web application where multiple VisionAgent instances are running in parallel. This callback ensures that the progress are not mixed up.
+            report_progress_callback: a callback to report the progress of the agent. This is useful for streaming logs in a web application where multiple EasyToolV2 instances are running in parallel. This callback ensures that the progress are not mixed up.
         """
         self.task_model = (
             OpenAILLM(model_name="gpt-4-turbo", json_mode=True, temperature=0.0)
@@ -658,7 +658,7 @@ class VisionAgent(Agent):
         # '<ANSWER>' is a symbol to indicate the end of the chat, which is useful for streaming logs.
         self.log_progress(
             {
-                "log": f"The Vision Agent has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
+                "log": f"EasyToolV2 has concluded this chat. <ANSWER>{final_answer}</ANSWER>"
             }
         )
 
