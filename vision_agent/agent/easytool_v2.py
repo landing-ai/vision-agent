@@ -544,7 +544,7 @@ class EasyToolV2(Agent):
         visualize_output: Optional[bool] = False,
         self_reflection: Optional[bool] = True,
     ) -> Tuple[str, List[Dict]]:
-        """Chat with the vision agent and return the final answer and all tool results.
+        """Chat with EasyToolV2 and return the final answer and all tool results.
 
         Parameters:
             chat: A conversation in the format of

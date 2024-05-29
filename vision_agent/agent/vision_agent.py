@@ -245,6 +245,18 @@ def retrieve_tools(
 
 
 class VisionAgent(Agent):
+    """Vision Agent is an agentic framework that can output code based on a user
+    request. It can plan tasks, retrieve relevant tools, write code, write tests and
+    reflect on failed test cases to debug code. It is inspired by AgentCoder
+    https://arxiv.org/abs/2312.13010 and Data Interpeter
+    https://arxiv.org/abs/2402.18679
+
+    Example
+    -------
+        >>> from vision_agent import VisionAgent
+        >>> agent = VisionAgent()
+        >>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
+    """
     def __init__(
         self,
         planner: Optional[LLM] = None,
@@ -255,6 +267,22 @@ class VisionAgent(Agent):
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
+        """Initialize the Vision Agent.
+
+        Parameters:
+            planner (Optional[LLM]): The planner model to use. Defaults to OpenAILLM.
+            coder (Optional[LLM]): The coder model to use. Defaults to OpenAILLM.
+            tester (Optional[LLM]): The tester model to use. Defaults to OpenAILLM.
+            debugger (Optional[LLM]): The debugger model to
+            tool_recommender (Optional[Sim]): The tool recommender model to use.
+            verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
+                highest verbosity level which will output all intermediate debugging
+                code.
+            report_progress_callback: a callback to report the progress of the agent.
+                This is useful for streaming logs in a web application where multiple
+                VisionAgent instances are running in parallel. This callback ensures
+                that the progress are not mixed up.
+        """
         self.planner = (
             OpenAILLM(temperature=0.0, json_mode=True) if planner is None else planner
         )
@@ -278,6 +306,17 @@ class VisionAgent(Agent):
         input: Union[List[Dict[str, str]], str],
         media: Optional[Union[str, Path]] = None,
     ) -> str:
+        """Chat with Vision Agent and return intermediate information regarding the task.
+
+        Parameters:
+            chat (List[Dict[str, str]]): A conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}].
+            media (Optional[Union[str, Path]]): The media file to be used in the task.
+            self_reflection (bool): Whether to reflect on the task and debug the code.
+
+        Returns:
+            str: The code output by the Vision Agent.
+        """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, media)
@@ -290,6 +329,18 @@ class VisionAgent(Agent):
         media: Optional[Union[str, Path]] = None,
         self_reflection: bool = False,
     ) -> Dict[str, Any]:
+        """Chat with Vision Agent and return intermediate information regarding the task.
+
+        Parameters:
+            chat (List[Dict[str, str]]): A conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}].
+            media (Optional[Union[str, Path]]): The media file to be used in the task.
+            self_reflection (bool): Whether to reflect on the task and debug the code.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the code, test, test result, plan,
+                and working memory of the agent.
+        """
         if len(chat) == 0:
             raise ValueError("Chat cannot be empty.")
 
@@ -373,7 +424,7 @@ class VisionAgent(Agent):
 
         self.log_progress(
             {
-                "log": f"The Vision Agent V3 has concluded this chat.\nSuccess: {success}",
+                "log": f"Vision Agent has concluded this chat.\nSuccess: {success}",
                 "finished": True,
             }
         )
