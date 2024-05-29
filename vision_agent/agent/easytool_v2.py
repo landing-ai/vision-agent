@@ -487,7 +487,7 @@ class EasyToolV2(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
         self_reflection: Optional[bool] = True,
@@ -512,7 +512,7 @@ class EasyToolV2(Agent):
             input = [{"role": "user", "content": input}]
         return self.chat(
             input,
-            image=image,
+            media=media,
             visualize_output=visualize_output,
             reference_data=reference_data,
             self_reflection=self_reflection,
@@ -539,7 +539,7 @@ class EasyToolV2(Agent):
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
         self_reflection: Optional[bool] = True,
@@ -566,8 +566,8 @@ class EasyToolV2(Agent):
             raise ValueError("Input cannot be empty.")
 
         question = chat[0]["content"]
-        if image:
-            question += f" Image name: {image}"
+        if media:
+            question += f" Image name: {media}"
         if reference_data:
             question += (
                 f" Reference image: {reference_data['image']}"
@@ -630,8 +630,8 @@ class EasyToolV2(Agent):
             all_tool_results.append({"visualized_output": visualized_output})
             if len(visualized_output) > 0:
                 reflection_images = sample_n_evenly_spaced(visualized_output, 3)
-            elif image is not None:
-                reflection_images = [image]
+            elif media is not None:
+                reflection_images = [media]
             else:
                 reflection_images = None
 
@@ -675,14 +675,14 @@ class EasyToolV2(Agent):
     def chat(
         self,
         chat: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         reference_data: Optional[Dict[str, str]] = None,
         visualize_output: Optional[bool] = False,
         self_reflection: Optional[bool] = True,
     ) -> str:
         answer, _ = self.chat_with_workflow(
             chat,
-            image=image,
+            media=media,
             visualize_output=visualize_output,
             reference_data=reference_data,
             self_reflection=self_reflection,

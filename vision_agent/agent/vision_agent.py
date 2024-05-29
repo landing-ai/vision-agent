@@ -277,27 +277,27 @@ class VisionAgent(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> Dict[str, Any]:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        results = self.chat_with_workflow(input, image)
+        results = self.chat_with_workflow(input, media)
         results.pop("working_memory")
         return results
 
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         self_reflection: bool = False,
     ) -> Dict[str, Any]:
         if len(chat) == 0:
             raise ValueError("Chat cannot be empty.")
 
-        if image is not None:
+        if media is not None:
             for chat_i in chat:
                 if chat_i["role"] == "user":
-                    chat_i["content"] += f" Image name {image}"
+                    chat_i["content"] += f" Image name {media}"
 
         code = ""
         test = ""
@@ -341,7 +341,7 @@ class VisionAgent(Agent):
                 self.debugger,
                 self.log_progress,
                 verbosity=self.verbosity,
-                input_media=image,
+                input_media=media,
             )
             success = cast(bool, results["success"])
             code = cast(str, results["code"])

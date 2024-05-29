@@ -150,20 +150,20 @@ class AgentCoder(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image)
+        return self.chat(input, media)
 
     def chat(
         self,
         input: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         question = input[0]["content"]
-        if image:
-            question += f" Input file path: {os.path.abspath(image)}"
+        if media:
+            question += f" Input file path: {os.path.abspath(media)}"
 
         code = ""
         feedback = ""

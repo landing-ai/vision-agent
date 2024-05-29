@@ -379,29 +379,29 @@ class DataInterpreter(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         plan: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        results = self.chat_with_workflow(input, image, plan)
+        results = self.chat_with_workflow(input, media, plan)
         return results["code"]  # type: ignore
 
     @traceable
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         plan: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         if len(chat) == 0:
             raise ValueError("Input cannot be empty.")
 
-        if image is not None:
+        if media is not None:
             # append file names to all user messages
             for chat_i in chat:
                 if chat_i["role"] == "user":
-                    chat_i["content"] += f" Image name {image}"
+                    chat_i["content"] += f" Image name {media}"
 
         working_code = ""
         if plan is not None:
