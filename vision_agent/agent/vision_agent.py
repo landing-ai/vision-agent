@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, cast, no_type_check
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 from rich.console import Console
 from rich.syntax import Syntax
