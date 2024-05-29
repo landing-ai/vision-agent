@@ -67,7 +67,9 @@ def parse_file_name(s: str) -> str:
     return "".join([p for p in s.split(" ") if p.endswith(".png")])
 
 
-def write_program(question: str, feedback: str, model: LLM, image: Optional[Union[str, Path]] = None) -> str:
+def write_program(
+    question: str, feedback: str, model: LLM, image: Optional[Union[str, Path]] = None
+) -> str:
     prompt = PROGRAM.format(
         docstring=TOOL_DOCSTRING, question=question, feedback=feedback
     )
