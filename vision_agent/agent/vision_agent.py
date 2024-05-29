@@ -10,7 +10,7 @@ from rich.syntax import Syntax
 from tabulate import tabulate
 
 from vision_agent.agent import Agent
-from vision_agent.agent.vision_agent_v3_prompts import (
+from vision_agent.agent.vision_agent_prompts import (
     CODE,
     FEEDBACK,
     FIX_BUG,
@@ -244,10 +244,9 @@ def retrieve_tools(
     return "\n\n".join(tool_info_set)
 
 
-class VisionAgentV3(Agent):
+class VisionAgent(Agent):
     def __init__(
         self,
-        timeout: int = 600,
         planner: Optional[LLM] = None,
         coder: Optional[LLM] = None,
         tester: Optional[LLM] = None,
