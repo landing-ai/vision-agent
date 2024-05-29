@@ -23,9 +23,9 @@ data = {
     "prompt": [{"mask": "baggage.png", "image": "baggage_mask.png"}],
     "image": "baggage2.png",
 }
-tool = va.tools.DINOv()
+tool = va.tools.easytool_tools.DINOv()
 output = res(**data)
-image = va.image_utils.overlay_masks("baggage2.png", output)
-image = va.image_utils.overlay_bboxes(image, output)
+image = va.utils.image_utils.overlay_masks("baggage2.png", output)
+image = va.utils.image_utils.overlay_bboxes(image, output)
 image.show()
 ```
