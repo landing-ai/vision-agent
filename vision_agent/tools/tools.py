@@ -687,9 +687,13 @@ def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
         if description is None:
             description = ""
 
-        description = (
-            description[: description.find("Parameters:")].replace("\n", " ").strip()
-        )
+        if "Parameters:" in description:
+            description = (
+                description[: description.find("Parameters:")]
+                .replace("\n", " ")
+                .strip()
+            )
+
         description = " ".join(description.split())
         descriptions += f"- {func.__name__}{inspect.signature(func)}: {description}\n"
     return descriptions
@@ -729,6 +733,7 @@ TOOLS = [
     save_image,
     overlay_bounding_boxes,
     overlay_segmentation_masks,
+    overlay_heat_map,
 ]
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore

@@ -1,3 +1,5 @@
+from typing import Callable
+
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     TOOL_DESCRIPTIONS,
@@ -23,3 +25,15 @@ from .tools import (
     visual_prompt_counting,
     zero_shot_counting,
 )
+
+
+def register_tool(tool: Callable) -> Callable:
+    from .tools import get_tool_descriptions, get_tool_documentation, get_tools_df
+
+    global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING
+
+    TOOLS.append(tool)
+    TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
+    TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)
+    TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
+    return tool
