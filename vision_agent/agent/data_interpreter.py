@@ -10,7 +10,7 @@ from rich.syntax import Syntax
 from tabulate import tabulate
 
 from vision_agent.agent import Agent
-from vision_agent.agent.vision_agent_v2_prompts import (
+from vision_agent.agent.data_interpreter_prompts import (
     CODE,
     CODE_SYS_MSG,
     DEBUG,
@@ -331,9 +331,9 @@ def run_plan(
     return current_code, current_test, plan, working_memory
 
 
-class VisionAgentV2(Agent):
-    """Vision Agent is an AI agentic framework geared towards outputting Python code to
-    solve vision tasks. It is inspired by MetaGPT's Data Interpreter
+class DataInterpreter(Agent):
+    """Data Interpreter is an AI agentic framework geared towards outputting Python
+    code to solve vision tasks. It is inspired by MetaGPT's Data Interpreter
     https://arxiv.org/abs/2402.18679. Vision Agent has several key features to help it
     generate code:
 
