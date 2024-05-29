@@ -6,7 +6,13 @@ import pytest
 from PIL import Image
 
 from vision_agent.tools.easytool_tools import TOOLS, Tool, register_tool
-from vision_agent.tools.easytool_tools import BboxIoU, BoxDistance, MaskDistance, SegArea, SegIoU
+from vision_agent.tools.easytool_tools import (
+    BboxIoU,
+    BoxDistance,
+    MaskDistance,
+    SegArea,
+    SegIoU,
+)
 
 
 def test_bbox_iou():
