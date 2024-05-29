@@ -1,4 +1,4 @@
-from vision_agent.agent.vision_agent import sample_n_evenly_spaced
+from vision_agent.agent.easytool_v2 import sample_n_evenly_spaced
 
 
 def test_sample_n_evenly_spaced_side_cases():
