@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from vision_agent.tools import CLIP, GroundingDINO, GroundingSAM
+from vision_agent.tools.easytool_tools import CLIP, GroundingDINO, GroundingSAM
 
 
 @pytest.fixture

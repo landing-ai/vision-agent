@@ -74,15 +74,15 @@ CODE = """
 
 # Constraints
 - Write a function that accomplishes the 'Current Subtask'. You are supplied code from a previous task under 'Previous Code', do not delete or change previous code unless it contains a bug or it is necessary to complete the 'Current Subtask'.
-- Always prioritize using pre-defined tools or code for the same functionality from 'Tool Info' when working on 'Current Subtask'. You have access to all these tools through the `from vision_agent.tools.tools_v2 import *` import.
+- Always prioritize using pre-defined tools or code for the same functionality from 'Tool Info' when working on 'Current Subtask'. You have access to all these tools through the `from vision_agent.tools import *` import.
 - You may recieve previous trials and errors under 'Previous Task', this is code, output and reflections from previous tasks. You can use these to avoid running in to the same issues when writing your code.
-- Use the `save_json` function from `vision_agent.tools.tools_v2` to save your output as a json file.
+- Use the `save_json` function from `vision_agent.tools` to save your output as a json file.
 - Write clean, readable, and well-documented code.
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. If possible, execute your defined functions in the code output. Output code in the following format:
 ```python
-from vision_agent.tools.tools_v2 imoprt *
+from vision_agent.tools imoprt *
 
 # your code goes here
 ```

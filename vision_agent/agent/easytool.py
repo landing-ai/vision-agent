@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM
-from vision_agent.tools import TOOLS
+from vision_agent.tools.easytool_tools import TOOLS
 
 from .agent import Agent
 from .easytool_prompts import (
@@ -272,7 +272,7 @@ class EasyTool(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         """Invoke the vision agent.
 
@@ -285,14 +285,14 @@ class EasyTool(Agent):
         """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image=image)
+        return self.chat(input, media=media)
 
     def chat_with_workflow(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self, chat: List[Dict[str, str]], media: Optional[Union[str, Path]] = None
     ) -> Tuple[str, List[Dict]]:
         question = chat[0]["content"]
-        if image:
-            question += f" Image name: {image}"
+        if media:
+            question += f" Image name: {media}"
         tasks = task_decompose(
             self.task_model,
             question,
@@ -340,7 +340,7 @@ class EasyTool(Agent):
         return answer_summarize(self.answer_model, question, answers), all_tool_results
 
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self, chat: List[Dict[str, str]], media: Optional[Union[str, Path]] = None
     ) -> str:
-        answer, _ = self.chat_with_workflow(chat, image=image)
+        answer, _ = self.chat_with_workflow(chat, media=media)
         return answer
