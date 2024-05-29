@@ -329,7 +329,7 @@ class VisionAgent(Agent):
             input = [{"role": "user", "content": input}]
         results = self.chat_with_workflow(input, media)
         results.pop("working_memory")
-        return results["code"]  # type: ignore
+        return results  # type: ignore
 
     def chat_with_workflow(
         self,
