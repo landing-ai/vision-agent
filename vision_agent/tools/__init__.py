@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
@@ -32,7 +32,7 @@ __new_tools__ = [
 ]
 
 
-def register_tool(imports: None | List = None) -> Callable:
+def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
