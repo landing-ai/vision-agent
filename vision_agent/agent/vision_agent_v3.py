@@ -122,7 +122,7 @@ def write_and_test_code(
 ) -> Dict[str, Any]:
     log_progress(
         {
-            "type": "code_execution",
+            "type": "code",
             "status": "started",
         }
     )
@@ -143,8 +143,8 @@ def write_and_test_code(
 
     log_progress(
         {
-            "type": "code_execution",
-            "status": "code_generated",
+            "type": "code",
+            "status": "running",
             "payload": {
                 "code": code,
                 "test": test,
@@ -154,7 +154,7 @@ def write_and_test_code(
     success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
     log_progress(
         {
-            "type": "code_execution",
+            "type": "code",
             "status": "completed" if success else "failed",
             "payload": {
                 "code": code,
@@ -176,7 +176,7 @@ def write_and_test_code(
     while not success and count < max_retries:
         log_progress(
             {
-                "type": "code_execution",
+                "type": "code",
                 "status": "started",
             }
         )
@@ -193,8 +193,8 @@ def write_and_test_code(
             test = extract_code(fixed_code_and_test["test"])
         log_progress(
             {
-                "type": "code_execution",
-                "status": "code_generated",
+                "type": "code",
+                "status": "running",
                 "payload": {
                     "code": code,
                     "test": test,
@@ -209,7 +209,7 @@ def write_and_test_code(
 
         log_progress(
             {
-                "type": "code_execution",
+                "type": "code",
                 "status": "completed" if success else "failed",
                 "payload": {
                     "code": code,
@@ -236,18 +236,6 @@ def write_and_test_code(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
         )
         _LOGGER.info(f"Final Result: {result}")
-
-    log_progress(
-        {
-            "type": "final_code",
-            "status": "completed" if success else "failed",
-            "payload": {
-                "code": code,
-                "test": test,
-                "result": result,
-            },
-        }
-    )
 
     return {
         "code": code,
@@ -435,8 +423,13 @@ class VisionAgentV3(Agent):
 
         self.log_progress(
             {
-                "type": "chat_with_workflow",
+                "type": "final_code",
                 "status": "completed" if success else "failed",
+                "payload": {
+                    "code": code,
+                    "test": test,
+                    "result": results["test_result"],
+                },
             }
         )
 
