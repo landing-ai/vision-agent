@@ -58,9 +58,10 @@ def grounding_dino(
     box_threshold: float = 0.20,
     iou_threshold: float = 0.20,
 ) -> List[Dict[str, Any]]:
-    """'grounding_dino' is a tool that can detect and count objects given a text prompt
-    such as category names or referring expressions. It returns a list and count of
-    bounding boxes, label names and associated probability scores.
+    """'grounding_dino' is a tool that can detect and count multiple objects given a text
+    prompt such as category names or referring expressions. The categories in text prompt
+    are separated by commas or periods. It returns a list and count of bounding boxes,
+    label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -111,9 +112,10 @@ def grounding_sam(
     box_threshold: float = 0.20,
     iou_threshold: float = 0.20,
 ) -> List[Dict[str, Any]]:
-    """'grounding_sam' is a tool that can detect and segment objects given a text
-    prompt such as category names or referring expressions. It returns a list of
-    bounding boxes, label names and masks file names and associated probability scores.
+    """'grounding_sam' is a tool that can detect and segment multiple objects given a
+    text prompt such as category names or referring expressions. The categories in text
+    prompt are separated by commas or periods. It returns a list of bounding boxes,
+    label names, mask file names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -343,9 +345,9 @@ def image_question_answering(image: np.ndarray, prompt: str) -> str:
 
 
 def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
-    """'clip' is a tool that can classify an image given a list of input classes or tags.
-    It returns the same list of the input classes along with their probability scores
-    based on image content.
+    """'clip' is a tool that can classify an image or a cropped detection given a list
+    of input classes or tags. It returns the same list of the input classes along with
+    their probability scores based on image content.
 
     Parameters:
         image (np.ndarray): The image to classify or tag
