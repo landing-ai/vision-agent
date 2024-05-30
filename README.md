@@ -120,6 +120,34 @@ you. For example:
 }]
 ```
 
+You can also add custom tools to the agent:
+
+```python
+import vision_agent as va
+
+@va.tools.register_tool(imports=["import numpy as np"])
+def custom_tool(image_path: str) -> str:
+    """My custom tool documentation.
+
+    Parameters:
+        image_path (str): The path to the image.
+
+    Returns:
+        str: The result of the tool.
+
+    Example
+    -------
+    >>> custom_tool("image.jpg")
+    """
+
+    import numpy as np
+    return np.zeros((10, 10))
+```
+
+You need to ensure you call `@va.tools.register_tool` with any imports it might use and
+ensure the documentation is in the same format above with description, `Parameters:`,
+`Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
+
 ### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:
 
@@ -133,9 +161,10 @@ You can then run Vision Agent using the Azure OpenAI models:
 ```python
 >>> import vision_agent as va
 >>> agent = va.agent.VisionAgent(
->>>     task_model=va.llm.AzureOpenAILLM(),
->>>     answer_model=va.lmm.AzureOpenAILMM(),
->>>     reflection_model=va.lmm.AzureOpenAILMM(),
+>>>     planner=va.llm.AzureOpenAILLM(),
+>>>     coder=va.lmm.AzureOpenAILMM(),
+>>>     tester=va.lmm.AzureOpenAILMM(),
+>>>     debugger=va.lmm.AzureOpenAILMM(),
 >>> )
 ```
 

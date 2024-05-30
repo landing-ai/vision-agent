@@ -35,15 +35,13 @@ def rotate_image(mat, angle):
 
 
 def template_matching_with_rotation(
-    main_image_path: str,
-    template_path: str,
+    main_image: np.ndarray,
+    template: np.ndarray,
     max_rotation: int = 360,
     step: int = 90,
     threshold: float = 0.75,
     visualize: bool = False,
 ) -> dict:
-    main_image = cv2.imread(main_image_path)
-    template = cv2.imread(template_path)
     template_height, template_width = template.shape[:2]
 
     # Convert images to grayscale
