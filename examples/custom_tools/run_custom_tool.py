@@ -2,11 +2,16 @@ import numpy as np
 from template_match import template_matching_with_rotation
 
 import vision_agent as va
-from vision_agent.tools import register_tool
 from vision_agent.utils.image_utils import get_image_size, normalize_bbox
 
 
-@register_tool
+@va.tools.register_tool(
+    imports=[
+        "import numpy as np",
+        "from vision_agent.utils.image_utils import get_image_size, normalize_bbox",
+        "from template_match import template_matching_with_rotation",
+    ]
+)
 def template_match(target_image: np.ndarray, template_image: np.ndarray) -> dict:
     """'template_match' tool that finds the locations of the template image in the
     target image.

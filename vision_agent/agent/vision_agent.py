@@ -31,6 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 _MAX_TABULATE_COL_WIDTH = 80
 _EXECUTE = Execute(600)
 _CONSOLE = Console()
+_DEFAULT_IMPORT = "\n".join(T.__new_tools__)
 
 
 def format_memory(memory: List[Dict[str, str]]) -> str:
@@ -140,7 +141,7 @@ def write_and_test_code(
         )
     )
 
-    success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
+    success, result = _EXECUTE.run_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
     if verbosity == 2:
         _LOGGER.info("Initial code and tests:")
         log_progress(
@@ -184,7 +185,7 @@ def write_and_test_code(
             {"code": f"{code}\n{test}", "feedback": fixed_code_and_test["reflections"]}
         )
 
-        success, result = _EXECUTE.run_isolation(f"{code}\n{test}")
+        success, result = _EXECUTE.run_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
         if verbosity == 2:
             log_progress(
                 {
@@ -357,6 +358,10 @@ class VisionAgent(Agent):
             for chat_i in chat:
                 if chat_i["role"] == "user":
                     chat_i["content"] += f" Image name {media}"
+
+        # re-grab custom tools
+        global _DEFAULT_IMPORT
+        _DEFAULT_IMPORT = "\n".join(T.__new_tools__)
 
         code = ""
         test = ""
