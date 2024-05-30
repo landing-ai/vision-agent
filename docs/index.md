@@ -1,12 +1,15 @@
 # 🔍🤖 Vision Agent
+Vision Agent is a library that helps you utilize agent frameworks to generate code to
+solve your vision task. Many current vision problems can easily take hours or days to
+solve, you need to find the right model, figure out how to use it and program it to
+accomplish the task you want. Vision Agent aims to provide an in-seconds experience by
+allowing users to describe their problem in text and have the agent framework generate
+code to solve the task for them. Check out our discord for updates and roadmaps!
 
-Vision Agent is a library that helps you utilize agent frameworks for your vision tasks.
-Many current vision problems can easily take hours or days to solve, you need to find the
-right model, figure out how to use it, possibly write programming logic around it to 
-accomplish the task you want or even more expensive, train your own model. Vision Agent
-aims to provide an in-seconds experience by allowing users to describe their problem in
-text and utilizing agent frameworks to solve the task for them. Check out our discord
-for updates and roadmaps!
+## Documentation
+
+- [Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
+
 
 ## Getting Started
 ### Installation
@@ -16,51 +19,78 @@ To get started, you can install the library using pip:
 pip install vision-agent
 ```
 
-Ensure you have an OpenAI API key and set it as an environment variable:
+Ensure you have an OpenAI API key and set it as an environment variable (if you are
+using Azure OpenAI please see the Azure setup section):
 
 ```bash
 export OPENAI_API_KEY="your-api-key"
 ```
 
-### Vision Agents
-You can interact with the agents as you would with any LLM or LMM model:
+### Vision Agent
+You can interact with the agent as you would with any LLM or LMM model:
 
 ```python
->>> import vision_agent as va
+>>> from vision_agent.agent import VisionAgent
 >>> agent = VisionAgent()
->>> agent("How many apples are in this image?", image="apples.jpg")
-"There are 2 apples in the image."
+>>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
 ```
 
-To better understand how the model came up with it's answer, you can also run it in
-debug mode by passing in the verbose argument:
+Which produces the following code:
+```python
+from vision_agent.tools import load_image, grounding_sam
+
+def calculate_filled_percentage(image_path: str) -> float:
+    # Step 1: Load the image
+    image = load_image(image_path)
+    
+    # Step 2: Segment the jar
+    jar_segments = grounding_sam(prompt="jar", image=image)
+    
+    # Step 3: Segment the coffee beans
+    coffee_beans_segments = grounding_sam(prompt="coffee beans", image=image)
+    
+    # Step 4: Calculate the area of the segmented jar
+    jar_area = 0
+    for segment in jar_segments:
+        jar_area += segment['mask'].sum()
+    
+    # Step 5: Calculate the area of the segmented coffee beans
+    coffee_beans_area = 0
+    for segment in coffee_beans_segments:
+        coffee_beans_area += segment['mask'].sum()
+    
+    # Step 6: Compute the percentage of the jar area that is filled with coffee beans
+    if jar_area == 0:
+        return 0.0  # To avoid division by zero
+    filled_percentage = (coffee_beans_area / jar_area) * 100
+    
+    # Step 7: Return the computed percentage
+    return filled_percentage
+```
+
+To better understand how the model came up with it's answer, you can run it in debug
+mode by passing in the verbose argument:
 
 ```python
->>> agent = VisionAgent(verbose=True)
+>>> agent = VisionAgent(verbose=2)
 ```
 
-You can also have it return the workflow it used to complete the task along with all
-the individual steps and tools to get the answer:
+You can also have it return more information by calling `chat_with_workflow`:
 
 ```python
->>> resp, workflow = agent.chat_with_workflow([{"role": "user", "content": "How many apples are in this image?"}], image="apples.jpg")
->>> print(workflow)
-[{"task": "Count the number of apples using 'grounding_dino_'.",
-  "tool": "grounding_dino_",
-  "parameters": {"prompt": "apple", "image": "apples.jpg"},
-  "call_results": [[
-    {
-      "labels": ["apple", "apple"],
-      "scores": [0.99, 0.95],
-      "bboxes": [
-        [0.58, 0.2, 0.72, 0.45],
-        [0.94, 0.57, 0.98, 0.66],
-      ]
-    }
-  ]],
-  "answer": "There are 2 apples in the image.",
-}]
+>>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?"}], media="jar.jpg")
+>>> print(results)
+{
+    "code": "from vision_agent.tools import ..."
+    "test": "calculate_filled_percentage('jar.jpg')",
+    "test_result": "...",
+    "plan": [{"code": "...", "test": "...", "plan": "..."}, ...],
+    "working_memory": ...,
+}
 ```
+
+With this you can examine more detailed information such as the etesting code, testing
+results, plan or working memory it used to complete the task.
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
@@ -70,37 +100,59 @@ you. For example:
 ```python
 >>> import vision_agent as va
 >>> llm = va.llm.OpenAILLM()
->>> detector = llm.generate_detector("Can you build an apple detector for me?")
->>> detector("apples.jpg")
-[{"labels": ["apple", "apple"],
-  "scores": [0.99, 0.95],
+>>> detector = llm.generate_detector("Can you build a jar detector for me?")
+>>> detector("jar.jpg")
+[{"labels": ["jar",],
+  "scores": [0.99],
   "bboxes": [
     [0.58, 0.2, 0.72, 0.45],
-    [0.94, 0.57, 0.98, 0.66],
   ]
 }]
 ```
 
-| Tool | Description |
-| --- | --- |
-| CLIP | CLIP is a tool that can classify or tag any image given a set of input classes or tags. |
-| ImageCaption| ImageCaption is a tool that can generate a caption for an image. |
-| GroundingDINO | GroundingDINO is a tool that can detect arbitrary objects with inputs such as category names or referring expressions. |
-| GroundingSAM | GroundingSAM is a tool that can detect and segment arbitrary objects with inputs such as category names or referring expressions. |
-| DINOv | DINOv is a tool that can detect arbitrary objects with using a referring mask. |
-| Crop | Crop crops an image given a bounding box and returns a file name of the cropped image. |
-| BboxArea | BboxArea returns the area of the bounding box in pixels normalized to 2 decimal places. |
-| SegArea | SegArea returns the area of the segmentation mask in pixels normalized to 2 decimal places. |
-| BboxIoU | BboxIoU returns the intersection over union of two bounding boxes normalized to 2 decimal places. |
-| SegIoU | SegIoU returns the intersection over union of two segmentation masks normalized to 2 decimal places. |
-| BoxDistance | BoxDistance returns the minimum distance between two bounding boxes normalized to 2 decimal places. |
-| MaskDistance | MaskDistance returns the minimum distance between two segmentation masks in pixel units |
-| BboxContains | BboxContains returns the intersection of two boxes over the target box area. It is good for check if one box is contained within another box. |
-| ExtractFrames | ExtractFrames extracts frames with motion from a video. |
-| ZeroShotCounting | ZeroShotCounting returns the total number of objects belonging to a single class in a given image. |
-| VisualPromptCounting | VisualPromptCounting returns the total number of objects belonging to a single class given an image and visual prompt. |
-| VisualQuestionAnswering | VisualQuestionAnswering is a tool that can explain the contents of an image and answer questions about the image. |
-| ImageQuestionAnswering | ImageQuestionAnswering is similar to VisualQuestionAnswering but does not rely on OpenAI and instead uses a dedicated model for the task. |
-| OCR | OCR returns the text detected in an image along with the location. |
+You can also add custom tools to the agent:
 
-It also has a basic set of calculate tools such as add, subtract, multiply and divide.
+```python
+import vision_agent as va
+
+@va.tools.register_tool(imports=["import numpy as np"])
+def custom_tool(image_path: str) -> str:
+    """My custom tool documentation.
+
+    Parameters:
+        image_path (str): The path to the image.
+
+    Returns:
+        str: The result of the tool.
+
+    Example
+    -------
+    >>> custom_tool("image.jpg")
+    """
+
+    import numpy as np
+    return np.zeros((10, 10))
+```
+
+You need to ensure you call `@va.tools.register_tool` with any imports it might use and
+ensure the documentation is in the same format above with description, `Parameters:`,
+`Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
+
+### Azure Setup
+If you want to use Azure OpenAI models, you can set the environment variable:
+
+```bash
+export AZURE_OPENAI_API_KEY="your-api-key"
+export AZURE_OPENAI_ENDPOINT="your-endpoint"
+```
+
+You can then run Vision Agent using the Azure OpenAI models:
+
+```python
+>>> import vision_agent as va
+>>> agent = va.agent.VisionAgent(
+>>>     planner=va.llm.AzureOpenAILLM(),
+>>>     coder=va.lmm.AzureOpenAILMM(),
+>>>     tester=va.lmm.AzureOpenAILMM(),
+>>>     debugger=va.lmm.AzureOpenAILMM(),
+>>> )
