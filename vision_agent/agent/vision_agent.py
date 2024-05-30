@@ -264,15 +264,19 @@ def retrieve_tools(
     )
     tool_info = []
     tool_desc = []
+    tool_list = []
     for task in plan:
         tools = tool_recommender.top_k(task["instructions"], k=2, thresh=0.3)
         tool_info.extend([e["doc"] for e in tools])
         tool_desc.extend([e["desc"] for e in tools])
+        tool_list.extend(
+            {"description": e["desc"], "documentation": e["doc"]} for e in tools
+        )
     log_progress(
         {
             "type": "tools",
             "status": "completed",
-            "payload": tools,
+            "payload": tool_list,
         }
     )
     if verbosity == 2:
