@@ -151,9 +151,8 @@ You can then run Vision Agent using the Azure OpenAI models:
 ```python
 >>> import vision_agent as va
 >>> agent = va.agent.VisionAgent(
->>>     task_model=va.llm.AzureOpenAILLM(),
->>>     answer_model=va.lmm.AzureOpenAILMM(),
->>>     reflection_model=va.lmm.AzureOpenAILMM(),
+>>>     planner=va.llm.AzureOpenAILLM(),
+>>>     coder=va.lmm.AzureOpenAILMM(),
+>>>     tester=va.lmm.AzureOpenAILMM(),
+>>>     debugger=va.lmm.AzureOpenAILMM(),
 >>> )
-```
-
