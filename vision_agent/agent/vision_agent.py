@@ -264,7 +264,7 @@ def retrieve_tools(
     )
     tool_info = []
     tool_desc = []
-    tool_list = []
+    tool_list: List[Dict[str, str]] = []
     for task in plan:
         tools = tool_recommender.top_k(task["instructions"], k=2, thresh=0.3)
         tool_info.extend([e["doc"] for e in tools])
