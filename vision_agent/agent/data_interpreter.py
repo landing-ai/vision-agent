@@ -10,7 +10,7 @@ from rich.syntax import Syntax
 from tabulate import tabulate
 
 from vision_agent.agent import Agent
-from vision_agent.agent.vision_agent_v2_prompts import (
+from vision_agent.agent.data_interpreter_prompts import (
     CODE,
     CODE_SYS_MSG,
     DEBUG,
@@ -25,7 +25,7 @@ from vision_agent.agent.vision_agent_v2_prompts import (
     USER_REQ_SUBTASK_WM_CONTEXT,
 )
 from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.tools.tools_v2 import TOOL_DESCRIPTIONS, TOOLS_DF
+from vision_agent.tools import TOOL_DESCRIPTIONS, TOOLS_DF
 from vision_agent.utils import Execute, Sim
 
 logging.basicConfig(level=logging.INFO)
@@ -331,11 +331,11 @@ def run_plan(
     return current_code, current_test, plan, working_memory
 
 
-class VisionAgentV2(Agent):
-    """Vision Agent is an AI agentic framework geared towards outputting Python code to
-    solve vision tasks. It is inspired by MetaGPT's Data Interpreter
-    https://arxiv.org/abs/2402.18679. Vision Agent has several key features to help it
-    generate code:
+class DataInterpreter(Agent):
+    """This version of Data Interpreter is an AI agentic framework geared towards
+    outputting Python code to solve vision tasks. It is inspired by MetaGPT's Data
+    Interpreter https://arxiv.org/abs/2402.18679. This version of Data Interpreter has
+    several key features to help it generate code:
 
     - A planner to generate a plan of tasks to solve a user requirement. The planner
     can output code tasks or test tasks, where test tasks are used to verify the code.
@@ -379,29 +379,29 @@ class VisionAgentV2(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         plan: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        results = self.chat_with_workflow(input, image, plan)
+        results = self.chat_with_workflow(input, media, plan)
         return results["code"]  # type: ignore
 
     @traceable
     def chat_with_workflow(
         self,
         chat: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
         plan: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         if len(chat) == 0:
             raise ValueError("Input cannot be empty.")
 
-        if image is not None:
+        if media is not None:
             # append file names to all user messages
             for chat_i in chat:
                 if chat_i["role"] == "user":
-                    chat_i["content"] += f" Image name {image}"
+                    chat_i["content"] += f" Image name {media}"
 
         working_code = ""
         if plan is not None:

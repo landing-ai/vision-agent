@@ -1,6 +1,6 @@
 import skimage as ski
 
-from vision_agent.tools.tools_v2 import (
+from vision_agent.tools import (
     clip,
     grounding_dino,
     grounding_sam,

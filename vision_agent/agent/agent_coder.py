@@ -18,7 +18,7 @@ from vision_agent.agent.agent_coder_prompts import (
 )
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.tools.tools_v2 import TOOL_DOCSTRING, UTILITIES_DOCSTRING
+from vision_agent.tools import TOOL_DOCSTRING, UTILITIES_DOCSTRING
 from vision_agent.utils import Execute
 
 IMPORT_HELPER = """
@@ -38,7 +38,7 @@ import numpy as np
 import string
 from typing import *
 from collections import *
-from vision_agent.tools.tools_v2 import *
+from vision_agent.tools import *
 """
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
@@ -67,11 +67,17 @@ def parse_file_name(s: str) -> str:
     return "".join([p for p in s.split(" ") if p.endswith(".png")])
 
 
-def write_program(question: str, feedback: str, model: LLM) -> str:
+def write_program(
+    question: str, feedback: str, model: LLM, media: Optional[Union[str, Path]] = None
+) -> str:
     prompt = PROGRAM.format(
         docstring=TOOL_DOCSTRING, question=question, feedback=feedback
     )
-    completion = model(prompt)
+    if isinstance(model, OpenAILMM):
+        completion = model(prompt, images=[media] if media else None)
+    else:
+        completion = model(prompt)
+
     return preprocess_data(completion)
 
 
@@ -150,25 +156,25 @@ class AgentCoder(Agent):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image)
+        return self.chat(input, media)
 
     def chat(
         self,
         input: List[Dict[str, str]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         question = input[0]["content"]
-        if image:
-            question += f" Input file path: {os.path.abspath(image)}"
+        if media:
+            question += f" Input file path: {os.path.abspath(media)}"
 
         code = ""
         feedback = ""
         for _ in range(self.max_turns):
-            code = write_program(question, feedback, self.coder_agent)
+            code = write_program(question, feedback, self.coder_agent, media=media)
             if self.verbose:
                 _CONSOLE.print(
                     Syntax(code, "python", theme="gruvbox-dark", line_numbers=True)

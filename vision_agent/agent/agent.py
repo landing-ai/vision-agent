@@ -8,7 +8,7 @@ class Agent(ABC):
     def __call__(
         self,
         input: Union[List[Dict[str, str]], str],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         pass
 

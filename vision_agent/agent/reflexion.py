@@ -138,7 +138,7 @@ class Reflexion(Agent):
     def __call__(
         self,
         input: Union[str, List[Dict[str, str]]],
-        image: Optional[Union[str, Path]] = None,
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         """Invoke the vision agent.
 
@@ -151,24 +151,24 @@ class Reflexion(Agent):
         """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        return self.chat(input, image)
+        return self.chat(input, media)
 
     def chat(
-        self, chat: List[Dict[str, str]], image: Optional[Union[str, Path]] = None
+        self, chat: List[Dict[str, str]], media: Optional[Union[str, Path]] = None
     ) -> str:
         if len(chat) == 0 or chat[0]["role"] != "user":
             raise ValueError(
                 f"Invalid chat. Should start with user and alternate between user"
                 f"and assistant and contain at least one entry {chat}"
             )
-        if image is not None and isinstance(self.action_agent, LLM):
+        if media is not None and isinstance(self.action_agent, LLM):
             raise ValueError(
                 "If image is provided, then action_agent must be an agent or LMM."
             )
 
         question = chat[0]["content"]
         if len(chat) == 1:
-            results = self._step(question, image=image)
+            results = self._step(question, image=media)
             self.last_scratchpad = results["scratchpad"]
             return results["action_arg"]
 
@@ -183,10 +183,10 @@ class Reflexion(Agent):
             self.last_scratchpad += "Answer is INCORRECT"
             chat_context = "The previous conversation was:\n" + chat_str
             reflections = self.reflect(
-                question, chat_context, self.last_scratchpad, image
+                question, chat_context, self.last_scratchpad, media
             )
             _LOGGER.info(f" {reflections}")
-            results = self._step(question, reflections, image=image)
+            results = self._step(question, reflections, image=media)
             self.last_scratchpad = results["scratchpad"]
             return results["action_arg"]
 
@@ -249,7 +249,7 @@ class Reflexion(Agent):
             return format_step(
                 self.action_agent(
                     self._build_agent_prompt(question, reflections, scratchpad),
-                    image=image,
+                    media=image,
                 )
             )
 

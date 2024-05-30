@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, cast
 import requests
 from openai import AzureOpenAI, OpenAI
 
-from vision_agent.tools import CHOOSE_PARAMS, SYSTEM_PROMPT
+from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ class OpenAILMM(LMM):
         return cast(str, response.choices[0].message.content)
 
     def generate_classifier(self, question: str) -> Callable:
-        from vision_agent.tools import CLIP
+        from vision_agent.tools.easytool_tools import CLIP
 
         api_doc = CLIP.description + "\n" + str(CLIP.usage)
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
@@ -223,7 +223,7 @@ class OpenAILMM(LMM):
         return lambda x: CLIP()(**{"prompt": params["prompt"], "image": x})
 
     def generate_detector(self, question: str) -> Callable:
-        from vision_agent.tools import GroundingDINO
+        from vision_agent.tools.easytool_tools import GroundingDINO
 
         api_doc = GroundingDINO.description + "\n" + str(GroundingDINO.usage)
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
@@ -248,7 +248,7 @@ class OpenAILMM(LMM):
         return lambda x: GroundingDINO()(**{"prompt": params["prompt"], "image": x})
 
     def generate_segmentor(self, question: str) -> Callable:
-        from vision_agent.tools import GroundingSAM
+        from vision_agent.tools.easytool_tools import GroundingSAM
 
         api_doc = GroundingSAM.description + "\n" + str(GroundingSAM.usage)
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
@@ -273,12 +273,12 @@ class OpenAILMM(LMM):
         return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
 
     def generate_zero_shot_counter(self, question: str) -> Callable:
-        from vision_agent.tools import ZeroShotCounting
+        from vision_agent.tools.easytool_tools import ZeroShotCounting
 
         return lambda x: ZeroShotCounting()(**{"image": x})
 
     def generate_image_qa_tool(self, question: str) -> Callable:
-        from vision_agent.tools import ImageQuestionAnswering
+        from vision_agent.tools.easytool_tools import ImageQuestionAnswering
 
         return lambda x: ImageQuestionAnswering()(**{"prompt": question, "image": x})
 

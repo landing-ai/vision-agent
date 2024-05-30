@@ -1,152 +1,236 @@
-VISION_AGENT_REFLECTION = """You are an advanced reasoning agent that can improve based on self-refection. You will be given a previous reasoning trial in which you were given the user's question, the available tools that the agent has, the decomposed tasks and tools that the agent used to answer the question, the tool usage for each of the tools used and the final answer the agent provided. You may also receive an image with the visualized bounding boxes or masks with their associated labels and scores from the tools used.
+USER_REQ = """
+## User Request
+{user_request}
+"""
 
-Please note that:
-1. You must ONLY output parsible JSON format. If the agents output was correct set "Finish" to true, else set "Finish" to false. An example output looks like:
-{{"Finish": true, "Reflection": "The agent's answer was correct."}}
-2. You must utilize the image with the visualized bounding boxes or masks and determine if the tools were used correctly or if the tools were used incorrectly or the wrong tools were used.
-3. If the agent's answer was incorrect, you must diagnose the reason for failure and devise a new concise and concrete plan that aims to mitigate the same failure with the tools available. An example output looks like:
-    {{"Finish": false, "Reflection": "I can see from the visualized bounding boxes that the agent's answer was incorrect because the grounding_dino_ tool produced false positive predictions. The agent should use the following tools with the following parameters:
-        Step 1: Use 'grounding_dino_' with a 'prompt' of 'baby. bed' and a 'box_threshold' of 0.7 to reduce the false positives.
-        Step 2: Use 'box_iou_' with the baby bounding box and the bed bounding box to determine if the baby is on the bed or not."}}
-4. If the task cannot be completed with the existing tools or by adjusting the parameters, set "Finish" to true.
+FULL_TASK = """
+## User Request
+{user_request}
 
-User's question: {question}
+## Subtasks
+{subtasks}
+"""
 
-Tools available:
-{tools}
+FEEDBACK = """
+## This contains code and feedback from previous runs and is used for providing context so you do not make the same mistake again.
 
-Tasks and tools used:
-{tool_results}
+{feedback}
+"""
 
-Tool's used API documentation:
-{tool_usage}
 
-Final answer:
-{final_answer}
+PLAN = """
+**Context**
+{context}
 
-Reflection: """
+**Tools Available**:
+{tool_desc}
 
-TASK_DECOMPOSE = """You need to decompose a user's complex question into one or more simple subtasks and let the model execute it step by step.
-This is the user's question: {question}
-This is the tool list:
-{tools}
+**Previous Feedback**:
+{feedback}
 
-Please note that:
-1. If the given task is simple and the answer can be provided by executing one tool, you should only use that tool to provide the answer.
-2. If the given task is complex, You should decompose this user's complex question into simple subtasks which can only be executed easily by using one single tool in the tool list.
-3. You should try to decompose the complex question into least number of subtasks.
-4. If one subtask needs the results from another subtask, you should write clearly. For example:
-{{"Tasks": ["Convert 23 km/h to X km/min by 'divide_'", "Multiply X km/min by 45 min to get Y by 'multiply_'"]}}
-5. You must ONLY output in a parsible JSON format. An example output looks like:
+**Instructions**:
+Based on the context and tools you have available, write a plan of subtasks to achieve the user request utilizing given tools when necessary. Output a list of jsons in the following format:
 
-{{"Tasks": ["Task 1", "Task 2", ...]}}
+```json
+{{
+    "plan":
+        [
+            {{
+                "instructions": str # what you should do in this task, one short phrase or sentence
+            }}
+        ]
+}}
+```
+"""
 
-Output: """
+CODE = """
+**Role**: You are a software programmer.
 
-TASK_DECOMPOSE_DEPENDS = """You need to decompose a user's complex question into one or more simple subtasks and let the model execute it step by step.
-This is the user's question: {question}
+**Task**: As a programmer, you are required to complete the function. Use a Chain-of-Thought approach to break down the problem, create pseudocode, and then write the code in Python language. Ensure that your code is efficient, readable, and well-commented. Return the requested information from the function you create. Do not call your code, a test will be run after the code is submitted.
 
-This is the tool list:
-{tools}
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
 
-This is a reflection from a previous failed attempt:
-{reflections}
+{docstring}
 
-Please note that:
-1. If the given task is simple and the answer can be provided by executing one tool, you should only use that tool to provide the answer.
-2. If the given task is complex, You should decompose this user's complex question into simple subtasks which can only be executed easily by using one single tool in the tool list.
-3. You should try to decompose the complex question into least number of subtasks.
-4. If one subtask needs the results from another subtask, you should write clearly. For example:
-{{"Tasks": ["Convert 23 km/h to X km/min by 'divide_'", "Multiply X km/min by 45 min to get Y by 'multiply_'"]}}
-5. You must ONLY output in a parsible JSON format. An example output looks like:
+**Input Code Snippet**:
+```python
+# Your code here
+```
 
-{{"Tasks": ["Task 1", "Task 2", ...]}}
+**User Instructions**:
+{question}
 
-Output: """
+**Previous Feedback**:
+{feedback}
 
-CHOOSE_TOOL = """This is the user's question: {question}
-These are the tools you can select to solve the question:
-{tools}
+**Instructions**:
+1. **Understand and Clarify**: Make sure you understand the task.
+2. **Algorithm/Method Selection**: Decide on the most efficient way.
+3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
+4. **Code Generation**: Translate your pseudocode into executable Python code.
+5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools import *`. Use a debug flag in the function parameters to toggle logging on and off.
+"""
 
-Please note that:
-1. You should only choose one tool from the Tool List to solve this question and it should have maximum chance of solving the question.
-2. You should only choose the tool whose parameters are most relevant to the user's question and are available as part of the question.
-3. You should choose the tool whose return type is most relevant to the answer of the user's question.
-4. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
+TEST = """
+**Role**: As a tester, your task is to create comprehensive test cases for the provided code. These test cases should encompass Basic and Edge case scenarios to ensure the code's robustness and reliability if possible.
 
-Example 1: {{"ID": 1}}
-Example 2: {{"ID": 2}}
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`. You do not need to test these functions. Test only the code provided by the user.
 
-Output: """
+{docstring}
 
-CHOOSE_TOOL_DEPENDS = """This is the user's question: {question}
-These are the tools you can select to solve the question:
-{tools}
+**User Instructions**:
+{question}
 
-This is a reflection from a previous failed attempt:
-{reflections}
+**Input Code Snippet**:
+```python
+### Please decided how would you want to generate test cases. Based on incomplete code or completed version.
+{code}
+```
 
-Please note that:
-1. You should only choose one tool from the Tool List to solve this question and it should have maximum chance of solving the question.
-2. You should only choose the tool whose parameters are most relevant to the user's question and are available as part of the question.
-3. You should choose the tool whose return type is most relevant to the answer of the user's question.
-4. You must ONLY output the ID of the tool you chose in a parsible JSON format. Two example outputs look like:
+**Instructions**:
+1. Verify the fundamental functionality under normal conditions.
+2. Ensure each test case is well-documented with comments explaining the scenario it covers.
+3. DO NOT use any files that are not provided by the user's instructions, your test must be run and will crash if it tries to load a non-existent file.
+4. DO NOT mock any functions, you must test their functionality as is.
 
-Example 1: {{"ID": 1}}
-Example 2: {{"ID": 2}}
+You should format your test cases at the end of your response wrapped in ```python ``` tags like in the following example:
+```python
+# You can run assertions to ensure the function is working as expected
+assert function(input) == expected_output, "Test case description"
 
-Output: """
+# You can simply call the function to ensure it runs
+function(input)
 
-CHOOSE_PARAMETER_DEPENDS = """Given a user's question and an API tool documentation, you need to output parameters according to the API tool documentation to successfully call the API to solve the user's question.
-Please note that:
-1. The Example in the API tool documentation can help you better understand the use of the API. Pay attention to the examples which show how to parse the question and extract tool parameters such as prompts and visual inputs.
-2. Ensure the parameters you output are correct. The output must contain the required parameters, and can contain the optional parameters based on the question. If there are no parameters in the required parameters and optional parameters, just leave it as {{"Parameters":{{}}}}
-3. If the user's question mentions other APIs, you should ONLY consider the API tool documentation I give and do not consider other APIs.
-4. The question may have dependencies on answers of other questions, so we will provide logs of previous questions and answers for your reference.
-5. If you need to use this API multiple times, please set "Parameters" to a list.
-6. You must ONLY output in a parsible JSON format. Two example outputs look like:
+# Or you can visualize the output
+output = function(input)
+visualize(output)
+```
 
-Example 1: {{"Parameters":{{"input": [1,2,3]}}}}
-Example 2: {{"Parameters":[{{"input": [1,2,3]}}, {{"input": [2,3,4]}}]}}
+**Examples**:
+## Prompt 1:
+```python
+def detect_cats_and_dogs(image_path: str) -> Dict[str, List[List[float]]]:
+    \""" Detects cats and dogs in an image. Returns a dictionary with
+    {{
+        "cats": [[x1, y1, x2, y2], ...], "dogs": [[x1, y1, x2, y2], ...]
+    }}
+    \"""
+```
 
-This is a reflection from a previous failed attempt:
-{reflections}
+## Completion 1:
+```python
+# We can test to ensure the output has the correct structure but we cannot test the
+# content of the output without knowing the image. We can test on "image.jpg" because
+# it is provided by the user so we know it exists.
+output = detect_cats_and_dogs("image.jpg")
+assert "cats" in output, "The output should contain 'cats'
+assert "dogs" in output, "The output should contain 'dogs'
+```
 
-These are logs of previous questions and answers:
-{previous_log}
+## Prompt 2:
+```python
+def find_text(image_path: str, text: str) -> str:
+    \""" Finds the text in the image and returns the text. \"""
 
-This is the current user's question: {question}
-This is the API tool documentation: {tool_usage}
-Output: """
+## Completion 2:
+```python
+# Because we do not know ahead of time what text is in the image, we can only run the
+# code and print the results. We can test on "image.jpg" because it is provided by the
+# user so we know it exists.
+found_text = find_text("image.jpg", "Hello World")
+print(found_text)
+```
+"""
 
-ANSWER_GENERATE_DEPENDS = """You should answer the question based on the response output by the API tool.
-Please note that:
-1. You should try to organize the response into a natural language answer.
-2. We will not show the API response to the user, thus you need to make full use of the response and give the information in the response that can satisfy the user's question in as much detail as possible.
-3. If the API tool does not provide useful information in the response, please answer with your knowledge.
-4. The question may have dependencies on answers of other questions, so we will provide logs of previous questions and answers.
 
-This is a reflection from a previous failed attempt:
-{reflections}
+SIMPLE_TEST = """
+**Role**: As a tester, your task is to create a simple test case for the provided code. This test case should verify the fundamental functionality under normal conditions.
 
-These are logs of previous questions and answers:
-{previous_log}
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`. You do not need to test these functions, only the code provided by the user.
 
-This is the user's question: {question}
+{docstring}
 
-This is the response output by the API tool:
-{call_results}
+**User Instructions**:
+{question}
 
-We will not show the API response to the user, thus you need to make full use of the response and give the information in the response that can satisfy the user's question in as much detail as possible.
-Output: """
+**Input Code Snippet**:
+```python
+### Please decide how would you want to generate test cases. Based on incomplete code or completed version.
+{code}
+```
 
-ANSWER_SUMMARIZE_DEPENDS = """We break down a user's complex problems into simple subtasks and provide answers to each simple subtask. You need to organize these answers to each subtask and form a self-consistent final answer to the user's question
-This is the user's question: {question}
+**Previous Feedback**:
+{feedback}
 
-These are subtasks and their answers:
-{answers}
+**Instructions**:
+1. Verify the fundamental functionality under normal conditions.
+2. Ensure each test case is well-documented with comments explaining the scenario it covers.
+3. Your test case MUST run only on the given image which is {media}
+4. Your test case MUST run only with the given values which is available in the question - {question}
+5. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
+6. DO NOT mock any functions, you must test their functionality as is.
+7. DO NOT assert the output value, run the code and assert only the output format or data structure.
+8. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
+9. DO NOT import the testing function as it will available in the testing environment.
+10. Print the output of the function that is being tested.
+"""
 
-This is a reflection from a previous failed attempt:
-{reflections}
 
-Final answer: """
+FIX_BUG = """
+**Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so you can run !pip install to install missing packages.
+
+**Instructions**:
+Please re-complete the code to fix the error message. Here is the previous version:
+```python
+{code}
+```
+
+When we run this test code:
+```python
+{tests}
+```
+
+It raises this error:
+```python
+{result}
+```
+
+This is previous feedback provided on the code:
+{feedback}
+
+Please fix the bug by follow the error information and return a JSON object with the following format:
+{{
+    "reflections": str # any thoughts you have about the bug and how you fixed it
+    "code": str # the fixed code if any, else an empty string
+    "test": str # the fixed test code if any, else an empty string
+}}
+"""
+
+
+REFLECT = """
+**Role**: You are a reflection agent. Your job is to look at the original user request and the code produced and determine if the code satisfies the user's request. If it does not, you must provide feedback on how to improve the code. You are concerned only if the code meets the user request, not if the code is good or bad.
+
+**Context**:
+{context}
+
+**Plan**:
+{plan}
+
+**Code**:
+{code}
+
+**Instructions**:
+1. **Understand the User Request**: Read the user request and understand what the user is asking for.
+2. **Review the Plan**: Check the plan to see if it is a viable approach to solving the user request.
+3. **Review the Code**: Check the code to see if it solves the user request.
+4. DO NOT add any reflections for test cases, these are taken care of.
+
+Respond in JSON format with the following structure:
+{{
+    "feedback": str # the feedback you would give to the coder and tester
+    "success": bool # whether the code and tests meet the user request
+}}
+"""
