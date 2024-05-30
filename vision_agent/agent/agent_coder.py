@@ -19,7 +19,7 @@ from vision_agent.agent.agent_coder_prompts import (
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.tools import TOOL_DOCSTRING, UTILITIES_DOCSTRING
-from vision_agent.utils import Execute
+from vision_agent.utils import CodeInterpreterFactory
 
 IMPORT_HELPER = """
 import math
@@ -42,7 +42,7 @@ from vision_agent.tools import *
 """
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
-_EXECUTE = Execute()
+_EXECUTE = CodeInterpreterFactory.get_default_instance()
 _CONSOLE = Console()
 
 
@@ -94,8 +94,8 @@ def write_debug(question: str, code: str, feedback: str, model: LLM) -> str:
 
 def execute_tests(code: str, tests: str) -> Dict[str, Union[str, bool]]:
     full_code = f"{IMPORT_HELPER}\n{code}\n{tests}"
-    success, result = _EXECUTE.run_isolation(full_code)
-    return {"code": code, "result": result, "passed": success}
+    result = _EXECUTE.exec_isolation(full_code)
+    return {"code": code, "result": result.text(), "passed": result.success}
 
 
 def run_visual_tests(
