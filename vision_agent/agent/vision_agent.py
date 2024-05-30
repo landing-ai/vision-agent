@@ -126,6 +126,12 @@ def write_and_test_code(
     max_retries: int = 3,
     input_media: Optional[Union[str, Path]] = None,
 ) -> Dict[str, Any]:
+    log_progress(
+        {
+            "type": "code",
+            "status": "started",
+        }
+    )
     code = extract_code(
         coder(CODE.format(docstring=tool_info, question=task, feedback=working_memory))
     )
@@ -141,35 +147,44 @@ def write_and_test_code(
         )
     )
 
+    log_progress(
+        {
+            "type": "code",
+            "status": "running",
+            "payload": {
+                "code": code,
+                "test": test,
+            },
+        }
+    )
     success, result = _EXECUTE.run_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
+    log_progress(
+        {
+            "type": "code",
+            "status": "completed" if success else "failed",
+            "payload": {
+                "code": code,
+                "test": test,
+                "result": result,
+            },
+        }
+    )
     if verbosity == 2:
         _LOGGER.info("Initial code and tests:")
-        log_progress(
-            {
-                "log": "Code:",
-                "code": code,
-            }
-        )
-        log_progress(
-            {
-                "log": "Test:",
-                "code": test,
-            }
-        )
         _CONSOLE.print(
             Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
-        )
-        log_progress(
-            {
-                "log": "Result:",
-                "result": result,
-            }
         )
         _LOGGER.info(f"Initial result: {result}")
 
     count = 0
     new_working_memory = []
     while not success and count < max_retries:
+        log_progress(
+            {
+                "type": "code",
+                "status": "started",
+            }
+        )
         fixed_code_and_test = extract_json(
             debugger(
                 FIX_BUG.format(
@@ -181,18 +196,33 @@ def write_and_test_code(
             code = extract_code(fixed_code_and_test["code"])
         if fixed_code_and_test["test"].strip() != "":
             test = extract_code(fixed_code_and_test["test"])
+        log_progress(
+            {
+                "type": "code",
+                "status": "running",
+                "payload": {
+                    "code": code,
+                    "test": test,
+                },
+            }
+        )
         new_working_memory.append(
             {"code": f"{code}\n{test}", "feedback": fixed_code_and_test["reflections"]}
         )
 
         success, result = _EXECUTE.run_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
+        log_progress(
+            {
+                "type": "code",
+                "status": "completed" if success else "failed",
+                "payload": {
+                    "code": code,
+                    "test": test,
+                    "result": result,
+                },
+            }
+        )
         if verbosity == 2:
-            log_progress(
-                {
-                    "log": f"Debug attempt {count + 1}, reflection:",
-                    "result": fixed_code_and_test["reflections"],
-                }
-            )
             _LOGGER.info(
                 f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
@@ -200,12 +230,6 @@ def write_and_test_code(
                 Syntax(
                     f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True
                 )
-            )
-            log_progress(
-                {
-                    "log": "Debug result:",
-                    "result": result,
-                }
             )
             _LOGGER.info(f"Debug result: {result}")
         count += 1
@@ -232,19 +256,26 @@ def retrieve_tools(
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
 ) -> str:
+    log_progress(
+        {
+            "type": "tools",
+            "status": "started",
+        }
+    )
     tool_info = []
     tool_desc = []
     for task in plan:
         tools = tool_recommender.top_k(task["instructions"], k=2, thresh=0.3)
         tool_info.extend([e["doc"] for e in tools])
         tool_desc.extend([e["desc"] for e in tools])
+    log_progress(
+        {
+            "type": "tools",
+            "status": "completed",
+            "payload": tools,
+        }
+    )
     if verbosity == 2:
-        log_progress(
-            {
-                "log": "Retrieved tools:",
-                "tools": tool_desc,
-            }
-        )
         _LOGGER.info(f"Tools: {tool_desc}")
     tool_info_set = set(tool_info)
     return "\n\n".join(tool_info_set)
@@ -372,6 +403,12 @@ class VisionAgent(Agent):
         retries = 0
 
         while not success and retries < self.max_retries:
+            self.log_progress(
+                {
+                    "type": "plans",
+                    "status": "started",
+                }
+            )
             plan_i = write_plan(
                 chat,
                 T.TOOL_DESCRIPTIONS,
@@ -380,13 +417,15 @@ class VisionAgent(Agent):
                 media=[media] if media else None,
             )
             plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
+
+            self.log_progress(
+                {
+                    "type": "plans",
+                    "status": "completed",
+                    "payload": plan_i,
+                }
+            )
             if self.verbosity >= 1:
-                self.log_progress(
-                    {
-                        "log": "Going to run the following plan(s) in sequence:\n",
-                        "plan": plan_i,
-                    }
-                )
 
                 _LOGGER.info(
                     f"""
@@ -418,6 +457,12 @@ class VisionAgent(Agent):
             plan.append({"code": code, "test": test, "plan": plan_i})
 
             if self_reflection:
+                self.log_progress(
+                    {
+                        "type": "self_reflection",
+                        "status": "started",
+                    }
+                )
                 reflection = reflect(
                     chat,
                     FULL_TASK.format(
@@ -427,23 +472,29 @@ class VisionAgent(Agent):
                     self.planner,
                 )
                 if self.verbosity > 0:
-                    self.log_progress(
-                        {
-                            "log": "Reflection:",
-                            "reflection": reflection,
-                        }
-                    )
                     _LOGGER.info(f"Reflection: {reflection}")
                 feedback = cast(str, reflection["feedback"])
                 success = cast(bool, reflection["success"])
+                self.log_progress(
+                    {
+                        "type": "self_reflection",
+                        "status": "completed" if success else "failed",
+                        "payload": reflection,
+                    }
+                )
                 working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
 
             retries += 1
 
         self.log_progress(
             {
-                "log": f"Vision Agent has concluded this chat.\nSuccess: {success}",
-                "finished": True,
+                "type": "final_code",
+                "status": "completed" if success else "failed",
+                "payload": {
+                    "code": code,
+                    "test": test,
+                    "result": results["test_result"],
+                },
             }
         )
 
