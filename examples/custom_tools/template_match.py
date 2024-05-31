@@ -54,6 +54,11 @@ def template_matching_with_rotation(
     for angle in range(0, max_rotation, step):
         # Rotate the template
         rotated_template = rotate_image(template_gray, angle)
+        if (
+            rotated_template.shape[0] > main_image_gray.shape[0]
+            or rotated_template.shape[1] > main_image_gray.shape[1]
+        ):
+            continue
 
         # Perform template matching
         result = cv2.matchTemplate(
@@ -69,17 +74,18 @@ def template_matching_with_rotation(
             )
             scores.append(result[y, x])
 
-    indices = (
-        nms(
-            torch.tensor(boxes).float(),
-            torch.tensor(scores).float(),
-            0.2,
+    if len(boxes) > 0:
+        indices = (
+            nms(
+                torch.tensor(boxes).float(),
+                torch.tensor(scores).float(),
+                0.2,
+            )
+            .numpy()
+            .tolist()
         )
-        .numpy()
-        .tolist()
-    )
-    boxes = [boxes[i] for i in indices]
-    scores = [scores[i] for i in indices]
+        boxes = [boxes[i] for i in indices]
+        scores = [scores[i] for i in indices]
 
     if visualize:
         # Draw a rectangle around the best match
