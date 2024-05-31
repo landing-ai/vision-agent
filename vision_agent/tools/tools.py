@@ -198,7 +198,7 @@ def extract_frames(
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     """'ocr' extracts text from an image. It returns a list of detected text, bounding
-    boxes, and confidence scores.
+    boxes, and confidence scores. The results are sorted from top-left to bottom right
 
     Parameters:
         image (np.ndarray): The image to extract text from.
@@ -211,7 +211,7 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     -------
     >>> ocr(image)
     [
-        {'label': 'some text', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
+        {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
     ]
     """
 
@@ -245,7 +245,8 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
         box = normalize_bbox(box, image_size)
         output.append({"label": label, "bbox": box, "score": round(det["score"], 2)})
 
-    return output
+    ocr_results = sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
+    return ocr_results
 
 
 def zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
