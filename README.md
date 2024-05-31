@@ -124,6 +124,7 @@ You can also add custom tools to the agent:
 
 ```python
 import vision_agent as va
+import numpy as np
 
 @va.tools.register_tool(imports=["import numpy as np"])
 def custom_tool(image_path: str) -> str:
@@ -140,7 +141,6 @@ def custom_tool(image_path: str) -> str:
     >>> custom_tool("image.jpg")
     """
 
-    import numpy as np
     return np.zeros((10, 10))
 ```
 
