@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 from rich.console import Console
+from rich.style import Style
 from rich.syntax import Syntax
 from tabulate import tabulate
 
@@ -23,13 +24,13 @@ from vision_agent.agent.vision_agent_prompts import (
 )
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.lmm import LMM, OpenAILMM
-from vision_agent.utils import Execute
+from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.sim import Sim
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _MAX_TABULATE_COL_WIDTH = 80
-_EXECUTE = Execute(600)
+_EXECUTE = CodeInterpreterFactory.get_default_instance()
 _CONSOLE = Console()
 _DEFAULT_IMPORT = "\n".join(T.__new_tools__)
 
@@ -157,28 +158,27 @@ def write_and_test_code(
             },
         }
     )
-    success, result = _EXECUTE.run_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
+    result = _EXECUTE.exec_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
     log_progress(
         {
             "type": "code",
-            "status": "completed" if success else "failed",
+            "status": "completed" if result.success else "failed",
             "payload": {
                 "code": code,
                 "test": test,
-                "result": result,
+                "result": result.to_json(),
             },
         }
     )
     if verbosity == 2:
-        _LOGGER.info("Initial code and tests:")
-        _CONSOLE.print(
-            Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
+        _print_code("Initial code and tests:", code, test)
+        _LOGGER.info(
+            f"Initial code execution result:\n{result.text(include_logs=False)}"
         )
-        _LOGGER.info(f"Initial result: {result}")
 
     count = 0
     new_working_memory = []
-    while not success and count < max_retries:
+    while not result.success and count < max_retries:
         log_progress(
             {
                 "type": "code",
@@ -188,7 +188,7 @@ def write_and_test_code(
         fixed_code_and_test = extract_json(
             debugger(
                 FIX_BUG.format(
-                    code=code, tests=test, result=result, feedback=working_memory
+                    code=code, tests=test, result=result.text(), feedback=working_memory
                 )
             )
         )
@@ -210,15 +210,15 @@ def write_and_test_code(
             {"code": f"{code}\n{test}", "feedback": fixed_code_and_test["reflections"]}
         )
 
-        success, result = _EXECUTE.run_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
+        result = _EXECUTE.exec_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
         log_progress(
             {
                 "type": "code",
-                "status": "completed" if success else "failed",
+                "status": "completed" if result.success else "failed",
                 "payload": {
                     "code": code,
                     "test": test,
-                    "result": result,
+                    "result": result.to_json(),
                 },
             }
         )
@@ -226,28 +226,31 @@ def write_and_test_code(
             _LOGGER.info(
                 f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
-            _CONSOLE.print(
-                Syntax(
-                    f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True
-                )
+            _print_code("Code and test after attempted fix:", code, test)
+            _LOGGER.info(
+                f"Code execution result after attempted fix: {result.text(include_logs=False)}"
             )
-            _LOGGER.info(f"Debug result: {result}")
         count += 1
 
     if verbosity >= 1:
-        _LOGGER.info("Final code and tests:")
-        _CONSOLE.print(
-            Syntax(f"{code}\n{test}", "python", theme="gruvbox-dark", line_numbers=True)
-        )
-        _LOGGER.info(f"Final Result: {result}")
+        _print_code("Final code and tests:", code, test)
 
     return {
         "code": code,
         "test": test,
-        "success": success,
+        "success": result.success,
         "test_result": result,
         "working_memory": new_working_memory,
     }
+
+
+def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
+    _CONSOLE.print(title, style=Style(bgcolor="dark_orange3", bold=True))
+    _CONSOLE.print("=" * 30 + " Code " + "=" * 30)
+    _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
+    if test:
+        _CONSOLE.print("=" * 30 + " Test " + "=" * 30)
+        _CONSOLE.print(Syntax(test, "python", theme="gruvbox-dark", line_numbers=True))
 
 
 def retrieve_tools(
@@ -279,8 +282,10 @@ def retrieve_tools(
             "payload": tool_list,
         }
     )
+
     if verbosity == 2:
-        _LOGGER.info(f"Tools: {tool_desc}")
+        tool_desc_str = "\n".join(tool_desc)
+        _LOGGER.info(f"Tools Description:\n{tool_desc_str}")
     tool_info_set = set(tool_info)
     return "\n\n".join(tool_info_set)
 
@@ -386,10 +391,11 @@ class VisionAgent(Agent):
                 and working memory of the agent.
         """
 
-        if len(chat) == 0:
+        if not chat:
             raise ValueError("Chat cannot be empty.")
 
         if media is not None:
+            media = _EXECUTE.upload_file(media)
             for chat_i in chat:
                 if chat_i["role"] == "user":
                     chat_i["content"] += f" Image name {media}"
@@ -497,7 +503,7 @@ class VisionAgent(Agent):
                 "payload": {
                     "code": code,
                     "test": test,
-                    "result": results["test_result"],
+                    "result": cast(Execution, results["test_result"]).to_json(),
                 },
             }
         )
@@ -513,4 +519,3 @@ class VisionAgent(Agent):
     def log_progress(self, data: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
-        pass

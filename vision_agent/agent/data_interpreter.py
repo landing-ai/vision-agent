@@ -26,11 +26,12 @@ from vision_agent.agent.data_interpreter_prompts import (
 )
 from vision_agent.llm import LLM, OpenAILLM
 from vision_agent.tools import TOOL_DESCRIPTIONS, TOOLS_DF
-from vision_agent.utils import Execute, Sim
+from vision_agent.utils import CodeInterpreter, CodeInterpreterFactory, Execution, Sim
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
 _MAX_TABULATE_COL_WIDTH = 80
+_EXECUTE = CodeInterpreterFactory.get_default_instance()
 _CONSOLE = Console()
 
 
@@ -163,12 +164,12 @@ def write_and_exec_code(
     code_writer_call: Callable[..., str],
     model: LLM,
     tool_info: str,
-    exec: Execute,
+    exec: CodeInterpreter,
     retrieved_ltm: str,
     log_progress: Callable[[Dict[str, Any]], None],
     max_retry: int = 3,
     verbosity: int = 0,
-) -> Tuple[bool, str, str, Dict[str, List[str]]]:
+) -> Tuple[bool, str, Execution, Dict[str, List[str]]]:
     success = False
     counter = 0
     reflection = ""
@@ -176,7 +177,8 @@ def write_and_exec_code(
     code = code_writer_call(
         user_req, subtask, retrieved_ltm, tool_info, orig_code, model
     )
-    success, result = exec.run_isolation(code)
+    result = exec.exec_isolation(code)
+    success = result.success
     if verbosity == 2:
         _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
         log_progress(
@@ -193,10 +195,10 @@ def write_and_exec_code(
         log_progress(
             {
                 "log": "Result:",
-                "result": str(result),
+                "result": result.to_json(),
             }
         )
-        _LOGGER.info(f"\tCode success: {success}, result: {str(result)}")
+        _LOGGER.info(f"\tCode success: {success}, result: {result.text(False)}")
     working_memory: Dict[str, List[str]] = {}
     while not success and counter < max_retry:
         if subtask not in working_memory:
@@ -210,13 +212,13 @@ def write_and_exec_code(
             )
         else:
             working_memory[subtask].append(
-                PREV_CODE_CONTEXT.format(code=code, result=result)
+                PREV_CODE_CONTEXT.format(code=code, result=result.text())
             )
 
         code, reflection = debug_code(
             user_req, subtask, retrieved_ltm, "\n".join(working_memory[subtask]), model
         )
-        success, result = exec.run_isolation(code)
+        result = exec.exec_isolation(code)
         counter += 1
         if verbosity == 2:
             _CONSOLE.print(
@@ -231,19 +233,21 @@ def write_and_exec_code(
             log_progress(
                 {
                     "log": "Result:",
-                    "result": result,
+                    "result": result.to_json(),
                 }
             )
-            _LOGGER.info(f"\tDebugging reflection: {reflection}, result: {result}")
+            _LOGGER.info(
+                f"\tDebugging reflection: {reflection}, result: {result.text(False)}"
+            )
 
         if success:
             working_memory[subtask].append(
                 PREV_CODE_CONTEXT_WITH_REFLECTION.format(
-                    reflection=reflection, code=code, result=result
+                    reflection=reflection, code=code, result=result.text()
                 )
             )
 
-    return success, code, result, working_memory
+    return result.success, code, result, working_memory
 
 
 @traceable(name="plan execution")
@@ -251,7 +255,7 @@ def run_plan(
     user_req: str,
     plan: List[Dict[str, Any]],
     coder: LLM,
-    exec: Execute,
+    exec: CodeInterpreter,
     code: str,
     tool_recommender: Sim,
     log_progress: Callable[[Dict[str, Any]], None],
@@ -316,10 +320,10 @@ def run_plan(
         log_progress(
             {
                 "log": "Result:",
-                "result": str(result),
+                "result": result.to_json(),
             }
         )
-        _LOGGER.info(f"\tCode success: {success} result: {str(result)}")
+        _LOGGER.info(f"\tCode success: {success} result: {result.text(False)}")
 
         task["success"] = success
         task["result"] = result
@@ -360,7 +364,7 @@ class DataInterpreter(Agent):
     ) -> None:
         self.planner = OpenAILLM(temperature=0.0, json_mode=True)
         self.coder = OpenAILLM(temperature=0.0)
-        self.exec = Execute(timeout=timeout)
+        self.exec = _EXECUTE
         self.report_progress_callback = report_progress_callback
         if tool_recommender is None:
             self.tool_recommender = Sim(TOOLS_DF, sim_key="desc")
