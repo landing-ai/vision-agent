@@ -34,6 +34,9 @@ nbformat = "^5.10.4"
 rich = "^13.7.1"
 langsmith = "^0.1.58"
 ipykernel = "^6.29.4"
+e2b = "^0.17.0"
+e2b-code-interpreter = "^0.0.7"
+tenacity = "^8.3.0"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
@@ -93,4 +96,6 @@ module = [
     "openai.*",
     "sentence_transformers.*",
     "moviepy.*",
+    "e2b_code_interpreter.*",
+    "e2b.*",
 ]
