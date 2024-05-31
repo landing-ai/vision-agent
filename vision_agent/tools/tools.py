@@ -60,8 +60,8 @@ def grounding_dino(
 ) -> List[Dict[str, Any]]:
     """'grounding_dino' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions. The categories in text prompt
-    are separated by commas or periods. It returns a list and count of bounding boxes,
-    label names and associated probability scores.
+    are separated by commas or periods. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -73,7 +73,7 @@ def grounding_dino(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-        bounding box of the detected objects with normalized coordinates
+        bounding box of the detected objects with normalized coordinates between 0 and 1
         (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left and
         xmax and ymax are the coordinates of the bottom-right of the bounding box.
 
