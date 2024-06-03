@@ -357,10 +357,9 @@ class VisionAgent(Agent):
                 that the progress are not mixed up.
         """
 
-        # self.planner = (
-        #     OpenAILLM(temperature=0.0, json_mode=True) if planner is None else planner
-        # )
-        self.planner = OpenAILMM(temperature=0.0, json_mode=True)
+        self.planner = (
+            OpenAILLM(temperature=0.0, json_mode=True) if planner is None else planner
+        )
         self.coder = OpenAILLM(temperature=0.0) if coder is None else coder
         self.tester = OpenAILLM(temperature=0.0) if tester is None else tester
         self.debugger = (
