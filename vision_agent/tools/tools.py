@@ -660,7 +660,7 @@ def overlay_heat_map(
     pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
 
     if "heat_map" not in heat_map or len(heat_map["heat_map"]) == 0:
-        return image
+        return pil_image
 
     pil_image = pil_image.convert("L")
     mask = Image.fromarray(heat_map["heat_map"])

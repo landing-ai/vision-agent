@@ -8,6 +8,7 @@ import re
 import sys
 import tempfile
 import traceback
+import warnings
 from enum import Enum
 from io import IOBase
 from pathlib import Path
@@ -506,9 +507,9 @@ class CodeInterpreterFactory:
     _instance_map: Dict[str, CodeInterpreter] = {}
     _default_key = "default"
 
-    @DeprecationWarning("Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future.")
     @staticmethod
     def get_default_instance() -> CodeInterpreter:
+        warnings.warn("Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future.")
         inst_map = CodeInterpreterFactory._instance_map
         instance = inst_map.get(CodeInterpreterFactory._default_key)
         if instance:
@@ -520,7 +521,7 @@ class CodeInterpreterFactory:
     @staticmethod
     def new_instance() -> CodeInterpreter:
         if os.getenv("CODE_SANDBOX_RUNTIME") == "e2b":
-            instance = E2BCodeInterpreter(timeout=600)
+            instance: CodeInterpreter = E2BCodeInterpreter(timeout=600)
         else:
             instance = LocalCodeInterpreter(timeout=600)
         atexit.register(instance.close)
