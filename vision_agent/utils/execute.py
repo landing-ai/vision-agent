@@ -264,11 +264,7 @@ class Execution(BaseModel):
         """
         Returns the text representation of this object, i.e. including the main result or the error traceback, optionally along with the logs (stdout, stderr).
         """
-        prefix = (
-            "\n".join(self.logs.stdout) + "\n".join(self.logs.stderr)
-            if include_logs
-            else ""
-        )
+        prefix = str(self.logs) if include_logs else ""
         if self.error:
             return prefix + "\n" + self.error.traceback
         return next(

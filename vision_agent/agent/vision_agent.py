@@ -175,7 +175,7 @@ def write_and_test_code(
     if verbosity == 2:
         _print_code("Initial code and tests:", code, test)
         _LOGGER.info(
-            f"Initial code execution result:\n{result.text(include_logs=False)}"
+            f"Initial code execution result:\n{result.text(include_logs=True)}"
         )
 
     count = 0
@@ -230,7 +230,7 @@ def write_and_test_code(
             )
             _print_code("Code and test after attempted fix:", code, test)
             _LOGGER.info(
-                f"Code execution result after attempted fix: {result.text(include_logs=False)}"
+                f"Code execution result after attempted fix: {result.text(include_logs=True)}"
             )
         count += 1
 
