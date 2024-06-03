@@ -404,7 +404,7 @@ print(f"Vision Agent version: {va_version}")"""
         self.interpreter.notebook.restart_kernel()
 
     def exec_cell(self, code: str) -> Execution:
-        execution = self.interpreter.notebook.exec_cell(code)
+        execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
     def upload_file(self, file: Union[str, Path, IO]) -> str:
@@ -506,18 +506,24 @@ class CodeInterpreterFactory:
     _instance_map: Dict[str, CodeInterpreter] = {}
     _default_key = "default"
 
+    @DeprecationWarning("Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future.")
     @staticmethod
     def get_default_instance() -> CodeInterpreter:
         inst_map = CodeInterpreterFactory._instance_map
         instance = inst_map.get(CodeInterpreterFactory._default_key)
         if instance:
             return instance
+        instance = CodeInterpreterFactory.new_instance()
+        inst_map[CodeInterpreterFactory._default_key] = instance
+        return instance
+
+    @staticmethod
+    def new_instance() -> CodeInterpreter:
         if os.getenv("CODE_SANDBOX_RUNTIME") == "e2b":
             instance = E2BCodeInterpreter(timeout=600)
-            atexit.register(instance.close)
         else:
             instance = LocalCodeInterpreter(timeout=600)
-        inst_map[CodeInterpreterFactory._default_key] = instance
+        atexit.register(instance.close)
         return instance
 
 

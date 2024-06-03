@@ -523,8 +523,8 @@ def save_image(image: np.ndarray) -> str:
 
 def overlay_bounding_boxes(
     image: np.ndarray, bboxes: List[Dict[str, Any]]
-) -> np.ndarray:
-    """'display_bounding_boxes' is a utility function that displays bounding boxes on
+) -> Image.Image:
+    """'overlay_bounding_boxes' is a utility function that displays bounding boxes on
     an image.
 
     Parameters:
@@ -533,11 +533,11 @@ def overlay_bounding_boxes(
             boxes.
 
     Returns:
-        np.ndarray: The image with the bounding boxes, labels and scores displayed.
+        PIL.Image.Image: The image with the bounding boxes, labels and scores displayed.
 
     Example
     -------
-    >>> image_with_bboxes = display_bounding_boxes(
+    >>> image_with_bboxes = overlay_bounding_boxes(
         image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
     )
     """
@@ -577,13 +577,13 @@ def overlay_bounding_boxes(
         text_box = draw.textbbox((box[0], box[1]), text=text, font=font)
         draw.rectangle((box[0], box[1], text_box[2], text_box[3]), fill=color[label])
         draw.text((box[0], box[1]), text, fill="black", font=font)
-    return np.array(pil_image.convert("RGB"))
+    return pil_image.convert("RGB")
 
 
 def overlay_segmentation_masks(
     image: np.ndarray, masks: List[Dict[str, Any]]
-) -> np.ndarray:
-    """'display_segmentation_masks' is a utility function that displays segmentation
+) -> Image.Image:
+    """'overlay_segmentation_masks' is a utility function that displays segmentation
     masks.
 
     Parameters:
@@ -591,11 +591,11 @@ def overlay_segmentation_masks(
         masks (List[Dict[str, Any]]): A list of dictionaries containing the masks.
 
     Returns:
-        np.ndarray: The image with the masks displayed.
+        PIL.Image.Image: The image with the masks displayed.
 
     Example
     -------
-    >>> image_with_masks = display_segmentation_masks(
+    >>> image_with_masks = overlay_segmentation_masks(
         image,
         [{
             'score': 0.99,
@@ -627,13 +627,13 @@ def overlay_segmentation_masks(
         np_mask[mask > 0, :] = color[label] + (255 * 0.5,)
         mask_img = Image.fromarray(np_mask.astype(np.uint8))
         pil_image = Image.alpha_composite(pil_image, mask_img)
-    return np.array(pil_image.convert("RGB"))
+    return pil_image.convert("RGB")
 
 
 def overlay_heat_map(
     image: np.ndarray, heat_map: Dict[str, Any], alpha: float = 0.8
-) -> np.ndarray:
-    """'display_heat_map' is a utility function that displays a heat map on an image.
+) -> Image.Image:
+    """'overlay_heat_map' is a utility function that displays a heat map on an image.
 
     Parameters:
         image (np.ndarray): The image to display the heat map on.
@@ -642,11 +642,11 @@ def overlay_heat_map(
         alpha (float, optional): The transparency of the overlay. Defaults to 0.8.
 
     Returns:
-        np.ndarray: The image with the heat map displayed.
+        PIL.Image.Image: The image with the heat map displayed.
 
     Example
     -------
-    >>> image_with_heat_map = display_heat_map(
+    >>> image_with_heat_map = overlay_heat_map(
         image,
         {
             'heat_map': array([[0, 0, 0, ..., 0, 0, 0],
@@ -672,7 +672,7 @@ def overlay_heat_map(
     combined = Image.alpha_composite(
         pil_image.convert("RGBA"), overlay.resize(pil_image.size)
     )
-    return np.array(combined.convert("RGB"))
+    return combined.convert("RGB")
 
 
 def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
