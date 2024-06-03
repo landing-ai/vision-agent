@@ -199,7 +199,7 @@ def extract_frames(
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     """'ocr' extracts text from an image. It returns a list of detected text, bounding
     boxes with normalized coordinates, and confidence scores. The results are sorted
-    from top-left to bottom right. Each element in the return list represents a
+    from top-left to bottom right. Each element in the returned list represents a
     contiguous text region. Text on separate lines is considered separate regions and
     would be returned as separate elements.
 
