@@ -177,7 +177,6 @@ def write_and_test_code(
         _LOGGER.info(
             f"Initial code execution result:\n{result.text(include_logs=False)}"
         )
-        breakpoint()
 
     count = 0
     new_working_memory = []
