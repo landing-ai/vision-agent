@@ -4,7 +4,7 @@ import logging
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
 from PIL import Image
 from rich.console import Console
@@ -79,8 +79,8 @@ def extract_json(json_str: str) -> Dict[str, Any]:
 
 
 def extract_image(
-    media: Optional[List[Union[str, Path]]]
-) -> Optional[List[Union[str, Path]]]:
+    media: Optional[Sequence[Union[str, Path]]]
+) -> Optional[Sequence[Union[str, Path]]]:
     if media is None:
         return None
 
@@ -95,7 +95,9 @@ def extract_image(
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                 if len(frames) > 0:
                     Image.fromarray(frames[0][0]).save(tmp.name)
-                    new_media.append(tmp.name)
+                    new_media.append(Path(tmp.name))
+    if len(new_media) == 0:
+        return None
     return new_media
 
 
@@ -104,7 +106,7 @@ def write_plan(
     tool_desc: str,
     working_memory: str,
     model: Union[LLM, LMM],
-    media: Optional[List[Union[str, Path]]] = None,
+    media: Optional[Sequence[Union[str, Path]]] = None,
 ) -> List[Dict[str, str]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
