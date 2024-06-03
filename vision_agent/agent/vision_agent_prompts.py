@@ -29,14 +29,18 @@ PLAN = """
 {feedback}
 
 **Instructions**:
-Based on the context and tools you have available, write a plan of subtasks to achieve the user request utilizing given tools when necessary. Output a list of jsons in the following format:
+1. Based on the context and tools you have available, write a plan of subtasks to achieve the user request.
+2. Go over the users request, step by step, and ensure each step is represented as a clear subtask in your plan.
+3. Utilize information from the image provided to make your plan more clear and concise.
+
+Output a list of jsons in the following format
 
 ```json
 {{
     "plan":
         [
             {{
-                "instructions": str # what you should do in this task, one short phrase or sentence
+                "instructions": str # what you should do in this task associated with a tool
             }}
         ]
 }}
