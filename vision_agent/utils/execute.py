@@ -509,7 +509,9 @@ class CodeInterpreterFactory:
 
     @staticmethod
     def get_default_instance() -> CodeInterpreter:
-        warnings.warn("Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future.")
+        warnings.warn(
+            "Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future."
+        )
         inst_map = CodeInterpreterFactory._instance_map
         instance = inst_map.get(CodeInterpreterFactory._default_key)
         if instance:
