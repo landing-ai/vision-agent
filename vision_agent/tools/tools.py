@@ -7,6 +7,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple, Union, cast
 
+import cv2
 import numpy as np
 import pandas as pd
 import requests
@@ -421,10 +422,39 @@ def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
 
     mask1 = np.clip(mask1, 0, 1)
     mask2 = np.clip(mask2, 0, 1)
-    mask1_points = np.transpose(np.nonzero(mask1))
-    mask2_points = np.transpose(np.nonzero(mask2))
-    dist_matrix = distance.cdist(mask1_points, mask2_points, "euclidean")
-    return cast(float, np.min(dist_matrix))
+    contours1, _ = cv2.findContours(mask1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours2, _ = cv2.findContours(mask2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    largest_contour1 = max(contours1, key=cv2.contourArea)
+    largest_contour2 = max(contours2, key=cv2.contourArea)
+    polygon1 = cv2.approxPolyDP(largest_contour1, 1.0, True)
+    polygon2 = cv2.approxPolyDP(largest_contour2, 1.0, True)
+    min_distance = np.inf
+
+    small_polygon, larger_contour = (
+        (polygon1, largest_contour2)
+        if len(largest_contour1) < len(largest_contour2)
+        else (polygon2, largest_contour1)
+    )
+
+    # For each point in the first polygon
+    for point in small_polygon:
+        # Calculate the distance to the second polygon, -1 is to invert result as point inside the polygon is positive
+
+        distance = (
+            cv2.pointPolygonTest(
+                larger_contour, (point[0, 0].item(), point[0, 1].item()), True
+            )
+            * -1
+        )
+
+        # If the distance is negative, the point is inside the polygon, so the distance is 0
+        if distance < 0:
+            continue
+        else:
+            # Update the minimum distance if the point is outside the polygon
+            min_distance = min(min_distance, distance)
+
+    return min_distance if min_distance != np.inf else 0.0
 
 
 def closest_box_distance(
