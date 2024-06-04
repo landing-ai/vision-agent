@@ -1,4 +1,5 @@
 import skimage as ski
+import numpy as np
 
 from vision_agent.tools import (
     clip,
@@ -9,6 +10,7 @@ from vision_agent.tools import (
     ocr,
     visual_prompt_counting,
     zero_shot_counting,
+    closest_mask_distance,
 )
 
 
@@ -82,3 +84,22 @@ def test_ocr() -> None:
         image=img,
     )
     assert any("Region-based segmentation" in res["label"] for res in result)
+
+
+def test_mask_distance():
+    # Create two binary masks
+    mask1 = np.zeros((100, 100), dtype=np.uint8)
+    mask1[:10, :10] = 1  # Top left
+    mask2 = np.zeros((100, 100), dtype=np.uint8)
+    mask2[-10:, -10:] = 1  # Bottom right
+
+    # Calculate the distance between the masks
+    distance = closest_mask_distance(mask1, mask2)
+    print(f"Distance between the masks: {distance}")
+
+    # Check the result
+    assert np.isclose(
+        distance,
+        np.sqrt(2) * 81,
+        atol=1e-2,
+    ), f"Expected {np.sqrt(2) * 81}, got {distance}"
