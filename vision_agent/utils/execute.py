@@ -219,7 +219,7 @@ class Logs(BaseModel):
         stdout_str = "\n".join(self.stdout)
         stderr_str = "\n".join(self.stderr)
         return _remove_escape_and_color_codes(
-            f"stdout:\n{stdout_str}\nstderr:\n{stderr_str}"
+            f"----- stdout -----\n{stdout_str}\n----- stderr -----\n{stderr_str}"
         )
 
 
@@ -266,13 +266,13 @@ class Execution(BaseModel):
         """
         prefix = str(self.logs) if include_logs else ""
         if self.error:
-            return prefix + "\nError:" + self.error.traceback
+            return prefix + "\n----- Error -----\n" + self.error.traceback
 
         result_str = [
             (
-                f"Final output:{res.text}"
+                f"----- Final output -----\n{res.text}"
                 if res.is_main_result
-                else f"Intermediate output:{res.text}"
+                else f"----- Intermediate output-----\n{res.text}"
             )
             for res in self.results
         ]
