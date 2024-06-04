@@ -88,7 +88,7 @@ def extract_image(
     for m in media:
         m = Path(m)
         extension = m.suffix
-        if extension in [".jpg", ".jpeg", ".png"]:
+        if extension in [".jpg", ".jpeg", ".png", ".bmp"]:
             new_media.append(m)
         elif extension in [".mp4", ".mov"]:
             frames = T.extract_frames(m)
