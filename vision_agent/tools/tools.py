@@ -553,6 +553,7 @@ def overlay_bounding_boxes(
         label: COLORS[i % len(COLORS)]
         for i, label in enumerate(set([box["label"] for box in bboxes]))
     }
+    bbox = sorted(bboxes, key=lambda x: x["label"], reverse=True)
 
     width, height = pil_image.size
     fontsize = max(12, int(min(width, height) / 40))
@@ -620,6 +621,7 @@ def overlay_segmentation_masks(
         label: COLORS[i % len(COLORS)]
         for i, label in enumerate(set([mask["label"] for mask in masks]))
     }
+    masks = sorted(masks, key=lambda x: x["label"], reverse=True)
 
     for elt in masks:
         mask = elt["mask"]
