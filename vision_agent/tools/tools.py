@@ -524,7 +524,7 @@ def save_image(image: np.ndarray) -> str:
 def overlay_bounding_boxes(
     image: np.ndarray, bboxes: List[Dict[str, Any]]
 ) -> np.ndarray:
-    """'display_bounding_boxes' is a utility function that displays bounding boxes on
+    """'overlay_bounding_boxes' is a utility function that displays bounding boxes on
     an image.
 
     Parameters:
@@ -537,7 +537,7 @@ def overlay_bounding_boxes(
 
     Example
     -------
-    >>> image_with_bboxes = display_bounding_boxes(
+    >>> image_with_bboxes = overlay_bounding_boxes(
         image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
     )
     """
@@ -583,7 +583,7 @@ def overlay_bounding_boxes(
 def overlay_segmentation_masks(
     image: np.ndarray, masks: List[Dict[str, Any]]
 ) -> np.ndarray:
-    """'display_segmentation_masks' is a utility function that displays segmentation
+    """'overlay_segmentation_masks' is a utility function that displays segmentation
     masks.
 
     Parameters:
@@ -595,7 +595,7 @@ def overlay_segmentation_masks(
 
     Example
     -------
-    >>> image_with_masks = display_segmentation_masks(
+    >>> image_with_masks = overlay_segmentation_masks(
         image,
         [{
             'score': 0.99,
@@ -633,7 +633,7 @@ def overlay_segmentation_masks(
 def overlay_heat_map(
     image: np.ndarray, heat_map: Dict[str, Any], alpha: float = 0.8
 ) -> np.ndarray:
-    """'display_heat_map' is a utility function that displays a heat map on an image.
+    """'overlay_heat_map' is a utility function that displays a heat map on an image.
 
     Parameters:
         image (np.ndarray): The image to display the heat map on.
@@ -646,7 +646,7 @@ def overlay_heat_map(
 
     Example
     -------
-    >>> image_with_heat_map = display_heat_map(
+    >>> image_with_heat_map = overlay_heat_map(
         image,
         {
             'heat_map': array([[0, 0, 0, ..., 0, 0, 0],

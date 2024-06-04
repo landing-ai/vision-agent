@@ -8,6 +8,7 @@ import re
 import sys
 import tempfile
 import traceback
+import warnings
 from enum import Enum
 from io import IOBase
 from pathlib import Path
@@ -218,7 +219,7 @@ class Logs(BaseModel):
         stdout_str = "\n".join(self.stdout)
         stderr_str = "\n".join(self.stderr)
         return _remove_escape_and_color_codes(
-            f"stdout:\n{stdout_str}\nstderr:\n{stderr_str}"
+            f"----- stdout -----\n{stdout_str}\n----- stderr -----\n{stderr_str}"
         )
 
 
@@ -263,21 +264,19 @@ class Execution(BaseModel):
         """
         Returns the text representation of this object, i.e. including the main result or the error traceback, optionally along with the logs (stdout, stderr).
         """
-        prefix = (
-            "\n".join(self.logs.stdout) + "\n".join(self.logs.stderr)
-            if include_logs
-            else ""
-        )
+        prefix = str(self.logs) if include_logs else ""
         if self.error:
-            return prefix + "\n" + self.error.traceback
-        return next(
+            return prefix + "\n----- Error -----\n" + self.error.traceback
+
+        result_str = [
             (
-                prefix + "\n" + (res.text or "")
-                for res in self.results
+                f"----- Final output -----\n{res.text}"
                 if res.is_main_result
-            ),
-            prefix,
-        )
+                else f"----- Intermediate output-----\n{res.text}"
+            )
+            for res in self.results
+        ]
+        return prefix + "\n" + "\n".join(result_str)
 
     @property
     def success(self) -> bool:
@@ -404,7 +403,7 @@ print(f"Vision Agent version: {va_version}")"""
         self.interpreter.notebook.restart_kernel()
 
     def exec_cell(self, code: str) -> Execution:
-        execution = self.interpreter.notebook.exec_cell(code)
+        execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
     def upload_file(self, file: Union[str, Path, IO]) -> str:
@@ -508,16 +507,24 @@ class CodeInterpreterFactory:
 
     @staticmethod
     def get_default_instance() -> CodeInterpreter:
+        warnings.warn(
+            "Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future."
+        )
         inst_map = CodeInterpreterFactory._instance_map
         instance = inst_map.get(CodeInterpreterFactory._default_key)
         if instance:
             return instance
+        instance = CodeInterpreterFactory.new_instance()
+        inst_map[CodeInterpreterFactory._default_key] = instance
+        return instance
+
+    @staticmethod
+    def new_instance() -> CodeInterpreter:
         if os.getenv("CODE_SANDBOX_RUNTIME") == "e2b":
-            instance = E2BCodeInterpreter(timeout=600)
-            atexit.register(instance.close)
+            instance: CodeInterpreter = E2BCodeInterpreter(timeout=600)
         else:
             instance = LocalCodeInterpreter(timeout=600)
-        inst_map[CodeInterpreterFactory._default_key] = instance
+        atexit.register(instance.close)
         return instance
 
 
