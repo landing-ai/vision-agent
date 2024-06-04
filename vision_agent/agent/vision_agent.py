@@ -332,7 +332,7 @@ class VisionAgent(Agent):
 
     def __init__(
         self,
-        planner: Optional[LLM] = None,
+        planner: Optional[Union[LLM, LMM]] = None,
         coder: Optional[LLM] = None,
         tester: Optional[LLM] = None,
         debugger: Optional[LLM] = None,
