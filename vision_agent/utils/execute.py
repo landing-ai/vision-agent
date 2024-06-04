@@ -266,15 +266,17 @@ class Execution(BaseModel):
         """
         prefix = str(self.logs) if include_logs else ""
         if self.error:
-            return prefix + "\n" + self.error.traceback
-        return next(
+            return prefix + "\nError:" + self.error.traceback
+
+        result_str = [
             (
-                prefix + "\n" + (res.text or "")
-                for res in self.results
+                f"Final output:{res.text}"
                 if res.is_main_result
-            ),
-            prefix,
-        )
+                else f"Intermediate output:{res.text}"
+            )
+            for res in self.results
+        ]
+        return prefix + "\n" + "\n".join(result_str)
 
     @property
     def success(self) -> bool:
