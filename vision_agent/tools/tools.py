@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 import requests
 from PIL import Image, ImageDraw, ImageFont
-from scipy.spatial import distance  # type: ignore
 
 from vision_agent.tools.tool_utils import _send_inference_request
 from vision_agent.utils import extract_frames_from_video
