@@ -31,8 +31,9 @@ def play_video(video_base64: str) -> None:
         # Display the first frame and wait for any key press to start the video
         ret, frame = cap.read()
         if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             cv2.imshow("Video Player", frame)
-            _LOGGER.info("Press any key to start playing the video")
+            _LOGGER.info(f"Press any key to start playing the video: {temp_video_path}")
             cv2.waitKey(0)  # Wait for any key press
 
         while cap.isOpened():
