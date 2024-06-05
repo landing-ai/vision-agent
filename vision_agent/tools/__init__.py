@@ -22,6 +22,7 @@ from .tools import (
     overlay_segmentation_masks,
     save_image,
     save_json,
+    save_video_to_result,
     visual_prompt_counting,
     zero_shot_counting,
 )
