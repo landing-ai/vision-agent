@@ -188,7 +188,7 @@ def extract_frames(
 
     Returns:
         List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
-            and the timestamp in seconds.
+            as a numpy array and the timestamp in seconds.
 
     Example
     -------
@@ -511,7 +511,7 @@ def save_json(data: Any, file_path: str) -> None:
 
 
 def load_image(image_path: str) -> np.ndarray:
-    """'load_image' is a utility function that loads an image from the given path.
+    """'load_image' is a utility function that loads an image from the given file path string.
 
     Parameters:
         image_path (str): The path to the image.
@@ -523,7 +523,9 @@ def load_image(image_path: str) -> np.ndarray:
     -------
         >>> load_image("path/to/image.jpg")
     """
-
+    # NOTE: sometimes the generated code pass in a NumPy array
+    if isinstance(image_path, np.ndarray):
+        return image_path
     image = Image.open(image_path).convert("RGB")
     return np.array(image)
 
