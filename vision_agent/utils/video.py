@@ -2,8 +2,8 @@ import base64
 import logging
 import math
 import os
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import tempfile
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import List, Tuple, cast
 
 import cv2

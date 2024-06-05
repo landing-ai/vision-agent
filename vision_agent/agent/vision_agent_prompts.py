@@ -197,9 +197,7 @@ When we run this test code:
 ```
 
 It raises this error:
-```python
 {result}
-```
 
 This is previous feedback provided on the code:
 {feedback}
