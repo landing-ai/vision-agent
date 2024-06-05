@@ -2,9 +2,11 @@ import copy
 import json
 import logging
 import sys
+import tempfile
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
+from PIL import Image
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
@@ -78,12 +80,35 @@ def extract_json(json_str: str) -> Dict[str, Any]:
     return json_dict  # type: ignore
 
 
+def extract_image(
+    media: Optional[Sequence[Union[str, Path]]]
+) -> Optional[Sequence[Union[str, Path]]]:
+    if media is None:
+        return None
+
+    new_media = []
+    for m in media:
+        m = Path(m)
+        extension = m.suffix
+        if extension in [".jpg", ".jpeg", ".png", ".bmp"]:
+            new_media.append(m)
+        elif extension in [".mp4", ".mov"]:
+            frames = T.extract_frames(m)
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                if len(frames) > 0:
+                    Image.fromarray(frames[0][0]).save(tmp.name)
+                    new_media.append(Path(tmp.name))
+    if len(new_media) == 0:
+        return None
+    return new_media
+
+
 def write_plan(
     chat: List[Dict[str, str]],
     tool_desc: str,
     working_memory: str,
     model: Union[LLM, LMM],
-    media: Optional[List[Union[str, Path]]] = None,
+    media: Optional[Sequence[Union[str, Path]]] = None,
 ) -> List[Dict[str, str]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -94,6 +119,7 @@ def write_plan(
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
     if isinstance(model, OpenAILMM):
+        media = extract_image(media)
         return extract_json(model.chat(chat, images=media))["plan"]  # type: ignore
     else:
         return extract_json(model.chat(chat))["plan"]  # type: ignore
@@ -103,7 +129,7 @@ def reflect(
     chat: List[Dict[str, str]],
     plan: str,
     code: str,
-    model: LLM,
+    model: Union[LLM, LMM],
 ) -> Dict[str, Union[str, bool]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -309,7 +335,7 @@ class VisionAgent(Agent):
 
     def __init__(
         self,
-        planner: Optional[LLM] = None,
+        planner: Optional[Union[LLM, LMM]] = None,
         coder: Optional[LLM] = None,
         tester: Optional[LLM] = None,
         debugger: Optional[LLM] = None,
