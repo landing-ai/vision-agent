@@ -1,7 +1,9 @@
+import base64
 import logging
 import math
 import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import tempfile
 from typing import List, Tuple, cast
 
 import cv2
@@ -12,6 +14,39 @@ from tqdm import tqdm
 _LOGGER = logging.getLogger(__name__)
 # The maximum length of the clip to extract frames from, in seconds
 _CLIP_LENGTH = 30.0
+
+
+def play_video(video_base64: str) -> None:
+    """Play a video file"""
+    video_data = base64.b64decode(video_base64)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
+        temp_video.write(video_data)
+        temp_video_path = temp_video.name
+
+        cap = cv2.VideoCapture(temp_video_path)
+        if not cap.isOpened():
+            _LOGGER.error("Error: Could not open video.")
+            return
+
+        # Display the first frame and wait for any key press to start the video
+        ret, frame = cap.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            cv2.imshow("Video Player", frame)
+            _LOGGER.info(f"Press any key to start playing the video: {temp_video_path}")
+            cv2.waitKey(0)  # Wait for any key press
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            cv2.imshow("Video Player", frame)
+            # Press 'q' to exit the video
+            if cv2.waitKey(200) & 0xFF == ord("q"):
+                break
+        cap.release()
+        cv2.destroyAllWindows()
 
 
 def extract_frames_from_video(

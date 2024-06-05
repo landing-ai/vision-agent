@@ -28,6 +28,7 @@ from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.execute import CodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
 from vision_agent.utils.sim import Sim
+from vision_agent.utils.video import play_video
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
@@ -522,6 +523,9 @@ class VisionAgent(Agent):
                 for res in execution_result.results:
                     if res.png:
                         b64_to_pil(res.png).show()
+                    if res.mp4:
+                        play_video(res.mp4)
+
             return {
                 "code": code,
                 "test": test,
