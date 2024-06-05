@@ -43,7 +43,7 @@ def play_video(video_base64: str) -> None:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             cv2.imshow("Video Player", frame)
             # Press 'q' to exit the video
-            if cv2.waitKey(25) & 0xFF == ord("q"):
+            if cv2.waitKey(200) & 0xFF == ord("q"):
                 break
         cap.release()
         cv2.destroyAllWindows()
