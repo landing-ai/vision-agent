@@ -579,7 +579,7 @@ def save_video(
         if output_video_path:
             f = open(output_video_path, "wb")
         else:
-            f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+            f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)  # type: ignore
         video.write_videofile(f.name, codec="libx264")
         f.close()
         _save_video_to_result(f.name)
