@@ -562,7 +562,8 @@ def save_video(
 
     Parameters:
         frames (list[np.ndarray]): A list of frames to save.
-        fps (int): The number of frames composes a second in the video.
+        output_video_path (str): The path to save the video file. If not provided, a temporary file will be created.
+        fps (float): The number of frames composes a second in the video.
 
     Returns:
         str: The path to the saved video file.
