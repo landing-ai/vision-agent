@@ -1,8 +1,9 @@
-import skimage as ski
 import numpy as np
+import skimage as ski
 
 from vision_agent.tools import (
     clip,
+    closest_mask_distance,
     grounding_dino,
     grounding_sam,
     image_caption,
@@ -10,7 +11,6 @@ from vision_agent.tools import (
     ocr,
     visual_prompt_counting,
     zero_shot_counting,
-    closest_mask_distance,
 )
 
 
