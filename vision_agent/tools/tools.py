@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import requests
+from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 
 from vision_agent.tools.tool_utils import _send_inference_request
@@ -554,11 +555,12 @@ def save_image(image: np.ndarray) -> str:
     return f.name
 
 
-def save_video(frames: List[np.ndarray]) -> str:
+def save_video(frames: List[np.ndarray], fps: int = 4) -> str:
     """'save_video' is a utility function that saves a list of frames as a video file to a temporary folder on disk.
 
     Parameters:
         frames (list[np.ndarray]): A list of frames to save.
+        fps (int): The number of frames composes a second in the video.
 
     Returns:
         str: The path to the saved video file.
@@ -568,13 +570,11 @@ def save_video(frames: List[np.ndarray]) -> str:
     >>> save_video(frames)
     "/tmp/tmpvideo123.mp4"
     """
-    from moviepy.editor import ImageSequenceClip
-
-    video = ImageSequenceClip(frames, fps=1)
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-        video.write_videofile(f.name, codec="libx264")
-        _save_video_to_result(f.name)
-        return f.name
+    with ImageSequenceClip(frames, fps=fps) as video:
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            video.write_videofile(f.name, codec="libx264")
+            _save_video_to_result(f.name)
+            return f.name
 
 
 def _save_video_to_result(video_uri: str) -> None:
