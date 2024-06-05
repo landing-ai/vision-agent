@@ -36,11 +36,21 @@ logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _MAX_TABULATE_COL_WIDTH = 80
 _CONSOLE = Console()
-_DEFAULT_IMPORT = "\n".join(T.__new_tools__) + "\n".join(
-    [
+
+
+class DefaultImports:
+    """Container for default imports used in the code execution."""
+
+    common_imports = [
         "from typing import *",
     ]
-)
+
+    @staticmethod
+    def prepend_imports(code: str) -> str:
+        """Run this method to prepend the default imports to the code.
+        NOTE: be sure to run this method after the custom tools have been registered.
+        """
+        return "\n".join(DefaultImports.common_imports + T.__new_tools__) + "\n\n" + code
 
 
 def get_diff(before: str, after: str) -> str:
@@ -207,7 +217,8 @@ def write_and_test_code(
             },
         }
     )
-    result = code_interpreter.exec_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
+    code = DefaultImports.prepend_imports(code)
+    result = code_interpreter.exec_isolation(f"{code}\n{test}")
     log_progress(
         {
             "type": "code",
@@ -270,7 +281,8 @@ def write_and_test_code(
             }
         )
 
-        result = code_interpreter.exec_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
+        code = DefaultImports.prepend_imports(code)
+        result = code_interpreter.exec_isolation(f"{code}\n{test}")
         log_progress(
             {
                 "type": "code",
@@ -463,10 +475,6 @@ class VisionAgent(Agent):
                 for chat_i in chat:
                     if chat_i["role"] == "user":
                         chat_i["content"] += f" Image name {media}"
-
-            # re-grab custom tools
-            global _DEFAULT_IMPORT
-            _DEFAULT_IMPORT = "\n".join(T.__new_tools__)
 
             code = ""
             test = ""
