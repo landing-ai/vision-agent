@@ -604,7 +604,7 @@ class VisionAgent(Agent):
                         play_video(res.mp4)
 
             return {
-                "code": code,
+                "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
                 "plan": plan,
