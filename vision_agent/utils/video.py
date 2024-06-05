@@ -38,6 +38,7 @@ def play_video(video_base64: str) -> None:
 
         while cap.isOpened():
             ret, frame = cap.read()
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             if not ret:
                 break
             cv2.imshow("Video Player", frame)
