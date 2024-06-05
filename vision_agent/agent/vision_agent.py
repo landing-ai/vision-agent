@@ -36,7 +36,11 @@ logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _MAX_TABULATE_COL_WIDTH = 80
 _CONSOLE = Console()
-_DEFAULT_IMPORT = "\n".join(T.__new_tools__)
+_DEFAULT_IMPORT = "\n".join(T.__new_tools__) + "\n".join(
+    [
+        "from typing import *",
+    ]
+)
 
 
 def get_diff(before: str, after: str) -> str:
