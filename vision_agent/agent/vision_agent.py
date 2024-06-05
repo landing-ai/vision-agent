@@ -46,11 +46,15 @@ class DefaultImports:
     ]
 
     @staticmethod
+    def to_code_string() -> str:
+        return "\n".join(DefaultImports.common_imports + T.__new_tools__)
+
+    @staticmethod
     def prepend_imports(code: str) -> str:
         """Run this method to prepend the default imports to the code.
         NOTE: be sure to run this method after the custom tools have been registered.
         """
-        return "\n".join(DefaultImports.common_imports + T.__new_tools__) + "\n\n" + code
+        return DefaultImports.to_code_string() + "\n\n" + code
 
 
 def get_diff(before: str, after: str) -> str:
@@ -212,19 +216,20 @@ def write_and_test_code(
             "type": "code",
             "status": "running",
             "payload": {
-                "code": code,
+                "code": DefaultImports.prepend_imports(code),
                 "test": test,
             },
         }
     )
-    code = DefaultImports.prepend_imports(code)
-    result = code_interpreter.exec_isolation(f"{code}\n{test}")
+    result = code_interpreter.exec_isolation(
+        f"{DefaultImports.to_code_string()}\n{code}\n{test}"
+    )
     log_progress(
         {
             "type": "code",
             "status": "completed" if result.success else "failed",
             "payload": {
-                "code": code,
+                "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "result": result.to_json(),
             },
@@ -275,20 +280,21 @@ def write_and_test_code(
                 "type": "code",
                 "status": "running",
                 "payload": {
-                    "code": code,
+                    "code": DefaultImports.prepend_imports(code),
                     "test": test,
                 },
             }
         )
 
-        code = DefaultImports.prepend_imports(code)
-        result = code_interpreter.exec_isolation(f"{code}\n{test}")
+        result = code_interpreter.exec_isolation(
+            f"{DefaultImports.to_code_string()}\n{code}\n{test}"
+        )
         log_progress(
             {
                 "type": "code",
                 "status": "completed" if result.success else "failed",
                 "payload": {
-                    "code": code,
+                    "code": DefaultImports.prepend_imports(code),
                     "test": test,
                     "result": result.to_json(),
                 },
@@ -579,7 +585,7 @@ class VisionAgent(Agent):
                     "type": "final_code",
                     "status": "completed" if success else "failed",
                     "payload": {
-                        "code": code,
+                        "code": DefaultImports.prepend_imports(code),
                         "test": test,
                         "result": execution_result.to_json(),
                     },
