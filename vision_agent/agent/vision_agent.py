@@ -1,4 +1,5 @@
 import copy
+import difflib
 import json
 import logging
 import sys
@@ -16,7 +17,6 @@ import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
     CODE,
-    FEEDBACK,
     FIX_BUG,
     FULL_TASK,
     PLAN,
@@ -39,15 +39,25 @@ _CONSOLE = Console()
 _DEFAULT_IMPORT = "\n".join(T.__new_tools__)
 
 
-def format_memory(memory: List[Dict[str, str]]) -> str:
-    return FEEDBACK.format(
-        feedback="\n".join(
-            [
-                f"### Feedback {i}:\nCode: ```python\n{m['code']}\n```\nFeedback: {m['feedback']}\n"
-                for i, m in enumerate(memory)
-            ]
+def get_diff(before: str, after: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            before.splitlines(keepends=True), after.splitlines(keepends=True)
         )
     )
+
+
+def format_memory(memory: List[Dict[str, str]]) -> str:
+    output_str = ""
+    for i, m in enumerate(memory):
+        output_str += f"### Feedback {i}:\n"
+        output_str += f"Code {i}:\n```python\n{m['code']}```\n\n"
+        output_str += f"Feedback {i}: {m['feedback']}\n\n"
+        if "edits" in m:
+            output_str += f"Edits {i}:\n{m['edits']}\n"
+        output_str += "\n"
+
+    return output_str
 
 
 def extract_code(code: str) -> str:
@@ -146,7 +156,7 @@ def write_and_test_code(
     task: str,
     tool_info: str,
     tool_utils: str,
-    working_memory: str,
+    working_memory: List[Dict[str, str]],
     coder: LLM,
     tester: LLM,
     debugger: LLM,
@@ -163,7 +173,13 @@ def write_and_test_code(
         }
     )
     code = extract_code(
-        coder(CODE.format(docstring=tool_info, question=task, feedback=working_memory))
+        coder(
+            CODE.format(
+                docstring=tool_info,
+                question=task,
+                feedback=format_memory(working_memory),
+            )
+        )
     )
     test = extract_code(
         tester(
@@ -206,7 +222,7 @@ def write_and_test_code(
         )
 
     count = 0
-    new_working_memory = []
+    new_working_memory: List[Dict[str, str]] = []
     while not result.success and count < max_retries:
         log_progress(
             {
@@ -217,14 +233,28 @@ def write_and_test_code(
         fixed_code_and_test = extract_json(
             debugger(
                 FIX_BUG.format(
-                    code=code, tests=test, result=result.text(), feedback=working_memory
+                    code=code,
+                    tests=test,
+                    result="\n".join(result.text().splitlines()[-50:]),
+                    feedback=format_memory(working_memory + new_working_memory),
                 )
             )
         )
+        old_code = code
+        old_test = test
+
         if fixed_code_and_test["code"].strip() != "":
             code = extract_code(fixed_code_and_test["code"])
         if fixed_code_and_test["test"].strip() != "":
             test = extract_code(fixed_code_and_test["test"])
+
+        new_working_memory.append(
+            {
+                "code": f"{code}\n{test}",
+                "feedback": fixed_code_and_test["reflections"],
+                "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
+            }
+        )
         log_progress(
             {
                 "type": "code",
@@ -234,9 +264,6 @@ def write_and_test_code(
                     "test": test,
                 },
             }
-        )
-        new_working_memory.append(
-            {"code": f"{code}\n{test}", "feedback": fixed_code_and_test["reflections"]}
         )
 
         result = code_interpreter.exec_isolation(f"{_DEFAULT_IMPORT}\n{code}\n{test}")
@@ -485,7 +512,7 @@ class VisionAgent(Agent):
                     ),
                     tool_info=tool_info,
                     tool_utils=T.UTILITIES_DOCSTRING,
-                    working_memory=format_memory(working_memory),
+                    working_memory=working_memory,
                     coder=self.coder,
                     tester=self.tester,
                     debugger=self.debugger,
@@ -529,6 +556,8 @@ class VisionAgent(Agent):
                     working_memory.append(
                         {"code": f"{code}\n{test}", "feedback": feedback}
                     )
+                else:
+                    break
 
                 retries += 1
 
