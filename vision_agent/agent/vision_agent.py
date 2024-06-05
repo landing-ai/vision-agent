@@ -310,6 +310,7 @@ def write_and_test_code(
             )
         count += 1
 
+    code = DefaultImports.prepend_imports(code)
     if verbosity >= 1:
         _print_code("Final code and tests:", code, test)
 
