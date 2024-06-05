@@ -647,12 +647,9 @@ def overlay_bounding_boxes(
         box = elt["bbox"]
         scores = elt["score"]
 
-        box = [
-            int(box[0] * width),
-            int(box[1] * height),
-            int(box[2] * width),
-            int(box[3] * height),
-        ]
+        # denormalize the box if it is normalized
+        box = denormalize_bbox(box, (height, width))
+
         draw.rectangle(box, outline=color[label], width=4)
         text = f"{label}: {scores:.2f}"
         text_box = draw.textbbox((box[0], box[1]), text=text, font=font)
