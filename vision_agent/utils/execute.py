@@ -401,6 +401,8 @@ class CodeInterpreter(abc.ABC):
 
 
 class E2BCodeInterpreter(CodeInterpreter):
+    KEEP_ALIVE_SEC: int = 300
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         assert os.getenv("E2B_API_KEY"), "E2B_API_KEY environment variable must be set"
@@ -432,6 +434,7 @@ print(f"Vision Agent version: {va_version}")"""
         retry=tenacity.retry_if_exception_type(TimeoutError),
     )
     def exec_cell(self, code: str) -> Execution:
+        self.interpreter.keep_alive(E2BCodeInterpreter.KEEP_ALIVE_SEC)
         execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
