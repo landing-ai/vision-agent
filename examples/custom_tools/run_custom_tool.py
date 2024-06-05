@@ -1,7 +1,7 @@
 import numpy as np
+from template_match import template_matching_with_rotation
 
 import vision_agent as va
-from template_match import template_matching_with_rotation
 from vision_agent.utils.image_utils import get_image_size, normalize_bbox
 
 
