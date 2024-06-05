@@ -1,5 +1,6 @@
 import abc
 import atexit
+import base64
 import copy
 import logging
 import os
@@ -8,6 +9,7 @@ import re
 import sys
 import tempfile
 import traceback
+import warnings
 from enum import Enum
 from io import IOBase
 from pathlib import Path
@@ -44,10 +46,29 @@ class MimeType(str, Enum):
     IMAGE_SVG = "image/svg+xml"
     IMAGE_PNG = "image/png"
     IMAGE_JPEG = "image/jpeg"
+    VIDEO_MP4_B64 = "video/mp4/base64"
     APPLICATION_PDF = "application/pdf"
     TEXT_LATEX = "text/latex"
     APPLICATION_JSON = "application/json"
     APPLICATION_JAVASCRIPT = "application/javascript"
+
+
+class FileSerializer:
+    """Adaptor class that allows IPython.display.display() to serialize a file to a base64 string representation."""
+
+    def __init__(self, file_uri: str):
+        self.video_uri = file_uri
+        assert os.path.isfile(
+            file_uri
+        ), f"Only support local files currently: {file_uri}"
+        assert Path(file_uri).exists(), f"File not found: {file_uri}"
+
+    def __repr__(self) -> str:
+        return f"FileSerializer({self.video_uri})"
+
+    def base64(self) -> str:
+        with open(self.video_uri, "rb") as file:
+            return base64.b64encode(file.read()).decode("utf-8")
 
 
 class Result:
@@ -69,6 +90,7 @@ class Result:
     png: Optional[str] = None
     jpeg: Optional[str] = None
     pdf: Optional[str] = None
+    mp4: Optional[str] = None
     latex: Optional[str] = None
     json: Optional[Dict[str, Any]] = None
     javascript: Optional[str] = None
@@ -92,6 +114,7 @@ class Result:
         self.png = data.pop(MimeType.IMAGE_PNG, None)
         self.jpeg = data.pop(MimeType.IMAGE_JPEG, None)
         self.pdf = data.pop(MimeType.APPLICATION_PDF, None)
+        self.mp4 = data.pop(MimeType.VIDEO_MP4_B64, None)
         self.latex = data.pop(MimeType.TEXT_LATEX, None)
         self.json = data.pop(MimeType.APPLICATION_JSON, None)
         self.javascript = data.pop(MimeType.APPLICATION_JAVASCRIPT, None)
@@ -189,6 +212,8 @@ class Result:
             formats.append("json")
         if self.javascript:
             formats.append("javascript")
+        if self.mp4:
+            formats.append("mp4")
         if self.extra:
             formats.extend(iter(self.extra))
         return formats
@@ -218,7 +243,7 @@ class Logs(BaseModel):
         stdout_str = "\n".join(self.stdout)
         stderr_str = "\n".join(self.stderr)
         return _remove_escape_and_color_codes(
-            f"stdout:\n{stdout_str}\nstderr:\n{stderr_str}"
+            f"----- stdout -----\n{stdout_str}\n----- stderr -----\n{stderr_str}"
         )
 
 
@@ -263,21 +288,19 @@ class Execution(BaseModel):
         """
         Returns the text representation of this object, i.e. including the main result or the error traceback, optionally along with the logs (stdout, stderr).
         """
-        prefix = (
-            "\n".join(self.logs.stdout) + "\n".join(self.logs.stderr)
-            if include_logs
-            else ""
-        )
+        prefix = str(self.logs) if include_logs else ""
         if self.error:
-            return prefix + "\n" + self.error.traceback
-        return next(
+            return prefix + "\n----- Error -----\n" + self.error.traceback
+
+        result_str = [
             (
-                prefix + "\n" + (res.text or "")
-                for res in self.results
+                f"----- Final output -----\n{res.text}"
                 if res.is_main_result
-            ),
-            prefix,
-        )
+                else f"----- Intermediate output-----\n{res.text}"
+            )
+            for res in self.results
+        ]
+        return prefix + "\n" + "\n".join(result_str)
 
     @property
     def success(self) -> bool:
@@ -404,7 +427,7 @@ print(f"Vision Agent version: {va_version}")"""
         self.interpreter.notebook.restart_kernel()
 
     def exec_cell(self, code: str) -> Execution:
-        execution = self.interpreter.notebook.exec_cell(code)
+        execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
     def upload_file(self, file: Union[str, Path, IO]) -> str:
@@ -508,16 +531,24 @@ class CodeInterpreterFactory:
 
     @staticmethod
     def get_default_instance() -> CodeInterpreter:
+        warnings.warn(
+            "Use new_instance() instead for production usage, get_default_instance() is for testing and will be removed in the future."
+        )
         inst_map = CodeInterpreterFactory._instance_map
         instance = inst_map.get(CodeInterpreterFactory._default_key)
         if instance:
             return instance
+        instance = CodeInterpreterFactory.new_instance()
+        inst_map[CodeInterpreterFactory._default_key] = instance
+        return instance
+
+    @staticmethod
+    def new_instance() -> CodeInterpreter:
         if os.getenv("CODE_SANDBOX_RUNTIME") == "e2b":
-            instance = E2BCodeInterpreter(timeout=600)
-            atexit.register(instance.close)
+            instance: CodeInterpreter = E2BCodeInterpreter(timeout=600)
         else:
             instance = LocalCodeInterpreter(timeout=600)
-        inst_map[CodeInterpreterFactory._default_key] = instance
+        atexit.register(instance.close)
         return instance
 
 
