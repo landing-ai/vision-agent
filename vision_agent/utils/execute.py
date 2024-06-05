@@ -1,5 +1,6 @@
 import abc
 import atexit
+import base64
 import copy
 import logging
 import os
@@ -22,6 +23,7 @@ from e2b.api.v2.client.exceptions import ServiceException
 from e2b_code_interpreter import CodeInterpreter as E2BCodeInterpreterImpl
 from e2b_code_interpreter import Execution as E2BExecution
 from e2b_code_interpreter import Result as E2BResult
+from IPython.core.formatters import BaseFormatter
 from nbclient import NotebookClient
 from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
@@ -45,10 +47,29 @@ class MimeType(str, Enum):
     IMAGE_SVG = "image/svg+xml"
     IMAGE_PNG = "image/png"
     IMAGE_JPEG = "image/jpeg"
+    VIDEO_MP4_B64 = "video/mp4/base64"
     APPLICATION_PDF = "application/pdf"
     TEXT_LATEX = "text/latex"
     APPLICATION_JSON = "application/json"
     APPLICATION_JAVASCRIPT = "application/javascript"
+
+
+class FileSerializer:
+    """Adaptor class that allows IPython.display.display() to serialize a file to a base64 string representation."""
+
+    def __init__(self, file_uri: str):
+        self.video_uri = file_uri
+        assert os.path.isfile(
+            file_uri
+        ), f"Only support local files currently: {file_uri}"
+        assert Path(file_uri).exists(), f"File not found: {file_uri}"
+
+    def __repr__(self) -> str:
+        return f"FileSerializer({self.video_uri})"
+
+    def base64(self) -> str:
+        with open(self.video_uri, "rb") as file:
+            return base64.b64encode(file.read()).decode("utf-8")
 
 
 class Result:
@@ -70,6 +91,7 @@ class Result:
     png: Optional[str] = None
     jpeg: Optional[str] = None
     pdf: Optional[str] = None
+    mp4: Optional[str] = None
     latex: Optional[str] = None
     json: Optional[Dict[str, Any]] = None
     javascript: Optional[str] = None
@@ -93,6 +115,7 @@ class Result:
         self.png = data.pop(MimeType.IMAGE_PNG, None)
         self.jpeg = data.pop(MimeType.IMAGE_JPEG, None)
         self.pdf = data.pop(MimeType.APPLICATION_PDF, None)
+        self.mp4 = data.pop(MimeType.VIDEO_MP4_B64, None)
         self.latex = data.pop(MimeType.TEXT_LATEX, None)
         self.json = data.pop(MimeType.APPLICATION_JSON, None)
         self.javascript = data.pop(MimeType.APPLICATION_JAVASCRIPT, None)
@@ -190,6 +213,8 @@ class Result:
             formats.append("json")
         if self.javascript:
             formats.append("javascript")
+        if self.mp4:
+            formats.append("mp4")
         if self.extra:
             formats.extend(iter(self.extra))
         return formats
