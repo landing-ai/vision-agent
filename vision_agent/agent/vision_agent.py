@@ -304,7 +304,11 @@ def write_and_test_code(
             _LOGGER.info(
                 f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
-            _print_code("Code and test after attempted fix:", code, test)
+            _print_code(
+                "Code and test after attempted fix:",
+                DefaultImports.prepend_imports(code),
+                test,
+            )
             _LOGGER.info(
                 f"Code execution result after attempted fix: {result.text(include_logs=True)}"
             )
