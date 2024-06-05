@@ -744,7 +744,7 @@ def overlay_heat_map(
     combined = Image.alpha_composite(
         pil_image.convert("RGBA"), overlay.resize(pil_image.size)
     )
-    return np.array(pil_image)
+    return np.array(combined)
 
 
 def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
