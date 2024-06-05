@@ -417,10 +417,10 @@ class VisionAgent(Agent):
         """Chat with Vision Agent and return intermediate information regarding the task.
 
         Parameters:
-            chat (List[Dict[str, str]]): A conversation in the format of
-                [{"role": "user", "content": "describe your task here..."}].
+            input (Union[List[Dict[str, str]], str]): A conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}] or a string
+                of just the contents.
             media (Optional[Union[str, Path]]): The media file to be used in the task.
-            self_reflection (bool): Whether to reflect on the task and debug the code.
 
         Returns:
             str: The code output by the Vision Agent.
@@ -446,7 +446,8 @@ class VisionAgent(Agent):
                 [{"role": "user", "content": "describe your task here..."}].
             media (Optional[Union[str, Path]]): The media file to be used in the task.
             self_reflection (bool): Whether to reflect on the task and debug the code.
-            show_visualization (bool): If True, it opens a new window locally to show the image(s) created by visualization code (if there is any).
+            display_visualization (bool): If True, it opens a new window locally to
+                show the image(s) created by visualization code (if there is any).
 
         Returns:
             Dict[str, Any]: A dictionary containing the code, test, test result, plan,

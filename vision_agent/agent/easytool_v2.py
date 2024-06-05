@@ -428,12 +428,12 @@ def visualize_result(all_tool_results: List[Dict]) -> Sequence[Union[str, Path]]
 
 
 class EasyToolV2(Agent):
-    r"""EasyToolV2 is an agent framework that utilizes tools as well as self
-    reflection to accomplish tasks, in particular vision tasks. EasyToolV2 is based
-    off of EasyTool https://arxiv.org/abs/2401.06201 and Reflexion
-    https://arxiv.org/abs/2303.11366 where it will attempt to complete a task and then
-    reflect on whether or not it was able to accomplish the task based off of the plan
-    and final results, if not it will redo the task with this newly added reflection.
+    """EasyToolV2 is an agent framework that utilizes tools as well as self reflection
+    to accomplish tasks, in particular vision tasks. EasyToolV2 is based off of EasyTool
+    https://arxiv.org/abs/2401.06201 and Reflexion https://arxiv.org/abs/2303.11366
+    where it will attempt to complete a task and then reflect on whether or not it was
+    able to accomplish the task based off of the plan and final results, if not it will
+    redo the task with this newly added reflection.
 
     Example
     -------
@@ -461,7 +461,10 @@ class EasyToolV2(Agent):
             reflect_model: the model to use for self reflection.
             max_retries: maximum number of retries to attempt to complete the task.
             verbose: whether to print more logs.
-            report_progress_callback: a callback to report the progress of the agent. This is useful for streaming logs in a web application where multiple EasyToolV2 instances are running in parallel. This callback ensures that the progress are not mixed up.
+            report_progress_callback: a callback to report the progress of the agent.
+                This is useful for streaming logs in a web application where multiple
+                EasyToolV2 instances are running in parallel. This callback ensures
+                that the progress are not mixed up.
         """
         self.task_model = (
             OpenAILLM(model_name="gpt-4-turbo", json_mode=True, temperature=0.0)
@@ -495,9 +498,10 @@ class EasyToolV2(Agent):
         """Invoke the vision agent.
 
         Parameters:
-            chat: A conversation in the format of
-                [{"role": "user", "content": "describe your task here..."}].
-            image: The input image referenced in the chat parameter.
+            input: A conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}] or a string
+                containing just the content.
+            media: The input media referenced in the chat parameter.
             reference_data: A dictionary containing the reference image, mask or bounding
                 box in the format of:
                 {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
@@ -549,7 +553,7 @@ class EasyToolV2(Agent):
         Parameters:
             chat: A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}].
-            image: The input image referenced in the chat parameter.
+            media: The media image referenced in the chat parameter.
             reference_data: A dictionary containing the reference image, mask or bounding
                 box in the format of:
                 {"image": "image.jpg", "mask": "mask.jpg", "bbox": [0.1, 0.2, 0.1, 0.2]}
@@ -558,9 +562,8 @@ class EasyToolV2(Agent):
             self_reflection: boolean to enable and disable self reflection.
 
         Returns:
-            A tuple where the first item is the final answer and the second item is a
-            list of all the tool results. The last item in the tool results also
-            contains the visualized output.
+            Tuple[str, List[Dict]]: A tuple where the first item is the final answer
+                and the second item is a list of all the tool results.
         """
         if len(chat) == 0:
             raise ValueError("Input cannot be empty.")
