@@ -17,7 +17,6 @@ import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
     CODE,
-    FEEDBACK,
     FIX_BUG,
     FULL_TASK,
     PLAN,
@@ -513,7 +512,7 @@ class VisionAgent(Agent):
                     ),
                     tool_info=tool_info,
                     tool_utils=T.UTILITIES_DOCSTRING,
-                    working_memory=format_memory(working_memory),
+                    working_memory=working_memory,
                     coder=self.coder,
                     tester=self.tester,
                     debugger=self.debugger,
