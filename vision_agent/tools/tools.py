@@ -5,7 +5,7 @@ import logging
 import tempfile
 from importlib import resources
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
 import numpy as np
@@ -555,8 +555,10 @@ def save_image(image: np.ndarray) -> str:
     return f.name
 
 
-def save_video(frames: List[np.ndarray], fps: int = 4) -> str:
-    """'save_video' is a utility function that saves a list of frames as a video file to a temporary folder on disk.
+def save_video(
+    frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 4
+) -> str:
+    """'save_video' is a utility function that saves a list of frames as a mp4 video file on disk.
 
     Parameters:
         frames (list[np.ndarray]): A list of frames to save.
@@ -570,11 +572,18 @@ def save_video(frames: List[np.ndarray], fps: int = 4) -> str:
     >>> save_video(frames)
     "/tmp/tmpvideo123.mp4"
     """
+    if fps <= 0:
+        _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
+        fps = 4
     with ImageSequenceClip(frames, fps=fps) as video:
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
-            video.write_videofile(f.name, codec="libx264")
-            _save_video_to_result(f.name)
-            return f.name
+        if output_video_path:
+            f = open(output_video_path, "wb")
+        else:
+            f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+        video.write_videofile(f.name, codec="libx264")
+        f.close()
+        _save_video_to_result(f.name)
+        return f.name
 
 
 def _save_video_to_result(video_uri: str) -> None:
