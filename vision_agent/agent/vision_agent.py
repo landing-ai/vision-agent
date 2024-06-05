@@ -236,7 +236,9 @@ def write_and_test_code(
         }
     )
     if verbosity == 2:
-        _print_code("Initial code and tests:", code, test)
+        _print_code(
+            "Initial code and tests:", DefaultImports.prepend_imports(code), test
+        )
         _LOGGER.info(
             f"Initial code execution result:\n{result.text(include_logs=True)}"
         )
