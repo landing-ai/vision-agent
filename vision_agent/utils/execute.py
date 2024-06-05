@@ -23,7 +23,6 @@ from e2b.api.v2.client.exceptions import ServiceException
 from e2b_code_interpreter import CodeInterpreter as E2BCodeInterpreterImpl
 from e2b_code_interpreter import Execution as E2BExecution
 from e2b_code_interpreter import Result as E2BResult
-from IPython.core.formatters import BaseFormatter
 from nbclient import NotebookClient
 from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
