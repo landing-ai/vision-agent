@@ -236,9 +236,7 @@ def write_and_test_code(
         }
     )
     if verbosity == 2:
-        _print_code(
-            "Initial code and tests:", DefaultImports.prepend_imports(code), test
-        )
+        _print_code("Initial code and tests:", code, test)
         _LOGGER.info(
             f"Initial code execution result:\n{result.text(include_logs=True)}"
         )
@@ -306,17 +304,12 @@ def write_and_test_code(
             _LOGGER.info(
                 f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
             )
-            _print_code(
-                "Code and test after attempted fix:",
-                DefaultImports.prepend_imports(code),
-                test,
-            )
+            _print_code("Code and test after attempted fix:", code, test)
             _LOGGER.info(
                 f"Code execution result after attempted fix: {result.text(include_logs=True)}"
             )
         count += 1
 
-    code = DefaultImports.prepend_imports(code)
     if verbosity >= 1:
         _print_code("Final code and tests:", code, test)
 
@@ -332,7 +325,14 @@ def write_and_test_code(
 def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
     _CONSOLE.print(title, style=Style(bgcolor="dark_orange3", bold=True))
     _CONSOLE.print("=" * 30 + " Code " + "=" * 30)
-    _CONSOLE.print(Syntax(code, "python", theme="gruvbox-dark", line_numbers=True))
+    _CONSOLE.print(
+        Syntax(
+            DefaultImports.prepend_imports(code),
+            "python",
+            theme="gruvbox-dark",
+            line_numbers=True,
+        )
+    )
     if test:
         _CONSOLE.print("=" * 30 + " Test " + "=" * 30)
         _CONSOLE.print(Syntax(test, "python", theme="gruvbox-dark", line_numbers=True))
@@ -552,38 +552,35 @@ class VisionAgent(Agent):
                 working_memory.extend(results["working_memory"])  # type: ignore
                 plan.append({"code": code, "test": test, "plan": plan_i})
 
-                if self_reflection:
-                    self.log_progress(
-                        {
-                            "type": "self_reflection",
-                            "status": "started",
-                        }
-                    )
-                    reflection = reflect(
-                        chat,
-                        FULL_TASK.format(
-                            user_request=chat[0]["content"], subtasks=plan_i_str
-                        ),
-                        code,
-                        self.planner,
-                    )
-                    if self.verbosity > 0:
-                        _LOGGER.info(f"Reflection: {reflection}")
-                    feedback = cast(str, reflection["feedback"])
-                    success = cast(bool, reflection["success"])
-                    self.log_progress(
-                        {
-                            "type": "self_reflection",
-                            "status": "completed" if success else "failed",
-                            "payload": reflection,
-                        }
-                    )
-                    working_memory.append(
-                        {"code": f"{code}\n{test}", "feedback": feedback}
-                    )
-                else:
+                if not self_reflection:
                     break
 
+                self.log_progress(
+                    {
+                        "type": "self_reflection",
+                        "status": "started",
+                    }
+                )
+                reflection = reflect(
+                    chat,
+                    FULL_TASK.format(
+                        user_request=chat[0]["content"], subtasks=plan_i_str
+                    ),
+                    code,
+                    self.planner,
+                )
+                if self.verbosity > 0:
+                    _LOGGER.info(f"Reflection: {reflection}")
+                feedback = cast(str, reflection["feedback"])
+                success = cast(bool, reflection["success"])
+                self.log_progress(
+                    {
+                        "type": "self_reflection",
+                        "status": "completed" if success else "failed",
+                        "payload": reflection,
+                    }
+                )
+                working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
                 retries += 1
 
             execution_result = cast(Execution, results["test_result"])
