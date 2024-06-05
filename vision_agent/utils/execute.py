@@ -426,6 +426,11 @@ print(f"Vision Agent version: {va_version}")"""
     def restart_kernel(self) -> None:
         self.interpreter.notebook.restart_kernel()
 
+    @tenacity.retry(
+        wait=tenacity.wait_exponential_jitter(),
+        stop=tenacity.stop_after_attempt(2),
+        retry=tenacity.retry_if_exception_type(TimeoutError),
+    )
     def exec_cell(self, code: str) -> Execution:
         execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
