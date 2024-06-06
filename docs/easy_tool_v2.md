@@ -91,7 +91,7 @@ agent(
 ```
 Here, `reference_mask.png` and `reference_image.png` in `reference_data` could be any
 image with it's corresponding mask that is the object you want to detect in `image.jpg`.
-You can find a demo app to generate masks for DINOv [here](examples/mask_app/).
+You can find a demo app to generate masks for DINOv [here](https://github.com/landing-ai/vision-agent/tree/main/examples/mask_app).
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
@@ -134,7 +134,7 @@ class NumItems(Tool):
 ```
 This will register it with the list of tools Easy Tool V2 has access to. It will be able
 to pick it based on the tool description and use it based on the usage provided. You can
-find an example that creates a custom tool for template matching [here](examples/custom_tools/).
+find an example that creates a custom tool for template matching [here](https://github.com/landing-ai/vision-agent/tree/main/examples/custom_tools).
 
 #### Tool List
 | Tool | Description |

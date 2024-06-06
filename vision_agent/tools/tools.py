@@ -75,17 +75,18 @@ def grounding_dino(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-        bounding box of the detected objects with normalized coordinates between 0 and 1
-        (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left and
-        xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
 
     Example
     -------
-    >>> grounding_dino("car. dinosaur", image)
-    [
-        {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-        {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
-    ]
+        >>> grounding_dino("car. dinosaur", image)
+        [
+            {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+        ]
     """
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
@@ -129,27 +130,27 @@ def grounding_sam(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-        bounding box, and mask of the detected objects with normalized coordinates
-        (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left and
-        xmax and ymax are the coordinates of the bottom-right of the bounding box.
-        The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-        the background.
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
 
     Example
     -------
-    >>> grounding_sam("car. dinosaur", image)
-    [
-        {
-            'score': 0.99,
-            'label': 'dinosaur',
-            'bbox': [0.1, 0.11, 0.35, 0.4],
-            'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 0, 0, ..., 0, 0, 0],
-                ...,
-                [0, 0, 0, ..., 0, 0, 0],
-                [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-        },
-    ]
+        >>> grounding_sam("car. dinosaur", image)
+        [
+            {
+                'score': 0.99,
+                'label': 'dinosaur',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
     """
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
@@ -187,12 +188,12 @@ def extract_frames(
 
     Returns:
         List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
-        as a numpy array and the timestamp in seconds.
+            as a numpy array and the timestamp in seconds.
 
     Example
     -------
-    >>> extract_frames("path/to/video.mp4")
-    [(frame1, 0.0), (frame2, 0.5), ...]
+        >>> extract_frames("path/to/video.mp4")
+        [(frame1, 0.0), (frame2, 0.5), ...]
     """
 
     return extract_frames_from_video(str(video_uri), fps)
@@ -212,10 +213,10 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Example
     -------
-    >>> ocr(image)
-    [
-        {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
-    ]
+        >>> ocr(image)
+        [
+            {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
+        ]
     """
 
     pil_image = Image.fromarray(image).convert("RGB")
@@ -266,9 +267,8 @@ def zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
 
     Example
     -------
-    >>> zero_shot_counting(image)
-    {'count': 45},
-
+        >>> zero_shot_counting(image)
+        {'count': 45},
     """
 
     image_b64 = convert_to_b64(image)
@@ -297,9 +297,8 @@ def visual_prompt_counting(
 
     Example
     -------
-    >>> visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
-    {'count': 45},
-
+        >>> visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
+        {'count': 45},
     """
 
     image_size = get_image_size(image)
@@ -332,9 +331,8 @@ def image_question_answering(image: np.ndarray, prompt: str) -> str:
 
     Example
     -------
-    >>> image_question_answering(image, 'What is the cat doing ?')
-    'drinking milk'
-
+        >>> image_question_answering(image, 'What is the cat doing ?')
+        'drinking milk'
     """
 
     image_b64 = convert_to_b64(image)
@@ -363,9 +361,8 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
 
     Example
     -------
-    >>> clip(image, ['dog', 'cat', 'bird'])
-    {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
-
+        >>> clip(image, ['dog', 'cat', 'bird'])
+        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
     """
 
     image_b64 = convert_to_b64(image)
@@ -391,9 +388,8 @@ def image_caption(image: np.ndarray) -> str:
 
     Example
     -------
-    >>> image_caption(image)
-    'This image contains a cat sitting on a table with a bowl of milk.'
-
+        >>> image_caption(image)
+        'This image contains a cat sitting on a table with a bowl of milk.'
     """
 
     image_b64 = convert_to_b64(image)
@@ -418,8 +414,8 @@ def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
 
     Example
     -------
-    >>> closest_mask_distance(mask1, mask2)
-    0.5
+        >>> closest_mask_distance(mask1, mask2)
+        0.5
     """
 
     mask1 = np.clip(mask1, 0, 1)
@@ -474,8 +470,8 @@ def closest_box_distance(
 
     Example
     -------
-    >>> closest_box_distance([100, 100, 200, 200], [300, 300, 400, 400])
-    141.42
+        >>> closest_box_distance([100, 100, 200, 200], [300, 300, 400, 400])
+        141.42
     """
 
     x11, y11, x12, y12 = denormalize_bbox(box1, image_size)
@@ -499,7 +495,7 @@ def save_json(data: Any, file_path: str) -> None:
 
     Example
     -------
-    >>> save_json(data, "path/to/file.json")
+        >>> save_json(data, "path/to/file.json")
     """
 
     class NumpyEncoder(json.JSONEncoder):
@@ -525,7 +521,7 @@ def load_image(image_path: str) -> np.ndarray:
 
     Example
     -------
-    >>> load_image("path/to/image.jpg")
+        >>> load_image("path/to/image.jpg")
     """
     # NOTE: sometimes the generated code pass in a NumPy array
     if isinstance(image_path, np.ndarray):
@@ -545,8 +541,8 @@ def save_image(image: np.ndarray) -> str:
 
     Example
     -------
-    >>> save_image(image)
-    "/tmp/tmpabc123.png"
+        >>> save_image(image)
+        "/tmp/tmpabc123.png"
     """
     from IPython.display import display
 
@@ -572,8 +568,8 @@ def save_video(
 
     Example
     -------
-    >>> save_video(frames)
-    "/tmp/tmpvideo123.mp4"
+        >>> save_video(frames)
+        "/tmp/tmpvideo123.mp4"
     """
     if fps <= 0:
         _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
@@ -619,9 +615,9 @@ def overlay_bounding_boxes(
 
     Example
     -------
-    >>> image_with_bboxes = overlay_bounding_boxes(
-        image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
-    )
+        >>> image_with_bboxes = overlay_bounding_boxes(
+            image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
+        )
     """
     pil_image = Image.fromarray(image.astype(np.uint8))
 
@@ -675,18 +671,18 @@ def overlay_segmentation_masks(
 
     Example
     -------
-    >>> image_with_masks = overlay_segmentation_masks(
-        image,
-        [{
-            'score': 0.99,
-            'label': 'dinosaur',
-            'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 0, 0, ..., 0, 0, 0],
-                ...,
-                [0, 0, 0, ..., 0, 0, 0],
-                [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-        }],
-    )
+        >>> image_with_masks = overlay_segmentation_masks(
+            image,
+            [{
+                'score': 0.99,
+                'label': 'dinosaur',
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            }],
+        )
     """
     pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGBA")
 
@@ -727,16 +723,16 @@ def overlay_heat_map(
 
     Example
     -------
-    >>> image_with_heat_map = overlay_heat_map(
-        image,
-        {
-            'heat_map': array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 0, 0, ..., 0, 0, 0],
-                ...,
-                [0, 0, 0, ..., 0, 0, 0],
-                [0, 0, 0, ..., 125, 125, 125]], dtype=uint8),
-        },
-    )
+        >>> image_with_heat_map = overlay_heat_map(
+            image,
+            {
+                'heat_map': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 125, 125, 125]], dtype=uint8),
+            },
+        )
     """
     pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
 

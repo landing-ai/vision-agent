@@ -63,9 +63,9 @@ def extract_frames_from_video(
 
     Returns:
         a list of tuples containing the extracted frame and the timestamp in seconds.
-        E.g. [(frame1, 0.0), (frame2, 0.5), ...]. The timestamp is the time in seconds
-        from the start of the video. E.g. 12.125 means 12.125 seconds from the start of
-        the video. The frames are sorted by the timestamp in ascending order.
+            E.g. [(frame1, 0.0), (frame2, 0.5), ...]. The timestamp is the time in seconds
+            from the start of the video. E.g. 12.125 means 12.125 seconds from the start of
+            the video. The frames are sorted by the timestamp in ascending order.
     """
     with VideoFileClip(video_uri) as video:
         video_duration: float = video.duration

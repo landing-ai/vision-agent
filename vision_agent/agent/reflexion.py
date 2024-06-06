@@ -144,7 +144,7 @@ class Reflexion(Agent):
 
         Parameters:
             input: a prompt that describe the task or a conversation in the format of [{"role": "user", "content": "describe your task here..."}].
-            image: the input image referenced in the prompt parameter.
+            media: the input media referenced in the prompt parameter.
 
         Returns:
             A text response.
