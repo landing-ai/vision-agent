@@ -136,7 +136,7 @@ def custom_tool(image_path: str) -> str:
 
 You need to ensure you call `@va.tools.register_tool` with any imports it might use and
 ensure the documentation is in the same format above with description, `Parameters:`,
-`Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
+`Returns:`, and `Example\n-------`. You can find an example use case [here](https://github.com/landing-ai/vision-agent/tree/main/examples/custom_tools).
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:

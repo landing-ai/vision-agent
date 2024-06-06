@@ -1,3 +1,1 @@
-::: vision_agent.lmm
-
-::: vision_agent.lmm.lmm
+::: vision_agent.lmm.OpenAILMM
