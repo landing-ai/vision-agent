@@ -179,7 +179,7 @@ def extract_frames(
 ) -> List[Tuple[np.ndarray, float]]:
     """'extract_frames' extracts frames from a video, returns a list of tuples (frame,
     timestamp), where timestamp is the relative time in seconds where the frame was
-    captured. The frame is a local image file path.
+    captured. The frame is a numpy array in BGR format.
 
     Parameters:
         video_uri (Union[str, Path]): The path to the video file.
@@ -196,7 +196,11 @@ def extract_frames(
         [(frame1, 0.0), (frame2, 0.5), ...]
     """
 
-    return extract_frames_from_video(str(video_uri), fps)
+    frames_and_times = extract_frames_from_video(str(video_uri), fps)
+    return [
+        (cv2.cvtColor(frame, cv2.COLOR_RGB2BGR), time)
+        for frame, time in frames_and_times
+    ]
 
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -556,11 +560,13 @@ def save_image(image: np.ndarray) -> str:
 def save_video(
     frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 4
 ) -> str:
-    """'save_video' is a utility function that saves a list of frames as a mp4 video file on disk.
+    """'save_video' is a utility function that saves a list of frames as a mp4 video
+    file on disk.
 
     Parameters:
-        frames (list[np.ndarray]): A list of frames to save.
-        output_video_path (str): The path to save the video file. If not provided, a temporary file will be created.
+        frames (list[np.ndarray]): A list of frames to save, frames are in BGR format.
+        output_video_path (str): The path to save the video file. If not provided, a
+            temporary file will be created.
         fps (float): The number of frames composes a second in the video.
 
     Returns:
@@ -574,6 +580,7 @@ def save_video(
     if fps <= 0:
         _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
         fps = 4
+    frames = [cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) for frame in frames]
     with ImageSequenceClip(frames, fps=fps) as video:
         if output_video_path:
             f = open(output_video_path, "wb")
