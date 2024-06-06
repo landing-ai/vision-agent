@@ -545,7 +545,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
 
     pil_image = Image.fromarray(image.astype(np.uint8))
     display(pil_image)
-    pile_image.save(file_path)
+    pil_image.save(file_path)
 
 
 def save_video(
