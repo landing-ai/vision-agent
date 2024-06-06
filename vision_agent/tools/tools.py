@@ -179,7 +179,7 @@ def extract_frames(
 ) -> List[Tuple[np.ndarray, float]]:
     """'extract_frames' extracts frames from a video, returns a list of tuples (frame,
     timestamp), where timestamp is the relative time in seconds where the frame was
-    captured. The frame is a local image file path.
+    captured. The frame is a numpy array.
 
     Parameters:
         video_uri (Union[str, Path]): The path to the video file.
@@ -530,27 +530,22 @@ def load_image(image_path: str) -> np.ndarray:
     return np.array(image)
 
 
-def save_image(image: np.ndarray) -> str:
-    """'save_image' is a utility function that saves an image as a temporary file.
+def save_image(image: np.ndarray, file_path: str) -> None:
+    """'save_image' is a utility function that saves an image to a file path.
 
     Parameters:
         image (np.ndarray): The image to save.
-
-    Returns:
-        str: The path to the saved image.
+        file_path (str): The path to save the image file.
 
     Example
     -------
         >>> save_image(image)
-        "/tmp/tmpabc123.png"
     """
     from IPython.display import display
 
     pil_image = Image.fromarray(image.astype(np.uint8))
     display(pil_image)
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-        pil_image.save(f, "PNG")
-    return f.name
+    pil_image.save(file_path)
 
 
 def save_video(
