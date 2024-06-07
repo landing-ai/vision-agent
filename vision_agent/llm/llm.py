@@ -148,7 +148,7 @@ class OpenAILLM(LLM):
 class AzureOpenAILLM(OpenAILLM):
     def __init__(
         self,
-        model_name: str = "gpt-4-turbo-preview",
+        model_name: str = "gpt-4o",
         api_key: Optional[str] = None,
         api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
