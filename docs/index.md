@@ -149,10 +149,12 @@ export AZURE_OPENAI_ENDPOINT="your-endpoint"
 You can then run Vision Agent using the Azure OpenAI models:
 
 ```python
->>> import vision_agent as va
->>> agent = va.agent.VisionAgent(
->>>     planner=va.llm.AzureOpenAILLM(),
->>>     coder=va.lmm.AzureOpenAILMM(),
->>>     tester=va.lmm.AzureOpenAILMM(),
->>>     debugger=va.lmm.AzureOpenAILMM(),
->>> )
+import vision_agent as va
+agent = va.agent.VisionAgent(
+    planner=va.llm.AzureOpenAILLM(),
+    coder=va.lmm.AzureOpenAILMM(),
+    tester=va.lmm.AzureOpenAILMM(),
+    debugger=va.lmm.AzureOpenAILMM(),
+    tool_recommender=va.utils.AzureSim(),
+)
+```

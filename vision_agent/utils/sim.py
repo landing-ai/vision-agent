@@ -1,9 +1,10 @@
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
-from openai import Client
+from openai import AzureOpenAI, Client, OpenAI
 from scipy.spatial.distance import cosine  # type: ignore
 
 
@@ -33,9 +34,9 @@ class Sim:
         """
         self.df = df
         if not api_key:
-            self.client = Client()
+            self.client = OpenAI()
         else:
-            self.client = Client(api_key=api_key)
+            self.client = OpenAI(api_key=api_key)
 
         self.model = model
         if "embs" not in df.columns and sim_key is None:
@@ -76,6 +77,41 @@ class Sim:
         if thresh is not None:
             res = res[res.sim > thresh]
         return res[[c for c in res.columns if c != "embs"]].to_dict(orient="records")
+
+
+class AzureSim(Sim):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        sim_key: Optional[str] = None,
+        api_key: Optional[str] = None,
+        api_version: str = "2024-02-01",
+        azure_endpoint: Optional[str] = None,
+        model: str = "text-embedding-3-small",
+    ) -> None:
+        if not api_key:
+            api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if not azure_endpoint:
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+        if not api_key:
+            raise ValueError("Azure OpenAI API key is required.")
+        if not azure_endpoint:
+            raise ValueError("Azure OpenAI endpoint is required.")
+
+        self.df = df
+        self.client = AzureOpenAI(
+            api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+        )
+
+        self.model = model
+        if "embs" not in df.columns and sim_key is None:
+            raise ValueError("key is required if no column 'embs' is present.")
+
+        if sim_key is not None:
+            self.df["embs"] = self.df[sim_key].apply(
+                lambda x: get_embedding(self.client, x, model=self.model)
+            )
 
 
 def merge_sim(sim1: Sim, sim2: Sim) -> Sim:
