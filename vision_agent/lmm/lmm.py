@@ -286,11 +286,12 @@ class OpenAILMM(LMM):
 class AzureOpenAILMM(OpenAILMM):
     def __init__(
         self,
-        model_name: str = "gpt-4-vision-preview",
+        model_name: str = "gpt-4o",
         api_key: Optional[str] = None,
         api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
         max_tokens: int = 1024,
+        json_mode: bool = False,
         **kwargs: Any,
     ):
         if not api_key:
@@ -307,7 +308,11 @@ class AzureOpenAILMM(OpenAILMM):
             api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
         )
         self.model_name = model_name
-        self.max_tokens = max_tokens
+
+        if "max_tokens" not in kwargs:
+            kwargs["max_tokens"] = max_tokens
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
         self.kwargs = kwargs
 
 
