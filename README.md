@@ -88,7 +88,7 @@ mode by passing in the verbose argument:
 You can also have it return more information by calling `chat_with_workflow`:
 
 ```python
->>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?"}], media="jar.jpg")
+>>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
 >>> print(results)
 {
     "code": "from vision_agent.tools import ..."
@@ -111,7 +111,7 @@ you. For example:
 >>> import vision_agent as va
 >>> llm = va.llm.OpenAILLM()
 >>> detector = llm.generate_detector("Can you build a jar detector for me?")
->>> detector("jar.jpg")
+>>> detector(va.tools.load_image("jar.jpg"))
 [{"labels": ["jar",],
   "scores": [0.99],
   "bboxes": [

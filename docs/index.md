@@ -1,4 +1,5 @@
 # 🔍🤖 Vision Agent
+
 Vision Agent is a library that helps you utilize agent frameworks to generate code to
 solve your vision task. Many current vision problems can easily take hours or days to
 solve, you need to find the right model, figure out how to use it and program it to
@@ -78,7 +79,7 @@ mode by passing in the verbose argument:
 You can also have it return more information by calling `chat_with_workflow`:
 
 ```python
->>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?"}], media="jar.jpg")
+>>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
 >>> print(results)
 {
     "code": "from vision_agent.tools import ..."
@@ -101,7 +102,7 @@ you. For example:
 >>> import vision_agent as va
 >>> llm = va.llm.OpenAILLM()
 >>> detector = llm.generate_detector("Can you build a jar detector for me?")
->>> detector("jar.jpg")
+>>> detector(va.tools.load_image("jar.jpg"))
 [{"labels": ["jar",],
   "scores": [0.99],
   "bboxes": [
@@ -114,6 +115,7 @@ You can also add custom tools to the agent:
 
 ```python
 import vision_agent as va
+import numpy as np
 
 @va.tools.register_tool(imports=["import numpy as np"])
 def custom_tool(image_path: str) -> str:
@@ -130,13 +132,12 @@ def custom_tool(image_path: str) -> str:
     >>> custom_tool("image.jpg")
     """
 
-    import numpy as np
     return np.zeros((10, 10))
 ```
 
 You need to ensure you call `@va.tools.register_tool` with any imports it might use and
 ensure the documentation is in the same format above with description, `Parameters:`,
-`Returns:`, and `Example\n-------`. You can find an example use case [here](https://github.com/landing-ai/vision-agent/tree/main/examples/custom_tools).
+`Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:
