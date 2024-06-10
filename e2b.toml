@@ -1,0 +1,17 @@
+# This is a config for E2B sandbox template.
+# You can use 'template_id' (nh8girnufdutxd6xvy00) or 'template_name (va-sandbox) from this config to spawn a sandbox:
+
+# Python SDK
+# from e2b import Sandbox
+# sandbox = Sandbox(template='va-sandbox')
+
+# JS SDK
+# import { Sandbox } from 'e2b'
+# const sandbox = await Sandbox.create({ template: 'va-sandbox' })
+
+template_id = "nh8girnufdutxd6xvy00"
+dockerfile = "e2b/e2b.Dockerfile"
+template_name = "va-sandbox"
+start_cmd = "/root/.jupyter/start-up.sh"
+cpu_count = 2
+memory_mb = 1_024

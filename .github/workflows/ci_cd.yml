@@ -54,6 +54,8 @@ jobs:
     # https://github.community/t/how-do-i-specify-job-dependency-running-in-another-workflow/16482
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'chore(release):') && !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
+    env:
+      E2B_ACCESS_TOKEN: ${{ secrets.E2B_ACCESS_TOKEN }}
     steps:
       - uses: actions/setup-python@v4
         with:
@@ -84,3 +86,13 @@ jobs:
         run: |
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
           poetry publish --build -vvv
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.14.0
+      - name: Install e2b CLI
+        run: npm install -g @e2b/cli@latest
+      - name: E2B Login
+        run: e2b auth login
+      - name: E2B Publish Sandbox Template
+        e2b template build -d e2b/e2b.Dockerfile -c "/root/.jupyter/start-up.sh" --cpu-count 2 --memory-mb 1024
