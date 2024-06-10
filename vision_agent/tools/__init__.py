@@ -11,6 +11,7 @@ from .tools import (
     closest_box_distance,
     closest_mask_distance,
     extract_frames,
+    get_tool_documentation,
     grounding_dino,
     grounding_sam,
     image_caption,
@@ -37,7 +38,7 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from .tools import get_tool_descriptions, get_tool_documentation, get_tools_df
+        from .tools import get_tool_descriptions, get_tools_df
 
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING
 

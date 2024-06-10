@@ -25,7 +25,7 @@ from vision_agent.agent.vision_agent_prompts import (
     USER_REQ,
 )
 from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.lmm import LMM, OpenAILMM
+from vision_agent.lmm import MediaChatItem
 from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.execute import CodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
@@ -135,8 +135,7 @@ def write_plan(
     chat: List[Dict[str, str]],
     tool_desc: str,
     working_memory: str,
-    model: Union[LLM, LMM],
-    media: Optional[Sequence[Union[str, Path]]] = None,
+    model: LLM,
 ) -> List[Dict[str, str]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -146,18 +145,58 @@ def write_plan(
     context = USER_REQ.format(user_request=user_request)
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
-    if isinstance(model, OpenAILMM):
-        media = extract_image(media)
-        return extract_json(model.chat(chat, images=media))["plan"]  # type: ignore
-    else:
-        return extract_json(model.chat(chat))["plan"]  # type: ignore
+    return extract_json(model.chat(chat))["plan"]  # type: ignore
+
+
+def write_code(
+    coder: LLM,
+    chat: List[Dict[str, str]],
+    tool_info: str,
+    feedback: str,
+) -> str:
+    chat = copy.deepcopy(chat)
+    if chat[-1]["role"] != "user":
+        raise ValueError("Last chat message must be from the user.")
+
+    user_request = chat[-1]["content"]
+    prompt = CODE.format(
+        docstring=tool_info,
+        question=user_request,
+        feedback=feedback,
+    )
+    chat[-1]["content"] = prompt
+    return extract_code(coder(chat))
+
+
+def write_test(
+    tester: LLM,
+    chat: List[Dict[str, str]],
+    tool_utils: str,
+    code: str,
+    feedback: str,
+    media: Optional[Sequence[Union[str, Path]]] = None,
+) -> str:
+    chat = copy.deepcopy(chat)
+    if chat[-1]["role"] != "user":
+        raise ValueError("Last chat message must be from the user.")
+
+    user_request = chat[-1]["content"]
+    prompt = SIMPLE_TEST.format(
+        docstring=tool_utils,
+        question=user_request,
+        code=code,
+        feedback=feedback,
+        media=media,
+    )
+    chat[-1]["content"] = prompt
+    return extract_code(tester(chat))
 
 
 def reflect(
     chat: List[Dict[str, str]],
     plan: str,
     code: str,
-    model: Union[LLM, LMM],
+    model: LLM,
 ) -> Dict[str, Union[str, bool]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -167,11 +206,11 @@ def reflect(
     context = USER_REQ.format(user_request=user_request)
     prompt = REFLECT.format(context=context, plan=plan, code=code)
     chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))
+    return extract_json(model(chat))
 
 
 def write_and_test_code(
-    task: str,
+    chat: List[Dict[str, str]],
     tool_info: str,
     tool_utils: str,
     working_memory: List[Dict[str, str]],
@@ -182,7 +221,7 @@ def write_and_test_code(
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
-    input_media: Optional[Union[str, Path]] = None,
+    media: Optional[Sequence[Union[str, Path]]] = None,
 ) -> Dict[str, Any]:
     log_progress(
         {
@@ -190,25 +229,9 @@ def write_and_test_code(
             "status": "started",
         }
     )
-    code = extract_code(
-        coder(
-            CODE.format(
-                docstring=tool_info,
-                question=task,
-                feedback=format_memory(working_memory),
-            )
-        )
-    )
-    test = extract_code(
-        tester(
-            SIMPLE_TEST.format(
-                docstring=tool_utils,
-                question=task,
-                code=code,
-                feedback=working_memory,
-                media=input_media,
-            )
-        )
+    code = write_code(coder, chat, tool_info, format_memory(working_memory))
+    test = write_test(
+        tester, chat, tool_utils, code, format_memory(working_memory), media
     )
 
     log_progress(
@@ -391,7 +414,7 @@ class VisionAgent(Agent):
 
     def __init__(
         self,
-        planner: Optional[Union[LLM, LMM]] = None,
+        planner: Optional[LLM] = None,
         coder: Optional[LLM] = None,
         tester: Optional[LLM] = None,
         debugger: Optional[LLM] = None,
@@ -436,8 +459,7 @@ class VisionAgent(Agent):
 
     def __call__(
         self,
-        input: Union[List[Dict[str, str]], str],
-        media: Optional[Union[str, Path]] = None,
+        input: Union[str, List[MediaChatItem]],
     ) -> str:
         """Chat with Vision Agent and return intermediate information regarding the task.
 
@@ -453,23 +475,24 @@ class VisionAgent(Agent):
 
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
-        results = self.chat_with_workflow(input, media)
+        results = self.chat_with_workflow(input)
         results.pop("working_memory")
         return results  # type: ignore
 
     def chat_with_workflow(
         self,
-        chat: List[Dict[str, str]],
-        media: Optional[Union[str, Path]] = None,
+        chat: List[MediaChatItem],
         self_reflection: bool = False,
         display_visualization: bool = False,
     ) -> Dict[str, Any]:
         """Chat with Vision Agent and return intermediate information regarding the task.
 
         Parameters:
-            chat (List[Dict[str, str]]): A conversation in the format of
-                [{"role": "user", "content": "describe your task here..."}].
-            media (Optional[Union[str, Path]]): The media file to be used in the task.
+            chat (List[MediaChatItem]): A conversation
+                in the format of:
+                [{"role": "user", "content": "describe your task here..."}]
+                or if it contains media files, it should be in the format of:
+                [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
             self_reflection (bool): Whether to reflect on the task and debug the code.
             display_visualization (bool): If True, it opens a new window locally to
                 show the image(s) created by visualization code (if there is any).
@@ -484,11 +507,19 @@ class VisionAgent(Agent):
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         with CodeInterpreterFactory.new_instance() as code_interpreter:
-            if media is not None:
-                media = code_interpreter.upload_file(media)
-                for chat_i in chat:
-                    if chat_i["role"] == "user":
-                        chat_i["content"] += f" Image name {media}"
+            chat = copy.deepcopy(chat)
+            media_list = []
+            for chat_i in chat:
+                if "media" in chat_i:
+                    for media in chat_i["media"]:
+                        media = code_interpreter.upload_file(media)
+                        chat_i["content"] += f" Media name {media}"  # type: ignore
+                        media_list.append(media)
+
+            int_chat = cast(
+                List[Dict[str, str]],
+                [{"role": c["role"], "content": c["content"]} for c in chat],
+            )
 
             code = ""
             test = ""
@@ -506,11 +537,10 @@ class VisionAgent(Agent):
                     }
                 )
                 plan_i = write_plan(
-                    chat,
+                    int_chat,
                     T.TOOL_DESCRIPTIONS,
                     format_memory(working_memory),
                     self.planner,
-                    media=[media] if media else None,
                 )
                 plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
 
@@ -533,9 +563,7 @@ class VisionAgent(Agent):
                     self.verbosity,
                 )
                 results = write_and_test_code(
-                    task=FULL_TASK.format(
-                        user_request=chat[0]["content"], subtasks=plan_i_str
-                    ),
+                    chat=int_chat,
                     tool_info=tool_info,
                     tool_utils=T.UTILITIES_DOCSTRING,
                     working_memory=working_memory,
@@ -545,7 +573,7 @@ class VisionAgent(Agent):
                     code_interpreter=code_interpreter,
                     log_progress=self.log_progress,
                     verbosity=self.verbosity,
-                    input_media=media,
+                    media=media_list,
                 )
                 success = cast(bool, results["success"])
                 code = cast(str, results["code"])
@@ -563,7 +591,7 @@ class VisionAgent(Agent):
                     }
                 )
                 reflection = reflect(
-                    chat,
+                    int_chat,
                     FULL_TASK.format(
                         user_request=chat[0]["content"], subtasks=plan_i_str
                     ),

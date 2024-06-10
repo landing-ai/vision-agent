@@ -6,12 +6,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
 from langsmith.wrappers import wrap_openai
 from openai import AzureOpenAI, OpenAI
 
-from vision_agent.tools.easytool_tools import (
-    CLIP,
-    GroundingDINO,
-    GroundingSAM,
-    ZeroShotCounting,
-)
+import vision_agent.tools as T
 from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 
 
@@ -83,7 +78,7 @@ class OpenAILLM(LLM):
         return self.chat(input)
 
     def generate_classifier(self, question: str) -> Callable:
-        api_doc = CLIP.description + "\n" + str(CLIP.usage)
+        api_doc = T.get_tool_documentation([T.clip])
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
@@ -98,10 +93,10 @@ class OpenAILLM(LLM):
             "Parameters"
         ]
 
-        return lambda x: CLIP()(**{"prompt": params["prompt"], "image": x})
+        return lambda x: T.clip(x, params["prompt"])
 
     def generate_detector(self, question: str) -> Callable:
-        api_doc = GroundingDINO.description + "\n" + str(GroundingDINO.usage)
+        api_doc = T.get_tool_documentation([T.grounding_dino])
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
@@ -116,10 +111,10 @@ class OpenAILLM(LLM):
             "Parameters"
         ]
 
-        return lambda x: GroundingDINO()(**{"prompt": params["prompt"], "image": x})
+        return lambda x: T.grounding_dino(params["prompt"], x)
 
     def generate_segmentor(self, question: str) -> Callable:
-        api_doc = GroundingSAM.description + "\n" + str(GroundingSAM.usage)
+        api_doc = T.get_tool_documentation([T.grounding_sam])
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
@@ -134,15 +129,13 @@ class OpenAILLM(LLM):
             "Parameters"
         ]
 
-        return lambda x: GroundingSAM()(**{"prompt": params["prompt"], "image": x})
+        return lambda x: T.grounding_sam(params["prompt"], x)
 
     def generate_zero_shot_counter(self, question: str) -> Callable:
-        return lambda x: ZeroShotCounting()(**{"image": x})
+        return T.zero_shot_counting
 
     def generate_image_qa_tool(self, question: str) -> Callable:
-        from vision_agent.tools.easytool_tools import ImageQuestionAnswering
-
-        return lambda x: ImageQuestionAnswering()(**{"prompt": question, "image": x})
+        return lambda x: T.image_question_answering(question, x)
 
 
 class AzureOpenAILLM(OpenAILLM):
