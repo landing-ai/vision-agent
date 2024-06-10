@@ -460,6 +460,7 @@ class VisionAgent(Agent):
     def __call__(
         self,
         input: Union[str, List[MediaChatItem]],
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         """Chat with Vision Agent and return intermediate information regarding the task.
 
@@ -475,6 +476,8 @@ class VisionAgent(Agent):
 
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
+            if media is not None:
+                input[0]["media"] = [media]
         results = self.chat_with_workflow(input)
         results.pop("working_memory")
         return results  # type: ignore

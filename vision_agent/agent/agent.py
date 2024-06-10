@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Union
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 from vision_agent.lmm import MediaChatItem
 
@@ -9,6 +10,7 @@ class Agent(ABC):
     def __call__(
         self,
         input: Union[str, List[MediaChatItem]],
+        media: Optional[Union[str, Path]] = None,
     ) -> str:
         pass
 
