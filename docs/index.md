@@ -153,9 +153,9 @@ import vision_agent as va
 import vision_agent.tools as T
 agent = va.agent.VisionAgent(
     planner=va.llm.AzureOpenAILLM(),
-    coder=va.lmm.AzureOpenAILMM(),
-    tester=va.lmm.AzureOpenAILMM(),
-    debugger=va.lmm.AzureOpenAILMM(),
+    coder=va.lmm.AzureOpenAILLM(),
+    tester=va.lmm.AzureOpenAILLM(),
+    debugger=va.lmm.AzureOpenAILLM(),
     tool_recommender=va.utils.AzureSim(T.TOOLS_DF, sim_key="desc"),
 )
 ```
