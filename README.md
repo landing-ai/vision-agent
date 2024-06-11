@@ -2,7 +2,6 @@
     <img alt="vision_agent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo.jpg?raw=true">
 
 # 🔍🤖 Vision Agent
-
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
 ![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
@@ -16,9 +15,14 @@ accomplish the task you want. Vision Agent aims to provide an in-seconds experie
 allowing users to describe their problem in text and have the agent framework generate
 code to solve the task for them. Check out our discord for updates and roadmaps!
 
+
+## Web Application
+
+Try Vision Agent live on [va.landing.ai](https://va.landing.ai/)
+
 ## Documentation
 
-- [Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
+[Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
 
 
 ## Getting Started
@@ -52,28 +56,28 @@ from vision_agent.tools import load_image, grounding_sam
 def calculate_filled_percentage(image_path: str) -> float:
     # Step 1: Load the image
     image = load_image(image_path)
-    
+
     # Step 2: Segment the jar
     jar_segments = grounding_sam(prompt="jar", image=image)
-    
+
     # Step 3: Segment the coffee beans
     coffee_beans_segments = grounding_sam(prompt="coffee beans", image=image)
-    
+
     # Step 4: Calculate the area of the segmented jar
     jar_area = 0
     for segment in jar_segments:
         jar_area += segment['mask'].sum()
-    
+
     # Step 5: Calculate the area of the segmented coffee beans
     coffee_beans_area = 0
     for segment in coffee_beans_segments:
         coffee_beans_area += segment['mask'].sum()
-    
+
     # Step 6: Compute the percentage of the jar area that is filled with coffee beans
     if jar_area == 0:
         return 0.0  # To avoid division by zero
     filled_percentage = (coffee_beans_area / jar_area) * 100
-    
+
     # Step 7: Return the computed percentage
     return filled_percentage
 ```
