@@ -28,6 +28,7 @@ export OPENAI_API_KEY="your-api-key"
 ```
 
 ### Vision Agent
+#### Basic Usage
 You can interact with the agent as you would with any LLM or LMM model:
 
 ```python
@@ -76,7 +77,9 @@ mode by passing in the verbose argument:
 >>> agent = VisionAgent(verbose=2)
 ```
 
-You can also have it return more information by calling `chat_with_workflow`:
+#### Detailed Usage
+You can also have it return more information by calling `chat_with_workflow`. The format
+of the input is a list of dictionaries with the keys `role`, `content`, and `media`:
 
 ```python
 >>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
@@ -90,8 +93,34 @@ You can also have it return more information by calling `chat_with_workflow`:
 }
 ```
 
-With this you can examine more detailed information such as the etesting code, testing
+With this you can examine more detailed information such as the testing code, testing
 results, plan or working memory it used to complete the task.
+
+#### Multi-turn conversations
+You can have multi-turn conversations with vision-agent as well, giving it feedback on
+the code and having it update. You just need to add the code as a response from the
+assistant:
+
+```python
+agent = va.agent.VisionAgent(verbosity=2)
+conv = [
+    {
+        "role": "user",
+        "content": "Are these workers wearing safety gear? Output only a True or False value.",
+        "media": ["workers.png"],
+    }
+]
+result = agent.chat_with_workflow(conv)
+code = result["code"]
+conv.append({"role": "assistant", "content": code})
+conv.append(
+    {
+        "role": "user",
+        "content": "Can you also return the number of workers wearing safety gear?",
+    }
+)
+result = agent.chat_with_workflow(conv)
+```
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
@@ -137,7 +166,7 @@ def custom_tool(image_path: str) -> str:
 
 You need to ensure you call `@va.tools.register_tool` with any imports it might use and
 ensure the documentation is in the same format above with description, `Parameters:`,
-`Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
+`Returns:`, and `Example\n-------`. You can find an example use case [here](https://github.com/landing-ai/vision-agent/tree/main/examples/custom_tools).
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:
