@@ -13,6 +13,7 @@ from rich.style import Style
 from rich.syntax import Syntax
 from tabulate import tabulate
 
+from vision_agent.llm.llm import AzureOpenAILLM
 import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
@@ -29,7 +30,7 @@ from vision_agent.lmm import LMM, OpenAILMM
 from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.execute import CodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
-from vision_agent.utils.sim import Sim
+from vision_agent.utils.sim import AzureSim, Sim
 from vision_agent.utils.video import play_video
 
 logging.basicConfig(stream=sys.stdout)
@@ -615,3 +616,66 @@ class VisionAgent(Agent):
     def log_progress(self, data: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
+
+
+class AzureVisionAgent(VisionAgent):
+    """Vision Agent that uses Azure OpenAI APIs for planning, coding, testing.
+
+    Pre-requisites:
+    1. Set the environment variable AZURE_OPENAI_API_KEY to your Azure OpenAI API key.
+    2. Set the environment variable AZURE_OPENAI_ENDPOINT to your Azure OpenAI endpoint.
+
+    Example
+    -------
+        >>> from vision_agent import AzureVisionAgent
+        >>> agent = AzureVisionAgent()
+        >>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
+    """
+
+    def __init__(
+        self,
+        planner: Optional[Union[LLM, LMM]] = None,
+        coder: Optional[LLM] = None,
+        tester: Optional[LLM] = None,
+        debugger: Optional[LLM] = None,
+        tool_recommender: Optional[Sim] = None,
+        verbosity: int = 0,
+        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
+        """Initialize the Vision Agent.
+
+        Parameters:
+            planner (Optional[LLM]): The planner model to use. Defaults to OpenAILLM.
+            coder (Optional[LLM]): The coder model to use. Defaults to OpenAILLM.
+            tester (Optional[LLM]): The tester model to use. Defaults to OpenAILLM.
+            debugger (Optional[LLM]): The debugger model to
+            tool_recommender (Optional[Sim]): The tool recommender model to use.
+            verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
+                highest verbosity level which will output all intermediate debugging
+                code.
+            report_progress_callback: a callback to report the progress of the agent.
+                This is useful for streaming logs in a web application where multiple
+                VisionAgent instances are running in parallel. This callback ensures
+                that the progress are not mixed up.
+        """
+        super().__init__(
+            planner=(
+                AzureOpenAILLM(temperature=0.0, json_mode=True)
+                if planner is None
+                else planner
+            ),
+            coder=AzureOpenAILLM(temperature=0.0) if coder is None else coder,
+            tester=AzureOpenAILLM(temperature=0.0) if tester is None else tester,
+            debugger=(
+                AzureOpenAILLM(temperature=0.0, json_mode=True)
+                if debugger is None
+                else debugger
+            ),
+            tool_recommender=(
+                AzureSim(T.TOOLS_DF, sim_key="desc")
+                if tool_recommender is None
+                else tool_recommender
+            ),
+            verbosity=verbosity,
+            report_progress_callback=report_progress_callback,
+        )
