@@ -95,4 +95,4 @@ jobs:
       - name: E2B Login
         run: e2b auth login
       - name: E2B Publish Sandbox Template
-        run: e2b template build -d e2b/e2b.Dockerfile -c "/root/.jupyter/start-up.sh" --cpu-count 2 --memory-mb 1024
+        e2b template build -d e2b/e2b.Dockerfile -c "/root/.jupyter/start-up.sh" --cpu-count 2 --memory-mb 1024
