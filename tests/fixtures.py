@@ -2,8 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import vision_agent.tools as T
-
 
 @pytest.fixture
 def openai_llm_mock(request):
