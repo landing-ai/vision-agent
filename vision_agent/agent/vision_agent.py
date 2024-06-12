@@ -13,7 +13,6 @@ from rich.style import Style
 from rich.syntax import Syntax
 from tabulate import tabulate
 
-from vision_agent.llm.llm import AzureOpenAILLM
 import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
@@ -25,8 +24,7 @@ from vision_agent.agent.vision_agent_prompts import (
     SIMPLE_TEST,
     USER_REQ,
 )
-from vision_agent.llm import LLM, OpenAILLM
-from vision_agent.lmm import MediaChatItem
+from vision_agent.lmm import LMM, AzureOpenAILMM, Message, OpenAILMM
 from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.execute import CodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
@@ -133,10 +131,10 @@ def extract_image(
 
 
 def write_plan(
-    chat: List[Dict[str, str]],
+    chat: List[Message],
     tool_desc: str,
     working_memory: str,
-    model: LLM,
+    model: LMM,
 ) -> List[Dict[str, str]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -150,8 +148,8 @@ def write_plan(
 
 
 def write_code(
-    coder: LLM,
-    chat: List[Dict[str, str]],
+    coder: LMM,
+    chat: List[Message],
     tool_info: str,
     feedback: str,
 ) -> str:
@@ -170,8 +168,8 @@ def write_code(
 
 
 def write_test(
-    tester: LLM,
-    chat: List[Dict[str, str]],
+    tester: LMM,
+    chat: List[Message],
     tool_utils: str,
     code: str,
     feedback: str,
@@ -194,10 +192,10 @@ def write_test(
 
 
 def reflect(
-    chat: List[Dict[str, str]],
+    chat: List[Message],
     plan: str,
     code: str,
-    model: LLM,
+    model: LMM,
 ) -> Dict[str, Union[str, bool]]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -211,13 +209,13 @@ def reflect(
 
 
 def write_and_test_code(
-    chat: List[Dict[str, str]],
+    chat: List[Message],
     tool_info: str,
     tool_utils: str,
     working_memory: List[Dict[str, str]],
-    coder: LLM,
-    tester: LLM,
-    debugger: LLM,
+    coder: LMM,
+    tester: LMM,
+    debugger: LMM,
     code_interpreter: CodeInterpreter,
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
@@ -415,10 +413,10 @@ class VisionAgent(Agent):
 
     def __init__(
         self,
-        planner: Optional[LLM] = None,
-        coder: Optional[LLM] = None,
-        tester: Optional[LLM] = None,
-        debugger: Optional[LLM] = None,
+        planner: Optional[LMM] = None,
+        coder: Optional[LMM] = None,
+        tester: Optional[LMM] = None,
+        debugger: Optional[LMM] = None,
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
@@ -426,10 +424,10 @@ class VisionAgent(Agent):
         """Initialize the Vision Agent.
 
         Parameters:
-            planner (Optional[LLM]): The planner model to use. Defaults to OpenAILLM.
-            coder (Optional[LLM]): The coder model to use. Defaults to OpenAILLM.
-            tester (Optional[LLM]): The tester model to use. Defaults to OpenAILLM.
-            debugger (Optional[LLM]): The debugger model to
+            planner (Optional[LMM]): The planner model to use. Defaults to OpenAILMM.
+            coder (Optional[LMM]): The coder model to use. Defaults to OpenAILMM.
+            tester (Optional[LMM]): The tester model to use. Defaults to OpenAILMM.
+            debugger (Optional[LMM]): The debugger model to
             tool_recommender (Optional[Sim]): The tool recommender model to use.
             verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
                 highest verbosity level which will output all intermediate debugging
@@ -441,12 +439,12 @@ class VisionAgent(Agent):
         """
 
         self.planner = (
-            OpenAILLM(temperature=0.0, json_mode=True) if planner is None else planner
+            OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
         )
-        self.coder = OpenAILLM(temperature=0.0) if coder is None else coder
-        self.tester = OpenAILLM(temperature=0.0) if tester is None else tester
+        self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
+        self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
         self.debugger = (
-            OpenAILLM(temperature=0.0, json_mode=True) if debugger is None else debugger
+            OpenAILMM(temperature=0.0, json_mode=True) if debugger is None else debugger
         )
 
         self.tool_recommender = (
@@ -460,7 +458,7 @@ class VisionAgent(Agent):
 
     def __call__(
         self,
-        input: Union[str, List[MediaChatItem]],
+        input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
     ) -> str:
         """Chat with Vision Agent and return intermediate information regarding the task.
@@ -485,7 +483,7 @@ class VisionAgent(Agent):
 
     def chat_with_workflow(
         self,
-        chat: List[MediaChatItem],
+        chat: List[Message],
         self_reflection: bool = False,
         display_visualization: bool = False,
     ) -> Dict[str, Any]:
@@ -521,7 +519,7 @@ class VisionAgent(Agent):
                         media_list.append(media)
 
             int_chat = cast(
-                List[Dict[str, str]],
+                List[Message],
                 [{"role": c["role"], "content": c["content"]} for c in chat],
             )
 
@@ -665,10 +663,10 @@ class AzureVisionAgent(VisionAgent):
 
     def __init__(
         self,
-        planner: Optional[Union[LLM, LMM]] = None,
-        coder: Optional[LLM] = None,
-        tester: Optional[LLM] = None,
-        debugger: Optional[LLM] = None,
+        planner: Optional[LMM] = None,
+        coder: Optional[LMM] = None,
+        tester: Optional[LMM] = None,
+        debugger: Optional[LMM] = None,
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
@@ -676,10 +674,10 @@ class AzureVisionAgent(VisionAgent):
         """Initialize the Vision Agent.
 
         Parameters:
-            planner (Optional[LLM]): The planner model to use. Defaults to OpenAILLM.
-            coder (Optional[LLM]): The coder model to use. Defaults to OpenAILLM.
-            tester (Optional[LLM]): The tester model to use. Defaults to OpenAILLM.
-            debugger (Optional[LLM]): The debugger model to
+            planner (Optional[LMM]): The planner model to use. Defaults to OpenAILMM.
+            coder (Optional[LMM]): The coder model to use. Defaults to OpenAILMM.
+            tester (Optional[LMM]): The tester model to use. Defaults to OpenAILMM.
+            debugger (Optional[LMM]): The debugger model to
             tool_recommender (Optional[Sim]): The tool recommender model to use.
             verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
                 highest verbosity level which will output all intermediate debugging
@@ -691,14 +689,14 @@ class AzureVisionAgent(VisionAgent):
         """
         super().__init__(
             planner=(
-                AzureOpenAILLM(temperature=0.0, json_mode=True)
+                AzureOpenAILMM(temperature=0.0, json_mode=True)
                 if planner is None
                 else planner
             ),
-            coder=AzureOpenAILLM(temperature=0.0) if coder is None else coder,
-            tester=AzureOpenAILLM(temperature=0.0) if tester is None else tester,
+            coder=AzureOpenAILMM(temperature=0.0) if coder is None else coder,
+            tester=AzureOpenAILMM(temperature=0.0) if tester is None else tester,
             debugger=(
-                AzureOpenAILLM(temperature=0.0, json_mode=True)
+                AzureOpenAILMM(temperature=0.0, json_mode=True)
                 if debugger is None
                 else debugger
             ),

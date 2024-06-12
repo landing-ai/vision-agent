@@ -2,14 +2,14 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from vision_agent.lmm import MediaChatItem
+from vision_agent.lmm import Message
 
 
 class Agent(ABC):
     @abstractmethod
     def __call__(
         self,
-        input: Union[str, List[MediaChatItem]],
+        input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
     ) -> str:
         pass

@@ -1,1 +1,1 @@
-from .lmm import LMM, AzureOpenAILMM, MediaChatItem, OpenAILMM
+from .lmm import LMM, AzureOpenAILMM, Message, OpenAILMM

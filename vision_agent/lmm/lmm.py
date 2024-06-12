@@ -21,7 +21,7 @@ def encode_image(image: Union[str, Path]) -> str:
 
 
 TextOrImage = Union[str, List[Union[str, Path]]]
-MediaChatItem = Dict[str, TextOrImage]
+Message = Dict[str, TextOrImage]
 
 
 class LMM(ABC):
@@ -34,14 +34,14 @@ class LMM(ABC):
     @abstractmethod
     def chat(
         self,
-        chat: List[MediaChatItem],
+        chat: List[Message],
     ) -> str:
         pass
 
     @abstractmethod
     def __call__(
         self,
-        input: Union[str, List[MediaChatItem]],
+        input: Union[str, List[Message]],
     ) -> str:
         pass
 
@@ -72,7 +72,7 @@ class OpenAILMM(LMM):
 
     def __call__(
         self,
-        input: Union[str, List[MediaChatItem]],
+        input: Union[str, List[Message]],
     ) -> str:
         if isinstance(input, str):
             return self.generate(input)
@@ -80,7 +80,7 @@ class OpenAILMM(LMM):
 
     def chat(
         self,
-        chat: List[MediaChatItem],
+        chat: List[Message],
     ) -> str:
         """Chat with the LMM model.
 
