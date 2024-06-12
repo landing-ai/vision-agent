@@ -13,6 +13,7 @@ from rich.style import Style
 from rich.syntax import Syntax
 from tabulate import tabulate
 
+from vision_agent.llm.llm import AzureOpenAILLM
 import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
