@@ -316,14 +316,14 @@ def visual_prompt_counting(
     return resp_data
 
 
-def image_question_answering(image: np.ndarray, prompt: str) -> str:
+def image_question_answering(prompt: str, image: np.ndarray) -> str:
     """'image_question_answering_' is a tool that can answer questions about the visual
     contents of an image given a question and an image. It returns an answer to the
     question
 
     Parameters:
-        image (np.ndarray): The reference image used for the question
         prompt (str): The question about the image
+        image (np.ndarray): The reference image used for the question
 
     Returns:
         str: A string which is the answer to the given prompt. E.g. {'text': 'This
@@ -331,7 +331,7 @@ def image_question_answering(image: np.ndarray, prompt: str) -> str:
 
     Example
     -------
-        >>> image_question_answering(image, 'What is the cat doing ?')
+        >>> image_question_answering('What is the cat doing ?', image)
         'drinking milk'
     """
 
