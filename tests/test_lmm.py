@@ -1,16 +1,13 @@
 import tempfile
+from unittest.mock import patch
 
+import numpy as np
 import pytest
 from PIL import Image
 
 from vision_agent.lmm.lmm import OpenAILMM
 
-from .fixtures import (  # noqa: F401
-    clip_mock,
-    grounding_dino_mock,
-    grounding_sam_mock,
-    openai_lmm_mock,
-)
+from .fixtures import openai_lmm_mock  # noqa: F401
 
 
 def create_temp_image(image_format="jpeg"):
@@ -27,7 +24,7 @@ def create_temp_image(image_format="jpeg"):
 def test_generate_with_mock(openai_lmm_mock):  # noqa: F811
     temp_image = create_temp_image()
     lmm = OpenAILMM()
-    response = lmm.generate("test prompt", images=[temp_image])
+    response = lmm.generate("test prompt", media=[temp_image])
     assert response == "mocked response"
     assert (
         "image_url"
@@ -81,12 +78,18 @@ def test_call_with_mock(openai_lmm_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_classifier(openai_lmm_mock, clip_mock):  # noqa: F811
-    lmm = OpenAILMM()
-    prompt = "Can you generate a cat classifier?"
-    classifier = lmm.generate_classifier(prompt)
-    classifier("image.png")
-    assert clip_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
+def test_generate_classifier(openai_lmm_mock):  # noqa: F811
+    with patch("vision_agent.tools.clip") as clip_mock:
+        clip_mock.return_value = "test"
+        clip_mock.__name__ = "clip"
+        clip_mock.__doc__ = "clip"
+
+        lmm = OpenAILMM()
+        prompt = "Can you generate a cat classifier?"
+        classifier = lmm.generate_classifier(prompt)
+        dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
+        classifier(dummy_image)
+        assert clip_mock.call_args[0][1] == "cat"
 
 
 @pytest.mark.parametrize(
@@ -94,12 +97,18 @@ def test_generate_classifier(openai_lmm_mock, clip_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_detector(openai_lmm_mock, grounding_dino_mock):  # noqa: F811
-    lmm = OpenAILMM()
-    prompt = "Can you generate a cat classifier?"
-    detector = lmm.generate_detector(prompt)
-    detector("image.png")
-    assert grounding_dino_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
+def test_generate_detector(openai_lmm_mock):  # noqa: F811
+    with patch("vision_agent.tools.grounding_dino") as grounding_dino_mock:
+        grounding_dino_mock.return_value = "test"
+        grounding_dino_mock.__name__ = "grounding_dino"
+        grounding_dino_mock.__doc__ = "grounding_dino"
+
+        lmm = OpenAILMM()
+        prompt = "Can you generate a cat classifier?"
+        detector = lmm.generate_detector(prompt)
+        dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
+        detector(dummy_image)
+        assert grounding_dino_mock.call_args[0][0] == "cat"
 
 
 @pytest.mark.parametrize(
@@ -107,9 +116,15 @@ def test_generate_detector(openai_lmm_mock, grounding_dino_mock):  # noqa: F811
     ['{"Parameters": {"prompt": "cat"}}'],
     indirect=["openai_lmm_mock"],
 )
-def test_generate_segmentor(openai_lmm_mock, grounding_sam_mock):  # noqa: F811
-    lmm = OpenAILMM()
-    prompt = "Can you generate a cat classifier?"
-    segmentor = lmm.generate_segmentor(prompt)
-    segmentor("image.png")
-    assert grounding_sam_mock.call_args[1] == {"prompt": "cat", "image": "image.png"}
+def test_generate_segmentor(openai_lmm_mock):  # noqa: F811
+    with patch("vision_agent.tools.grounding_sam") as grounding_sam_mock:
+        grounding_sam_mock.return_value = "test"
+        grounding_sam_mock.__name__ = "grounding_sam"
+        grounding_sam_mock.__doc__ = "grounding_sam"
+
+        lmm = OpenAILMM()
+        prompt = "Can you generate a cat classifier?"
+        segmentor = lmm.generate_segmentor(prompt)
+        dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
+        segmentor(dummy_image)
+        assert grounding_sam_mock.call_args[0][0] == "cat"

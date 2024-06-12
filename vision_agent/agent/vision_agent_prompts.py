@@ -171,7 +171,7 @@ This is the documentation for the functions you have access to. You may call any
 **Instructions**:
 1. Verify the fundamental functionality under normal conditions.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
-3. Your test case MUST run only on the given image which is {media}
+3. Your test case MUST run only on the given images which are {media}
 4. Your test case MUST run only with the given values which is available in the question - {question}
 5. DO NOT use any non-existent or dummy image or video files that are not provided by the user's instructions.
 6. DO NOT mock any functions, you must test their functionality as is.

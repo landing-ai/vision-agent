@@ -1,4 +1,5 @@
 # 🔍🤖 Vision Agent
+
 Vision Agent is a library that helps you utilize agent frameworks to generate code to
 solve your vision task. Many current vision problems can easily take hours or days to
 solve, you need to find the right model, figure out how to use it and program it to
@@ -6,9 +7,14 @@ accomplish the task you want. Vision Agent aims to provide an in-seconds experie
 allowing users to describe their problem in text and have the agent framework generate
 code to solve the task for them. Check out our discord for updates and roadmaps!
 
+
+## Web Application
+
+Try Vision Agent live on [va.landing.ai](https://va.landing.ai/)
+
 ## Documentation
 
-- [Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
+[Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
 
 
 ## Getting Started
@@ -27,6 +33,7 @@ export OPENAI_API_KEY="your-api-key"
 ```
 
 ### Vision Agent
+#### Basic Usage
 You can interact with the agent as you would with any LLM or LMM model:
 
 ```python
@@ -42,28 +49,28 @@ from vision_agent.tools import load_image, grounding_sam
 def calculate_filled_percentage(image_path: str) -> float:
     # Step 1: Load the image
     image = load_image(image_path)
-    
+
     # Step 2: Segment the jar
     jar_segments = grounding_sam(prompt="jar", image=image)
-    
+
     # Step 3: Segment the coffee beans
     coffee_beans_segments = grounding_sam(prompt="coffee beans", image=image)
-    
+
     # Step 4: Calculate the area of the segmented jar
     jar_area = 0
     for segment in jar_segments:
         jar_area += segment['mask'].sum()
-    
+
     # Step 5: Calculate the area of the segmented coffee beans
     coffee_beans_area = 0
     for segment in coffee_beans_segments:
         coffee_beans_area += segment['mask'].sum()
-    
+
     # Step 6: Compute the percentage of the jar area that is filled with coffee beans
     if jar_area == 0:
         return 0.0  # To avoid division by zero
     filled_percentage = (coffee_beans_area / jar_area) * 100
-    
+
     # Step 7: Return the computed percentage
     return filled_percentage
 ```
@@ -75,10 +82,12 @@ mode by passing in the verbose argument:
 >>> agent = VisionAgent(verbose=2)
 ```
 
-You can also have it return more information by calling `chat_with_workflow`:
+#### Detailed Usage
+You can also have it return more information by calling `chat_with_workflow`. The format
+of the input is a list of dictionaries with the keys `role`, `content`, and `media`:
 
 ```python
->>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?"}], media="jar.jpg")
+>>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
 >>> print(results)
 {
     "code": "from vision_agent.tools import ..."
@@ -89,19 +98,45 @@ You can also have it return more information by calling `chat_with_workflow`:
 }
 ```
 
-With this you can examine more detailed information such as the etesting code, testing
+With this you can examine more detailed information such as the testing code, testing
 results, plan or working memory it used to complete the task.
+
+#### Multi-turn conversations
+You can have multi-turn conversations with vision-agent as well, giving it feedback on
+the code and having it update. You just need to add the code as a response from the
+assistant:
+
+```python
+agent = va.agent.VisionAgent(verbosity=2)
+conv = [
+    {
+        "role": "user",
+        "content": "Are these workers wearing safety gear? Output only a True or False value.",
+        "media": ["workers.png"],
+    }
+]
+result = agent.chat_with_workflow(conv)
+code = result["code"]
+conv.append({"role": "assistant", "content": code})
+conv.append(
+    {
+        "role": "user",
+        "content": "Can you also return the number of workers wearing safety gear?",
+    }
+)
+result = agent.chat_with_workflow(conv)
+```
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
-while others are hosted for you. You can also ask an LLM directly to build a tool for
+while others are hosted for you. You can also ask an LMM directly to build a tool for
 you. For example:
 
 ```python
 >>> import vision_agent as va
->>> llm = va.llm.OpenAILLM()
+>>> llm = va.llm.OpenAILMM()
 >>> detector = llm.generate_detector("Can you build a jar detector for me?")
->>> detector("jar.jpg")
+>>> detector(va.tools.load_image("jar.jpg"))
 [{"labels": ["jar",],
   "scores": [0.99],
   "bboxes": [
@@ -114,6 +149,7 @@ You can also add custom tools to the agent:
 
 ```python
 import vision_agent as va
+import numpy as np
 
 @va.tools.register_tool(imports=["import numpy as np"])
 def custom_tool(image_path: str) -> str:
@@ -130,13 +166,12 @@ def custom_tool(image_path: str) -> str:
     >>> custom_tool("image.jpg")
     """
 
-    import numpy as np
     return np.zeros((10, 10))
 ```
 
 You need to ensure you call `@va.tools.register_tool` with any imports it might use and
 ensure the documentation is in the same format above with description, `Parameters:`,
-`Returns:`, and `Example\n-------`. You can find an example use case [here](https://github.com/landing-ai/vision-agent/tree/main/examples/custom_tools).
+`Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you can set the environment variable:
@@ -151,11 +186,5 @@ You can then run Vision Agent using the Azure OpenAI models:
 ```python
 import vision_agent as va
 import vision_agent.tools as T
-agent = va.agent.VisionAgent(
-    planner=va.llm.AzureOpenAILLM(),
-    coder=va.lmm.AzureOpenAILLM(),
-    tester=va.lmm.AzureOpenAILLM(),
-    debugger=va.lmm.AzureOpenAILLM(),
-    tool_recommender=va.utils.AzureSim(T.TOOLS_DF, sim_key="desc"),
-)
+agent = va.agent.AzureVisionAgent()
 ```
