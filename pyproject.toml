@@ -34,8 +34,8 @@ nbformat = "^5.10.4"
 rich = "^13.7.1"
 langsmith = "^0.1.58"
 ipykernel = "^6.29.4"
-e2b = "^0.17.0"
-e2b-code-interpreter = "^0.0.7"
+e2b = "^0.17.1"
+e2b-code-interpreter = "^0.0.9"
 tenacity = "^8.3.0"
 
 [tool.poetry.group.dev.dependencies]
