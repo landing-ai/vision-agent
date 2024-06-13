@@ -233,7 +233,7 @@ class OpenAILMM(LMM):
 class AzureOpenAILMM(OpenAILMM):
     def __init__(
         self,
-        model_name: str = "gpt-4o",
+        model_name: Optional[str] = None,
         api_key: Optional[str] = None,
         api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
@@ -245,14 +245,20 @@ class AzureOpenAILMM(OpenAILMM):
             api_key = os.getenv("AZURE_OPENAI_API_KEY")
         if not azure_endpoint:
             azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        if not model_name:
+            model_name = os.getenv("AZURE_OPENAI_CHAT_MODEL_DEPLOYMENT_NAME")
 
         if not api_key:
             raise ValueError("OpenAI API key is required.")
         if not azure_endpoint:
             raise ValueError("Azure OpenAI endpoint is required.")
+        if not model_name:
+            raise ValueError("Azure OpenAI chat model deployment name is required.")
 
         self.client = AzureOpenAI(
-            api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+            api_key=api_key,
+            api_version=api_version,
+            azure_endpoint=azure_endpoint,
         )
         self.model_name = model_name
 
