@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
 from PIL import Image
+from langsmith import traceable
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
@@ -130,6 +131,7 @@ def extract_image(
     return new_media
 
 
+@traceable
 def write_plan(
     chat: List[Message],
     tool_desc: str,
@@ -147,6 +149,7 @@ def write_plan(
     return extract_json(model.chat(chat))["plan"]  # type: ignore
 
 
+@traceable
 def write_code(
     coder: LMM,
     chat: List[Message],
@@ -167,6 +170,7 @@ def write_code(
     return extract_code(coder(chat))
 
 
+@traceable
 def write_test(
     tester: LMM,
     chat: List[Message],
@@ -191,6 +195,7 @@ def write_test(
     return extract_code(tester(chat))
 
 
+@traceable
 def reflect(
     chat: List[Message],
     plan: str,
@@ -266,70 +271,19 @@ def write_and_test_code(
     count = 0
     new_working_memory: List[Dict[str, str]] = []
     while not result.success and count < max_retries:
-        log_progress(
-            {
-                "type": "code",
-                "status": "started",
-            }
-        )
-        fixed_code_and_test = extract_json(
-            debugger(
-                FIX_BUG.format(
-                    code=code,
-                    tests=test,
-                    result="\n".join(result.text().splitlines()[-50:]),
-                    feedback=format_memory(working_memory + new_working_memory),
-                )
-            )
-        )
-        old_code = code
-        old_test = test
-
-        if fixed_code_and_test["code"].strip() != "":
-            code = extract_code(fixed_code_and_test["code"])
-        if fixed_code_and_test["test"].strip() != "":
-            test = extract_code(fixed_code_and_test["test"])
-
-        new_working_memory.append(
-            {
-                "code": f"{code}\n{test}",
-                "feedback": fixed_code_and_test["reflections"],
-                "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
-            }
-        )
-        log_progress(
-            {
-                "type": "code",
-                "status": "running",
-                "payload": {
-                    "code": DefaultImports.prepend_imports(code),
-                    "test": test,
-                },
-            }
-        )
-
-        result = code_interpreter.exec_isolation(
-            f"{DefaultImports.to_code_string()}\n{code}\n{test}"
-        )
-        log_progress(
-            {
-                "type": "code",
-                "status": "completed" if result.success else "failed",
-                "payload": {
-                    "code": DefaultImports.prepend_imports(code),
-                    "test": test,
-                    "result": result.to_json(),
-                },
-            }
-        )
         if verbosity == 2:
-            _LOGGER.info(
-                f"Debug attempt {count + 1}, reflection: {fixed_code_and_test['reflections']}"
-            )
-            _print_code("Code and test after attempted fix:", code, test)
-            _LOGGER.info(
-                f"Code execution result after attempted fix: {result.text(include_logs=True)}"
-            )
+            _LOGGER.info(f"Start debugging attempt {count + 1}")
+        code, test, result = debug_code(
+            working_memory,
+            debugger,
+            code_interpreter,
+            code,
+            test,
+            result,
+            new_working_memory,
+            log_progress,
+            verbosity,
+        )
         count += 1
 
     if verbosity >= 1:
@@ -342,6 +296,83 @@ def write_and_test_code(
         "test_result": result,
         "working_memory": new_working_memory,
     }
+
+
+@traceable
+def debug_code(
+    working_memory: List[Dict[str, str]],
+    debugger: LMM,
+    code_interpreter: CodeInterpreter,
+    code: str,
+    test: str,
+    result: Execution,
+    new_working_memory: List[Dict[str, str]],
+    log_progress: Callable[[Dict[str, Any]], None],
+    verbosity: int = 0,
+) -> tuple[str, str, Execution]:
+    log_progress(
+        {
+            "type": "code",
+            "status": "started",
+        }
+    )
+    fixed_code_and_test = extract_json(
+        debugger(
+            FIX_BUG.format(
+                code=code,
+                tests=test,
+                result="\n".join(result.text().splitlines()[-50:]),
+                feedback=format_memory(working_memory + new_working_memory),
+            )
+        )
+    )
+    old_code = code
+    old_test = test
+
+    if fixed_code_and_test["code"].strip() != "":
+        code = extract_code(fixed_code_and_test["code"])
+    if fixed_code_and_test["test"].strip() != "":
+        test = extract_code(fixed_code_and_test["test"])
+
+    new_working_memory.append(
+        {
+            "code": f"{code}\n{test}",
+            "feedback": fixed_code_and_test["reflections"],
+            "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
+        }
+    )
+    log_progress(
+        {
+            "type": "code",
+            "status": "running",
+            "payload": {
+                "code": DefaultImports.prepend_imports(code),
+                "test": test,
+            },
+        }
+    )
+
+    result = code_interpreter.exec_isolation(
+        f"{DefaultImports.to_code_string()}\n{code}\n{test}"
+    )
+    log_progress(
+        {
+            "type": "code",
+            "status": "completed" if result.success else "failed",
+            "payload": {
+                "code": DefaultImports.prepend_imports(code),
+                "test": test,
+                "result": result.to_json(),
+            },
+        }
+    )
+    if verbosity == 2:
+        _print_code("Code and test after attempted fix:", code, test)
+        _LOGGER.info(
+            f"Reflection: {fixed_code_and_test['reflections']}\nCode execution result after attempted fix: {result.text(include_logs=True)}"
+        )
+
+    return code, test, result
 
 
 def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
@@ -481,6 +512,7 @@ class VisionAgent(Agent):
         results.pop("working_memory")
         return results  # type: ignore
 
+    @traceable
     def chat_with_workflow(
         self,
         chat: List[Message],

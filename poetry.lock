@@ -596,17 +596,17 @@ websockets = ">=11.0.3"
 
 [[package]]
 name = "e2b-code-interpreter"
-version = "0.0.7"
+version = "0.0.9"
 description = "E2B Code Interpreter - Stateful code execution"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "e2b_code_interpreter-0.0.7-py3-none-any.whl", hash = "sha256:3a490e80698640b02cf8340e8451e684cc7725617c6f2f97572e8deb37ba61c6"},
-    {file = "e2b_code_interpreter-0.0.7.tar.gz", hash = "sha256:2078cdecb436ef865ba9327e89a809c4ce93a4560a9b629295f49b529f49699d"},
+    {file = "e2b_code_interpreter-0.0.9-py3-none-any.whl", hash = "sha256:62f08f799d7d93164b11938272cca27dba702dfe9b5c1af886d4bca0f63fa98d"},
+    {file = "e2b_code_interpreter-0.0.9.tar.gz", hash = "sha256:f3aa400f97037e6c43a985471731f8b65673fa42ec170414614a2ac28da8350b"},
 ]
 
 [package.dependencies]
-e2b = ">=0.17.0"
+e2b = ">=0.17.1"
 pydantic = ">1,<3"
 websocket-client = ">=1.7.0,<2.0.0"
 
@@ -3567,4 +3567,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "f83b2f518eb15325260c63eb90a84e54d70c85b047994e281659409bad3ef49d"
+content-hash = "556f19356f845564c3f9099d7339b969e84aa37e1f20924837f3e3071e5b3bc2"
