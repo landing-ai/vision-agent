@@ -277,12 +277,12 @@ def write_and_test_code(
             working_memory,
             debugger,
             code_interpreter,
-            log_progress,
-            verbosity,
             code,
             test,
             result,
             new_working_memory,
+            log_progress,
+            verbosity,
         )
         count += 1
 
@@ -300,16 +300,16 @@ def write_and_test_code(
 
 @traceable
 def debug_code(
-    working_memory,
-    debugger,
-    code_interpreter,
-    log_progress,
-    verbosity,
-    code,
-    test,
-    result,
-    new_working_memory,
-):
+    working_memory: List[Dict[str, str]],
+    debugger: LMM,
+    code_interpreter: CodeInterpreter,
+    code: str,
+    test: str,
+    result: Execution,
+    new_working_memory: List[Dict[str, str]],
+    log_progress: Callable[[Dict[str, Any]], None],
+    verbosity: int = 0,
+) -> tuple[str, str, Execution]:
     log_progress(
         {
             "type": "code",
