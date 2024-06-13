@@ -89,7 +89,7 @@ jobs:
       - name: Setup Node.js 20.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20.14.0
+          node-version: 18.17.1
       - name: Install e2b CLI
         run: npm install -g @e2b/cli@latest
       - name: E2B Login
