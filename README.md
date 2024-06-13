@@ -182,12 +182,24 @@ ensure the documentation is in the same format above with description, `Paramete
 `Returns:`, and `Example\n-------`. You can find an example use case [here](examples/custom_tools/).
 
 ### Azure Setup
-If you want to use Azure OpenAI models, you can set the environment variable:
+If you want to use Azure OpenAI models, you need to have two OpenAI model deployments:
+
+1. OpenAI GPT-4o model
+2. OpenAI text embedding model
+
+
+Then you can set the following environment variables:
 
 ```bash
 export AZURE_OPENAI_API_KEY="your-api-key"
 export AZURE_OPENAI_ENDPOINT="your-endpoint"
+# The deployment name of your OpenAI chat model
+export AZURE_OPENAI_CHAT_MODEL_DEPLOYMENT_NAME="your_gpt4o_model_deployment_name"
+# The deployment name of your OpenAI text embedding model
+export AZURE_OPENAI_EMBEDDING_MODEL_DEPLOYMENT_NAME="your_embedding_model_deployment_name"
 ```
+
+> NOTE: make sure your Azure model deployment have enough quota (token per minute) to support it.
 
 You can then run Vision Agent using the Azure OpenAI models:
 
