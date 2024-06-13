@@ -87,17 +87,23 @@ class AzureSim(Sim):
         api_key: Optional[str] = None,
         api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
-        model: str = "text-embedding-3-small",
+        model: Optional[str] = None,
     ) -> None:
         if not api_key:
             api_key = os.getenv("AZURE_OPENAI_API_KEY")
         if not azure_endpoint:
             azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        if not model:
+            model = os.getenv("AZURE_OPENAI_EMBEDDING_MODEL_DEPLOYMENT_NAME")
 
         if not api_key:
             raise ValueError("Azure OpenAI API key is required.")
         if not azure_endpoint:
             raise ValueError("Azure OpenAI endpoint is required.")
+        if not model:
+            raise ValueError(
+                "Azure OpenAI embedding model deployment name is required."
+            )
 
         self.df = df
         self.client = AzureOpenAI(
