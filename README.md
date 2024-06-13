@@ -187,19 +187,20 @@ If you want to use Azure OpenAI models, you need to have two OpenAI model deploy
 1. OpenAI GPT-4o model
 2. OpenAI text embedding model
 
+<img width="1201" alt="Screenshot 2024-06-12 at 5 54 48 PM" src="https://github.com/landing-ai/vision-agent/assets/2736300/da125592-b01d-45bc-bc99-d48c9dcdfa32">
 
 Then you can set the following environment variables:
 
 ```bash
 export AZURE_OPENAI_API_KEY="your-api-key"
 export AZURE_OPENAI_ENDPOINT="your-endpoint"
-# The deployment name of your OpenAI chat model
+# The deployment name of your Azure OpenAI chat model
 export AZURE_OPENAI_CHAT_MODEL_DEPLOYMENT_NAME="your_gpt4o_model_deployment_name"
-# The deployment name of your OpenAI text embedding model
+# The deployment name of your Azure OpenAI text embedding model
 export AZURE_OPENAI_EMBEDDING_MODEL_DEPLOYMENT_NAME="your_embedding_model_deployment_name"
 ```
 
-> NOTE: make sure your Azure model deployment have enough quota (token per minute) to support it.
+> NOTE: make sure your Azure model deployment have enough quota (token per minute) to support it. The default value 8000TPM is not enough.
 
 You can then run Vision Agent using the Azure OpenAI models:
 
