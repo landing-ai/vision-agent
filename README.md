@@ -206,6 +206,5 @@ You can then run Vision Agent using the Azure OpenAI models:
 
 ```python
 import vision_agent as va
-import vision_agent.tools as T
 agent = va.agent.AzureVisionAgent()
 ```
