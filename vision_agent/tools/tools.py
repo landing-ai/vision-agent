@@ -59,6 +59,7 @@ def grounding_dino(
     image: np.ndarray,
     box_threshold: float = 0.20,
     iou_threshold: float = 0.20,
+    model_size: str = "large",
 ) -> List[Dict[str, Any]]:
     """'grounding_dino' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions. The categories in text prompt
@@ -72,6 +73,7 @@ def grounding_dino(
             to 0.20.
         iou_threshold (float, optional): The threshold for the Intersection over Union
             (IoU). Defaults to 0.20.
+        model_size (str, optional): The size of the model to use.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -90,10 +92,70 @@ def grounding_dino(
     """
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
+    if model_size not in ["large", "tiny"]:
+        raise ValueError("model_size must be either 'large' or 'tiny'")
     request_data = {
         "prompt": prompt,
         "image": image_b64,
-        "tool": "visual_grounding",
+        "tool": (
+            "visual_grounding" if model_size == "large" else "visual_grounding_tiny"
+        ),
+        "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
+    }
+    data: Dict[str, Any] = _send_inference_request(request_data, "tools")
+    return_data = []
+    for i in range(len(data["bboxes"])):
+        return_data.append(
+            {
+                "score": round(data["scores"][i], 2),
+                "label": data["labels"][i],
+                "bbox": normalize_bbox(data["bboxes"][i], image_size),
+            }
+        )
+    return return_data
+
+
+def owl_v2(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.10,
+    iou_threshold: float = 0.10,
+) -> List[Dict[str, Any]]:
+    """'owl_v2' is a tool that can detect multiple objects given a text
+    prompt such as category names or referring expressions. The categories in text prompt
+    are separated by commas or periods. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+        box_threshold (float, optional): The threshold for the box detection. Defaults
+            to 0.10.
+        iou_threshold (float, optional): The threshold for the Intersection over Union
+            (IoU). Defaults to 0.10.
+        model_size (str, optional): The size of the model to use.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> owl_v2("car. dinosaur", image)
+        [
+            {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+        ]
+    """
+    image_size = image.shape[:2]
+    image_b64 = convert_to_b64(image)
+    request_data = {
+        "prompt": prompt,
+        "image": image_b64,
+        "tool": "open_vocab_detection",
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
     }
     data: Dict[str, Any] = _send_inference_request(request_data, "tools")
@@ -253,8 +315,8 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     return ocr_results
 
 
-def zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
-    """'zero_shot_counting' is a tool that counts the dominant foreground object given
+def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
+    """'loca_zero_shot_counting' is a tool that counts the dominant foreground object given
     an image and no other information about the content. It returns only the count of
     the objects in the image.
 
@@ -267,7 +329,7 @@ def zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
 
     Example
     -------
-        >>> zero_shot_counting(image)
+        >>> loca_zero_shot_counting(image)
         {'count': 45},
     """
 
@@ -281,10 +343,10 @@ def zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
     return resp_data
 
 
-def visual_prompt_counting(
+def loca_visual_prompt_counting(
     image: np.ndarray, visual_prompt: Dict[str, List[float]]
 ) -> Dict[str, Any]:
-    """'visual_prompt_counting' is a tool that counts the dominant foreground object
+    """'loca_visual_prompt_counting' is a tool that counts the dominant foreground object
     given an image and a visual prompt which is a bounding box describing the object.
     It returns only the count of the objects in the image.
 
@@ -297,7 +359,7 @@ def visual_prompt_counting(
 
     Example
     -------
-        >>> visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
+        >>> loca_visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
         {'count': 45},
     """
 
@@ -316,8 +378,8 @@ def visual_prompt_counting(
     return resp_data
 
 
-def image_question_answering(prompt: str, image: np.ndarray) -> str:
-    """'image_question_answering_' is a tool that can answer questions about the visual
+def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
+    """'git_vqa_v2' is a tool that can answer questions about the visual
     contents of an image given a question and an image. It returns an answer to the
     question
 
@@ -331,7 +393,7 @@ def image_question_answering(prompt: str, image: np.ndarray) -> str:
 
     Example
     -------
-        >>> image_question_answering('What is the cat doing ?', image)
+        >>> git_vqa_v2('What is the cat doing ?', image)
         'drinking milk'
     """
 
@@ -376,8 +438,62 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
     return resp_data
 
 
-def image_caption(image: np.ndarray) -> str:
-    """'image_caption' is a tool that can caption an image based on its contents. It
+def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
+    """'vit_image_classification' is a tool that can classify an image. It returns a
+    list of classes and their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of labels and other a list of scores.
+
+    Example
+    -------
+        >>> vit_image_classification(image)
+        {"labels": ["leopard", "lemur, otter", "bird"], "scores": [0.68, 0.30, 0.02]},
+    """
+
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "image_classification",
+    }
+    resp_data = _send_inference_request(data, "tools")
+    resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
+    return resp_data
+
+
+def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
+    """'vit_nsfw_classification' is a tool that can classify an image as 'nsfw' or 'normal'.
+    It returns the predicted label and their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of labels and other a list of scores.
+
+    Example
+    -------
+        >>> vit_nsfw_classification(image)
+        {"labels": "normal", "scores": 0.68},
+    """
+
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "nsfw_image_classification",
+    }
+    resp_data = _send_inference_request(data, "tools")
+    resp_data["scores"] = round(resp_data["scores"], 4)
+    return resp_data
+
+
+def blip_image_caption(image: np.ndarray) -> str:
+    """'blip_image_caption' is a tool that can caption an image based on its contents. It
     returns a text describing the image.
 
     Parameters:
@@ -388,7 +504,7 @@ def image_caption(image: np.ndarray) -> str:
 
     Example
     -------
-        >>> image_caption(image)
+        >>> blip_image_caption(image)
         'This image contains a cat sitting on a table with a bowl of milk.'
     """
 
@@ -792,15 +908,17 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
 
 
 TOOLS = [
-    grounding_dino,
     grounding_sam,
+    owl_v2,
     extract_frames,
     ocr,
     clip,
-    zero_shot_counting,
-    visual_prompt_counting,
-    image_question_answering,
-    image_caption,
+    vit_image_classification,
+    vit_nsfw_classification,
+    loca_zero_shot_counting,
+    loca_visual_prompt_counting,
+    git_vqa_v2,
+    blip_image_caption,
     closest_mask_distance,
     closest_box_distance,
     save_json,
