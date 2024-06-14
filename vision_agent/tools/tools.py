@@ -121,7 +121,7 @@ def owl_v2(
     box_threshold: float = 0.10,
     iou_threshold: float = 0.10,
 ) -> List[Dict[str, Any]]:
-    """'owl_v2' is a tool that can detect multiple objects given a text
+    """'owl_v2' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions. The categories in text prompt
     are separated by commas or periods. It returns a list of bounding boxes with
     normalized coordinates, label names and associated probability scores.
@@ -164,7 +164,7 @@ def owl_v2(
         return_data.append(
             {
                 "score": round(data["scores"][i], 2),
-                "label": data["labels"][i],
+                "label": data["labels"][i].strip(),
                 "bbox": normalize_bbox(data["bboxes"][i], image_size),
             }
         )
@@ -908,8 +908,8 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
 
 
 TOOLS = [
-    grounding_sam,
     owl_v2,
+    grounding_sam,
     extract_frames,
     ocr,
     clip,
