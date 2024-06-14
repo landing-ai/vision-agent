@@ -224,10 +224,10 @@ class OpenAILMM(LMM):
         return lambda x: T.grounding_sam(params["prompt"], x)
 
     def generate_zero_shot_counter(self, question: str) -> Callable:
-        return T.zero_shot_counting
+        return T.loca_zero_shot_counting
 
     def generate_image_qa_tool(self, question: str) -> Callable:
-        return lambda x: T.image_question_answering(question, x)
+        return lambda x: T.git_vqa_v2(question, x)
 
 
 class AzureOpenAILMM(OpenAILMM):

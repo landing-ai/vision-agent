@@ -6,11 +6,14 @@ from vision_agent.tools import (
     closest_mask_distance,
     grounding_dino,
     grounding_sam,
-    image_caption,
-    image_question_answering,
+    blip_image_caption,
+    git_vqa_v2,
     ocr,
-    visual_prompt_counting,
-    zero_shot_counting,
+    loca_visual_prompt_counting,
+    loca_zero_shot_counting,
+    vit_nsfw_classification,
+    vit_image_classification,
+    owl_v2,
 )
 
 
@@ -22,6 +25,20 @@ def test_grounding_dino():
     )
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
+
+
+def test_grounding_dino_tiny():
+    img = ski.data.coins()
+    result = grounding_dino(prompt="coin", image=img, model_size="tiny")
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
+
+
+def test_owl():
+    img = ski.data.coins()
+    result = owl_v2(prompt="coin", image=img, box_threshold=0.15)
+    assert len(result) == 25
+    assert [res["label"] for res in result] == ["coin"] * 25
 
 
 def test_grounding_sam():
@@ -44,34 +61,50 @@ def test_clip():
     assert result["scores"] == [0.9999, 0.0001]
 
 
+def test_vit_classification():
+    img = ski.data.coins()
+    result = vit_image_classification(
+        image=img,
+    )
+    assert "typewriter keyboard" in result["labels"]
+
+
+def test_nsfw_classification():
+    img = ski.data.coins()
+    result = vit_nsfw_classification(
+        image=img,
+    )
+    assert result["labels"] == "normal"
+
+
 def test_image_caption() -> None:
     img = ski.data.rocket()
-    result = image_caption(
+    result = blip_image_caption(
         image=img,
     )
     assert result.strip() == "a rocket on a stand"
 
 
-def test_zero_shot_counting() -> None:
+def test_loca_zero_shot_counting() -> None:
     img = ski.data.coins()
-    result = zero_shot_counting(
+    result = loca_zero_shot_counting(
         image=img,
     )
     assert result["count"] == 21
 
 
-def test_visual_prompt_counting() -> None:
+def test_loca_visual_prompt_counting() -> None:
     img = ski.data.coins()
-    result = visual_prompt_counting(
+    result = loca_visual_prompt_counting(
         visual_prompt={"bbox": [85, 106, 122, 145]},
         image=img,
     )
     assert result["count"] == 25
 
 
-def test_image_question_answering() -> None:
+def test_git_vqa_v2() -> None:
     img = ski.data.rocket()
-    result = image_question_answering(
+    result = git_vqa_v2(
         prompt="Is the scene captured during day or night ?",
         image=img,
     )
