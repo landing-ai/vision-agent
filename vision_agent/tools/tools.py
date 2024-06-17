@@ -659,7 +659,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
     """
     from IPython.display import display
 
-    pil_image = Image.fromarray(image.astype(np.uint8))
+    pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
     display(pil_image)
     pil_image.save(file_path)
 
