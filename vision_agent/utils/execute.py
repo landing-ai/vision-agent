@@ -426,11 +426,11 @@ class E2BCodeInterpreter(CodeInterpreter):
             """
 import platform
 import sys
-import pkg_resources
+import importlib.metadata
 
 print(f"Python version: {sys.version}")
 print(f"OS version: {platform.system()} {platform.release()} ({platform.architecture()})")
-va_version = pkg_resources.get_distribution("vision-agent").version
+va_version = importlib.metadata.version("vision-agent")
 print(f"Vision Agent version: {va_version}")"""
         )
         sys_versions = "\n".join(result.logs.stdout)
