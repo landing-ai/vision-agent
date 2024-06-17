@@ -2,6 +2,7 @@ import abc
 import atexit
 import base64
 import copy
+import json
 import logging
 import os
 import platform
@@ -308,6 +309,21 @@ class Execution(BaseModel):
         Returns whether the execution was successful.
         """
         return self.error is None
+
+    def get_main_result(self) -> Optional[Result]:
+        """
+        Get the main result of the execution.
+        An execution may have multiple results, e.g. intermediate outputs. The main result is the last output of the cell execution.
+        """
+        if not self.success:
+            _LOGGER.info("Result is not available as the execution was not successful.")
+            return None
+        if not self.results or not any(res.is_main_result for res in self.results):
+            _LOGGER.info("Execution was successful but there is no main result.")
+            return None
+        main_result = self.results[-1]
+        assert main_result.is_main_result, "The last result should be the main result."
+        return main_result
 
     def to_json(self) -> str:
         """
