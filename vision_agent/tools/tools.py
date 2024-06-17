@@ -13,6 +13,7 @@ import pandas as pd
 import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
+from pillow_heif import register_heif_opener
 
 from vision_agent.tools.tool_utils import _send_inference_request
 from vision_agent.utils import extract_frames_from_video
@@ -25,6 +26,8 @@ from vision_agent.utils.image_utils import (
     normalize_bbox,
     rle_decode,
 )
+
+register_heif_opener()
 
 COLORS = [
     (158, 218, 229),

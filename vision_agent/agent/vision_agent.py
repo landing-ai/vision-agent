@@ -7,8 +7,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
-from PIL import Image
 from langsmith import traceable
+from PIL import Image
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
