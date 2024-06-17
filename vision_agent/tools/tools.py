@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
-from pillow_heif import register_heif_opener
+from pillow_heif import register_heif_opener  # type: ignore
 
 from vision_agent.tools.tool_utils import _send_inference_request
 from vision_agent.utils import extract_frames_from_video
