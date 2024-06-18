@@ -17,6 +17,8 @@ from .tools import (
     grounding_dino,
     grounding_sam,
     load_image,
+    loca_visual_prompt_counting,
+    loca_zero_shot_counting,
     ocr,
     overlay_bounding_boxes,
     overlay_heat_map,
@@ -25,8 +27,6 @@ from .tools import (
     save_image,
     save_json,
     save_video,
-    loca_visual_prompt_counting,
-    loca_zero_shot_counting,
     vit_image_classification,
     vit_nsfw_classification,
 )
