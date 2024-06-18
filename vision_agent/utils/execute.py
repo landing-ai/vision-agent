@@ -309,6 +309,21 @@ class Execution(BaseModel):
         """
         return self.error is None
 
+    def get_main_result(self) -> Optional[Result]:
+        """
+        Get the main result of the execution.
+        An execution may have multiple results, e.g. intermediate outputs. The main result is the last output of the cell execution.
+        """
+        if not self.success:
+            _LOGGER.info("Result is not available as the execution was not successful.")
+            return None
+        if not self.results or not any(res.is_main_result for res in self.results):
+            _LOGGER.info("Execution was successful but there is no main result.")
+            return None
+        main_result = self.results[-1]
+        assert main_result.is_main_result, "The last result should be the main result."
+        return main_result
+
     def to_json(self) -> str:
         """
         Returns the JSON representation of the Execution object.
@@ -411,11 +426,11 @@ class E2BCodeInterpreter(CodeInterpreter):
             """
 import platform
 import sys
-import pkg_resources
+import importlib.metadata
 
 print(f"Python version: {sys.version}")
 print(f"OS version: {platform.system()} {platform.release()} ({platform.architecture()})")
-va_version = pkg_resources.get_distribution("vision-agent").version
+va_version = importlib.metadata.version("vision-agent")
 print(f"Vision Agent version: {va_version}")"""
         )
         sys_versions = "\n".join(result.logs.stdout)
