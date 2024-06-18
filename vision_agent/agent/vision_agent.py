@@ -43,6 +43,7 @@ class DefaultImports:
 
     common_imports = [
         "from typing import *",
+        "register_heif_opener()",
     ]
 
     @staticmethod
