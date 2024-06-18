@@ -43,6 +43,7 @@ class DefaultImports:
 
     common_imports = [
         "from typing import *",
+        "from pillow_heif import register_heif_opener",
         "register_heif_opener()",
     ]
 
