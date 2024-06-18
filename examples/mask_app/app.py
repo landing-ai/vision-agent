@@ -1,7 +1,8 @@
 import cv2
-import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
+
+import streamlit as st
 
 st.title("Image Segmentation Mask App")
 
