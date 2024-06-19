@@ -1,12 +1,12 @@
 import base64
 import json
-import requests
 import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
+import requests
 from openai import AzureOpenAI, OpenAI
 
 import vision_agent.tools as T
@@ -292,7 +292,7 @@ class OllamaLMM(LMM):
         if isinstance(input, str):
             return self.generate(input)
         return self.chat(input)
-    
+
     def chat(
         self,
         chat: List[Message],
@@ -315,18 +315,14 @@ class OllamaLMM(LMM):
         url = f"{self.url}/chat"
         model = self.model_name
         messages = fixed_chat
-        data = {
-            "model": model,
-            "messages": messages,
-            "stream": self.stream
-        }
+        data = {"model": model, "messages": messages, "stream": self.stream}
         json_data = json.dumps(data)
         response = requests.post(url, data=json_data)
         if response.status_code != 200:
             raise ValueError(f"Request failed with status code {response.status_code}")
         response = response.json()
-        return response["message"]["content"]
-    
+        return response["message"]["content"]  # type: ignore
+
     def generate(
         self,
         prompt: str,
@@ -338,19 +334,18 @@ class OllamaLMM(LMM):
             "model": self.model_name,
             "prompt": prompt,
             "images": [],
-            "stream": self.stream
+            "stream": self.stream,
         }
 
         json_data = json.dumps(data)
         if media and len(media) > 0:
             for m in media:
-                data["images"].append(encode_image(m))
+                data["images"].append(encode_image(m))  # type: ignore
 
         response = requests.post(url, data=json_data)
 
         if response.status_code != 200:
             raise ValueError(f"Request failed with status code {response.status_code}")
-        
+
         response = response.json()
-        return response["response"]
-    
+        return response["response"]  # type: ignore
