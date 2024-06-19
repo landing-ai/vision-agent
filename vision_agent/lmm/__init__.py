@@ -1,1 +1,1 @@
-from .lmm import LMM, AzureOpenAILMM, Message, OpenAILMM
+from .lmm import LMM, AzureOpenAILMM, Message, OllamaLMM, OpenAILMM
