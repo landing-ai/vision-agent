@@ -84,13 +84,3 @@ jobs:
         run: |
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
           poetry publish --build -vvv
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18.17.1
-      - name: Install e2b CLI
-        run: npm install -g @e2b/cli@latest
-      - name: E2B Publish Sandbox Template
-        run: e2b template build -d e2b/e2b.Dockerfile -c "/root/.jupyter/start-up.sh" --cpu-count 2 --memory-mb 1024
-        env:
-          E2B_ACCESS_TOKEN: ${{ secrets.E2B_ACCESS_TOKEN }}
