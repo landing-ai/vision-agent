@@ -437,12 +437,12 @@ def retrieve_tools(
         {
             "type": "tools",
             "status": "completed",
-            "payload": tool_list,
+            "payload": {v["description"]: v for v in tool_list}.values(),
         }
     )
 
     if verbosity == 2:
-        tool_desc_str = "\n".join(tool_desc)
+        tool_desc_str = "\n".join(set(tool_desc))
         _LOGGER.info(f"Tools Description:\n{tool_desc_str}")
     tool_info_set = set(tool_info)
     return "\n\n".join(tool_info_set)
