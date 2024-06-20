@@ -324,16 +324,28 @@ def debug_code(
             "status": "started",
         }
     )
-    fixed_code_and_test = extract_json(
-        debugger(
-            FIX_BUG.format(
-                code=code,
-                tests=test,
-                result="\n".join(result.text().splitlines()[-50:]),
-                feedback=format_memory(working_memory + new_working_memory),
+
+    fixed_code_and_test = {"code": "", "test": "", "reflections": ""}
+    success = False
+    count = 0
+    while not success and count < 3:
+        try:
+            fixed_code_and_test = extract_json(
+                debugger(
+                    FIX_BUG.format(
+                        code=code,
+                        tests=test,
+                        result="\n".join(result.text().splitlines()[-50:]),
+                        feedback=format_memory(working_memory + new_working_memory),
+                    )
+                )
             )
-        )
-    )
+            success = True
+        except Exception as e:
+            _LOGGER.exception(f"Error while extracting JSON: {e}")
+
+        count += 1
+
     old_code = code
     old_test = test
 
