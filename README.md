@@ -41,7 +41,7 @@ export OPENAI_API_KEY="your-api-key"
 ```
 
 ### Important Note on API Usage
-Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/landing-ai/vision-agent?tab=readme-ov-file#to-get-started-with-api-credits)
+Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/landing-ai/vision-agent?tab=readme-ov-file#how-to-get-started-with-openai-api-credits)
 
 ### Vision Agent
 #### Basic Usage
