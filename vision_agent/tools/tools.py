@@ -15,7 +15,7 @@ from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 
-from vision_agent.tools.tool_utils import _send_inference_request
+from vision_agent.tools.tool_utils import send_inference_request
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -105,7 +105,7 @@ def grounding_dino(
         ),
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
     }
-    data: Dict[str, Any] = _send_inference_request(request_data, "tools")
+    data: Dict[str, Any] = send_inference_request(request_data, "tools")
     return_data = []
     for i in range(len(data["bboxes"])):
         return_data.append(
@@ -161,7 +161,7 @@ def owl_v2(
         "tool": "open_vocab_detection",
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
     }
-    data: Dict[str, Any] = _send_inference_request(request_data, "tools")
+    data: Dict[str, Any] = send_inference_request(request_data, "tools")
     return_data = []
     for i in range(len(data["bboxes"])):
         return_data.append(
@@ -225,7 +225,7 @@ def grounding_sam(
         "tool": "visual_grounding_segment",
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
     }
-    data: Dict[str, Any] = _send_inference_request(request_data, "tools")
+    data: Dict[str, Any] = send_inference_request(request_data, "tools")
     return_data = []
     for i in range(len(data["bboxes"])):
         return_data.append(
@@ -341,7 +341,7 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
         "image": image_b64,
         "tool": "zero_shot_counting",
     }
-    resp_data = _send_inference_request(data, "tools")
+    resp_data = send_inference_request(data, "tools")
     resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
     return resp_data
 
@@ -376,7 +376,7 @@ def loca_visual_prompt_counting(
         "prompt": bbox_str,
         "tool": "few_shot_counting",
     }
-    resp_data = _send_inference_request(data, "tools")
+    resp_data = send_inference_request(data, "tools")
     resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
     return resp_data
 
@@ -407,7 +407,7 @@ def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
         "tool": "image_question_answering",
     }
 
-    answer = _send_inference_request(data, "tools")
+    answer = send_inference_request(data, "tools")
     return answer["text"][0]  # type: ignore
 
 
@@ -436,7 +436,7 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
         "image": image_b64,
         "tool": "closed_set_image_classification",
     }
-    resp_data = _send_inference_request(data, "tools")
+    resp_data = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
     return resp_data
 
@@ -463,7 +463,7 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
         "image": image_b64,
         "tool": "image_classification",
     }
-    resp_data = _send_inference_request(data, "tools")
+    resp_data = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
     return resp_data
 
@@ -490,7 +490,7 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
         "image": image_b64,
         "tool": "nsfw_image_classification",
     }
-    resp_data = _send_inference_request(data, "tools")
+    resp_data = send_inference_request(data, "tools")
     resp_data["scores"] = round(resp_data["scores"], 4)
     return resp_data
 
@@ -517,7 +517,7 @@ def blip_image_caption(image: np.ndarray) -> str:
         "tool": "image_captioning",
     }
 
-    answer = _send_inference_request(data, "tools")
+    answer = send_inference_request(data, "tools")
     return answer["text"][0]  # type: ignore
 
 
