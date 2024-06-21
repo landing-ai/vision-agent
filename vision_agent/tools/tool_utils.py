@@ -58,6 +58,6 @@ def _create_requests_session(
             504,  # Gateway Timeout
         ],
     )
-    session.mount(url, HTTPAdapter(max_retries=retries if num_retry > 0 else num_retry))
+    session.mount(url, HTTPAdapter(max_retries=retries if num_retry > 0 else 0))
     session.headers.update(headers)
     return session
