@@ -7,7 +7,7 @@ on:
 
 jobs:
   unit_test:
-    name: Linting & Unit Test
+    name: Test
     strategy:
       matrix:
         python-version: [3.9, 3.11]
