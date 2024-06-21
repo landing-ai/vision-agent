@@ -81,6 +81,7 @@ jobs:
         poetry run pytest -v tests/integ
 
   release:
+    name: Release
     needs: unit_test
     # https://github.community/t/how-do-i-specify-job-dependency-running-in-another-workflow/16482
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'chore(release):') && !contains(github.event.head_commit.message, '[skip release]')
