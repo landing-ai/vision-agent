@@ -6,7 +6,8 @@ on:
     branches: [ main ]
 
 jobs:
-  Test:
+  unit_test:
+    name: Linting & Unit Test
     strategy:
       matrix:
         python-version: [3.9, 3.11]
@@ -47,10 +48,41 @@ jobs:
         poetry run mypy vision_agent
     - name: Test with pytest
       run: |
-        poetry run pytest -v tests
+        poetry run pytest -v tests/unit
 
-  Release:
-    needs: Test
+  integ_test:
+    name: Integration Test
+    runs-on: ubuntu-22.04
+    env:
+      RUNTIME_TAG: ci_job
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+    - name: Install Python Poetry
+      uses: abatilo/actions-poetry@v2.1.0
+      with:
+        poetry-version: 1.4.2
+    - name: Configure poetry
+      shell: bash
+      run: poetry config virtualenvs.in-project true
+    - name: Print Python environment information
+      run: |
+        poetry env info
+        poetry --version
+        poetry run pip -V
+    - name: Install dependencies
+      run: |
+        # Install main dependencies first so we can see their size
+        poetry install --all-extras
+    - name: Test with pytest
+      run: |
+        poetry run pytest -v tests/integ
+
+  release:
+    name: Release
+    needs: unit_test
     # https://github.community/t/how-do-i-specify-job-dependency-running-in-another-workflow/16482
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'chore(release):') && !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
