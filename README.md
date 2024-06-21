@@ -40,6 +40,9 @@ using Azure OpenAI please see the Azure setup section):
 export OPENAI_API_KEY="your-api-key"
 ```
 
+### Important Note on API Usage
+Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/moutasemalakkad/vision-agent/blob/57e50b59e39fde7d943d534a8bf83c5ff6281562/README.md#L215-L216)
+
 ### Vision Agent
 #### Basic Usage
 You can interact with the agent as you would with any LLM or LMM model:
@@ -208,3 +211,13 @@ You can then run Vision Agent using the Azure OpenAI models:
 import vision_agent as va
 agent = va.agent.AzureVisionAgent()
 ```
+******************************************************************************************************************************
+#### To get started with API credits:
+
+1. Visit the[OpenAI API platform](https://beta.openai.com/signup/) to sign up for an API key.
+2. Follow the instructions to purchase and manage your API credits.
+3. Ensure your API key is correctly configured in your project settings.
+
+Failure to have sufficient API credits may result in limited or no functionality for the features that rely on the OpenAI API.
+
+For more details on managing your API usage and credits, please refer to the OpenAI API documentation.
