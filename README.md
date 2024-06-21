@@ -41,7 +41,7 @@ export OPENAI_API_KEY="your-api-key"
 ```
 
 ### Important Note on API Usage
-Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/moutasemalakkad/vision-agent/blob/57e50b59e39fde7d943d534a8bf83c5ff6281562/README.md#L215-L216)
+Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/landing-ai/vision-agent?tab=readme-ov-file#to-get-started-with-api-credits)
 
 ### Vision Agent
 #### Basic Usage
@@ -211,8 +211,12 @@ You can then run Vision Agent using the Azure OpenAI models:
 import vision_agent as va
 agent = va.agent.AzureVisionAgent()
 ```
+
 ******************************************************************************************************************************
-#### To get started with API credits:
+
+### Q&A
+
+#### How to get started with OpenAI API credits
 
 1. Visit the[OpenAI API platform](https://beta.openai.com/signup/) to sign up for an API key.
 2. Follow the instructions to purchase and manage your API credits.
