@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 jobs:
-  Lint & Unit Test:
+  Unit_Test:
     strategy:
       matrix:
         python-version: [3.9, 3.11]
@@ -49,7 +49,7 @@ jobs:
       run: |
         poetry run pytest -v tests/unit
 
-  Integration Test:
+  Integration_Test:
     runs-on: ubuntu-22.04
     env:
       RUNTIME_TAG: ci_job
