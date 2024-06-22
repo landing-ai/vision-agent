@@ -2,7 +2,6 @@ import logging
 import os
 from typing import Any, Dict
 
-import requests
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -27,10 +26,6 @@ def send_inference_request(
             "Content-Type": "application/json",
             "apikey": _LND_API_KEY,
         },
-    )
-    res = requests.post(
-        f"{_LND_API_URL}/model/{endpoint_name}",
-        json=payload,
     )
     res = session.post(url, json=payload)
     if res.status_code != 200:
