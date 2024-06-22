@@ -28,10 +28,6 @@ def send_inference_request(
             "apikey": _LND_API_KEY,
         },
     )
-    res = requests.post(
-        f"{_LND_API_URL}/model/{endpoint_name}",
-        json=payload,
-    )
     res = session.post(url, json=payload)
     if res.status_code != 200:
         _LOGGER.error(f"Request failed: {res.status_code} {res.text}")
