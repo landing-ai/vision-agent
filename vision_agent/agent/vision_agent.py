@@ -437,7 +437,7 @@ def retrieve_tools(
         {
             "type": "tools",
             "status": "completed",
-            "payload": {v["description"]: v for v in tool_list}.values(),
+            "payload": tool_list,
         }
     )
 
