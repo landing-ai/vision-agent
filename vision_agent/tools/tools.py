@@ -137,7 +137,6 @@ def owl_v2(
             to 0.10.
         iou_threshold (float, optional): The threshold for the Intersection over Union
             (IoU). Defaults to 0.10.
-        model_size (str, optional): The size of the model to use.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -550,8 +549,8 @@ def florancev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
 
     Parameters:
         image (np.ndarray): The image to caption
-        detail_caption (bool): If True, the caption will be as detailed as possible, If
-        False, the caption will be a brief description.
+        detail_caption (bool): If True, the caption will be as detailed as possible else
+            the caption will be a brief description.
 
     Returns:
        str: A string which is the caption for the given image.
@@ -820,7 +819,7 @@ def template_match(
 
     Example
     -------
-        >>> >>> template_match(image, template)
+        >>> template_match(image, template)
         [
             {'score': 0.79, 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.38, 'bbox': [0.2, 0.21, 0.45, 0.5},
