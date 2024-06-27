@@ -33,7 +33,7 @@ export OPENAI_API_KEY="your-api-key"
 ```
 
 ### Important Note on API Usage
-Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/moutasemalakkad/vision-agent/blob/f491252f3477103b7f517c45e6dea2f9d9f7abc4/docs/index.md#L207)
+Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/landing-ai/vision-agent?tab=readme-ov-file#how-to-get-started-with-openai-api-credits)
 
 ### Vision Agent
 #### Basic Usage
@@ -137,8 +137,8 @@ you. For example:
 
 ```python
 >>> import vision_agent as va
->>> llm = va.llm.OpenAILMM()
->>> detector = llm.generate_detector("Can you build a jar detector for me?")
+>>> lmm = va.lmm.OpenAILMM()
+>>> detector = lmm.generate_detector("Can you build a jar detector for me?")
 >>> detector(va.tools.load_image("jar.jpg"))
 [{"labels": ["jar",],
   "scores": [0.99],
@@ -203,8 +203,12 @@ You can then run Vision Agent using the Azure OpenAI models:
 import vision_agent as va
 agent = va.agent.AzureVisionAgent()
 ```
+
 ******************************************************************************************************************************
-#### To get started with API credits:
+
+### Q&A
+
+#### How to get started with OpenAI API credits
 
 1. Visit the[OpenAI API platform](https://beta.openai.com/signup/) to sign up for an API key.
 2. Follow the instructions to purchase and manage your API credits.
