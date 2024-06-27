@@ -207,7 +207,7 @@ def test_generate_pose():
     import cv2
 
     cv2.imwrite("imag.png", result)
-    assert result.shape == img.shape
+    assert result.shape == img.shape + (3,)
 
 
 def test_generate_normal():
