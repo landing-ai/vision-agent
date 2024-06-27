@@ -145,8 +145,8 @@ you. For example:
 
 ```python
 >>> import vision_agent as va
->>> llm = va.llm.OpenAILMM()
->>> detector = llm.generate_detector("Can you build a jar detector for me?")
+>>> lmm = va.lmm.OpenAILMM()
+>>> detector = lmm.generate_detector("Can you build a jar detector for me?")
 >>> detector(va.tools.load_image("jar.jpg"))
 [{"labels": ["jar",],
   "scores": [0.99],

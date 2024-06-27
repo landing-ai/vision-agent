@@ -164,6 +164,7 @@ class OpenAILMM(LMM):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
+            response_format={"type": "json_object"},
         )
 
         try:
@@ -179,7 +180,7 @@ class OpenAILMM(LMM):
         return lambda x: T.clip(x, params["prompt"])
 
     def generate_detector(self, question: str) -> Callable:
-        api_doc = T.get_tool_documentation([T.grounding_dino])
+        api_doc = T.get_tool_documentation([T.owl_v2])
         prompt = CHOOSE_PARAMS.format(api_doc=api_doc, question=question)
         response = self.client.chat.completions.create(
             model=self.model_name,
@@ -187,6 +188,7 @@ class OpenAILMM(LMM):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
+            response_format={"type": "json_object"},
         )
 
         try:
@@ -199,7 +201,7 @@ class OpenAILMM(LMM):
             )
             raise ValueError("Failed to decode response")
 
-        return lambda x: T.grounding_dino(params["prompt"], x)
+        return lambda x: T.owl_v2(params["prompt"], x)
 
     def generate_segmentor(self, question: str) -> Callable:
         api_doc = T.get_tool_documentation([T.grounding_sam])
@@ -210,6 +212,7 @@ class OpenAILMM(LMM):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
+            response_format={"type": "json_object"},
         )
 
         try:
