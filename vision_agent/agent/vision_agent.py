@@ -16,6 +16,7 @@ from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent import Agent
+from vision_agent.agent.agent_utils import extract_code, extract_json
 from vision_agent.agent.vision_agent_prompts import (
     CODE,
     FIX_BUG,
@@ -691,7 +692,7 @@ class VisionAgent(Agent):
         """Chat with Vision Agent and return intermediate information regarding the task.
 
         Parameters:
-            input (Union[List[Dict[str, str]], str]): A conversation in the format of
+            input (Union[str, List[Message]]): A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}] or a string
                 of just the contents.
             media (Optional[Union[str, Path]]): The media file to be used in the task.
@@ -718,7 +719,7 @@ class VisionAgent(Agent):
         """Chat with Vision Agent and return intermediate information regarding the task.
 
         Parameters:
-            chat (List[MediaChatItem]): A conversation
+            chat (List[Message]): A conversation
                 in the format of:
                 [{"role": "user", "content": "describe your task here..."}]
                 or if it contains media files, it should be in the format of:
