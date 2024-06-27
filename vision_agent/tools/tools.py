@@ -697,7 +697,7 @@ def generate_depth_image(image: np.ndarray) -> np.ndarray:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "image_to_depth",
+        "tool": "generate_depth",
     }
 
     answer = send_inference_request(data, "tools")
@@ -728,7 +728,7 @@ def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "image_to_hed",
+        "tool": "generate_hed",
     }
 
     answer = send_inference_request(data, "tools")
@@ -760,7 +760,7 @@ def generate_normal_image(image: np.ndarray) -> np.ndarray:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "image_to_normal",
+        "tool": "generate_normal",
     }
 
     answer = send_inference_request(data, "tools")
@@ -791,7 +791,7 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "image_to_pose",
+        "tool": "generate_pose",
     }
 
     answer = send_inference_request(data, "tools")
