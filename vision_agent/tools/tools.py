@@ -653,7 +653,6 @@ def generic_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
             },
         ]
     """
-    image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
@@ -668,7 +667,9 @@ def generic_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
             {
                 "score": round(answer["scores"][i], 2),
                 "label": answer["labels"][i],
-                "mask": rle_decode(mask_rle=answer["masks"][i], shape=image_size),
+                "mask": rle_decode(
+                    mask_rle=answer["masks"][i], shape=answer["mask_shape"]
+                ),
             }
         )
     return return_data
