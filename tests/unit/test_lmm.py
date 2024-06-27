@@ -98,17 +98,17 @@ def test_generate_classifier(openai_lmm_mock):  # noqa: F811
     indirect=["openai_lmm_mock"],
 )
 def test_generate_detector(openai_lmm_mock):  # noqa: F811
-    with patch("vision_agent.tools.grounding_dino") as grounding_dino_mock:
-        grounding_dino_mock.return_value = "test"
-        grounding_dino_mock.__name__ = "grounding_dino"
-        grounding_dino_mock.__doc__ = "grounding_dino"
+    with patch("vision_agent.tools.owl_v2") as owl_v2_mock:
+        owl_v2_mock.return_value = "test"
+        owl_v2_mock.__name__ = "owl_v2"
+        owl_v2_mock.__doc__ = "owl_v2"
 
         lmm = OpenAILMM()
         prompt = "Can you generate a cat classifier?"
         detector = lmm.generate_detector(prompt)
         dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
         detector(dummy_image)
-        assert grounding_dino_mock.call_args[0][0] == "cat"
+        assert owl_v2_mock.call_args[0][0] == "cat"
 
 
 @pytest.mark.parametrize(
