@@ -5,6 +5,13 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
+    florancev2_image_caption,
+    generate_depth_image,
+    generate_normal_image,
+    generate_pose_image,
+    generate_soft_edge_image,
+    generic_object_detection,
+    generic_segmentation,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
@@ -12,6 +19,7 @@ from vision_agent.tools import (
     loca_zero_shot_counting,
     ocr,
     owl_v2,
+    template_match,
     vit_image_classification,
     vit_nsfw_classification,
 )
@@ -48,6 +56,24 @@ def test_owl():
     assert [res["label"] for res in result] == ["coin"] * 25
 
 
+def test_object_detection():
+    img = ski.data.coins()
+    result = generic_object_detection(
+        image=img,
+    )
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
+
+
+def test_template_match():
+    img = ski.data.coins()
+    result = template_match(
+        image=img,
+        template_image=img[32:76, 20:68],
+    )
+    assert len(result) == 2
+
+
 def test_grounding_sam():
     img = ski.data.coins()
     result = grounding_sam(
@@ -57,6 +83,16 @@ def test_grounding_sam():
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
     assert len([res["mask"] for res in result]) == 24
+
+
+def test_segmentation():
+    img = ski.data.coins()
+    result = generic_segmentation(
+        image=img,
+    )
+    assert len(result) == 1
+    assert [res["label"] for res in result] == ["pizza"]
+    assert len([res["mask"] for res in result]) == 1
 
 
 def test_clip():
@@ -90,6 +126,14 @@ def test_image_caption() -> None:
         image=img,
     )
     assert result.strip() == "a rocket on a stand"
+
+
+def test_florance_image_caption() -> None:
+    img = ski.data.rocket()
+    result = florancev2_image_caption(
+        image=img,
+    )
+    assert "The image shows a rocket on a launch pad at night" in result.strip()
 
 
 def test_loca_zero_shot_counting() -> None:
@@ -144,3 +188,41 @@ def test_mask_distance():
         np.sqrt(2) * 81,
         atol=1e-2,
     ), f"Expected {np.sqrt(2) * 81}, got {distance}"
+
+
+def test_generate_depth():
+    img = ski.data.coins()
+    result = generate_depth_image(
+        image=img,
+    )
+
+    assert result.shape == img.shape
+
+
+def test_generate_pose():
+    img = ski.data.coins()
+    result = generate_pose_image(
+        image=img,
+    )
+    import cv2
+
+    cv2.imwrite("imag.png", result)
+    assert result.shape == img.shape
+
+
+def test_generate_normal():
+    img = ski.data.coins()
+    result = generate_normal_image(
+        image=img,
+    )
+
+    assert result.shape == img.shape + (3,)
+
+
+def test_generate_hed():
+    img = ski.data.coins()
+    result = generate_soft_edge_image(
+        image=img,
+    )
+
+    assert result.shape == img.shape

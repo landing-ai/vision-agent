@@ -14,6 +14,7 @@ import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
+from pytube import YouTube
 
 from vision_agent.tools.tool_utils import send_inference_request
 from vision_agent.utils import extract_frames_from_video
@@ -126,7 +127,7 @@ def owl_v2(
 ) -> List[Dict[str, Any]]:
     """'owl_v2' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions. The categories in text prompt
-    are separated by commas or periods. It returns a list of bounding boxes with
+    are separated by commas. It returns a list of bounding boxes with
     normalized coordinates, label names and associated probability scores.
 
     Parameters:
@@ -180,7 +181,7 @@ def grounding_sam(
     box_threshold: float = 0.20,
     iou_threshold: float = 0.20,
 ) -> List[Dict[str, Any]]:
-    """'grounding_sam' is a tool that can detect and segment multiple objects given a
+    """'grounding_sam' is a tool that can segment multiple objects given a
     text prompt such as category names or referring expressions. The categories in text
     prompt are separated by commas or periods. It returns a list of bounding boxes,
     label names, mask file names and associated probability scores.
@@ -242,12 +243,12 @@ def grounding_sam(
 def extract_frames(
     video_uri: Union[str, Path], fps: float = 0.5
 ) -> List[Tuple[np.ndarray, float]]:
-    """'extract_frames' extracts frames from a video, returns a list of tuples (frame,
-    timestamp), where timestamp is the relative time in seconds where the frame was
-    captured. The frame is a numpy array.
+    """'extract_frames' extracts frames from a video which can be a file path or youtube
+    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
+    time in seconds where the frame was captured. The frame is a numpy array.
 
     Parameters:
-        video_uri (Union[str, Path]): The path to the video file.
+        video_uri (Union[str, Path]): The path to the video file or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
             to 0.5.
 
@@ -260,6 +261,28 @@ def extract_frames(
         >>> extract_frames("path/to/video.mp4")
         [(frame1, 0.0), (frame2, 0.5), ...]
     """
+
+    if str(video_uri).startswith(
+        (
+            "http://www.youtube.com/",
+            "https://www.youtube.com/",
+            "http://youtu.be/",
+            "https://youtu.be/",
+        )
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yt = YouTube(str(video_uri))
+            # Download the highest resolution video
+            video = (
+                yt.streams.filter(progressive=True, file_extension="mp4")
+                .order_by("resolution")
+                .desc()
+                .first()
+            )
+            if not video:
+                raise Exception("No suitable video stream found")
+            video_file_path = video.download(output_path=temp_dir)
+            return extract_frames_from_video(video_file_path, fps)
 
     return extract_frames_from_video(str(video_uri), fps)
 
@@ -519,6 +542,308 @@ def blip_image_caption(image: np.ndarray) -> str:
 
     answer = send_inference_request(data, "tools")
     return answer["text"][0]  # type: ignore
+
+
+def florancev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
+    """'florancev2_image_caption' is a tool that can caption or describe an image based
+    on its contents. It returns a text describing the image.
+
+    Parameters:
+        image (np.ndarray): The image to caption
+        detail_caption (bool): If True, the caption will be as detailed as possible, If
+        False, the caption will be a brief description.
+
+    Returns:
+       str: A string which is the caption for the given image.
+
+    Example
+    -------
+        >>> florancev2_image_caption(image, False)
+        'This image contains a cat sitting on a table with a bowl of milk.'
+    """
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "florence2_image_captioning",
+        "detail_caption": detail_caption,
+    }
+
+    answer = send_inference_request(data, "tools")
+    return answer["text"][0]  # type: ignore
+
+
+def generic_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'generic_object_detection' is a tool that can detect common objects in an
+    image without any text prompt or thresholding. It returns a list of detected objects
+    as labels and their location as bounding boxes.
+
+    Parameters:
+        image (np.ndarray): The image to used to detect objects
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box. The scores are always 1.0 and cannot be thresholded
+
+    Example
+    -------
+        >>> generic_object_detection(image)
+        [
+            {'score': 1.0, 'label': 'window', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 1.0, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 1.0, 'label': 'person', 'bbox': [0.34, 0.21, 0.85, 0.5},
+        ]
+    """
+    image_size = image.shape[:2]
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "object_detection",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = []
+    for i in range(len(answer["bboxes"])):
+        return_data.append(
+            {
+                "score": round(answer["scores"][i], 2),
+                "label": answer["labels"][i],
+                "bbox": normalize_bbox(answer["bboxes"][i], image_size),
+            }
+        )
+    return return_data
+
+
+def generic_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'generic_segmentation' is a tool that can segment common objects in an
+    image without any text prompt. It returns a list of detected objects
+    as labels, their regions as masks and their scores.
+
+    Parameters:
+        image (np.ndarray): The image used to segment things and objects
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label
+            and mask of the detected objects. The mask is binary 2D numpy array where 1
+            indicates the object and 0 indicates the background.
+
+    Example
+    -------
+        >>> generic_segmentation(image)
+        [
+            {
+                'score': 0.45,
+                'label': 'window',
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+            {
+                'score': 0.70,
+                'label': 'bird',
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    image_size = image.shape[:2]
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "panoptic_segmentation",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = []
+
+    for i in range(len(answer["scores"])):
+        return_data.append(
+            {
+                "score": round(answer["scores"][i], 2),
+                "label": answer["labels"][i],
+                "mask": rle_decode(mask_rle=answer["masks"][i], shape=image_size),
+            }
+        )
+    return return_data
+
+
+def generate_depth_image(image: np.ndarray) -> np.ndarray:
+    """'generate_depth_image' is a tool that runs depth_anythingv2 model to generate a
+    depth image from a given RGB image. The returned depth image is monochrome and
+    represents depth values as pixel intesities with pixel values ranging from 0 to 255.
+
+    Parameters:
+        image (np.ndarray): The image to used to generate depth image
+
+    Returns:
+        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255.
+
+    Example
+    -------
+        >>> generate_depth_image(image)
+        array([[0, 0, 0, ..., 0, 0, 0],
+                [0, 20, 24, ..., 0, 100, 103],
+                ...,
+                [10, 11, 15, ..., 202, 202, 205],
+                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
+    """
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "image_to_depth",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("L"))
+    return return_data
+
+
+def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
+    """'generate_soft_edge_image' is a tool that runs Holistically Nested edge detection
+    to generate a soft edge image (HED) from a given RGB image. The returned image is
+    monochrome and represents object boundaries as soft white edges on black background
+
+    Parameters:
+        image (np.ndarray): The image to used to generate soft edge image
+
+    Returns:
+        np.ndarray: A soft edge image with pixel values ranging from 0 to 255.
+
+    Example
+    -------
+        >>> generate_soft_edge_image(image)
+        array([[0, 0, 0, ..., 0, 0, 0],
+                [0, 20, 24, ..., 0, 100, 103],
+                ...,
+                [10, 11, 15, ..., 202, 202, 205],
+                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
+    """
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "image_to_hed",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("L"))
+    return return_data
+
+
+def generate_normal_image(image: np.ndarray) -> np.ndarray:
+    """'generate_normal_image' is a tool that generates a normal mapped from a given RGB
+    image. The returned RGB image is texture mapped image of the surface normals and the
+    RGB values represent the surface normals in the x, y, z directions.
+
+    Parameters:
+        image (np.ndarray): The image to used to generate normal image
+
+    Returns:
+        np.ndarray: A mapped normal image with RGB pixel values indicating surface
+        normals in x, y, z directions.
+
+    Example
+    -------
+        >>> generate_normal_image(image)
+        array([[0, 0, 0, ..., 0, 0, 0],
+                [0, 20, 24, ..., 0, 100, 103],
+                ...,
+                [10, 11, 15, ..., 202, 202, 205],
+                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
+    """
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "image_to_normal",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("RGB"))
+    return return_data
+
+
+def generate_pose_image(image: np.ndarray) -> np.ndarray:
+    """'generate_pose_image' is a tool that generates a open pose bone/stick image from
+    a given RGB image. The returned bone image is RGB with the pose amd keypoints colored
+    and background as black.
+
+    Parameters:
+        image (np.ndarray): The image to used to generate pose image
+
+    Returns:
+        np.ndarray: A bone or pose image indicating the pose and keypoints
+
+    Example
+    -------
+        >>> generate_pose_image(image)
+        array([[0, 0, 0, ..., 0, 0, 0],
+                [0, 20, 24, ..., 0, 100, 103],
+                ...,
+                [10, 11, 15, ..., 202, 202, 205],
+                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
+    """
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "tool": "image_to_pose",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("RGB"))
+    return return_data
+
+
+def template_match(
+    image: np.ndarray, template_image: np.ndarray
+) -> List[Dict[str, Any]]:
+    """'template_match' is a tool that can detect all instances of a template in
+    a given image. It returns the locations of the detected template, a corresponding
+    similarity score of the same
+
+    Parameters:
+        image (np.ndarray): The image used for searching the template
+        template_image (np.ndarray): The template image or crop to search in the image
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score and
+            bounding box of the detected template with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> >>> template_match(image, template)
+        [
+            {'score': 0.79, 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.38, 'bbox': [0.2, 0.21, 0.45, 0.5},
+        ]
+    """
+    image_size = image.shape[:2]
+    image_b64 = convert_to_b64(image)
+    template_image_b64 = convert_to_b64(template_image)
+    data = {
+        "image": image_b64,
+        "template": template_image_b64,
+        "tool": "template_match",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return_data = []
+    for i in range(len(answer["bboxes"])):
+        return_data.append(
+            {
+                "score": round(answer["scores"][i], 2),
+                "bbox": normalize_bbox(answer["bboxes"][i], image_size),
+            }
+        )
+    return return_data
 
 
 def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
@@ -921,7 +1246,13 @@ TOOLS = [
     loca_zero_shot_counting,
     loca_visual_prompt_counting,
     git_vqa_v2,
-    blip_image_caption,
+    florancev2_image_caption,
+    generic_object_detection,
+    generic_segmentation,
+    generate_depth_image,
+    generate_soft_edge_image,
+    generate_normal_image,
+    generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
     save_json,
@@ -931,6 +1262,7 @@ TOOLS = [
     overlay_bounding_boxes,
     overlay_segmentation_masks,
     overlay_heat_map,
+    template_match,
 ]
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
