@@ -1,5 +1,6 @@
 from typing import Callable, List, Optional
 
+from .orchestrator_tools import ORCH_TOOL_DOCSTRING
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     TOOL_DESCRIPTIONS,

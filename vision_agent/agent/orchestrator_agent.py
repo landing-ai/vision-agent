@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import vision_agent as va
 from vision_agent.agent import Agent
+from vision_agent.agent.agent_utils import extract_json
 from vision_agent.agent.orchestrator_agent_prompts import (
     EXAMPLES_CODE,
     EXAMPLES_JSON,
@@ -12,22 +13,20 @@ from vision_agent.agent.orchestrator_agent_prompts import (
     ORCHESTRATOR_JSON,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
+from vision_agent.tools import ORCH_TOOL_DOCSTRING
 from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.execute import CodeInterpreter
 
-from .agent_utils import extract_json
-from .orchestrator_tools import generate_vision_code
-
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 WORKSPACE.mkdir(parents=True, exist_ok=True)
-# os.environ["PYTHONPATH"] = f"{os.getenv('PYTHONPATH', '')}:{WORKSPACE}"
+os.environ["PYTHONPATH"] = f"{os.getenv('PYTHONPATH', '')}:{WORKSPACE}"
 
 
 class DefaultImports:
     code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.agent.orchestrator_agent import generate_vision_code",
+        "from vision_agent.tools.orchestrator_tools import generate_vision_code, edit_vision_code",
     ]
 
     @staticmethod
@@ -105,19 +104,27 @@ def run_orchestrator_code(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         else:
             raise ValueError(f"role {chat_i['role']} is not supported")
 
-    prompt = ORCHESTRATOR_CODE.format(examples=EXAMPLES_CODE, conversation=conversation)
+    prompt = ORCHESTRATOR_CODE.format(
+        documentation=ORCH_TOOL_DOCSTRING,
+        examples=EXAMPLES_CODE,
+        conversation=conversation,
+    )
     return extract_json(orch([{"role": "user", "content": prompt}]))
-
-
-def generate_code(save_file: str, chat: List[Message]) -> str:
-    return ""
 
 
 def run_code_action(code: str) -> str:
     with CodeInterpreterFactory.new_instance() as code_interpreter:
         result = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
 
-    return result.results[0]["text/plain"].replace("\\n", "\n").replace("'", "")
+    return_str = ""
+    for res in result.results:
+        if res.text is not None:
+            return_str += res.text.replace("\\n", "\n").replace("'", "")
+    for log in result.logs.stdout:
+        return_str += log.replace("\\n", "\n")
+    for log in result.logs.stderr:
+        return_str += log.replace("\\n", "\n")
+    return return_str
 
 
 def parse_execution(response: str) -> Optional[str]:
@@ -148,7 +155,7 @@ class OrchestratorAgent(Agent):
     def chat_in_code(
         self,
         chat: List[Message],
-    ) -> None:
+    ) -> List[Message]:
         if not chat:
             raise ValueError("chat cannot be empty")
 
@@ -171,18 +178,23 @@ class OrchestratorAgent(Agent):
         __import__("ipdb").set_trace()
         while not finished and iterations < self.max_iterations:
             response = run_orchestrator_code(self.agent, int_chat)
+            print(response)
             int_chat.append({"role": "assistant", "content": str(response)})
+            orig_chat.append({"role": "assistant", "content": str(response)})
 
-            if response["terminate"]:
+            if response["let_user_respond"]:
                 break
 
             code_action = parse_execution(response["response"])
 
             if code_action is not None:
                 obs = run_code_action(code_action)
+                print(obs)
                 int_chat.append({"role": "observation", "content": obs})
+                orig_chat.append({"role": "observation", "content": obs})
 
             iterations += 1
+        return orig_chat
 
     def chat_in_json(
         self,
