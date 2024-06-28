@@ -281,6 +281,7 @@ def extract_frames(
             if not video:
                 raise Exception("No suitable video stream found")
             video_file_path = video.download(output_path=temp_dir)
+
             return extract_frames_from_video(video_file_path, fps)
 
     return extract_frames_from_video(str(video_uri), fps)
@@ -1058,7 +1059,7 @@ def overlay_bounding_boxes(
             image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
         )
     """
-    pil_image = Image.fromarray(image.astype(np.uint8))
+    pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
 
     if len(set([box["label"] for box in bboxes])) > len(COLORS):
         _LOGGER.warning(
