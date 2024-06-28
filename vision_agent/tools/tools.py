@@ -404,6 +404,35 @@ def loca_visual_prompt_counting(
     return resp_data
 
 
+def image_question_answering_with_context(prompt: str, image: np.ndarray) -> str:
+    """'image_question_answering_with_context' is a tool that takes an image and analyzes
+    its contents, generates detailed captions and then tries to answer the given
+    question using the generated context. It returns text as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the image
+        image (np.ndarray): The reference image used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> image_question_answering_with_context('What is the top left animal in this image ?', image)
+        'white tiger'
+    """
+
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "prompt": prompt,
+        "tool": "image_question_answering_with_context",
+    }
+
+    answer = send_inference_request(data, "tools")
+    return answer["text"][0]  # type: ignore
+
+
 def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
     """'git_vqa_v2' is a tool that can answer questions about the visual
     contents of an image given a question and an image. It returns an answer to the
@@ -414,8 +443,7 @@ def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
         image (np.ndarray): The reference image used for the question
 
     Returns:
-        str: A string which is the answer to the given prompt. E.g. {'text': 'This
-            image contains a cat sitting on a table with a bowl of milk.'}.
+        str: A string which is the answer to the given prompt.
 
     Example
     -------
@@ -1246,7 +1274,7 @@ TOOLS = [
     vit_nsfw_classification,
     loca_zero_shot_counting,
     loca_visual_prompt_counting,
-    git_vqa_v2,
+    image_question_answering_with_context,
     florancev2_image_caption,
     generic_object_detection,
     generic_segmentation,

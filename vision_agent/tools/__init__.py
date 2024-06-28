@@ -23,6 +23,7 @@ from .tools import (
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    image_question_answering_with_context,
     load_image,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,

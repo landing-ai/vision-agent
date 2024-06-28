@@ -15,6 +15,7 @@ from vision_agent.tools import (
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    image_question_answering_with_context,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
     ocr,
@@ -161,6 +162,15 @@ def test_git_vqa_v2() -> None:
         image=img,
     )
     assert result.strip() == "night"
+
+
+def test_image_qa_with_context() -> None:
+    img = ski.data.rocket()
+    result = image_question_answering_with_context(
+        prompt="Is the scene captured during day or night ?",
+        image=img,
+    )
+    assert "night" in result.strip()
 
 
 def test_ocr() -> None:
