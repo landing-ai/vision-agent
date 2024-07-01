@@ -145,7 +145,7 @@ def write_plan(
     tool_desc: str,
     working_memory: str,
     model: LMM,
-) -> List[Dict[str, str]]:
+) -> Dict[str, Any]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
         raise ValueError("Last chat message must be from the user.")
@@ -154,13 +154,14 @@ def write_plan(
     context = USER_REQ.format(user_request=user_request)
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))["plan"]  # type: ignore
+    return extract_json(model.chat(chat))  # type: ignore
 
 
 @traceable
 def write_code(
     coder: LMM,
     chat: List[Message],
+    image_desc: str,
     tool_info: str,
     feedback: str,
 ) -> str:
@@ -173,6 +174,7 @@ def write_code(
         docstring=tool_info,
         question=user_request,
         feedback=feedback,
+        image_desc=image_desc,
     )
     chat[-1]["content"] = prompt
     return extract_code(coder(chat))
@@ -182,6 +184,7 @@ def write_code(
 def write_test(
     tester: LMM,
     chat: List[Message],
+    image_desc: str,
     tool_utils: str,
     code: str,
     feedback: str,
@@ -197,6 +200,7 @@ def write_test(
         question=user_request,
         code=code,
         feedback=feedback,
+        image_desc=image_desc,
         media=media,
     )
     chat[-1]["content"] = prompt
@@ -223,6 +227,7 @@ def reflect(
 
 def write_and_test_code(
     chat: List[Message],
+    image_desc: str,
     tool_info: str,
     tool_utils: str,
     working_memory: List[Dict[str, str]],
@@ -241,9 +246,9 @@ def write_and_test_code(
             "status": "started",
         }
     )
-    code = write_code(coder, chat, tool_info, format_memory(working_memory))
+    code = write_code(coder, chat, image_desc, tool_info, format_memory(working_memory))
     test = write_test(
-        tester, chat, tool_utils, code, format_memory(working_memory), media
+        tester, chat, image_desc, tool_utils, code, format_memory(working_memory), media
     )
 
     log_progress(
@@ -581,7 +586,10 @@ class VisionAgent(Agent):
 
             int_chat = cast(
                 List[Message],
-                [{"role": c["role"], "content": c["content"]} for c in chat],
+                [
+                    {"role": c["role"], "content": c["content"], "media": c["media"]}
+                    for c in chat
+                ],
             )
 
             code = ""
@@ -599,13 +607,15 @@ class VisionAgent(Agent):
                         "status": "started",
                     }
                 )
-                plan_i = write_plan(
+                plan_and_image_desc = write_plan(
                     int_chat,
                     T.TOOL_DESCRIPTIONS,
                     format_memory(working_memory),
                     self.planner,
                 )
+                plan_i = plan_and_image_desc["plan"]
                 plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
+                image_desc = plan_and_image_desc["image_desc"]
 
                 self.log_progress(
                     {
@@ -626,7 +636,10 @@ class VisionAgent(Agent):
                     self.verbosity,
                 )
                 results = write_and_test_code(
-                    chat=int_chat,
+                    chat=[
+                        {"role": c["role"], "content": c["content"]} for c in int_chat
+                    ],
+                    image_desc=image_desc,
                     tool_info=tool_info,
                     tool_utils=T.UTILITIES_DOCSTRING,
                     working_memory=working_memory,

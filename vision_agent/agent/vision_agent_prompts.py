@@ -31,6 +31,7 @@ PLAN = """
 **Instructions**:
 1. Based on the context and tools you have available, write a plan of subtasks to achieve the user request.
 2. Go over the users request step by step and ensure each step is represented as a clear subtask in your plan.
+3. Provide a detailed description of the image, be sure to include any text you see in the image and a rough count of the objects you see.
 
 Output a list of jsons in the following format
 
@@ -42,6 +43,7 @@ Output a list of jsons in the following format
                 "instructions": str # what you should do in this task associated with a tool
             }}
         ]
+    "image_desc": str # description of the image you are working with
 }}
 ```
 """
@@ -67,12 +69,14 @@ This is the documentation for the functions you have access to. You may call any
 **Previous Feedback**:
 {feedback}
 
+**Image Description**:
+{image_desc}
+
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
 2. **Algorithm/Method Selection**: Decide on the most efficient way.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
-5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools import *`. Use a debug flag in the function parameters to toggle logging on and off.
 """
 
 TEST = """
@@ -168,8 +172,11 @@ This is the documentation for the functions you have access to. You may call any
 **Previous Feedback**:
 {feedback}
 
+**Image Description**:
+{image_desc}
+
 **Instructions**:
-1. Verify the fundamental functionality under normal conditions.
+1. Verify the fundamental functionality under normal conditions, use the image description to inform your test cases.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
 3. Your test case MUST run only on the given images which are {media}
 4. Your test case MUST run only with the given values which is available in the question - {question}
