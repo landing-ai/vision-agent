@@ -5,17 +5,17 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
-    florancev2_image_caption,
-    generate_depth_image,
-    generate_normal_image,
+    florencev2_image_caption,
+    depth_anything_v2,
+    dpt_hybrid_midas,
     generate_pose_image,
     generate_soft_edge_image,
-    generic_object_detection,
-    generic_segmentation,
+    florencev2_object_detection,
+    detr_segmentation,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
-    image_question_answering_with_context,
+    florencev2_roberta_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
     ocr,
@@ -59,7 +59,7 @@ def test_owl():
 
 def test_object_detection():
     img = ski.data.coins()
-    result = generic_object_detection(
+    result = florencev2_object_detection(
         image=img,
     )
     assert len(result) == 24
@@ -88,7 +88,7 @@ def test_grounding_sam():
 
 def test_segmentation():
     img = ski.data.coins()
-    result = generic_segmentation(
+    result = detr_segmentation(
         image=img,
     )
     assert len(result) == 1
@@ -129,9 +129,9 @@ def test_image_caption() -> None:
     assert result.strip() == "a rocket on a stand"
 
 
-def test_florance_image_caption() -> None:
+def test_florence_image_caption() -> None:
     img = ski.data.rocket()
-    result = florancev2_image_caption(
+    result = florencev2_image_caption(
         image=img,
     )
     assert "The image shows a rocket on a launch pad at night" in result.strip()
@@ -166,7 +166,7 @@ def test_git_vqa_v2() -> None:
 
 def test_image_qa_with_context() -> None:
     img = ski.data.rocket()
-    result = image_question_answering_with_context(
+    result = florencev2_roberta_vqa(
         prompt="Is the scene captured during day or night ?",
         image=img,
     )
@@ -202,7 +202,7 @@ def test_mask_distance():
 
 def test_generate_depth():
     img = ski.data.coins()
-    result = generate_depth_image(
+    result = depth_anything_v2(
         image=img,
     )
 
@@ -222,7 +222,7 @@ def test_generate_pose():
 
 def test_generate_normal():
     img = ski.data.coins()
-    result = generate_normal_image(
+    result = dpt_hybrid_midas(
         image=img,
     )
 

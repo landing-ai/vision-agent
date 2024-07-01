@@ -404,8 +404,8 @@ def loca_visual_prompt_counting(
     return resp_data
 
 
-def image_question_answering_with_context(prompt: str, image: np.ndarray) -> str:
-    """'image_question_answering_with_context' is a tool that takes an image and analyzes
+def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
+    """'florencev2_roberta_vqa' is a tool that takes an image and analyzes
     its contents, generates detailed captions and then tries to answer the given
     question using the generated context. It returns text as an answer to the question.
 
@@ -418,7 +418,7 @@ def image_question_answering_with_context(prompt: str, image: np.ndarray) -> str
 
     Example
     -------
-        >>> image_question_answering_with_context('What is the top left animal in this image ?', image)
+        >>> florencev2_roberta_vqa('What is the top left animal in this image ?', image)
         'white tiger'
     """
 
@@ -572,8 +572,8 @@ def blip_image_caption(image: np.ndarray) -> str:
     return answer["text"][0]  # type: ignore
 
 
-def florancev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
-    """'florancev2_image_caption' is a tool that can caption or describe an image based
+def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
+    """'florencev2_image_caption' is a tool that can caption or describe an image based
     on its contents. It returns a text describing the image.
 
     Parameters:
@@ -586,7 +586,7 @@ def florancev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
 
     Example
     -------
-        >>> florancev2_image_caption(image, False)
+        >>> florencev2_image_caption(image, False)
         'This image contains a cat sitting on a table with a bowl of milk.'
     """
     image_b64 = convert_to_b64(image)
@@ -600,8 +600,8 @@ def florancev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
     return answer["text"][0]  # type: ignore
 
 
-def generic_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
-    """'generic_object_detection' is a tool that can detect common objects in an
+def florencev2_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florencev2_object_detection' is a tool that can detect common objects in an
     image without any text prompt or thresholding. It returns a list of detected objects
     as labels and their location as bounding boxes.
 
@@ -617,7 +617,7 @@ def generic_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Example
     -------
-        >>> generic_object_detection(image)
+        >>> florencev2_object_detection(image)
         [
             {'score': 1.0, 'label': 'window', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -644,8 +644,8 @@ def generic_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
     return return_data
 
 
-def generic_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
-    """'generic_segmentation' is a tool that can segment common objects in an
+def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'detr_segmentation' is a tool that can segment common objects in an
     image without any text prompt. It returns a list of detected objects
     as labels, their regions as masks and their scores.
 
@@ -659,7 +659,7 @@ def generic_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Example
     -------
-        >>> generic_segmentation(image)
+        >>> detr_segmentation(image)
         [
             {
                 'score': 0.45,
@@ -703,8 +703,8 @@ def generic_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
     return return_data
 
 
-def generate_depth_image(image: np.ndarray) -> np.ndarray:
-    """'generate_depth_image' is a tool that runs depth_anythingv2 model to generate a
+def depth_anything_v2(image: np.ndarray) -> np.ndarray:
+    """'depth_anything_v2' is a tool that runs depth_anythingv2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
     represents depth values as pixel intesities with pixel values ranging from 0 to 255.
 
@@ -716,7 +716,7 @@ def generate_depth_image(image: np.ndarray) -> np.ndarray:
 
     Example
     -------
-        >>> generate_depth_image(image)
+        >>> depth_anything_v2(image)
         array([[0, 0, 0, ..., 0, 0, 0],
                 [0, 20, 24, ..., 0, 100, 103],
                 ...,
@@ -765,8 +765,8 @@ def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
     return return_data
 
 
-def generate_normal_image(image: np.ndarray) -> np.ndarray:
-    """'generate_normal_image' is a tool that generates a normal mapped from a given RGB
+def dpt_hybrid_midas(image: np.ndarray) -> np.ndarray:
+    """'dpt_hybrid_midas' is a tool that generates a normal mapped from a given RGB
     image. The returned RGB image is texture mapped image of the surface normals and the
     RGB values represent the surface normals in the x, y, z directions.
 
@@ -779,7 +779,7 @@ def generate_normal_image(image: np.ndarray) -> np.ndarray:
 
     Example
     -------
-        >>> generate_normal_image(image)
+        >>> dpt_hybrid_midas(image)
         array([[0, 0, 0, ..., 0, 0, 0],
                 [0, 20, 24, ..., 0, 100, 103],
                 ...,
@@ -1274,13 +1274,13 @@ TOOLS = [
     vit_nsfw_classification,
     loca_zero_shot_counting,
     loca_visual_prompt_counting,
-    image_question_answering_with_context,
-    florancev2_image_caption,
-    generic_object_detection,
-    generic_segmentation,
-    generate_depth_image,
+    florencev2_roberta_vqa,
+    florencev2_image_caption,
+    florencev2_object_detection,
+    detr_segmentation,
+    depth_anything_v2,
     generate_soft_edge_image,
-    generate_normal_image,
+    dpt_hybrid_midas,
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
