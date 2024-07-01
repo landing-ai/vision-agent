@@ -38,6 +38,7 @@ e2b = "^0.17.1"
 e2b-code-interpreter = "^0.0.9"
 tenacity = "^8.3.0"
 pillow-heif = "^0.16.0"
+pytube = "15.0.0"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"

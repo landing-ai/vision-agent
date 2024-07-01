@@ -5,13 +5,22 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
+    florencev2_image_caption,
+    depth_anything_v2,
+    dpt_hybrid_midas,
+    generate_pose_image,
+    generate_soft_edge_image,
+    florencev2_object_detection,
+    detr_segmentation,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    florencev2_roberta_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
     ocr,
     owl_v2,
+    template_match,
     vit_image_classification,
     vit_nsfw_classification,
 )
@@ -48,6 +57,24 @@ def test_owl():
     assert [res["label"] for res in result] == ["coin"] * 25
 
 
+def test_object_detection():
+    img = ski.data.coins()
+    result = florencev2_object_detection(
+        image=img,
+    )
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
+
+
+def test_template_match():
+    img = ski.data.coins()
+    result = template_match(
+        image=img,
+        template_image=img[32:76, 20:68],
+    )
+    assert len(result) == 2
+
+
 def test_grounding_sam():
     img = ski.data.coins()
     result = grounding_sam(
@@ -57,6 +84,16 @@ def test_grounding_sam():
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
     assert len([res["mask"] for res in result]) == 24
+
+
+def test_segmentation():
+    img = ski.data.coins()
+    result = detr_segmentation(
+        image=img,
+    )
+    assert len(result) == 1
+    assert [res["label"] for res in result] == ["pizza"]
+    assert len([res["mask"] for res in result]) == 1
 
 
 def test_clip():
@@ -92,6 +129,14 @@ def test_image_caption() -> None:
     assert result.strip() == "a rocket on a stand"
 
 
+def test_florence_image_caption() -> None:
+    img = ski.data.rocket()
+    result = florencev2_image_caption(
+        image=img,
+    )
+    assert "The image shows a rocket on a launch pad at night" in result.strip()
+
+
 def test_loca_zero_shot_counting() -> None:
     img = ski.data.coins()
 
@@ -119,6 +164,15 @@ def test_git_vqa_v2() -> None:
     assert result.strip() == "night"
 
 
+def test_image_qa_with_context() -> None:
+    img = ski.data.rocket()
+    result = florencev2_roberta_vqa(
+        prompt="Is the scene captured during day or night ?",
+        image=img,
+    )
+    assert "night" in result.strip()
+
+
 def test_ocr() -> None:
     img = ski.data.page()
     result = ocr(
@@ -144,3 +198,41 @@ def test_mask_distance():
         np.sqrt(2) * 81,
         atol=1e-2,
     ), f"Expected {np.sqrt(2) * 81}, got {distance}"
+
+
+def test_generate_depth():
+    img = ski.data.coins()
+    result = depth_anything_v2(
+        image=img,
+    )
+
+    assert result.shape == img.shape
+
+
+def test_generate_pose():
+    img = ski.data.coins()
+    result = generate_pose_image(
+        image=img,
+    )
+    import cv2
+
+    cv2.imwrite("imag.png", result)
+    assert result.shape == img.shape + (3,)
+
+
+def test_generate_normal():
+    img = ski.data.coins()
+    result = dpt_hybrid_midas(
+        image=img,
+    )
+
+    assert result.shape == img.shape + (3,)
+
+
+def test_generate_hed():
+    img = ski.data.coins()
+    result = generate_soft_edge_image(
+        image=img,
+    )
+
+    assert result.shape == img.shape
