@@ -471,6 +471,7 @@ class VisionAgent(Agent):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         """Initialize the Vision Agent.
 
@@ -487,6 +488,9 @@ class VisionAgent(Agent):
                 This is useful for streaming logs in a web application where multiple
                 VisionAgent instances are running in parallel. This callback ensures
                 that the progress are not mixed up.
+            code_sandbox_runtime: the code sandbox runtime to use. It can be None, "local" or "e2b".
+                If None, Vision Agent will read the value from the environment variable CODE_SANDBOX_RUNTIME.
+                If CODE_SANDBOX_RUNTIME is also None, the local code sandbox runtime will be used.
         """
 
         self.planner = (
@@ -506,6 +510,7 @@ class VisionAgent(Agent):
         self.verbosity = verbosity
         self.max_retries = 2
         self.report_progress_callback = report_progress_callback
+        self.code_sandbox_runtime = code_sandbox_runtime
 
     def __call__(
         self,
@@ -560,7 +565,9 @@ class VisionAgent(Agent):
             raise ValueError("Chat cannot be empty.")
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
-        with CodeInterpreterFactory.new_instance() as code_interpreter:
+        with CodeInterpreterFactory.new_instance(
+            code_sandbox_runtime=self.code_sandbox_runtime
+        ) as code_interpreter:
             chat = copy.deepcopy(chat)
             media_list = []
             for chat_i in chat:
