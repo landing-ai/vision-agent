@@ -1,5 +1,4 @@
 import abc
-import atexit
 import base64
 import copy
 import logging
@@ -447,8 +446,15 @@ print(f"Vision Agent version: {va_version}")"""
         _LOGGER.info(f"E2BCodeInterpreter initialized:\n{sys_versions}")
 
     def close(self, *args: Any, **kwargs: Any) -> None:
-        self.interpreter.close()
-        self.interpreter.kill()
+        try:
+            self.interpreter.kill(request_timeout=2)
+            _LOGGER.info(
+                f"The sandbox {self.interpreter.sandbox_id} is closed successfully."
+            )
+        except Exception as e:
+            _LOGGER.warn(
+                f"Failed to close the remote sandbox ({self.interpreter.sandbox_id}) due to {e}. This is not an issue. It's likely that the sandbox is already closed due to timeout."
+            )
 
     def restart_kernel(self) -> None:
         if not self.interpreter.is_running():
@@ -596,9 +602,12 @@ class CodeInterpreterFactory:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
         if code_sandbox_runtime == "e2b":
             instance: CodeInterpreter = E2BCodeInterpreter(timeout=_SESSION_TIMEOUT)
-        else:
+        elif code_sandbox_runtime == "local":
             instance = LocalCodeInterpreter(timeout=_SESSION_TIMEOUT)
-        atexit.register(instance.close)
+        else:
+            raise ValueError(
+                f"Unsupported code sandbox runtime: {code_sandbox_runtime}. Supported runtimes: e2b, local"
+            )
         return instance
 
 

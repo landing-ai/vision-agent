@@ -488,9 +488,11 @@ class VisionAgent(Agent):
                 This is useful for streaming logs in a web application where multiple
                 VisionAgent instances are running in parallel. This callback ensures
                 that the progress are not mixed up.
-            code_sandbox_runtime: the code sandbox runtime to use. It can be None, "local" or "e2b".
-                If None, Vision Agent will read the value from the environment variable CODE_SANDBOX_RUNTIME.
-                If CODE_SANDBOX_RUNTIME is also None, the local code sandbox runtime will be used.
+            code_sandbox_runtime: the code sandbox runtime to use. A code sandbox is
+                 used to run the generated code. It can be one of the following
+                 values: None, "local" or "e2b". If None, Vision Agent will read the
+                 value from the environment variable CODE_SANDBOX_RUNTIME. If it's
+                 also None, the local python runtime environment will be used.
         """
 
         self.planner = (
