@@ -446,6 +446,7 @@ print(f"Vision Agent version: {va_version}")"""
 
     def close(self, *args: Any, **kwargs: Any) -> None:
         try:
+            self.interpreter.notebook.close()
             self.interpreter.kill(request_timeout=2)
             _LOGGER.info(
                 f"The sandbox {self.interpreter.sandbox_id} is closed successfully."
