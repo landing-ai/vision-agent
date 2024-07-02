@@ -17,7 +17,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import nbformat
 import tenacity
 from dotenv import load_dotenv
-from e2b.exceptions import SandboxException
 from e2b_code_interpreter import CodeInterpreter as E2BCodeInterpreterImpl
 from e2b_code_interpreter import Execution as E2BExecution
 from e2b_code_interpreter import Result as E2BResult
@@ -37,7 +36,7 @@ from vision_agent.utils.exceptions import (
 
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
-_SESSION_TIMEOUT = 300  # 5 minutes
+_SESSION_TIMEOUT = 600  # 10 minutes
 
 
 class MimeType(str, Enum):
@@ -457,10 +456,7 @@ print(f"Vision Agent version: {va_version}")"""
             )
 
     def restart_kernel(self) -> None:
-        if not self.interpreter.is_running():
-            raise RemoteSandboxClosedError(
-                "Remote sandbox is closed unexpectedly. Please retry the operation."
-            )
+        self._check_sandbox_liveness()
         self.interpreter.notebook.restart_kernel()
 
     @tenacity.retry(
@@ -470,40 +466,44 @@ print(f"Vision Agent version: {va_version}")"""
         retry=tenacity.retry_if_exception_type(TimeoutError),
     )
     def exec_cell(self, code: str) -> Execution:
-        if not self.interpreter.is_running():
-            raise RemoteSandboxClosedError(
-                "Remote sandbox is closed unexpectedly. Please retry the operation."
-            )
+        self._check_sandbox_liveness()
         self.interpreter.set_timeout(_SESSION_TIMEOUT)  # Extend the life of the sandbox
         try:
             execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
             return Execution.from_e2b_execution(execution)
-        except SandboxException as e:
+        except Exception as e:
             raise RemoteSandboxExecutionError(
                 f"Failed executing code in remote sandbox due to {e}: {code}"
             ) from e
 
     def upload_file(self, file: Union[str, Path]) -> str:
+        self._check_sandbox_liveness()
         file_name = Path(file).name
         remote_path = f"/home/user/{file_name}"
-        if not self.interpreter.is_running():
-            raise RemoteSandboxClosedError(
-                "Remote sandbox is closed unexpectedly. Please retry the operation."
-            )
         with open(file, "rb") as f:
             self.interpreter.files.write(path=remote_path, data=f)
             _LOGGER.info(f"File ({file}) is uploaded to: {remote_path}")
             return remote_path
 
     def download_file(self, file_path: str) -> Path:
-        if not self.interpreter.is_running():
-            raise RemoteSandboxClosedError(
-                "Remote sandbox is closed unexpectedly. Please retry the operation."
-            )
+        self._check_sandbox_liveness()
         with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as file:
             file.write(self.interpreter.files.read(path=file_path, format="bytes"))
             _LOGGER.info(f"File ({file_path}) is downloaded to: {file.name}")
             return Path(file.name)
+
+    def _check_sandbox_liveness(self) -> None:
+        try:
+            alive = self.interpreter.is_running()
+        except Exception as e:
+            _LOGGER.error(
+                f"Failed to check the health of the remote sandbox ({self.interpreter.sandbox_id}) due to {e}. Consider the sandbox as dead."
+            )
+            alive = False
+        if not alive:
+            raise RemoteSandboxClosedError(
+                "Remote sandbox is closed unexpectedly. Please start a new VisionAgent instance."
+            )
 
     @staticmethod
     def _new_e2b_interpreter_impl(*args, **kwargs) -> E2BCodeInterpreterImpl:  # type: ignore
