@@ -11,10 +11,9 @@ import tempfile
 import traceback
 import warnings
 from enum import Enum
-from io import IOBase
 from pathlib import Path
 from time import sleep
-from typing import IO, Any, Dict, Iterable, List, Optional, Union, cast
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import nbformat
 import tenacity
@@ -33,6 +32,7 @@ from typing_extensions import Self
 
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
+_SESSION_TIMEOUT = 600  # 10 minutes
 
 
 class MimeType(str, Enum):
@@ -403,11 +403,8 @@ class CodeInterpreter(abc.ABC):
         self.restart_kernel()
         return self.exec_cell(code)
 
-    def upload_file(self, file: Union[str, Path, IO]) -> str:
+    def upload_file(self, file: Union[str, Path]) -> str:
         # Default behavior is a no-op (for local code interpreter)
-        assert not isinstance(
-            file, IO
-        ), "Don't pass IO objects to upload_file() of local interpreter"
         return str(file)
 
     def download_file(self, file_path: str) -> Path:
@@ -416,7 +413,6 @@ class CodeInterpreter(abc.ABC):
 
 
 class E2BCodeInterpreter(CodeInterpreter):
-    KEEP_ALIVE_SEC: int = 300
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -437,8 +433,8 @@ print(f"Vision Agent version: {va_version}")"""
         _LOGGER.info(f"E2BCodeInterpreter initialized:\n{sys_versions}")
 
     def close(self, *args: Any, **kwargs: Any) -> None:
-        self.interpreter.notebook.close()
         self.interpreter.close()
+        self.interpreter.kill()
 
     def restart_kernel(self) -> None:
         self.interpreter.notebook.restart_kernel()
@@ -449,25 +445,22 @@ print(f"Vision Agent version: {va_version}")"""
         retry=tenacity.retry_if_exception_type(TimeoutError),
     )
     def exec_cell(self, code: str) -> Execution:
-        self.interpreter.keep_alive(E2BCodeInterpreter.KEEP_ALIVE_SEC)
         execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
-    def upload_file(self, file: Union[str, Path, IO]) -> str:
-        try:
-            if isinstance(file, (Path, str)):
-                file = open(file, "rb")
-            return cast(str, self.interpreter.upload_file(cast(IO, file)))
-        finally:
-            assert isinstance(file, IOBase), f"Unexpected file type: {type(file)}"
-            file.close()
-            _LOGGER.info(f"File ({file}) is uploaded to: {file.name}")
+    def upload_file(self, file: Union[str, Path]) -> str:
+        file_name = Path(file).name
+        remote_path = f"/home/user/{file_name}"
+        with open(file, "rb") as f:
+            self.interpreter.files.write(path=remote_path, data=f)
+            _LOGGER.info(f"File ({file}) is uploaded to: {remote_path}")
+            return remote_path
 
     def download_file(self, file_path: str) -> Path:
-        file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
-        file.write(self.interpreter.download_file(file_path))
-        _LOGGER.info(f"File ({file_path}) is downloaded to: {file.name}")
-        return Path(file.name)
+        with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as file:
+            file.write(self.interpreter.files.read(path=file_path, format="bytes"))
+            _LOGGER.info(f"File ({file_path}) is downloaded to: {file.name}")
+            return Path(file.name)
 
     @staticmethod
     @tenacity.retry(
@@ -568,9 +561,9 @@ class CodeInterpreterFactory:
     @staticmethod
     def new_instance() -> CodeInterpreter:
         if os.getenv("CODE_SANDBOX_RUNTIME") == "e2b":
-            instance: CodeInterpreter = E2BCodeInterpreter(timeout=600)
+            instance: CodeInterpreter = E2BCodeInterpreter(timeout=_SESSION_TIMEOUT)
         else:
-            instance = LocalCodeInterpreter(timeout=600)
+            instance = LocalCodeInterpreter(timeout=_SESSION_TIMEOUT)
         atexit.register(instance.close)
         return instance
 
