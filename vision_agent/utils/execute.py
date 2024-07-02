@@ -446,8 +446,10 @@ print(f"Vision Agent version: {va_version}")"""
     )
     def exec_cell(self, code: str) -> Execution:
         if not self.interpreter.is_running():
-            raise ConnectionResetError("Remote sandbox is not closed unexpectedly. Please retry the operation.")
-        self.interpreter.set_timeout(_SESSION_TIMEOUT) # Extend the life of the sandbox
+            raise ConnectionResetError(
+                "Remote sandbox is not closed unexpectedly. Please retry the operation."
+            )
+        self.interpreter.set_timeout(_SESSION_TIMEOUT)  # Extend the life of the sandbox
         execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
