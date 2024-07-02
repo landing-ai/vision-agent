@@ -32,7 +32,7 @@ from typing_extensions import Self
 
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
-_SESSION_TIMEOUT = 600  # 10 minutes
+_SESSION_TIMEOUT = 300  # 5 minutes
 
 
 class MimeType(str, Enum):
@@ -445,6 +445,9 @@ print(f"Vision Agent version: {va_version}")"""
         retry=tenacity.retry_if_exception_type(TimeoutError),
     )
     def exec_cell(self, code: str) -> Execution:
+        if not self.interpreter.is_running():
+            raise ConnectionResetError("Remote sandbox is not closed unexpectedly. Please retry the operation.")
+        self.interpreter.set_timeout(_SESSION_TIMEOUT) # Extend the life of the sandbox
         execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
         return Execution.from_e2b_execution(execution)
 
@@ -473,7 +476,7 @@ print(f"Vision Agent version: {va_version}")"""
 
 
 class LocalCodeInterpreter(CodeInterpreter):
-    def __init__(self, timeout: int = 600) -> None:
+    def __init__(self, timeout: int = _SESSION_TIMEOUT) -> None:
         super().__init__(timeout=timeout)
         self.nb = nbformat.v4.new_notebook()
         self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
