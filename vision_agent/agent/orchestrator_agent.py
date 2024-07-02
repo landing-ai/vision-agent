@@ -119,11 +119,16 @@ def run_code_action(code: str) -> str:
     return_str = ""
     for res in result.results:
         if res.text is not None:
-            return_str += res.text.replace("\\n", "\n").replace("'", "")
+            res_text = res.text.replace("\\n", "\n")
+            if res_text.startswith("'") and res_text.endswith("'"):
+                res_text = res_text[1:-1]
+            return_str += res.text.replace("\\n", "\n")
     for log in result.logs.stdout:
         return_str += log.replace("\\n", "\n")
     for log in result.logs.stderr:
         return_str += log.replace("\\n", "\n")
+    if result.error:
+        return_str += "\n" + result.error.value
     return return_str
 
 
@@ -175,7 +180,6 @@ class OrchestratorAgent(Agent):
 
         finished = False
         iterations = 0
-        __import__("ipdb").set_trace()
         while not finished and iterations < self.max_iterations:
             response = run_orchestrator_code(self.agent, int_chat)
             print(response)
