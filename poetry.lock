@@ -453,13 +453,13 @@ files = [
 
 [[package]]
 name = "e2b"
-version = "0.17.2a21"
+version = "0.17.2a23"
 description = "E2B SDK that give agents cloud environments"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "e2b-0.17.2a21-py3-none-any.whl", hash = "sha256:2bb173a3c22e60690cc82ae163cc7fa8078824b57e9f7d1a5ab6970d8a86e235"},
-    {file = "e2b-0.17.2a21.tar.gz", hash = "sha256:37d90745bc31096b00583fce0c4a17e801b2296d1a9f30a1399ad486f3587d83"},
+    {file = "e2b-0.17.2a23-py3-none-any.whl", hash = "sha256:12e65f4f2c18c750c076f7bd22c24ed0b13ad0b59ecc9b99655990e7aeb7c93d"},
+    {file = "e2b-0.17.2a23.tar.gz", hash = "sha256:948542564255d913da97a754765ea3ec1bf1482a897599ace9421e6857910cdd"},
 ]
 
 [package.dependencies]
@@ -474,17 +474,17 @@ urllib3 = ">=1.25.3"
 
 [[package]]
 name = "e2b-code-interpreter"
-version = "0.0.11a1"
+version = "0.0.11a2"
 description = "E2B Code Interpreter - Stateful code execution"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "e2b_code_interpreter-0.0.11a1-py3-none-any.whl", hash = "sha256:a212d8a1159f16fa6eef66c69c3570e6dc50046a1fa9435acdea919c3c9c7e32"},
-    {file = "e2b_code_interpreter-0.0.11a1.tar.gz", hash = "sha256:5dad948a092bde56d91c83c9c8fb065845d40843e025077bfaa34f91afe3a5fd"},
+    {file = "e2b_code_interpreter-0.0.11a2-py3-none-any.whl", hash = "sha256:bc3ae199acfb8e4c6675c4fc57a1070bb767a1e9bf99ac6d3aa09347fdc29997"},
+    {file = "e2b_code_interpreter-0.0.11a2.tar.gz", hash = "sha256:6280f553be373865c43b2bfb546a3953d3faa43f9ce4ab7ed2dba576db548301"},
 ]
 
 [package.dependencies]
-e2b = "0.17.2a21"
+e2b = "0.17.2a23"
 pydantic = "*"
 requests = ">=2.32.3,<3.0.0"
 websocket-client = ">=1.7.0,<2.0.0"
@@ -3246,4 +3246,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "42deafc2b4d32e51d8b77bc48d696ac604678971c2aed1cffedc1e1371932088"
+content-hash = "7dbe864df7d0b79afdcdc35b97209abb0f4a471e728f7929104861ededa2e12f"

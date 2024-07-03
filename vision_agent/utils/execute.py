@@ -495,7 +495,7 @@ print(f"Vision Agent version: {va_version}")"""
 
     def _check_sandbox_liveness(self) -> None:
         try:
-            alive = self.interpreter.is_running()
+            alive = self.interpreter.is_running(request_timeout=2)
         except Exception as e:
             _LOGGER.error(
                 f"Failed to check the health of the remote sandbox ({self.interpreter.sandbox_id}) due to {e}. Consider the sandbox as dead."
