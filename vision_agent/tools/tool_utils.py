@@ -40,7 +40,7 @@ def send_inference_request(
 
     resp = res.json()
     # TODO: consider making the response schema the same between below two sources
-    return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"] # type: ignore
+    return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]  # type: ignore
 
 
 def _create_requests_session(
