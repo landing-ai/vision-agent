@@ -18,20 +18,32 @@ def send_inference_request(
 ) -> Dict[str, Any]:
     if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
         payload["runtime_tag"] = runtime_tag
+
     url = f"{_LND_API_URL}/model/{endpoint_name}"
+    if "TOOL_ENDPOINT_URL" in os.environ:
+        url = os.environ["TOOL_ENDPOINT_URL"]
+
+    headers = {
+        "Content-Type": "application/json",
+        "apikey": _LND_API_KEY
+    }
+    if "TOOL_ENDPOINT_AUTH" in os.environ:
+        headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
+        headers.pop("apikey")
+
     session = _create_requests_session(
         url=url,
         num_retry=3,
-        headers={
-            "Content-Type": "application/json",
-            "apikey": _LND_API_KEY,
-        },
+        headers=headers,
     )
     res = session.post(url, json=payload)
     if res.status_code != 200:
         _LOGGER.error(f"Request failed: {res.status_code} {res.text}")
         raise ValueError(f"Request failed: {res.status_code} {res.text}")
-    return res.json()["data"]  # type: ignore
+
+    resp = res.json()
+    # TODO: consider making the response schema the same between below two sources
+    return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]
 
 
 def _create_requests_session(
