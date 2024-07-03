@@ -29,21 +29,22 @@ PLAN = """
 {feedback}
 
 **Instructions**:
-1. Based on the context and tools you have available, write a plan of subtasks to achieve the user request.
-2. Go over the users request step by step and ensure each step is represented as a clear subtask in your plan.
-3. Provide a detailed description of the image, be sure to include any text you see in the image and a rough count of the objects you see.
+1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
+2. Provide a detailed description of the image, be sure to include any text you see in the image and whether or not the predominant object count is many, over a dozen, or just a few. 
+3. Go over the users request step by step and ensure each step is represented as a clear subtask in your plan.
 
 Output a list of jsons in the following format
 
 ```json
 {{
+    "image_desc": str # description of the image you are working with,
+    "thoughts": str # any thoughts you have about how to formulate the plan based on the image information,
     "plan":
         [
             {{
                 "instructions": str # what you should do in this task associated with a tool
             }}
         ]
-    "image_desc": str # description of the image you are working with
 }}
 ```
 """
@@ -74,7 +75,7 @@ This is the documentation for the functions you have access to. You may call any
 
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
-2. **Algorithm/Method Selection**: Decide on the most efficient way.
+2. **Algorithm/Method Selection**: Decide on the most efficient implementation utilizing the image description and tools available.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
 """
@@ -185,9 +186,9 @@ This is the documentation for the functions you have access to. You may call any
 7. DO NOT assert the output value, run the code and assert only the output format or data structure.
 8. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
 9. DO NOT import the testing function as it will available in the testing environment.
-10. Print the output of the function that is being tested.
+10. DO NOT reimplement the function, use the provided function as is and write test cases for it.
 11. Use the output of the function that is being tested as the return value of the testing function.
-12. Run the testing function in the end and don't assign a variable to its output.
+12. Run the testing function in the end and don't assign a variable to its output and print the output.
 """
 
 

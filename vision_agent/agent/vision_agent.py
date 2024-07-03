@@ -246,7 +246,13 @@ def write_and_test_code(
             "status": "started",
         }
     )
-    code = write_code(coder, chat, image_desc, tool_info, format_memory(working_memory))
+    code = write_code(
+        coder,
+        chat,
+        image_desc,
+        f"{tool_info}\n{tool_utils}",
+        format_memory(working_memory),
+    )
     test = write_test(
         tester, chat, image_desc, tool_utils, code, format_memory(working_memory), media
     )
@@ -607,15 +613,15 @@ class VisionAgent(Agent):
                         "status": "started",
                     }
                 )
-                plan_and_image_desc = write_plan(
+                planning = write_plan(
                     int_chat,
                     T.TOOL_DESCRIPTIONS,
                     format_memory(working_memory),
                     self.planner,
                 )
-                plan_i = plan_and_image_desc["plan"]
+                plan_i = planning["plan"]
                 plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
-                image_desc = plan_and_image_desc["image_desc"]
+                image_desc = planning["image_desc"]
 
                 self.log_progress(
                     {

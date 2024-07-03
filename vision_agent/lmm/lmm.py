@@ -54,7 +54,7 @@ class OpenAILMM(LMM):
         self,
         model_name: str = "gpt-4o",
         api_key: Optional[str] = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         json_mode: bool = False,
         **kwargs: Any,
     ):
