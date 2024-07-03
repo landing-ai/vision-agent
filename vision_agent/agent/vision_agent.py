@@ -19,9 +19,7 @@ from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts import (
     CODE,
     FIX_BUG,
-    FULL_TASK,
     PLAN,
-    REFLECT,
     SIMPLE_TEST,
     USER_REQ,
 )
@@ -205,24 +203,6 @@ def write_test(
     )
     chat[-1]["content"] = prompt
     return extract_code(tester(chat))
-
-
-@traceable
-def reflect(
-    chat: List[Message],
-    plan: str,
-    code: str,
-    model: LMM,
-) -> Dict[str, Union[str, bool]]:
-    chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
-        raise ValueError("Last chat message must be from the user.")
-
-    user_request = chat[-1]["content"]
-    context = USER_REQ.format(user_request=user_request)
-    prompt = REFLECT.format(context=context, plan=plan, code=code)
-    chat[-1]["content"] = prompt
-    return extract_json(model(chat))
 
 
 def write_and_test_code(
@@ -554,7 +534,6 @@ class VisionAgent(Agent):
     def chat_with_workflow(
         self,
         chat: List[Message],
-        self_reflection: bool = False,
         display_visualization: bool = False,
     ) -> Dict[str, Any]:
         """Chat with Vision Agent and return intermediate information regarding the task.
@@ -565,7 +544,6 @@ class VisionAgent(Agent):
                 [{"role": "user", "content": "describe your task here..."}]
                 or if it contains media files, it should be in the format of:
                 [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
-            self_reflection (bool): Whether to reflect on the task and debug the code.
             display_visualization (bool): If True, it opens a new window locally to
                 show the image(s) created by visualization code (if there is any).
 
@@ -663,35 +641,6 @@ class VisionAgent(Agent):
                 working_memory.extend(results["working_memory"])  # type: ignore
                 plan.append({"code": code, "test": test, "plan": plan_i})
 
-                if not self_reflection:
-                    break
-
-                self.log_progress(
-                    {
-                        "type": "self_reflection",
-                        "status": "started",
-                    }
-                )
-                reflection = reflect(
-                    int_chat,
-                    FULL_TASK.format(
-                        user_request=chat[0]["content"], subtasks=plan_i_str
-                    ),
-                    code,
-                    self.planner,
-                )
-                if self.verbosity > 0:
-                    _LOGGER.info(f"Reflection: {reflection}")
-                feedback = cast(str, reflection["feedback"])
-                success = cast(bool, reflection["success"])
-                self.log_progress(
-                    {
-                        "type": "self_reflection",
-                        "status": "completed" if success else "failed",
-                        "payload": reflection,
-                    }
-                )
-                working_memory.append({"code": f"{code}\n{test}", "feedback": feedback})
                 retries += 1
 
             execution_result = cast(Execution, results["test_result"])
