@@ -1,6 +1,8 @@
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
+from vision_agent.utils.exceptions import InvalidApiKeyError
+
 
 class LandingaiAPIKey(BaseSettings):
     """The API key of a user in a particular organization in LandingLens.
@@ -34,15 +36,3 @@ class LandingaiAPIKey(BaseSettings):
         env_prefix = "landingai_"
         case_sensitive = False
         extra = "ignore"
-
-
-class InvalidApiKeyError(Exception):
-    """Exception raised when the an invalid API key is provided. This error could be raised from any SDK code, not limited to a HTTP client."""
-
-    def __init__(self, message: str):
-        self.message = f"""{message}
-For more information, see https://landing-ai.github.io/landingai-python/landingai.html#manage-api-credentials"""
-        super().__init__(self.message)
-
-    def __str__(self) -> str:
-        return self.message

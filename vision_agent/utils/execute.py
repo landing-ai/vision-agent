@@ -1,5 +1,4 @@
 import abc
-import atexit
 import base64
 import copy
 import logging
@@ -18,7 +17,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import nbformat
 import tenacity
 from dotenv import load_dotenv
-from e2b.api.v2.client.exceptions import ServiceException
 from e2b_code_interpreter import CodeInterpreter as E2BCodeInterpreterImpl
 from e2b_code_interpreter import Execution as E2BExecution
 from e2b_code_interpreter import Result as E2BResult
@@ -30,9 +28,15 @@ from nbformat.v4 import new_code_cell
 from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
 
+from vision_agent.utils.exceptions import (
+    RemoteSandboxClosedError,
+    RemoteSandboxCreationError,
+    RemoteSandboxExecutionError,
+)
+
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
-_SESSION_TIMEOUT = 300  # 5 minutes
+_SESSION_TIMEOUT = 600  # 10 minutes
 
 
 class MimeType(str, Enum):
@@ -417,7 +421,15 @@ class E2BCodeInterpreter(CodeInterpreter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         assert os.getenv("E2B_API_KEY"), "E2B_API_KEY environment variable must be set"
-        self.interpreter = E2BCodeInterpreter._new_e2b_interpreter_impl(*args, **kwargs)
+        try:
+            self.interpreter = E2BCodeInterpreter._new_e2b_interpreter_impl(
+                *args, **kwargs
+            )
+        except Exception as e:
+            raise RemoteSandboxCreationError(
+                f"Failed to create a remote sandbox due to {e}"
+            ) from e
+
         result = self.exec_cell(
             """
 import platform
@@ -433,27 +445,40 @@ print(f"Vision Agent version: {va_version}")"""
         _LOGGER.info(f"E2BCodeInterpreter initialized:\n{sys_versions}")
 
     def close(self, *args: Any, **kwargs: Any) -> None:
-        self.interpreter.close()
-        self.interpreter.kill()
+        try:
+            self.interpreter.notebook.close()
+            self.interpreter.kill(request_timeout=2)
+            _LOGGER.info(
+                f"The sandbox {self.interpreter.sandbox_id} is closed successfully."
+            )
+        except Exception as e:
+            _LOGGER.warn(
+                f"Failed to close the remote sandbox ({self.interpreter.sandbox_id}) due to {e}. This is not an issue. It's likely that the sandbox is already closed due to timeout."
+            )
 
     def restart_kernel(self) -> None:
+        self._check_sandbox_liveness()
         self.interpreter.notebook.restart_kernel()
 
     @tenacity.retry(
         wait=tenacity.wait_exponential_jitter(),
         stop=tenacity.stop_after_attempt(2),
+        # TODO: change TimeoutError to a more specific exception when e2b team provides more granular retryable exceptions
         retry=tenacity.retry_if_exception_type(TimeoutError),
     )
     def exec_cell(self, code: str) -> Execution:
-        if not self.interpreter.is_running():
-            raise ConnectionResetError(
-                "Remote sandbox is closed unexpectedly. Please retry the operation."
-            )
+        self._check_sandbox_liveness()
         self.interpreter.set_timeout(_SESSION_TIMEOUT)  # Extend the life of the sandbox
-        execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
-        return Execution.from_e2b_execution(execution)
+        try:
+            execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
+            return Execution.from_e2b_execution(execution)
+        except Exception as e:
+            raise RemoteSandboxExecutionError(
+                f"Failed executing code in remote sandbox due to {e}: {code}"
+            ) from e
 
     def upload_file(self, file: Union[str, Path]) -> str:
+        self._check_sandbox_liveness()
         file_name = Path(file).name
         remote_path = f"/home/user/{file_name}"
         with open(file, "rb") as f:
@@ -462,17 +487,26 @@ print(f"Vision Agent version: {va_version}")"""
             return remote_path
 
     def download_file(self, file_path: str) -> Path:
+        self._check_sandbox_liveness()
         with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as file:
             file.write(self.interpreter.files.read(path=file_path, format="bytes"))
             _LOGGER.info(f"File ({file_path}) is downloaded to: {file.name}")
             return Path(file.name)
 
+    def _check_sandbox_liveness(self) -> None:
+        try:
+            alive = self.interpreter.is_running(request_timeout=2)
+        except Exception as e:
+            _LOGGER.error(
+                f"Failed to check the health of the remote sandbox ({self.interpreter.sandbox_id}) due to {e}. Consider the sandbox as dead."
+            )
+            alive = False
+        if not alive:
+            raise RemoteSandboxClosedError(
+                "Remote sandbox is closed unexpectedly. Please start a new VisionAgent instance."
+            )
+
     @staticmethod
-    @tenacity.retry(
-        wait=tenacity.wait_exponential_jitter(),
-        stop=tenacity.stop_after_delay(60),
-        retry=tenacity.retry_if_exception_type(ServiceException),
-    )
     def _new_e2b_interpreter_impl(*args, **kwargs) -> E2BCodeInterpreterImpl:  # type: ignore
         return E2BCodeInterpreterImpl(template="va-sandbox", *args, **kwargs)
 
@@ -564,12 +598,17 @@ class CodeInterpreterFactory:
         return instance
 
     @staticmethod
-    def new_instance() -> CodeInterpreter:
-        if os.getenv("CODE_SANDBOX_RUNTIME") == "e2b":
+    def new_instance(code_sandbox_runtime: Optional[str] = None) -> CodeInterpreter:
+        if not code_sandbox_runtime:
+            code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
+        if code_sandbox_runtime == "e2b":
             instance: CodeInterpreter = E2BCodeInterpreter(timeout=_SESSION_TIMEOUT)
-        else:
+        elif code_sandbox_runtime == "local":
             instance = LocalCodeInterpreter(timeout=_SESSION_TIMEOUT)
-        atexit.register(instance.close)
+        else:
+            raise ValueError(
+                f"Unsupported code sandbox runtime: {code_sandbox_runtime}. Supported runtimes: e2b, local"
+            )
         return instance
 
 
