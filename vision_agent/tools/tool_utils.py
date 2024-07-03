@@ -23,10 +23,7 @@ def send_inference_request(
     if "TOOL_ENDPOINT_URL" in os.environ:
         url = os.environ["TOOL_ENDPOINT_URL"]
 
-    headers = {
-        "Content-Type": "application/json",
-        "apikey": _LND_API_KEY
-    }
+    headers = {"Content-Type": "application/json", "apikey": _LND_API_KEY}
     if "TOOL_ENDPOINT_AUTH" in os.environ:
         headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
         headers.pop("apikey")
@@ -43,7 +40,7 @@ def send_inference_request(
 
     resp = res.json()
     # TODO: consider making the response schema the same between below two sources
-    return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]
+    return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"] # type: ignore
 
 
 def _create_requests_session(
