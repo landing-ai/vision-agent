@@ -30,7 +30,7 @@ PLAN = """
 
 **Instructions**:
 1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
-2. Provide a detailed description of the image, be sure to include any text you see in the image and whether or not the predominant object count is many, over a dozen, or just a few. 
+2. Provide a detailed description of the image, be sure to include any text you see in the image and whether or not the predominant object count is many, over a dozen, or just a few.
 3. Go over the users request step by step and ensure each step is represented as a clear subtask in your plan.
 
 Output a list of jsons in the following format
@@ -152,7 +152,6 @@ print(found_text)
 ```
 """
 
-
 SIMPLE_TEST = """
 **Role**: As a tester, your task is to create a simple test case for the provided code. This test case should verify the fundamental functionality under normal conditions.
 
@@ -173,11 +172,8 @@ This is the documentation for the functions you have access to. You may call any
 **Previous Feedback**:
 {feedback}
 
-**Image Description**:
-{image_desc}
-
 **Instructions**:
-1. Verify the fundamental functionality under normal conditions, use the image description to inform your test cases.
+1. Verify the fundamental functionality under normal conditions.
 2. Ensure each test case is well-documented with comments explaining the scenario it covers.
 3. Your test case MUST run only on the given images which are {media}
 4. Your test case MUST run only with the given values which is available in the question - {question}
@@ -186,9 +182,9 @@ This is the documentation for the functions you have access to. You may call any
 7. DO NOT assert the output value, run the code and assert only the output format or data structure.
 8. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
 9. DO NOT import the testing function as it will available in the testing environment.
-10. DO NOT reimplement the function, use the provided function as is and write test cases for it.
+10. Print the output of the function that is being tested.
 11. Use the output of the function that is being tested as the return value of the testing function.
-12. Run the testing function in the end and don't assign a variable to its output and print the output.
+12. Run the testing function in the end and don't assign a variable to its output.
 """
 
 

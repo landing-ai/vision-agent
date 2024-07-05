@@ -152,7 +152,7 @@ def write_plan(
     context = USER_REQ.format(user_request=user_request)
     prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
     chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))  # type: ignore
+    return extract_json(model.chat(chat))
 
 
 @traceable
@@ -198,7 +198,7 @@ def write_test(
         question=user_request,
         code=code,
         feedback=feedback,
-        image_desc=image_desc,
+        # image_desc=image_desc,
         media=media,
     )
     chat[-1]["content"] = prompt
@@ -598,7 +598,6 @@ class VisionAgent(Agent):
                     self.planner,
                 )
                 plan_i = planning["plan"]
-                plan_i_str = "\n-".join([e["instructions"] for e in plan_i])
                 image_desc = planning["image_desc"]
 
                 self.log_progress(
