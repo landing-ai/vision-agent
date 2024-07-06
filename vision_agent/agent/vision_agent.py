@@ -2,7 +2,6 @@ import copy
 import difflib
 import json
 import logging
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -26,7 +25,7 @@ from vision_agent.agent.vision_agent_prompts import (
 )
 from vision_agent.lmm import LMM, AzureOpenAILMM, Message, OpenAILMM
 from vision_agent.utils import CodeInterpreterFactory, Execution
-from vision_agent.utils.execute import CodeInterpreter, Execution
+from vision_agent.utils.execute import CodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
 from vision_agent.utils.sim import AzureSim, Sim
 from vision_agent.utils.video import play_video
