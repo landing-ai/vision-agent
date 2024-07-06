@@ -2,6 +2,7 @@ import copy
 import difflib
 import json
 import logging
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -25,7 +26,7 @@ from vision_agent.agent.vision_agent_prompts import (
 )
 from vision_agent.lmm import LMM, AzureOpenAILMM, Message, OpenAILMM
 from vision_agent.utils import CodeInterpreterFactory, Execution
-from vision_agent.utils.execute import CodeInterpreter
+from vision_agent.utils.execute import CodeInterpreter, Execution
 from vision_agent.utils.image_utils import b64_to_pil
 from vision_agent.utils.sim import AzureSim, Sim
 from vision_agent.utils.video import play_video
@@ -182,7 +183,6 @@ def write_code(
 def write_test(
     tester: LMM,
     chat: List[Message],
-    image_desc: str,
     tool_utils: str,
     code: str,
     feedback: str,
@@ -198,7 +198,6 @@ def write_test(
         question=user_request,
         code=code,
         feedback=feedback,
-        # image_desc=image_desc,
         media=media,
     )
     chat[-1]["content"] = prompt
@@ -234,7 +233,7 @@ def write_and_test_code(
         format_memory(working_memory),
     )
     test = write_test(
-        tester, chat, image_desc, tool_utils, code, format_memory(working_memory), media
+        tester, chat, tool_utils, code, format_memory(working_memory), media
     )
 
     log_progress(

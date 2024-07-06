@@ -264,7 +264,7 @@ class AzureOpenAILMM(OpenAILMM):
         api_key: Optional[str] = None,
         api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         json_mode: bool = False,
         **kwargs: Any,
     ):
