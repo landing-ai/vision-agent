@@ -377,8 +377,9 @@ class Execution(BaseModel):
                     name=exec.error.name,
                     value=_remove_escape_and_color_codes(exec.error.value),
                     traceback_raw=[
-                        _remove_escape_and_color_codes(line) for line in exec.error.traceback_raw
-                    ]
+                        _remove_escape_and_color_codes(line)
+                        for line in exec.error.traceback_raw
+                    ],
                 )
                 if exec.error
                 else None
