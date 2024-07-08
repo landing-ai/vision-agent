@@ -19,7 +19,7 @@ FEEDBACK = """
 
 
 PLAN = """
-**Context**
+**Context**:
 {context}
 
 **Tools Available**:
@@ -30,23 +30,102 @@ PLAN = """
 
 **Instructions**:
 1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
-2. Provide a detailed description of the image, be sure to include any text you see in the image and whether or not the predominant object count is many, over a dozen, or just a few.
-3. Go over the users request step by step and ensure each step is represented as a clear subtask in your plan.
+2. Output three different plans each utilize a different strategy or tool.
 
 Output a list of jsons in the following format
 
 ```json
 {{
-    "image_desc": str # description of the image you are working with,
-    "thoughts": str # any thoughts you have about how to formulate the plan based on the image information,
-    "plan":
+    "plan1":
         [
             {{
                 "instructions": str # what you should do in this task associated with a tool
             }}
-        ]
+        ],
+    "plan2": ...,
+    "plan3": ...
 }}
 ```
+"""
+
+
+TEST_PLANS = """
+**Role**: You are a software programmer responsible for testing different tools.
+
+**Task**: Your responsibility is to take a set of several plans and test the different tools for each plan.
+
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
+
+{docstring}
+
+**Plans**:
+{plans}
+
+{previous_attempts}
+
+**Instructions**:
+1. Write a program to load the media and call each tool and save it's output.
+2. Create a dictionary where the keys are the tool name and the values are the tool outputs.
+3. Print this final dictionary.
+
+**Example**:
+plan1:
+- Load the image from the provided file path 'image.jpg'.
+- Use the 'owl_v2' tool with the prompt 'person' to detect and count the number of people in the image.
+plan2:
+- Load the image from the provided file path 'image.jpg'.
+- Use the 'florencev2_object_detection' tool to detect common objects in the image, including people.
+- Count the number of detected objects labeled as 'person'.
+plan3:
+- Load the image from the provided file path 'image.jpg'.
+- Use the 'loca_zero_shot_counting' tool to count the dominant foreground object, which in this case is people.
+
+```python
+from vision_agent.tools import load_image, owl_v2, florencev2_object_detection, loca_zero_shot_counting
+image = load_image("image.jpg")
+owl_v2_out = owl_v2("person", image)
+florencev2_out = florencev2_object_detection(image)
+loca_out = loca_zero_shot_counting(image)
+final_out = {{"owl_v2": owl_v2_out, "florencev2_object_detection": florencev2_out, "loca_zero_shot_counting": loca_out}}
+print(final_out)
+```
+"""
+
+
+PREVIOUS_FAILED = """
+**Previous Failed Attempts**:
+You previously ran this code:
+```python
+{code}
+```
+
+But got the following error or no stdout:
+{error}
+"""
+
+
+PICK_PLAN = """
+**Role**: You are a software programmer.
+
+**Task**: Your responsibility is to pick the best plan from the three plans provided.
+
+**Context**:
+{context}
+
+**Plans**:
+{plans}
+
+**Tool Output**:
+{tool_output}
+
+**Instructions**:
+1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
+2. Output a JSON object with the following format:
+{{
+    "thoughts": str # your thought process for choosing the best plan
+    "best_plan": str # the best plan you have chosen
+}}
 """
 
 CODE = """
@@ -67,15 +146,15 @@ This is the documentation for the functions you have access to. You may call any
 **User Instructions**:
 {question}
 
+**Tool Output**:
+{tool_output}
+
 **Previous Feedback**:
 {feedback}
 
-**Image Description**:
-{image_desc}
-
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
-2. **Algorithm/Method Selection**: Decide on the most efficient implementation utilizing the image description and tools available.
+2. **Algorithm/Method Selection**: Decide on the most efficient way.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
 """
