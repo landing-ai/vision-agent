@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Union
 
@@ -33,11 +34,7 @@ class Sim:
             model: str: The model to use for embeddings.
         """
         self.df = df
-        if not api_key:
-            self.client = OpenAI()
-        else:
-            self.client = OpenAI(api_key=api_key)
-
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         if "embs" not in df.columns and sim_key is None:
             raise ValueError("key is required if no column 'embs' is present.")
@@ -57,6 +54,7 @@ class Sim:
         df = df.drop("embs", axis=1)
         df.to_csv(sim_file / "df.csv", index=False)
 
+    @lru_cache(maxsize=256)
     def top_k(
         self, query: str, k: int = 5, thresh: Optional[float] = None
     ) -> Sequence[Dict]:

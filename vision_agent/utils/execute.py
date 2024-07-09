@@ -112,6 +112,11 @@ class Result:
         self.raw = copy.deepcopy(data)
 
         self.text = data.pop(MimeType.TEXT_PLAIN, None)
+        if self.text and (self.text.startswith("'") and self.text.endswith("'")):
+            # This is a workaround for the issue that str result is wrapped with single quotes by notebook.
+            # E.g. input text: "'flower'". what we want: "flower"
+            self.text = self.text[1:-1]
+
         self.html = data.pop(MimeType.TEXT_HTML, None)
         self.markdown = data.pop(MimeType.TEXT_MARKDOWN, None)
         self.svg = data.pop(MimeType.IMAGE_SVG, None)
