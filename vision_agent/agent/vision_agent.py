@@ -223,14 +223,16 @@ def pick_plan(
     user_req = chat[-1]["content"]
     context = USER_REQ.format(user_request=user_req)
     # because the tool picker model gets the image as well, we have to be careful with
-    # how much text we send it, so we truncate the tool output to 500 characters
+    # how much text we send it, so we truncate the tool output to 20,000 characters
     prompt = PICK_PLAN.format(
         context=context,
         plans=format_plans(plans),
-        tool_output=tool_output_str[:500],
+        tool_output=tool_output_str[:20_000],
     )
     chat[-1]["content"] = prompt
     best_plan = extract_json(model(chat))
+    if verbosity >= 1:
+        _LOGGER.info(f"Best plan:\n{best_plan}")
     return best_plan["best_plan"], tool_output_str
 
 
