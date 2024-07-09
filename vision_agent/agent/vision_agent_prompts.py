@@ -75,7 +75,7 @@ plan1:
 - Use the 'owl_v2' tool with the prompt 'person' to detect and count the number of people in the image.
 plan2:
 - Load the image from the provided file path 'image.jpg'.
-- Use the 'grounding_sam' tool with the prompt 'person' to detect and count the number of people in the image. 
+- Use the 'grounding_sam' tool with the prompt 'person' to detect and count the number of people in the image.
 - Count the number of detected objects labeled as 'person'.
 plan3:
 - Load the image from the provided file path 'image.jpg'.
