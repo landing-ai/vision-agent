@@ -19,7 +19,7 @@ FEEDBACK = """
 
 
 PLAN = """
-**Context**
+**Context**:
 {context}
 
 **Tools Available**:
@@ -29,21 +29,108 @@ PLAN = """
 {feedback}
 
 **Instructions**:
-1. Based on the context and tools you have available, write a plan of subtasks to achieve the user request.
-2. Go over the users request step by step and ensure each step is represented as a clear subtask in your plan.
+1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
+2. Output three different plans each utilize a different strategy or tool.
 
 Output a list of jsons in the following format
 
 ```json
 {{
-    "plan":
+    "plan1":
         [
             {{
                 "instructions": str # what you should do in this task associated with a tool
             }}
-        ]
+        ],
+    "plan2": ...,
+    "plan3": ...
 }}
 ```
+"""
+
+
+TEST_PLANS = """
+**Role**: You are a software programmer responsible for testing different tools.
+
+**Task**: Your responsibility is to take a set of several plans and test the different tools for each plan.
+
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
+
+{docstring}
+
+**Plans**:
+{plans}
+
+{previous_attempts}
+
+**Instructions**:
+1. Write a program to load the media and call each tool and save it's output.
+2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove any array types from the printed dictionary.
+3. Print this final dictionary.
+
+**Example**:
+plan1:
+- Load the image from the provided file path 'image.jpg'.
+- Use the 'owl_v2' tool with the prompt 'person' to detect and count the number of people in the image.
+plan2:
+- Load the image from the provided file path 'image.jpg'.
+- Use the 'grounding_sam' tool with the prompt 'person' to detect and count the number of people in the image.
+- Count the number of detected objects labeled as 'person'.
+plan3:
+- Load the image from the provided file path 'image.jpg'.
+- Use the 'loca_zero_shot_counting' tool to count the dominant foreground object, which in this case is people.
+
+```python
+from vision_agent.tools import load_image, owl_v2, grounding_sam, loca_zero_shot_counting
+image = load_image("image.jpg")
+owl_v2_out = owl_v2("person", image)
+
+gsam_out = grounding_sam("person", image)
+gsam_out = [{{k: v for k, v in o.items() if k != "mask"}} for o in gsam_out]
+
+loca_out = loca_zero_shot_counting(image)
+loca_out = loca_out["count"]
+
+final_out = {{"owl_v2": owl_v2_out, "florencev2_object_detection": florencev2_out, "loca_zero_shot_counting": loca_out}}
+print(final_out)
+```
+"""
+
+
+PREVIOUS_FAILED = """
+**Previous Failed Attempts**:
+You previously ran this code:
+```python
+{code}
+```
+
+But got the following error or no stdout:
+{error}
+"""
+
+
+PICK_PLAN = """
+**Role**: You are a software programmer.
+
+**Task**: Your responsibility is to pick the best plan from the three plans provided.
+
+**Context**:
+{context}
+
+**Plans**:
+{plans}
+
+**Tool Output**:
+{tool_output}
+
+**Instructions**:
+1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
+2. Output a JSON object with the following format:
+{{
+    "thoughts": str # your thought process for choosing the best plan
+    "best_plan": str # the best plan you have chosen
+}}
 """
 
 CODE = """
@@ -64,6 +151,9 @@ This is the documentation for the functions you have access to. You may call any
 **User Instructions**:
 {question}
 
+**Tool Output**:
+{tool_output}
+
 **Previous Feedback**:
 {feedback}
 
@@ -72,7 +162,6 @@ This is the documentation for the functions you have access to. You may call any
 2. **Algorithm/Method Selection**: Decide on the most efficient way.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
-5. **Logging**: Log the output of the custom functions that were provided to you from `from vision_agent.tools import *`. Use a debug flag in the function parameters to toggle logging on and off.
 """
 
 TEST = """
@@ -146,7 +235,6 @@ found_text = find_text("image.jpg", "Hello World")
 print(found_text)
 ```
 """
-
 
 SIMPLE_TEST = """
 **Role**: As a tester, your task is to create a simple test case for the provided code. This test case should verify the fundamental functionality under normal conditions.

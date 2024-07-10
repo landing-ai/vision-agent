@@ -362,8 +362,10 @@ class Execution(BaseModel):
         return Execution(
             error=Error(
                 name=exec.__class__.__name__,
-                value=str(exec),
-                traceback_raw=traceback_raw,
+                value=_remove_escape_and_color_codes(str(exec)),
+                traceback_raw=[
+                    _remove_escape_and_color_codes(line) for line in traceback_raw
+                ],
             )
         )
 
@@ -378,8 +380,11 @@ class Execution(BaseModel):
             error=(
                 Error(
                     name=exec.error.name,
-                    value=exec.error.value,
-                    traceback_raw=exec.error.traceback_raw,
+                    value=_remove_escape_and_color_codes(exec.error.value),
+                    traceback_raw=[
+                        _remove_escape_and_color_codes(line)
+                        for line in exec.error.traceback_raw
+                    ],
                 )
                 if exec.error
                 else None
