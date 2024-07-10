@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 import logging
 import os
@@ -8,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import requests
 from openai import AzureOpenAI, OpenAI
+from PIL import Image
 
 import vision_agent.tools as T
 from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
@@ -15,10 +17,38 @@ from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 _LOGGER = logging.getLogger(__name__)
 
 
-def encode_image(image: Union[str, Path]) -> str:
-    with open(image, "rb") as f:
-        encoded_image = base64.b64encode(f.read()).decode("utf-8")
+def encode_image_bytes(image: bytes) -> str:
+    image = Image.open(io.BytesIO(image)).convert("RGB")  # type: ignore
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")  # type: ignore
+    encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return encoded_image
+
+
+def encode_media(media: Union[str, Path]) -> str:
+    extension = "png"
+    extension = Path(media).suffix
+    if extension.lower() not in {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".bmp",
+        ".mp4",
+        ".mov",
+    }:
+        raise ValueError(f"Unsupported image extension: {extension}")
+
+    image_bytes = b""
+    if extension.lower() in {".mp4", ".mov"}:
+        frames = T.extract_frames(media)
+        image = frames[len(frames) // 2]
+        buffer = io.BytesIO()
+        Image.fromarray(image[0]).convert("RGB").save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+    else:
+        image_bytes = open(media, "rb").read()
+    return encode_image_bytes(image_bytes)
 
 
 TextOrImage = Union[str, List[Union[str, Path]]]
@@ -54,7 +84,7 @@ class OpenAILMM(LMM):
         self,
         model_name: str = "gpt-4o",
         api_key: Optional[str] = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         json_mode: bool = False,
         **kwargs: Any,
     ):
@@ -97,20 +127,14 @@ class OpenAILMM(LMM):
             fixed_c = {"role": c["role"]}
             fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
             if "media" in c:
-                for image in c["media"]:
-                    extension = Path(image).suffix
-                    if extension.lower() == ".jpeg" or extension.lower() == ".jpg":
-                        extension = "jpg"
-                    elif extension.lower() == ".png":
-                        extension = "png"
-                    else:
-                        raise ValueError(f"Unsupported image extension: {extension}")
-                    encoded_image = encode_image(image)
+                for media in c["media"]:
+                    encoded_media = encode_media(media)
+
                     fixed_c["content"].append(  # type: ignore
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/{extension};base64,{encoded_image}",  # type: ignore
+                                "url": f"data:image/png;base64,{encoded_media}",  # type: ignore
                                 "detail": "low",
                             },
                         },
@@ -138,13 +162,12 @@ class OpenAILMM(LMM):
         ]
         if media and len(media) > 0:
             for m in media:
-                extension = Path(m).suffix
-                encoded_image = encode_image(m)
+                encoded_media = encode_media(m)
                 message[0]["content"].append(
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/{extension};base64,{encoded_image}",
+                            "url": f"data:image/png;base64,{encoded_media}",
                             "detail": "low",
                         },
                     },
@@ -241,7 +264,7 @@ class AzureOpenAILMM(OpenAILMM):
         api_key: Optional[str] = None,
         api_version: str = "2024-02-01",
         azure_endpoint: Optional[str] = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         json_mode: bool = False,
         **kwargs: Any,
     ):
@@ -312,7 +335,7 @@ class OllamaLMM(LMM):
         fixed_chat = []
         for message in chat:
             if "media" in message:
-                message["images"] = [encode_image(m) for m in message["media"]]
+                message["images"] = [encode_media(m) for m in message["media"]]
                 del message["media"]
             fixed_chat.append(message)
         url = f"{self.url}/chat"
@@ -343,7 +366,7 @@ class OllamaLMM(LMM):
         json_data = json.dumps(data)
         if media and len(media) > 0:
             for m in media:
-                data["images"].append(encode_image(m))  # type: ignore
+                data["images"].append(encode_media(m))  # type: ignore
 
         response = requests.post(url, data=json_data)
 
