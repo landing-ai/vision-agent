@@ -1,58 +1,33 @@
 import copy
-import difflib
-import json
 import logging
-import sys
-import tempfile
+import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
-from langsmith import traceable
-from PIL import Image
-from rich.console import Console
-from rich.style import Style
-from rich.syntax import Syntax
-from tabulate import tabulate
-
-import vision_agent.tools as T
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import extract_code, extract_json
-from vision_agent.agent.vision_agent_prompts import (
-    CODE,
-    FIX_BUG,
-    FULL_TASK,
-    PICK_PLAN,
-    PLAN,
-    PREVIOUS_FAILED,
-    SIMPLE_TEST,
-    TEST_PLANS,
-    USER_REQ,
-)
-from vision_agent.lmm import LMM, AzureOpenAILMM, Message, OpenAILMM
-from vision_agent.utils import CodeInterpreterFactory, Execution
-from vision_agent.utils.execute import CodeInterpreter
-from vision_agent.utils.image_utils import b64_to_pil
-from vision_agent.utils.sim import AzureSim, Sim
-from vision_agent.utils.video import play_video
+from vision_agent.agent.agent_utils import extract_json
+from vision_agent.agent.vision_agent_prompts import EXAMPLES_CODE, VA_CODE
+from vision_agent.lmm import LMM, Message, OpenAILMM
+from vision_agent.tools import META_TOOL_DOCSTRING
+from vision_agent.utils import CodeInterpreterFactory
 
-logging.basicConfig(stream=sys.stdout)
+logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
-_MAX_TABULATE_COL_WIDTH = 80
-_CONSOLE = Console()
+WORKSPACE = Path(os.getenv("WORKSPACE", ""))
+WORKSPACE.mkdir(parents=True, exist_ok=True)
+os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
 
 class DefaultImports:
-    """Container for default imports used in the code execution."""
-
-    common_imports = [
+    code = [
         "from typing import *",
-        "from pillow_heif import register_heif_opener",
-        "register_heif_opener()",
+        "from vision_agent.utils.execute import CodeInterpreter",
+        "from vision_agent.tools.meta_tools import generate_vision_code, edit_vision_code",
     ]
 
     @staticmethod
     def to_code_string() -> str:
-        return "\n".join(DefaultImports.common_imports + T.__new_tools__)
+        return "\n".join(DefaultImports.code)
 
     @staticmethod
     def prepend_imports(code: str) -> str:
@@ -62,878 +37,134 @@ class DefaultImports:
         return DefaultImports.to_code_string() + "\n\n" + code
 
 
-def get_diff(before: str, after: str) -> str:
-    return "".join(
-        difflib.unified_diff(
-            before.splitlines(keepends=True), after.splitlines(keepends=True)
-        )
+def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
+    chat = copy.deepcopy(chat)
+
+    conversation = ""
+    for chat_i in chat:
+        if chat_i["role"] == "user":
+            conversation += f"USER: {chat_i['content']}\n\n"
+        elif chat_i["role"] == "observation":
+            conversation += f"OBSERVATION:\n{chat_i['content']}\n\n"
+        elif chat_i["role"] == "assistant":
+            conversation += f"AGENT: {chat_i['content']}\n\n"
+        else:
+            raise ValueError(f"role {chat_i['role']} is not supported")
+
+    prompt = VA_CODE.format(
+        documentation=META_TOOL_DOCSTRING,
+        examples=EXAMPLES_CODE,
+        dir=WORKSPACE,
+        conversation=conversation,
     )
+    return extract_json(orch([{"role": "user", "content": prompt}]))
 
 
-def format_memory(memory: List[Dict[str, str]]) -> str:
-    output_str = ""
-    for i, m in enumerate(memory):
-        output_str += f"### Feedback {i}:\n"
-        output_str += f"Code {i}:\n```python\n{m['code']}```\n\n"
-        output_str += f"Feedback {i}: {m['feedback']}\n\n"
-        if "edits" in m:
-            output_str += f"Edits {i}:\n{m['edits']}\n"
-        output_str += "\n"
+def run_code_action(code: str) -> str:
+    with CodeInterpreterFactory.new_instance() as code_interpreter:
+        result = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
 
-    return output_str
+    return_str = ""
 
-
-def format_plans(plans: Dict[str, Any]) -> str:
-    plan_str = ""
-    for k, v in plans.items():
-        plan_str += f"{k}:\n"
-        plan_str += "-" + "\n-".join([e["instructions"] for e in v])
-
-    return plan_str
-
-
-def extract_code(code: str) -> str:
-    if "\n```python" in code:
-        start = "\n```python"
-    elif "```python" in code:
-        start = "```python"
+    if result.success:
+        for res in result.results:
+            if res.text is not None:
+                return_str += res.text.replace("\\n", "\n")
+        if result.logs.stdout:
+            return_str += "----- stdout -----\n"
+            for log in result.logs.stdout:
+                return_str += log.replace("\\n", "\n")
     else:
-        return code
+        # for log in result.logs.stderr:
+        #     return_str += log.replace("\\n", "\n")
+        if result.error:
+            return_str += "\n" + result.error.value
 
-    code = code[code.find(start) + len(start) :]
-    code = code[: code.find("```")]
-    if code.startswith("python\n"):
-        code = code[len("python\n") :]
+    return return_str
+
+
+def parse_execution(response: str) -> Optional[str]:
+    code = None
+    if "<execute_python>" in response:
+        code = response[response.find("<execute_python>") + len("<execute_python>") :]
+        code = code[: code.find("</execute_python>")]
     return code
 
-
-def extract_json(json_str: str) -> Dict[str, Any]:
-    try:
-        json_dict = json.loads(json_str)
-    except json.JSONDecodeError:
-        input_json_str = json_str
-        if "```json" in json_str:
-            json_str = json_str[json_str.find("```json") + len("```json") :]
-            json_str = json_str[: json_str.find("```")]
-        elif "```" in json_str:
-            json_str = json_str[json_str.find("```") + len("```") :]
-            # get the last ``` not one from an intermediate string
-            json_str = json_str[: json_str.find("}```")]
-        try:
-            json_dict = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            error_msg = f"Could not extract JSON from the given str: {json_str}.\nFunction input:\n{input_json_str}"
-            _LOGGER.exception(error_msg)
-            raise ValueError(error_msg) from e
-    return json_dict  # type: ignore
-
-
-def extract_image(
-    media: Optional[Sequence[Union[str, Path]]]
-) -> Optional[Sequence[Union[str, Path]]]:
-    if media is None:
-        return None
-
-    new_media = []
-    for m in media:
-        m = Path(m)
-        extension = m.suffix
-        if extension in [".jpg", ".jpeg", ".png", ".bmp"]:
-            new_media.append(m)
-        elif extension in [".mp4", ".mov"]:
-            frames = T.extract_frames(m)
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                if len(frames) > 0:
-                    Image.fromarray(frames[0][0]).save(tmp.name)
-                    new_media.append(Path(tmp.name))
-    if len(new_media) == 0:
-        return None
-    return new_media
-
-
-@traceable
-def write_plans(
-    chat: List[Message],
-    tool_desc: str,
-    working_memory: str,
-    model: LMM,
-) -> Dict[str, Any]:
-    chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
-        raise ValueError("Last chat message must be from the user.")
-
-    user_request = chat[-1]["content"]
-    context = USER_REQ.format(user_request=user_request)
-    prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
-    chat[-1]["content"] = prompt
-    return extract_json(model.chat(chat))
-
-
-@traceable
-def pick_plan(
-    chat: List[Message],
-    plans: Dict[str, Any],
-    tool_infos: Dict[str, str],
-    model: LMM,
-    code_interpreter: CodeInterpreter,
-    test_multi_plan: bool,
-    log_progress: Callable[[Dict[str, Any]], None],
-    verbosity: int = 0,
-    max_retries: int = 3,
-) -> Tuple[Any, str, str]:
-    if not test_multi_plan:
-        k = list(plans.keys())[0]
-        log_progress(
-            {
-                "type": "log",
-                "log_content": "Plans created",
-                "status": "completed",
-                "payload": plans[k],
-            }
-        )
-        return plans[k], tool_infos[k], ""
-
-    log_progress(
-        {
-            "type": "log",
-            "log_content": "Generating code to pick best plan",
-            "status": "started",
-        }
-    )
-    all_tool_info = tool_infos["all"]
-    chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
-        raise ValueError("Last chat message must be from the user.")
-
-    plan_str = format_plans(plans)
-    prompt = TEST_PLANS.format(
-        docstring=all_tool_info, plans=plan_str, previous_attempts=""
-    )
-
-    code = extract_code(model(prompt))
-    log_progress(
-        {
-            "type": "log",
-            "log_content": "Executing code to test plan",
-            "code": code,
-            "status": "running",
-        }
-    )
-    tool_output = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
-    tool_output_str = ""
-    if len(tool_output.logs.stdout) > 0:
-        tool_output_str = tool_output.logs.stdout[0]
-
-    if verbosity == 2:
-        _print_code("Initial code and tests:", code)
-        _LOGGER.info(f"Initial code execution result:\n{tool_output.text()}")
-
-    log_progress(
-        {
-            "type": "log",
-            "log_content": (
-                "Code execution succeed"
-                if tool_output.success
-                else "Code execution failed"
-            ),
-            "payload": tool_output.to_json(),
-            "status": "completed" if tool_output.success else "failed",
-        }
-    )
-    # retry if the tool output is empty or code fails
-    count = 0
-    while (not tool_output.success or tool_output_str == "") and count < max_retries:
-        prompt = TEST_PLANS.format(
-            docstring=all_tool_info,
-            plans=plan_str,
-            previous_attempts=PREVIOUS_FAILED.format(
-                code=code, error=tool_output.text()
-            ),
-        )
-        log_progress(
-            {
-                "type": "log",
-                "log_content": "Retry running code",
-                "code": code,
-                "status": "running",
-            }
-        )
-        code = extract_code(model(prompt))
-        tool_output = code_interpreter.exec_isolation(
-            DefaultImports.prepend_imports(code)
-        )
-        log_progress(
-            {
-                "type": "log",
-                "log_content": (
-                    "Code execution succeed"
-                    if tool_output.success
-                    else "Code execution failed"
-                ),
-                "code": code,
-                "payload": {
-                    "result": tool_output.to_json(),
-                },
-                "status": "completed" if tool_output.success else "failed",
-            }
-        )
-        tool_output_str = ""
-        if len(tool_output.logs.stdout) > 0:
-            tool_output_str = tool_output.logs.stdout[0]
-
-        if verbosity == 2:
-            _print_code("Code and test after attempted fix:", code)
-            _LOGGER.info(f"Code execution result after attempte {count}")
-
-        count += 1
-
-    if verbosity >= 1:
-        _print_code("Final code:", code)
-
-    user_req = chat[-1]["content"]
-    context = USER_REQ.format(user_request=user_req)
-    # because the tool picker model gets the image as well, we have to be careful with
-    # how much text we send it, so we truncate the tool output to 20,000 characters
-    prompt = PICK_PLAN.format(
-        context=context,
-        plans=format_plans(plans),
-        tool_output=tool_output_str[:20_000],
-    )
-    chat[-1]["content"] = prompt
-    best_plan = extract_json(model(chat))
-    if verbosity >= 1:
-        _LOGGER.info(f"Best plan:\n{best_plan}")
-
-    plan = best_plan["best_plan"]
-    if plan in plans and plan in tool_infos:
-        best_plans = plans[plan]
-        best_tool_infos = tool_infos[plan]
-    else:
-        if verbosity >= 1:
-            _LOGGER.warning(
-                f"Best plan {plan} not found in plans or tool_infos. Using the first plan and tool info."
-            )
-        k = list(plans.keys())[0]
-        best_plans = plans[k]
-        best_tool_infos = tool_infos[k]
-
-    log_progress(
-        {
-            "type": "log",
-            "log_content": "Picked best plan",
-            "status": "complete",
-            "payload": best_plans,
-        }
-    )
-    return best_plans, best_tool_infos, tool_output_str
-
-
-@traceable
-def write_code(
-    coder: LMM,
-    chat: List[Message],
-    plan: str,
-    tool_info: str,
-    tool_output: str,
-    feedback: str,
-) -> str:
-    chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
-        raise ValueError("Last chat message must be from the user.")
-
-    user_request = chat[-1]["content"]
-    prompt = CODE.format(
-        docstring=tool_info,
-        question=FULL_TASK.format(user_request=user_request, subtasks=plan),
-        tool_output=tool_output,
-        feedback=feedback,
-    )
-    chat[-1]["content"] = prompt
-    return extract_code(coder(chat))
-
-
-@traceable
-def write_test(
-    tester: LMM,
-    chat: List[Message],
-    tool_utils: str,
-    code: str,
-    feedback: str,
-    media: Optional[Sequence[Union[str, Path]]] = None,
-) -> str:
-    chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
-        raise ValueError("Last chat message must be from the user.")
-
-    user_request = chat[-1]["content"]
-    prompt = SIMPLE_TEST.format(
-        docstring=tool_utils,
-        question=user_request,
-        code=code,
-        feedback=feedback,
-        media=media,
-    )
-    chat[-1]["content"] = prompt
-    return extract_code(tester(chat))
-
-
-def write_and_test_code(
-    chat: List[Message],
-    plan: str,
-    tool_info: str,
-    tool_output: str,
-    tool_utils: str,
-    working_memory: List[Dict[str, str]],
-    coder: LMM,
-    tester: LMM,
-    debugger: LMM,
-    code_interpreter: CodeInterpreter,
-    log_progress: Callable[[Dict[str, Any]], None],
-    verbosity: int = 0,
-    max_retries: int = 3,
-    media: Optional[Sequence[Union[str, Path]]] = None,
-) -> Dict[str, Any]:
-    log_progress(
-        {
-            "type": "log",
-            "log_content": "Generating code",
-            "status": "started",
-        }
-    )
-    code = write_code(
-        coder,
-        chat,
-        plan,
-        tool_info,
-        tool_output,
-        format_memory(working_memory),
-    )
-    test = write_test(
-        tester, chat, tool_utils, code, format_memory(working_memory), media
-    )
-
-    log_progress(
-        {
-            "type": "log",
-            "log_content": "Running code",
-            "status": "running",
-            "code": DefaultImports.prepend_imports(code),
-            "payload": {
-                "test": test,
-            },
-        }
-    )
-    result = code_interpreter.exec_isolation(
-        f"{DefaultImports.to_code_string()}\n{code}\n{test}"
-    )
-    log_progress(
-        {
-            "type": "log",
-            "log_content": (
-                "Code execution succeed" if result.success else "Code execution failed"
-            ),
-            "status": "completed" if result.success else "failed",
-            "code": DefaultImports.prepend_imports(code),
-            "payload": {
-                "test": test,
-                "result": result.to_json(),
-            },
-        }
-    )
-    if verbosity == 2:
-        _print_code("Initial code and tests:", code, test)
-        _LOGGER.info(
-            f"Initial code execution result:\n{result.text(include_logs=True)}"
-        )
-
-    count = 0
-    new_working_memory: List[Dict[str, str]] = []
-    while not result.success and count < max_retries:
-        if verbosity == 2:
-            _LOGGER.info(f"Start debugging attempt {count + 1}")
-        code, test, result = debug_code(
-            working_memory,
-            debugger,
-            code_interpreter,
-            code,
-            test,
-            result,
-            new_working_memory,
-            log_progress,
-            verbosity,
-        )
-        count += 1
-
-    if verbosity >= 1:
-        _print_code("Final code and tests:", code, test)
-
-    return {
-        "code": code,
-        "test": test,
-        "success": result.success,
-        "test_result": result,
-        "working_memory": new_working_memory,
-    }
-
-
-@traceable
-def debug_code(
-    working_memory: List[Dict[str, str]],
-    debugger: LMM,
-    code_interpreter: CodeInterpreter,
-    code: str,
-    test: str,
-    result: Execution,
-    new_working_memory: List[Dict[str, str]],
-    log_progress: Callable[[Dict[str, Any]], None],
-    verbosity: int = 0,
-) -> tuple[str, str, Execution]:
-    log_progress(
-        {
-            "type": "code",
-            "status": "started",
-        }
-    )
-
-    fixed_code_and_test = {"code": "", "test": "", "reflections": ""}
-    success = False
-    count = 0
-    while not success and count < 3:
-        try:
-            fixed_code_and_test = extract_json(
-                debugger(
-                    FIX_BUG.format(
-                        code=code,
-                        tests=test,
-                        result="\n".join(result.text().splitlines()[-100:]),
-                        feedback=format_memory(working_memory + new_working_memory),
-                    )
-                )
-            )
-            success = True
-        except Exception as e:
-            _LOGGER.exception(f"Error while extracting JSON: {e}")
-
-        count += 1
-
-    old_code = code
-    old_test = test
-
-    if fixed_code_and_test["code"].strip() != "":
-        code = extract_code(fixed_code_and_test["code"])
-    if fixed_code_and_test["test"].strip() != "":
-        test = extract_code(fixed_code_and_test["test"])
-
-    new_working_memory.append(
-        {
-            "code": f"{code}\n{test}",
-            "feedback": fixed_code_and_test["reflections"],
-            "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
-        }
-    )
-    log_progress(
-        {
-            "type": "code",
-            "status": "running",
-            "payload": {
-                "code": DefaultImports.prepend_imports(code),
-                "test": test,
-            },
-        }
-    )
-
-    result = code_interpreter.exec_isolation(
-        f"{DefaultImports.to_code_string()}\n{code}\n{test}"
-    )
-    log_progress(
-        {
-            "type": "code",
-            "status": "completed" if result.success else "failed",
-            "payload": {
-                "code": DefaultImports.prepend_imports(code),
-                "test": test,
-                "result": result.to_json(),
-            },
-        }
-    )
-    if verbosity == 2:
-        _print_code("Code and test after attempted fix:", code, test)
-        _LOGGER.info(
-            f"Reflection: {fixed_code_and_test['reflections']}\nCode execution result after attempted fix: {result.text(include_logs=True)}"
-        )
-
-    return code, test, result
-
-
-def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
-    _CONSOLE.print(title, style=Style(bgcolor="dark_orange3", bold=True))
-    _CONSOLE.print("=" * 30 + " Code " + "=" * 30)
-    _CONSOLE.print(
-        Syntax(
-            DefaultImports.prepend_imports(code),
-            "python",
-            theme="gruvbox-dark",
-            line_numbers=True,
-        )
-    )
-    if test:
-        _CONSOLE.print("=" * 30 + " Test " + "=" * 30)
-        _CONSOLE.print(Syntax(test, "python", theme="gruvbox-dark", line_numbers=True))
-
-
-def retrieve_tools(
-    plans: Dict[str, List[Dict[str, str]]],
-    tool_recommender: Sim,
-    verbosity: int = 0,
-) -> Tuple[Dict[str, str], Dict[str, List[Dict[str, str]]]]:
-    tool_info = []
-    tool_desc = []
-    tool_lists: Dict[str, List[Dict[str, str]]] = {}
-    for k, plan in plans.items():
-        tool_lists[k] = []
-        for task in plan:
-            tools = tool_recommender.top_k(task["instructions"], k=2, thresh=0.3)
-            tool_info.extend([e["doc"] for e in tools])
-            tool_desc.extend([e["desc"] for e in tools])
-            tool_lists[k].extend(
-                {
-                    "plan": task["instructions"] if index == 0 else "",
-                    "tool": e["desc"].strip().split()[0],
-                    "documentation": e["doc"],
-                }
-                for index, e in enumerate(tools)
-            )
-
-    if verbosity == 2:
-        tool_desc_str = "\n".join(set(tool_desc))
-        _LOGGER.info(f"Tools Description:\n{tool_desc_str}")
-
-    tool_lists_unique = {}
-    for k in tool_lists:
-        tool_lists_unique[k] = "\n\n".join(
-            set(e["documentation"] for e in tool_lists[k])
-        )
-    all_tools = "\n\n".join(set(tool_info))
-    tool_lists_unique["all"] = all_tools
-    return tool_lists_unique, tool_lists
-
-
 class VisionAgent(Agent):
-    """Vision Agent is an agentic framework that can output code based on a user
-    request. It can plan tasks, retrieve relevant tools, write code, write tests and
-    reflect on failed test cases to debug code. It is inspired by AgentCoder
-    https://arxiv.org/abs/2312.13010 and Data Interpeter
-    https://arxiv.org/abs/2402.18679
-
-    Example
-    -------
-        >>> from vision_agent import VisionAgent
-        >>> agent = VisionAgent()
-        >>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
-    """
-
     def __init__(
         self,
-        planner: Optional[LMM] = None,
-        coder: Optional[LMM] = None,
-        tester: Optional[LMM] = None,
-        debugger: Optional[LMM] = None,
-        tool_recommender: Optional[Sim] = None,
+        agent: Optional[LMM] = None,
         verbosity: int = 0,
-        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
     ) -> None:
-        """Initialize the Vision Agent.
-
-        Parameters:
-            planner (Optional[LMM]): The planner model to use. Defaults to OpenAILMM.
-            coder (Optional[LMM]): The coder model to use. Defaults to OpenAILMM.
-            tester (Optional[LMM]): The tester model to use. Defaults to OpenAILMM.
-            debugger (Optional[LMM]): The debugger model to
-            tool_recommender (Optional[Sim]): The tool recommender model to use.
-            verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
-                highest verbosity level which will output all intermediate debugging
-                code.
-            report_progress_callback: a callback to report the progress of the agent.
-                This is useful for streaming logs in a web application where multiple
-                VisionAgent instances are running in parallel. This callback ensures
-                that the progress are not mixed up.
-            code_sandbox_runtime: the code sandbox runtime to use. A code sandbox is
-                 used to run the generated code. It can be one of the following
-                 values: None, "local" or "e2b". If None, Vision Agent will read the
-                 value from the environment variable CODE_SANDBOX_RUNTIME. If it's
-                 also None, the local python runtime environment will be used.
-        """
-
-        self.planner = (
-            OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
+        self.agent = (
+            OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
         )
-        self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
-        self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
-        self.debugger = (
-            OpenAILMM(temperature=0.0, json_mode=True) if debugger is None else debugger
-        )
-
-        self.tool_recommender = (
-            Sim(T.TOOLS_DF, sim_key="desc")
-            if tool_recommender is None
-            else tool_recommender
-        )
+        self.max_iterations = 100
         self.verbosity = verbosity
-        self.max_retries = 2
-        self.report_progress_callback = report_progress_callback
-        self.code_sandbox_runtime = code_sandbox_runtime
+        if self.verbosity >= 1:
+            _LOGGER.setLevel(logging.INFO)
 
     def __call__(
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ) -> str:
-        """Chat with Vision Agent and return intermediate information regarding the task.
+    ):
+        return "This is a planner agent"
 
-        Parameters:
-            input (Union[str, List[Message]]): A conversation in the format of
-                [{"role": "user", "content": "describe your task here..."}] or a string
-                of just the contents.
-            media (Optional[Union[str, Path]]): The media file to be used in the task.
-
-        Returns:
-            str: The code output by the Vision Agent.
-        """
-
-        if isinstance(input, str):
-            input = [{"role": "user", "content": input}]
-            if media is not None:
-                input[0]["media"] = [media]
-        results = self.chat_with_workflow(input)
-        results.pop("working_memory")
-        return results  # type: ignore
-
-    @traceable
-    def chat_with_workflow(
+    def chat_with_code(
         self,
         chat: List[Message],
-        test_multi_plan: bool = True,
-        display_visualization: bool = False,
-    ) -> Dict[str, Any]:
-        """Chat with Vision Agent and return intermediate information regarding the task.
-
-        Parameters:
-            chat (List[Message]): A conversation
-                in the format of:
-                [{"role": "user", "content": "describe your task here..."}]
-                or if it contains media files, it should be in the format of:
-                [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
-            display_visualization (bool): If True, it opens a new window locally to
-                show the image(s) created by visualization code (if there is any).
-
-        Returns:
-            Dict[str, Any]: A dictionary containing the code, test, test result, plan,
-                and working memory of the agent.
-        """
-
+    ) -> List[Message]:
         if not chat:
-            raise ValueError("Chat cannot be empty.")
+            raise ValueError("chat cannot be empty")
 
-        # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
-        with CodeInterpreterFactory.new_instance(
-            code_sandbox_runtime=self.code_sandbox_runtime
-        ) as code_interpreter:
-            chat = copy.deepcopy(chat)
-            media_list = []
-            for chat_i in chat:
-                if "media" in chat_i:
-                    for media in chat_i["media"]:
-                        media = code_interpreter.upload_file(media)
-                        chat_i["content"] += f" Media name {media}"  # type: ignore
-                        media_list.append(media)
+        orig_chat = copy.deepcopy(chat)
+        int_chat = copy.deepcopy(chat)
+        media_list = []
+        for chat_i in int_chat:
+            if "media" in chat_i:
+                for media in chat_i["media"]:
+                    chat_i["content"] += f" Media name {media}"  # type: ignore
+                    media_list.append(media)
 
-            int_chat = cast(
-                List[Message],
-                [
-                    (
-                        {
-                            "role": c["role"],
-                            "content": c["content"],
-                            "media": c["media"],
-                        }
-                        if "media" in c
-                        else {"role": c["role"], "content": c["content"]}
-                    )
-                    for c in chat
-                ],
-            )
-
-            code = ""
-            test = ""
-            working_memory: List[Dict[str, str]] = []
-            results = {"code": "", "test": "", "plan": []}
-            plan = []
-
-            self.log_progress(
-                {
-                    "type": "log",
-                    "log_content": "Creating plans",
-                    "status": "started",
-                }
-            )
-            plans = write_plans(
-                int_chat,
-                T.TOOL_DESCRIPTIONS,
-                format_memory(working_memory),
-                self.planner,
-            )
-
-            if self.verbosity >= 1 and test_multi_plan:
-                for p in plans:
-                    _LOGGER.info(
-                        f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
-                    )
-
-            tool_infos, tool_lists = retrieve_tools(
-                plans,
-                self.tool_recommender,
-                self.verbosity,
-            )
-
-            if test_multi_plan:
-                self.log_progress(
+        int_chat = cast(
+            List[Message],
+            [
+                (
                     {
-                        "type": "log",
-                        "log_content": "Creating plans",
-                        "status": "completed",
-                        "payload": tool_lists,
+                        "role": c["role"],
+                        "content": c["content"],
+                        "media": c["media"],
                     }
+                    if "media" in c
+                    else {"role": c["role"], "content": c["content"]}
                 )
+                for c in chat
+            ],
+        )
 
-            best_plan, best_tool_info, tool_output_str = pick_plan(
-                int_chat,
-                plans,
-                tool_infos,
-                self.coder,
-                code_interpreter,
-                test_multi_plan,
-                self.log_progress,
-                verbosity=self.verbosity,
-            )
-
+        finished = False
+        iterations = 0
+        while not finished and iterations < self.max_iterations:
+            response = run_conversation(self.agent, int_chat)
             if self.verbosity >= 1:
-                _LOGGER.info(
-                    f"Picked best plan:\n{tabulate(tabular_data=best_plan, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
-                )
+                _LOGGER.info(response)
+            int_chat.append({"role": "assistant", "content": str(response)})
+            orig_chat.append({"role": "assistant", "content": str(response)})
 
-            results = write_and_test_code(
-                chat=[{"role": c["role"], "content": c["content"]} for c in int_chat],
-                plan="\n-" + "\n-".join([e["instructions"] for e in best_plan]),
-                tool_info=best_tool_info,
-                tool_output=tool_output_str,
-                tool_utils=T.UTILITIES_DOCSTRING,
-                working_memory=working_memory,
-                coder=self.coder,
-                tester=self.tester,
-                debugger=self.debugger,
-                code_interpreter=code_interpreter,
-                log_progress=self.log_progress,
-                verbosity=self.verbosity,
-                media=media_list,
-            )
-            success = cast(bool, results["success"])
-            code = cast(str, results["code"])
-            test = cast(str, results["test"])
-            working_memory.extend(results["working_memory"])  # type: ignore
-            plan.append({"code": code, "test": test, "plan": best_plan})
+            if response["let_user_respond"]:
+                break
 
-            execution_result = cast(Execution, results["test_result"])
-            self.log_progress(
-                {
-                    "type": "final_code",
-                    "status": "completed" if success else "failed",
-                    "payload": {
-                        "code": DefaultImports.prepend_imports(code),
-                        "test": test,
-                        "result": execution_result.to_json(),
-                    },
-                }
-            )
+            code_action = parse_execution(response["response"])
 
-            if display_visualization:
-                for res in execution_result.results:
-                    if res.png:
-                        b64_to_pil(res.png).show()
-                    if res.mp4:
-                        play_video(res.mp4)
+            if code_action is not None:
+                obs = run_code_action(code_action)
+                _LOGGER.info(obs)
+                int_chat.append({"role": "observation", "content": obs})
+                orig_chat.append({"role": "observation", "content": obs})
 
-            return {
-                "code": DefaultImports.prepend_imports(code),
-                "test": test,
-                "test_result": execution_result,
-                "plan": plan,
-                "working_memory": working_memory,
-            }
+            iterations += 1
+        return orig_chat
 
     def log_progress(self, data: Dict[str, Any]) -> None:
-        if self.report_progress_callback is not None:
-            self.report_progress_callback(data)
-
-
-class AzureVisionAgent(VisionAgent):
-    """Vision Agent that uses Azure OpenAI APIs for planning, coding, testing.
-
-    Pre-requisites:
-    1. Set the environment variable AZURE_OPENAI_API_KEY to your Azure OpenAI API key.
-    2. Set the environment variable AZURE_OPENAI_ENDPOINT to your Azure OpenAI endpoint.
-
-    Example
-    -------
-        >>> from vision_agent import AzureVisionAgent
-        >>> agent = AzureVisionAgent()
-        >>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
-    """
-
-    def __init__(
-        self,
-        planner: Optional[LMM] = None,
-        coder: Optional[LMM] = None,
-        tester: Optional[LMM] = None,
-        debugger: Optional[LMM] = None,
-        tool_recommender: Optional[Sim] = None,
-        verbosity: int = 0,
-        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-    ) -> None:
-        """Initialize the Vision Agent.
-
-        Parameters:
-            planner (Optional[LMM]): The planner model to use. Defaults to OpenAILMM.
-            coder (Optional[LMM]): The coder model to use. Defaults to OpenAILMM.
-            tester (Optional[LMM]): The tester model to use. Defaults to OpenAILMM.
-            debugger (Optional[LMM]): The debugger model to
-            tool_recommender (Optional[Sim]): The tool recommender model to use.
-            verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
-                highest verbosity level which will output all intermediate debugging
-                code.
-            report_progress_callback: a callback to report the progress of the agent.
-                This is useful for streaming logs in a web application where multiple
-                VisionAgent instances are running in parallel. This callback ensures
-                that the progress are not mixed up.
-        """
-        super().__init__(
-            planner=(
-                AzureOpenAILMM(temperature=0.0, json_mode=True)
-                if planner is None
-                else planner
-            ),
-            coder=AzureOpenAILMM(temperature=0.0) if coder is None else coder,
-            tester=AzureOpenAILMM(temperature=0.0) if tester is None else tester,
-            debugger=(
-                AzureOpenAILMM(temperature=0.0, json_mode=True)
-                if debugger is None
-                else debugger
-            ),
-            tool_recommender=(
-                AzureSim(T.TOOLS_DF, sim_key="desc")
-                if tool_recommender is None
-                else tool_recommender
-            ),
-            verbosity=verbosity,
-            report_progress_callback=report_progress_callback,
-        )
+        pass
