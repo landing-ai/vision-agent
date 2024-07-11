@@ -10,6 +10,7 @@ from vision_agent.agent.vision_agent_prompts import EXAMPLES_CODE, VA_CODE
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.utils import CodeInterpreterFactory
+from vision_agent.utils.execute import CodeInterpreter
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
@@ -60,12 +61,10 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     return extract_json(orch([{"role": "user", "content": prompt}]))
 
 
-def run_code_action(code: str) -> str:
-    with CodeInterpreterFactory.new_instance() as code_interpreter:
-        result = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
+def run_code_action(code: str, code_interpreter: CodeInterpreter) -> str:
+    result = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
 
     return_str = ""
-
     if result.success:
         for res in result.results:
             if res.text is not None:
@@ -95,12 +94,14 @@ class VisionAgent(Agent):
         self,
         agent: Optional[LMM] = None,
         verbosity: int = 0,
+        code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         self.agent = (
             OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
         )
         self.max_iterations = 100
         self.verbosity = verbosity
+        self.code_sandbox_runtime = code_sandbox_runtime
         if self.verbosity >= 1:
             _LOGGER.setLevel(logging.INFO)
 
@@ -118,52 +119,56 @@ class VisionAgent(Agent):
         if not chat:
             raise ValueError("chat cannot be empty")
 
-        orig_chat = copy.deepcopy(chat)
-        int_chat = copy.deepcopy(chat)
-        media_list = []
-        for chat_i in int_chat:
-            if "media" in chat_i:
-                for media in chat_i["media"]:
-                    chat_i["content"] += f" Media name {media}"  # type: ignore
-                    media_list.append(media)
+        with CodeInterpreterFactory.new_instance(
+            code_sandbox_runtime=self.code_sandbox_runtime
+        ) as code_interpreter:
+            orig_chat = copy.deepcopy(chat)
+            int_chat = copy.deepcopy(chat)
+            media_list = []
+            for chat_i in int_chat:
+                if "media" in chat_i:
+                    for media in chat_i["media"]:
+                        media = code_interpreter.upload_file(media)
+                        chat_i["content"] += f" Media name {media}"  # type: ignore
+                        media_list.append(media)
 
-        int_chat = cast(
-            List[Message],
-            [
-                (
-                    {
-                        "role": c["role"],
-                        "content": c["content"],
-                        "media": c["media"],
-                    }
-                    if "media" in c
-                    else {"role": c["role"], "content": c["content"]}
-                )
-                for c in chat
-            ],
-        )
+            int_chat = cast(
+                List[Message],
+                [
+                    (
+                        {
+                            "role": c["role"],
+                            "content": c["content"],
+                            "media": c["media"],
+                        }
+                        if "media" in c
+                        else {"role": c["role"], "content": c["content"]}
+                    )
+                    for c in chat
+                ],
+            )
 
-        finished = False
-        iterations = 0
-        while not finished and iterations < self.max_iterations:
-            response = run_conversation(self.agent, int_chat)
-            if self.verbosity >= 1:
-                _LOGGER.info(response)
-            int_chat.append({"role": "assistant", "content": str(response)})
-            orig_chat.append({"role": "assistant", "content": str(response)})
+            finished = False
+            iterations = 0
+            while not finished and iterations < self.max_iterations:
+                response = run_conversation(self.agent, int_chat)
+                if self.verbosity >= 1:
+                    _LOGGER.info(response)
+                int_chat.append({"role": "assistant", "content": str(response)})
+                orig_chat.append({"role": "assistant", "content": str(response)})
 
-            if response["let_user_respond"]:
-                break
+                if response["let_user_respond"]:
+                    break
 
-            code_action = parse_execution(response["response"])
+                code_action = parse_execution(response["response"])
 
-            if code_action is not None:
-                obs = run_code_action(code_action)
-                _LOGGER.info(obs)
-                int_chat.append({"role": "observation", "content": obs})
-                orig_chat.append({"role": "observation", "content": obs})
+                if code_action is not None:
+                    obs = run_code_action(code_action, code_interpreter)
+                    _LOGGER.info(obs)
+                    int_chat.append({"role": "observation", "content": obs})
+                    orig_chat.append({"role": "observation", "content": obs})
 
-            iterations += 1
+                iterations += 1
         return orig_chat
 
     def log_progress(self, data: Dict[str, Any]) -> None:
