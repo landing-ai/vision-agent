@@ -40,9 +40,7 @@ _SESSION_TIMEOUT = 600  # 10 minutes
 
 
 class MimeType(str, Enum):
-    """
-    Represents a MIME type.
-    """
+    """Represents a MIME type."""
 
     TEXT_PLAIN = "text/plain"
     TEXT_HTML = "text/html"
@@ -58,7 +56,9 @@ class MimeType(str, Enum):
 
 
 class FileSerializer:
-    """Adaptor class that allows IPython.display.display() to serialize a file to a base64 string representation."""
+    """Adaptor class that allows IPython.display.display() to serialize a file to a
+    base64 string representation.
+    """
 
     def __init__(self, file_uri: str):
         self.video_uri = file_uri
@@ -76,13 +76,15 @@ class FileSerializer:
 
 
 class Result:
-    """
-    Represents the data to be displayed as a result of executing a cell in a Jupyter notebook.
-    The result is similar to the structure returned by ipython kernel: https://ipython.readthedocs.io/en/stable/development/execution.html#execution-semantics
+    """Represents the data to be displayed as a result of executing a cell in a Jupyter
+    notebook. The result is similar to the structure returned by ipython kernel:
+    https://ipython.readthedocs.io/en/stable/development/execution.html#execution-semantics
 
-    The result can contain multiple types of data, such as text, images, plots, etc. Each type of data is represented
-    as a string, and the result can contain multiple types of data. The display calls don't have to have text representation,
-    for the actual result the representation is always present for the result, the other representations are always optional.
+    The result can contain multiple types of data, such as text, images, plots, etc.
+    Each type of data is represented as a string, and the result can contain multiple
+    types of data. The display calls don't have to have text representation, for the
+    actual result the representation is always present for the result, the other
+    representations are always optional.
 
     The class also provides methods to display the data in a Jupyter notebook.
     """
@@ -143,62 +145,43 @@ class Result:
         return str(self.raw)
 
     def _repr_html_(self) -> Optional[str]:
-        """
-        Returns the HTML representation of the data.
-        """
+        """Returns the HTML representation of the data."""
         return self.html
 
     def _repr_markdown_(self) -> Optional[str]:
-        """
-        Returns the Markdown representation of the data.
-        """
+        """Returns the Markdown representation of the data."""
         return self.markdown
 
     def _repr_svg_(self) -> Optional[str]:
-        """
-        Returns the SVG representation of the data.
-        """
+        """Returns the SVG representation of the data."""
         return self.svg
 
     def _repr_png_(self) -> Optional[str]:
-        """
-        Returns the base64 representation of the PNG data.
-        """
+        """Returns the base64 representation of the PNG data."""
         return self.png
 
     def _repr_jpeg_(self) -> Optional[str]:
-        """
-        Returns the base64 representation of the JPEG data.
-        """
+        """Returns the base64 representation of the JPEG data."""
         return self.jpeg
 
     def _repr_pdf_(self) -> Optional[str]:
-        """
-        Returns the PDF representation of the data.
-        """
+        """Returns the PDF representation of the data."""
         return self.pdf
 
     def _repr_latex_(self) -> Optional[str]:
-        """
-        Returns the LaTeX representation of the data.
-        """
+        """Returns the LaTeX representation of the data."""
         return self.latex
 
     def _repr_json_(self) -> Optional[dict]:
-        """
-        Returns the JSON representation of the data.
-        """
+        """Returns the JSON representation of the data."""
         return self.json
 
     def _repr_javascript_(self) -> Optional[str]:
-        """
-        Returns the JavaScript representation of the data.
-        """
+        """Returns the JavaScript representation of the data."""
         return self.javascript
 
     def formats(self) -> Iterable[str]:
-        """
-        Returns all available formats of the result.
+        """Returns all available formats of the result.
 
         :return: All available formats of the result in MIME types.
         """
@@ -239,8 +222,8 @@ class Result:
 
 
 class Logs(BaseModel):
-    """
-    Data printed to stdout and stderr during execution, usually by print statements, logs, warnings, subprocesses, etc.
+    """Data printed to stdout and stderr during execution, usually by print statements,
+    logs, warnings, subprocesses, etc.
     """
 
     stdout: List[str] = []
@@ -257,9 +240,8 @@ class Logs(BaseModel):
 
 
 class Error(BaseModel):
-    """
-    Represents an error that occurred during the execution of a cell.
-    The error contains the name of the error, the value of the error, and the traceback.
+    """Represents an error that occurred during the execution of a cell. The error
+    contains the name of the error, the value of the error, and the traceback.
     """
 
     name: str
@@ -290,9 +272,7 @@ class Error(BaseModel):
 
 
 class Execution(BaseModel):
-    """
-    Represents the result of a cell execution.
-    """
+    """Represents the result of a cell execution."""
 
     class Config:
         arbitrary_types_allowed = True
@@ -305,8 +285,8 @@ class Execution(BaseModel):
     "Error object if an error occurred, None otherwise."
 
     def text(self, include_logs: bool = True) -> str:
-        """
-        Returns the text representation of this object, i.e. including the main result or the error traceback, optionally along with the logs (stdout, stderr).
+        """Returns the text representation of this object, i.e. including the main
+        result or the error traceback, optionally along with the logs (stdout, stderr).
         """
         prefix = str(self.logs) if include_logs else ""
         if self.error:
@@ -330,9 +310,9 @@ class Execution(BaseModel):
         return self.error is None
 
     def get_main_result(self) -> Optional[Result]:
-        """
-        Get the main result of the execution.
-        An execution may have multiple results, e.g. intermediate outputs. The main result is the last output of the cell execution.
+        """Get the main result of the execution. An execution may have multiple
+        results, e.g. intermediate outputs. The main result is the last output of the
+        cell execution.
         """
         if not self.success:
             _LOGGER.info("Result is not available as the execution was not successful.")
@@ -345,16 +325,13 @@ class Execution(BaseModel):
         return main_result
 
     def to_json(self) -> str:
-        """
-        Returns the JSON representation of the Execution object.
-        """
+        """Returns the JSON representation of the Execution object."""
         return self.model_dump_json(exclude_none=True)
 
     @field_serializer("results", when_used="json")
     def serialize_results(results: List[Result]) -> List[Dict[str, Union[str, bool]]]:  # type: ignore
-        """
-        Serializes the results to JSON.
-        This method is used by the Pydantic JSON encoder.
+        """Serializes the results to JSON. This method is used by the Pydantic JSON
+        encoder.
         """
         serialized = []
         for result in results:
@@ -367,9 +344,7 @@ class Execution(BaseModel):
 
     @staticmethod
     def from_exception(exec: Exception, traceback_raw: List[str]) -> "Execution":
-        """
-        Creates an Execution object from an exception.
-        """
+        """Creates an Execution object from an exception."""
         return Execution(
             error=Error(
                 name=exec.__class__.__name__,
@@ -382,9 +357,7 @@ class Execution(BaseModel):
 
     @staticmethod
     def from_e2b_execution(exec: E2BExecution) -> "Execution":  # type: ignore
-        """
-        Creates an Execution object from an E2BResult object.
-        """
+        """Creates an Execution object from an E2BResult object."""
         return Execution(
             results=[Result.from_e2b_result(res) for res in exec.results],
             logs=Logs(stdout=exec.logs.stdout, stderr=exec.logs.stderr),
@@ -634,9 +607,8 @@ class CodeInterpreterFactory:
 
 
 def _parse_local_code_interpreter_outputs(outputs: List[Dict[str, Any]]) -> Execution:
-    """
-    Parse notebook cell outputs to Execution object.
-    Output types: https://nbformat.readthedocs.io/en/latest/format_description.html#code-cell-outputs
+    """Parse notebook cell outputs to Execution object. Output types:
+    https://nbformat.readthedocs.io/en/latest/format_description.html#code-cell-outputs
     """
     execution = Execution()
     for data in outputs:

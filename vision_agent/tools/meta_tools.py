@@ -1,4 +1,3 @@
-import os
 import subprocess
 from pathlib import Path
 from typing import List
@@ -6,7 +5,6 @@ from typing import List
 import vision_agent as va
 from vision_agent.tools.tool_utils import get_tool_documentation
 
-WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 CURRENT_FILE = None
 CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100
@@ -33,12 +31,12 @@ def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
             return dogs
     """
 
-    agent = va.agent.VisionAgent()
+    agent = va.agent.VisionAgentCoder()
     try:
         fixed_chat = [{"role": "user", "content": chat, "media": media}]
         response = agent.chat_with_workflow(fixed_chat)
         code = response["code"]
-        with open(Path(WORKSPACE) / save_file, "w") as f:
+        with open(save_file, "w") as f:
             f.write(code)
         code_lines = code.splitlines(keepends=True)
         total_lines = len(code_lines)
@@ -71,8 +69,8 @@ def edit_vision_code(code_file: str, chat_history: List[str], media: List[str]) 
             return dogs
     """
 
-    agent = va.agent.VisionAgent()
-    with open(Path(WORKSPACE) / code_file, "r") as f:
+    agent = va.agent.VisionAgentCoder()
+    with open(code_file, "r") as f:
         code = f.read()
 
     # Append latest code to second to last message from assistant
@@ -89,7 +87,7 @@ def edit_vision_code(code_file: str, chat_history: List[str], media: List[str]) 
     try:
         response = agent.chat_with_workflow(fixed_chat_history)
         code = response["code"]
-        with open(Path(WORKSPACE) / code_file, "w") as f:
+        with open(code_file, "w") as f:
             f.write(code)
         code_lines = code.splitlines(keepends=True)
         total_lines = len(code_lines)
@@ -116,7 +114,7 @@ def view_lines(
 
 
 def open_file(file_path: str, line_num: int = 0, window_size: int = 100) -> str:
-    file_path_p = Path(WORKSPACE) / file_path
+    file_path_p =  Path(file_path)
     if not file_path_p.exists():
         return f"[File {file_path} does not exist]"
 
@@ -138,7 +136,7 @@ def open_file(file_path: str, line_num: int = 0, window_size: int = 100) -> str:
 
 
 def create_file(file_path: str) -> str:
-    file_path_p = Path(WORKSPACE) / file_path
+    file_path_p = Path(file_path)
     if file_path_p.exists():
         return f"[File {file_path} already exists]"
     file_path_p.touch()
@@ -160,7 +158,7 @@ def scroll_down() -> str:
 
 
 def edit_file(file_path: str, start: int, end: int, content: str) -> str:
-    file_path_p = Path(WORKSPACE) / file_path
+    file_path_p = Path(file_path)
     if not file_path_p.exists():
         return f"[File {file_path} does not exist]"
 
@@ -220,4 +218,4 @@ def edit_file(file_path: str, start: int, end: int, content: str) -> str:
     return open_file(file_path, cur_line)
 
 
-ORCH_TOOL_DOCSTRING = get_tool_documentation([generate_vision_code, edit_vision_code])
+META_TOOL_DOCSTRING = get_tool_documentation([generate_vision_code, edit_vision_code])
