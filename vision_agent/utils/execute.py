@@ -530,17 +530,19 @@ Timeout: {self.timeout}"""
             run_sync(self.nb_client.km.shutdown_kernel)(now=True)
             run_sync(self.nb_client.km.cleanup_resources)()
 
-            channels = [
-                self.nb_client.kc.stdin_channel,
-                self.nb_client.kc.hb_channel,
-                self.nb_client.kc.control_channel,
-            ]
+            if self.nb_client.kc is not None:
+                channels = [
+                    self.nb_client.kc.stdin_channel,
+                    self.nb_client.kc.hb_channel,
+                    self.nb_client.kc.control_channel,
+                ]
 
-            for ch in channels:
-                if ch.is_alive():
-                    ch.stop()
+                for ch in channels:
+                    if ch.is_alive():
+                        ch.stop()
+                self.nb_client.kc.stop_channels()
 
-            self.nb_client.kc = None
+                self.nb_client.kc = None
             self.nb_client.km = None
 
     def restart_kernel(self) -> None:
