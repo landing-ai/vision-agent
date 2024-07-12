@@ -655,7 +655,15 @@ class VisionAgent(Agent):
             int_chat = cast(
                 List[Message],
                 [
-                    {"role": c["role"], "content": c["content"], "media": c["media"]}
+                    (
+                        {
+                            "role": c["role"],
+                            "content": c["content"],
+                            "media": c["media"],
+                        }
+                        if "media" in c
+                        else {"role": c["role"], "content": c["content"]}
+                    )
                     for c in chat
                 ],
             )
