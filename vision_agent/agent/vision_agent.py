@@ -176,6 +176,7 @@ def pick_plan(
     model: LMM,
     code_interpreter: CodeInterpreter,
     verbosity: int = 0,
+    max_retries: int = 3
 ) -> Tuple[str, str]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -197,8 +198,8 @@ def pick_plan(
         _LOGGER.info(f"Initial code execution result:\n{tool_output.text()}")
 
     # retry if the tool output is empty or code fails
-    count = 1
-    while (not tool_output.success or tool_output_str == "") and count < 3:
+    count = 0
+    while (not tool_output.success or tool_output_str == "") and count < max_retries:
         prompt = TEST_PLANS.format(
             docstring=tool_info,
             plans=plan_str,
