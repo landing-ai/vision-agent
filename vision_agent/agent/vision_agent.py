@@ -16,14 +16,15 @@ logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 WORKSPACE.mkdir(parents=True, exist_ok=True)
-os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
+if WORKSPACE != "":
+    os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
 
 class DefaultImports:
     code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import generate_vision_code, edit_vision_code",
+        "from vision_agent.tools.meta_tools import generate_vision_code, edit_vision_code, open_file, create_file, scroll_up, scroll_down, edit_file",
     ]
 
     @staticmethod
@@ -109,8 +110,13 @@ class VisionAgent(Agent):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ):
-        return "This is a planner agent"
+    ) -> List[Message]:
+        if isinstance(input, str):
+            input = [{"role": "user", "content": input}]
+            if media is not None:
+                input[0]["media"] = [media]
+        results = self.chat_with_code(input)
+        return results  # type: ignore
 
     def chat_with_code(
         self,

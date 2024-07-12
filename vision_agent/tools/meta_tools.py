@@ -10,6 +10,16 @@ CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100
 
 
+def filter_file(file_name: str | Path) -> bool:
+    file_name_p = Path(file_name)
+    return (
+        file_name_p.is_file()
+        and "__pycache__" not in str(file_name_p)
+        and file_name_p.suffix in [".py", ".txt"]
+        and not file_name_p.name.startswith(".")
+    )
+
+
 def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
     """Generates python code to solve vision based tasks.
 
@@ -23,7 +33,7 @@ def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
 
     Examples
     --------
-        >>> generate_vision_code("code.py", "Can you detect the dogs in this image?", ["dog.jpg"])
+        >>> generate_vision_code("code.py", "Can you detect the dogs in this image?", ["image.jpg"])
         from vision_agent.tools import load_image, owl_v2
         def detect_dogs(image_path: str):
             image = load_image(image_path)
@@ -114,11 +124,23 @@ def view_lines(
 
 
 def open_file(file_path: str, line_num: int = 0, window_size: int = 100) -> str:
-    file_path_p =  Path(file_path)
+    """Opens the file at at the given path in the editor. If `line_num` is provided,
+    the window will be moved to include that line. It only shows the first 100 lines by
+    default! Max `window_size` supported is 2000. use `scroll up/down` to view the file
+    if you want to see more.
+
+    Parameters:
+        file_path (str): The file path to open, preferred absolute path.
+        line_num (int): The line number to move the window to.
+        window_size (int): The number of lines to show above and below the line.
+    """
+
+    file_path_p = Path(file_path)
     if not file_path_p.exists():
         return f"[File {file_path} does not exist]"
 
     total_lines = sum(1 for _ in open(file_path_p))
+    window_size = min(window_size, 2000)
     window_size = window_size // 2
     if line_num - window_size < 0:
         line_num = window_size
@@ -136,14 +158,23 @@ def open_file(file_path: str, line_num: int = 0, window_size: int = 100) -> str:
 
 
 def create_file(file_path: str) -> str:
+    """Creates and opens a new file with the given name.
+
+    Parameters:
+        file_path (str): The file path to create, preferred absolute path.
+    """
+
     file_path_p = Path(file_path)
     if file_path_p.exists():
         return f"[File {file_path} already exists]"
     file_path_p.touch()
+    global CURRENT_FILE
+    CURRENT_FILE = file_path
     return f"[File created {file_path}]"
 
 
 def scroll_up() -> str:
+    """Moves the window up by 100 lines."""
     if CURRENT_FILE is None:
         return "[No file is open]"
 
@@ -151,13 +182,116 @@ def scroll_up() -> str:
 
 
 def scroll_down() -> str:
+    """Moves the window down by 100 lines."""
     if CURRENT_FILE is None:
         return "[No file is open]"
 
     return open_file(CURRENT_FILE, CURRENT_LINE - DEFAULT_WINDOW_SIZE)
 
 
+def search_dir(search_term: str, dir_path: str) -> str:
+    """Searches for search_term in all files in a directory.
+
+    Parameters:
+        search_term (str): The search term to look for.
+        dir_path (str): The directory path to search in, preferred absolute path.
+    """
+
+    dir_path_p = Path(dir_path)
+    if not dir_path_p.exists():
+        return f"[Directory {dir_path} does not exist]"
+
+    matches = []
+    for file in dir_path_p.glob("**/*"):
+        if filter_file(file):
+            with open(file, "r") as f:
+                lines = f.readlines()
+                for i, line in enumerate(lines):
+                    if search_term in line:
+                        matches.append(f"{file}:{i}|{line.strip()}\n")
+    if not matches:
+        return f"[No matches found for {search_term} in {dir_path}]"
+    if len(matches) > 100:
+        return f"[More than {len(matches)} matches found for {search_term} in {dir_path}. Please narrow your search]"
+
+    return_str = f"[Found {len(matches)} matches for {search_term} in {dir_path}]\n"
+    for match in matches:
+        return_str += match
+
+    return_str += f"[End of matches for {search_term} in {dir_path}]"
+    return return_str
+
+
+def search_file(search_term: str, file_path: str) -> str:
+    """Searches the file for the given search term.
+
+    Parameters:
+        search_term (str): The search term to look for.
+        file_path (str): The file path to search in, preferred absolute path.
+    """
+
+    file_path_p = Path(file_path)
+    if not file_path_p.exists():
+        return f"[File {file_path} does not exist]"
+
+    with open(file_path_p, "r") as f:
+        lines = f.readlines()
+
+    search_results = []
+    for i, line in enumerate(lines):
+        if search_term in line:
+            search_results.append(f"{i}|{line.strip()}\n")
+
+    if not search_results:
+        return f"[No matches found for {search_term} in {file_path}]"
+
+    return_str = f"[Found {len(search_results)} matches for {search_term} in {file_path}]\n"
+    for result in search_results:
+        return_str += result
+
+    return_str += f"[End of matches for {search_term} in {file_path}]"
+    return return_str
+
+
+def find_file(file_name: str, dir_path: str = "./") -> str:
+    """Finds all files with the given name in the specified directory.
+
+    Parameters:
+        file_name (str): The file name to look for.
+        dir_path (str): The directory path to search in, preferred absolute path.
+    """
+
+    dir_path_p = Path(dir_path)
+    if not dir_path_p.exists():
+        return f"[Directory {dir_path} does not exist]"
+
+    files = list(dir_path_p.glob(f"**/*{file_name}*"))
+    files = [f for f in files if filter_file(f)]
+    if not files:
+        return f"[No files found in {dir_path} with name {file_name}]"
+
+    return_str = f"[Found {len(files)} matches for {file_name} in {dir_path}]\n"
+    for match in files:
+        return_str += str(match) + "\n"
+
+    return_str += f"[End of matches for {file_name} in {dir_path}]"
+    return return_str
+
+
 def edit_file(file_path: str, start: int, end: int, content: str) -> str:
+    """Edits the file at the given path with the provided content. The content will be
+    inserted between the `start` and `end` line numbers. If the `start` and `end` are
+    the same, the content will be inserted at the `start` line number. If the `end` is
+    greater than the total number of lines in the file, the content will be inserted at
+    the end of the file. If the `start` or `end` are negative, the function will return
+    an error message.
+
+    Parameters:
+        file_path (str): The file path to edit, preferred absolute path.
+        start (int): The line number to start the edit.
+        end (int): The line number to end the edit.
+        content (str): The content to insert.
+    """
     file_path_p = Path(file_path)
     if not file_path_p.exists():
         return f"[File {file_path} does not exist]"
@@ -218,4 +352,17 @@ def edit_file(file_path: str, start: int, end: int, content: str) -> str:
     return open_file(file_path, cur_line)
 
 
-META_TOOL_DOCSTRING = get_tool_documentation([generate_vision_code, edit_vision_code])
+META_TOOL_DOCSTRING = get_tool_documentation(
+    [
+        generate_vision_code,
+        edit_vision_code,
+        open_file,
+        create_file,
+        scroll_up,
+        scroll_down,
+        edit_file,
+        search_dir,
+        search_file,
+        find_file,
+    ]
+)

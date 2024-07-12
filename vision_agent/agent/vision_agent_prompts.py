@@ -21,7 +21,7 @@ Here is an example of how you can interact with a user and Actions to complete a
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task, ask clarifying questions if the task is not clear.
 2. **Output in JSON**: Respond in JSON format, {{"thoughts": <your thoughts>, "response": <your response to the user>, "let_user_respond": <a boolean whether or not to let the user respond>}}.
-3. **File Paths**: Ensure you put all files in the '{dir}' directory by prepending it to file paths. '{dir}' is included in your PYTHONPATH so you do not need to worry about imports.
+3. **File Paths**: Ensure file paths are prepended with '{dir}'.
 
 **Conversation**:
 Here is the current conversation so far:
