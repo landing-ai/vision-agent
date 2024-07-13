@@ -380,6 +380,7 @@ class OllamaLMM(LMM):
 
 class ClaudeSonnetLMM(LMM):
     r"""An LMM class for Sonnet."""
+    
     def __init__(
         self,
         api_key: str,
@@ -414,7 +415,7 @@ class ClaudeSonnetLMM(LMM):
             temperature=self.temperature,
             messages=messages,
         )
-        return response.content[0].text
+        return response["choices"][0]["message"]["content"]
 
     def generate(self, prompt: str, media: Optional[List[Union[str, Path]]] = None) -> str:
         messages = [{"role": "user", "content": prompt}]
@@ -438,4 +439,4 @@ class ClaudeSonnetLMM(LMM):
             temperature=self.temperature,
             messages=messages,
         )
-        return response.content[0].text
+        return response["choices"][0]["message"]["content"]
