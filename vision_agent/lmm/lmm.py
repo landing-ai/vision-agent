@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import requests
 from openai import AzureOpenAI, OpenAI
+import anthropic
 from PIL import Image
 
 import vision_agent.tools as T
@@ -375,3 +376,66 @@ class OllamaLMM(LMM):
 
         response = response.json()
         return response["response"]  # type: ignore
+    
+
+class ClaudeSonnetLMM(LMM):
+    r"""An LMM class for Sonnet."""
+    def __init__(
+        self,
+        api_key: str,
+        model_name: str = "claude-3-5-sonnet-20240620",
+        max_tokens: int = 1024,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ):
+        self.client = anthropic.Anthropic(api_key=api_key)
+        self.model_name = model_name
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+
+    def encode_image(self, image_path: Union[str, Path]) -> str:
+        with open(image_path, "rb") as image_file:
+            image = Image.open(io.BytesIO(image_file.read())).convert("RGB")
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            return encoded_image
+
+    def __call__(self, input: Union[str, List[Dict[str, Any]]]) -> str:
+        if isinstance(input, str):
+            return self.generate(input)
+        return self.chat(input)
+
+    def chat(self, chat: List[Dict[str, Any]]) -> str:
+        messages = [{"role": msg["role"], "content": msg["content"]} for msg in chat]
+        response = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=messages,
+        )
+        return response.content[0].text
+
+    def generate(self, prompt: str, media: Optional[List[Union[str, Path]]] = None) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        if media:
+            for m in media:
+                encoded_media = self.encode_image(m)
+                messages.append({
+                    "role": "user",
+                    "content": {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": encoded_media,
+                        },
+                    },
+                })
+        response = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=messages,
+        )
+        return response.content[0].text
