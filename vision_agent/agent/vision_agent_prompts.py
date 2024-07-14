@@ -112,4 +112,3 @@ OBSERVATION:
 
 AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to count the workers wearing helmets in code.py", "let_user_respond": true}
 """
-
