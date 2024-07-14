@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import extract_json
-from vision_agent.agent.vision_agent_prompts import EXAMPLES_CODE, VA_CODE
+from vision_agent.agent.vision_agent_prompts import EXAMPLES_CODE1, EXAMPLES_CODE2, VA_CODE
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.utils import CodeInterpreterFactory
@@ -55,7 +55,7 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
     prompt = VA_CODE.format(
         documentation=META_TOOL_DOCSTRING,
-        examples=EXAMPLES_CODE,
+        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}",
         dir=WORKSPACE,
         conversation=conversation,
     )
@@ -150,7 +150,7 @@ class VisionAgent(Agent):
                         if "media" in c
                         else {"role": c["role"], "content": c["content"]}
                     )
-                    for c in chat
+                    for c in int_chat
                 ],
             )
 
