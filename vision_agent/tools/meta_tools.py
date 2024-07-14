@@ -120,7 +120,7 @@ def view_lines(
     end = min(len(lines), line_num + window_size)
     return f"[File: {file_path} ({total_lines} lines total)]\n" + format_lines(
         lines[start:end], start
-    )
+    ) + ("[End of file]" if end == len(lines) else f"[{len(lines) - end} more lines]")
 
 
 def open_file(file_path: str, line_num: int = 0, window_size: int = 100) -> str:
