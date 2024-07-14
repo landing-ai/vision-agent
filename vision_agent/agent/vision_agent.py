@@ -63,7 +63,9 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
 
 def run_code_action(code: str, code_interpreter: CodeInterpreter) -> str:
-    result = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
+    # Note the code interpreter needs to keep running in the same environment because
+    # the SWE tools hold state like line numbers and currently open files.
+    result = code_interpreter.exec_cell(DefaultImports.prepend_imports(code))
 
     return_str = ""
     if result.success:
