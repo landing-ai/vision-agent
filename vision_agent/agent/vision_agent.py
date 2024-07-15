@@ -409,7 +409,7 @@ def debug_code(
                     FIX_BUG.format(
                         code=code,
                         tests=test,
-                        result="\n".join(result.text().splitlines()[-50:]),
+                        result="\n".join(result.text().splitlines()[-100:]),
                         feedback=format_memory(working_memory + new_working_memory),
                     )
                 )
