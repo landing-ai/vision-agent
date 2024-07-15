@@ -193,7 +193,7 @@ def pick_plan(
     if len(tool_output.logs.stdout) > 0:
         tool_output_str = tool_output.logs.stdout[0]
 
-    if verbosity >= 1:
+    if verbosity == 2:
         _print_code("Initial code and tests:", code)
         _LOGGER.info(f"Initial code execution result:\n{tool_output.text()}")
 
@@ -215,11 +215,14 @@ def pick_plan(
         if len(tool_output.logs.stdout) > 0:
             tool_output_str = tool_output.logs.stdout[0]
 
-        if verbosity == 1:
+        if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
             _LOGGER.info(f"Code execution result after attempte {count}")
 
         count += 1
+
+    if verbosity >= 1:
+        _print_code("Final code:", code)
 
     user_req = chat[-1]["content"]
     context = USER_REQ.format(user_request=user_req)
