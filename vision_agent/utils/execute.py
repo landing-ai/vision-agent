@@ -518,6 +518,8 @@ nbclient version: {nbclient_version}
 nbformat version: {nbformat.__version__}
 Timeout: {self.timeout}"""
         )
+        sleep(1)
+        self._new_kernel()
 
     def _new_kernel(self) -> None:
         if self.nb_client.kc is None or not run_sync(self.nb_client.kc.is_alive)():  # type: ignore
