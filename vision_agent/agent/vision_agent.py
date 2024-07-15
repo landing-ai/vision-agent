@@ -80,7 +80,7 @@ def run_code_action(code: str, code_interpreter: CodeInterpreter) -> str:
         # for log in result.logs.stderr:
         #     return_str += log.replace("\\n", "\n")
         if result.error:
-            return_str += "\n" + result.error.value
+            return_str += "\n" + result.error.value + "\n".join(result.error.traceback_raw)
 
     return return_str
 
@@ -172,7 +172,8 @@ class VisionAgent(Agent):
 
                 if code_action is not None:
                     obs = run_code_action(code_action, code_interpreter)
-                    _LOGGER.info(obs)
+                    if self.verbosity >= 1:
+                        _LOGGER.info(obs)
                     int_chat.append({"role": "observation", "content": obs})
                     orig_chat.append({"role": "observation", "content": obs})
 
