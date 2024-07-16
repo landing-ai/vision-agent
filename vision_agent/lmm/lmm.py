@@ -379,13 +379,13 @@ class OllamaLMM(LMM):
     
 
 class ClaudeSonnetLMM(LMM):
-    r"""An LMM class for Sonnet."""
-    
+    r"""An LMM class for Anthropic's Claude Sonnet model."""
+
     def __init__(
         self,
         api_key: str,
-        model_name: str = "claude-3-5-sonnet-20240620",
-        max_tokens: int = 1024,
+        model_name: str = "claude-3-sonnet-20240229",
+        max_tokens: int = 4096,
         temperature: float = 0.7,
         **kwargs: Any,
     ):
@@ -393,6 +393,79 @@ class ClaudeSonnetLMM(LMM):
         self.model_name = model_name
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.kwargs = kwargs
+
+    def __call__(
+        self,
+        input: Union[str, List[Dict[str, Any]]],
+    ) -> str:
+        if isinstance(input, str):
+            return self.generate(input)
+        return self.chat(input)
+
+    def chat(
+        self,
+        chat: List[Dict[str, Any]],
+    ) -> str:
+        """Chat with the LMM model.
+
+        Parameters:
+            chat (List[Dict[str, Any]]): A list of dictionaries containing the chat
+                messages. The messages can be in the format:
+                [{"role": "user", "content": "Hello!"}, ...]
+                or if it contains media, it should be in the format:
+                [{"role": "user", "content": "Hello!", "media": ["image1.jpg", ...]}, ...]
+        """
+        messages = []
+        for msg in chat:
+            content = [{"type": "text", "text": msg["content"]}]
+            if "media" in msg:
+                for media_path in msg["media"]:
+                    encoded_media = self.encode_image(media_path)
+                    content.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": encoded_media,
+                        },
+                    })
+            messages.append({"role": msg["role"], "content": content})
+
+        response = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=messages,
+            **self.kwargs
+        )
+        return cast(str, response.content[0].text)
+
+    def generate(
+        self,
+        prompt: str,
+        media: Optional[List[Union[str, Path]]] = None,
+    ) -> str:
+        content = [{"type": "text", "text": prompt}]
+        if media:
+            for m in media:
+                encoded_media = self.encode_image(m)
+                content.append({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": encoded_media,
+                    },
+                })
+        response = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=[{"role": "user", "content": content}],
+            **self.kwargs
+        )
+        return cast(str, response.content[0].text)
 
     def encode_image(self, image_path: Union[str, Path]) -> str:
         with open(image_path, "rb") as image_file:
@@ -400,43 +473,5 @@ class ClaudeSonnetLMM(LMM):
             buffer = io.BytesIO()
             image.save(buffer, format="PNG")
             encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
             return encoded_image
-
-    def __call__(self, input: Union[str, List[Dict[str, Any]]]) -> str:
-        if isinstance(input, str):
-            return self.generate(input)
-        return self.chat(input)
-
-    def chat(self, chat: List[Dict[str, Any]]) -> str:
-        messages = [{"role": msg["role"], "content": msg["content"]} for msg in chat]
-        response = self.client.messages.create(
-            model=self.model_name,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            messages=messages,
-        )
-        return response["choices"][0]["message"]["content"]
-
-    def generate(self, prompt: str, media: Optional[List[Union[str, Path]]] = None) -> str:
-        messages = [{"role": "user", "content": prompt}]
-        if media:
-            for m in media:
-                encoded_media = self.encode_image(m)
-                messages.append({
-                    "role": "user",
-                    "content": {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": encoded_media,
-                        },
-                    },
-                })
-        response = self.client.messages.create(
-            model=self.model_name,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            messages=messages,
-        )
-        return response["choices"][0]["message"]["content"]
