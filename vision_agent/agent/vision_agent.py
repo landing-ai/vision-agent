@@ -6,7 +6,11 @@ from typing import Any, Dict, List, Optional, Union, cast
 
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import extract_json
-from vision_agent.agent.vision_agent_prompts import EXAMPLES_CODE1, EXAMPLES_CODE2, VA_CODE
+from vision_agent.agent.vision_agent_prompts import (
+    EXAMPLES_CODE1,
+    EXAMPLES_CODE2,
+    VA_CODE,
+)
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.utils import CodeInterpreterFactory
@@ -80,7 +84,9 @@ def run_code_action(code: str, code_interpreter: CodeInterpreter) -> str:
         # for log in result.logs.stderr:
         #     return_str += log.replace("\\n", "\n")
         if result.error:
-            return_str += "\n" + result.error.value + "\n".join(result.error.traceback_raw)
+            return_str += (
+                "\n" + result.error.value + "\n".join(result.error.traceback_raw)
+            )
 
     return return_str
 

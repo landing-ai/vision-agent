@@ -1,9 +1,9 @@
 import subprocess
 from pathlib import Path
 from typing import List
-from vision_agent.lmm.types import Message
 
 import vision_agent as va
+from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 
 CURRENT_FILE = None

@@ -5,7 +5,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import anthropic
 import requests
@@ -15,6 +15,7 @@ from PIL import Image
 
 import vision_agent.tools as T
 from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
+
 from .types import Message
 
 _LOGGER = logging.getLogger(__name__)
