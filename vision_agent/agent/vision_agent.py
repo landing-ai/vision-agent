@@ -99,6 +99,20 @@ def parse_execution(response: str) -> Optional[str]:
     return code
 
 class VisionAgent(Agent):
+    """Vision Agent is an agent that can chat with the user and call tools or other
+    agents to generate code for it. Vision Agent uses python code to execute actions for
+    the user. Vision Agent is inspired by by OpenDev
+    https://github.com/OpenDevin/OpenDevin and CodeAct https://arxiv.org/abs/2402.01030
+
+    Example
+    -------
+        >>> from vision_agent.agent import VisionAgent
+        >>> agent = VisionAgent()
+        >>> resp = agent("Hello")
+        >>> resp.append({"role": "user", "content": "Can you write a function that counts dogs?", "media": ["dog.jpg"]})
+        >>> resp = agent(resp)
+    """
+
     def __init__(
         self,
         agent: Optional[LMM] = None,
@@ -119,6 +133,17 @@ class VisionAgent(Agent):
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
     ) -> str:
+        """Chat with VisionAgent and get the conversation response.
+
+        Parameters:
+            input (Union[str, List[Message]): A conversation in the format of
+                [{"role": "user", "content": "describe your task here..."}, ...] or a
+                string of just the contents.
+            media (Optional[Union[str, Path]]): The media file to be used in the task.
+
+        Returns:
+            str: The conversation response.
+        """
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
             if media is not None:
@@ -130,6 +155,20 @@ class VisionAgent(Agent):
         self,
         chat: List[Message],
     ) -> List[Message]:
+        """Chat with VisionAgent, it will use code to execute actions to accomplish
+        its tasks.
+
+        Parameters:
+            chat (List[Message]): A conversation
+                in the format of:
+                [{"role": "user", "content": "describe your task here..."}]
+                or if it contains media files, it should be in the format of:
+                [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
+
+        Returns:
+            List[Message]: The conversation response.
+        """
+
         if not chat:
             raise ValueError("chat cannot be empty")
 

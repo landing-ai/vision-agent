@@ -6,6 +6,8 @@ import vision_agent as va
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 
+# These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
+
 CURRENT_FILE = None
 CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100

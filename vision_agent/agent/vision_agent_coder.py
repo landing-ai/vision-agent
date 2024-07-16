@@ -492,7 +492,7 @@ class VisionAgentCoder(Agent):
 
     Example
     -------
-        >>> from vision_agent import VisionAgentCoder
+        >>> from vision_agent.agent import VisionAgentCoder
         >>> agent = VisionAgentCoder()
         >>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
     """
