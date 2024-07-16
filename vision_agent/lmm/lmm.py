@@ -7,9 +7,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
+import anthropic
 import requests
 from openai import AzureOpenAI, OpenAI
-import anthropic
 from PIL import Image
 
 import vision_agent.tools as T
@@ -376,7 +376,6 @@ class OllamaLMM(LMM):
 
         response = response.json()
         return response["response"]  # type: ignore
-    
 
 class ClaudeSonnetLMM(LMM):
     r"""An LMM class for Anthropic's Claude Sonnet model."""
@@ -422,14 +421,16 @@ class ClaudeSonnetLMM(LMM):
             if "media" in msg:
                 for media_path in msg["media"]:
                     encoded_media = self.encode_image(media_path)
-                    content.append({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": encoded_media,
-                        },
-                    })
+                    content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": encoded_media,
+                            },
+                        }
+                    )
             messages.append({"role": msg["role"], "content": content})
 
         response = self.client.messages.create(
@@ -437,7 +438,7 @@ class ClaudeSonnetLMM(LMM):
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             messages=messages,
-            **self.kwargs
+            **self.kwargs,
         )
         return cast(str, response.content[0].text)
 
@@ -450,20 +451,22 @@ class ClaudeSonnetLMM(LMM):
         if media:
             for m in media:
                 encoded_media = self.encode_image(m)
-                content.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/png",
-                        "data": encoded_media,
-                    },
-                })
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": encoded_media,
+                        },
+                    }
+                )
         response = self.client.messages.create(
             model=self.model_name,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             messages=[{"role": "user", "content": content}],
-            **self.kwargs
+            **self.kwargs,
         )
         return cast(str, response.content[0].text)
 
