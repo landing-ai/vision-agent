@@ -1,6 +1,6 @@
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import vision_agent as va
 from vision_agent.lmm.types import Message
@@ -11,7 +11,7 @@ CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100
 
 
-def filter_file(file_name: str | Path) -> bool:
+def filter_file(file_name: Union[str, Path]) -> bool:
     file_name_p = Path(file_name)
     return (
         file_name_p.is_file()
