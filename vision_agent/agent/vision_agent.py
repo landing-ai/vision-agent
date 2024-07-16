@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 WORKSPACE.mkdir(parents=True, exist_ok=True)
-if WORKSPACE != "":
+if str(WORKSPACE) != "":
     os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
 
@@ -112,7 +112,7 @@ class VisionAgent(Agent):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ) -> List[Message]:
+    ) -> str:
         if isinstance(input, str):
             input = [{"role": "user", "content": input}]
             if media is not None:

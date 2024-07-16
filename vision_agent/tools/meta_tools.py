@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 from typing import List
+from vision_agent.lmm.types import Message
 
 import vision_agent as va
 from vision_agent.tools.tool_utils import get_tool_documentation
@@ -43,7 +44,7 @@ def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
 
     agent = va.agent.VisionAgentCoder()
     try:
-        fixed_chat = [{"role": "user", "content": chat, "media": media}]
+        fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
         response = agent.chat_with_workflow(fixed_chat)
         code = response["code"]
         with open(save_file, "w") as f:
@@ -84,7 +85,7 @@ def edit_vision_code(code_file: str, chat_history: List[str], media: List[str]) 
         code = f.read()
 
     # Append latest code to second to last message from assistant
-    fixed_chat_history = []
+    fixed_chat_history: List[Message] = []
     for i, chat in enumerate(chat_history):
         if i == 0:
             fixed_chat_history.append({"role": "user", "content": chat, "media": media})
@@ -118,9 +119,11 @@ def view_lines(
 ) -> str:
     start = max(0, line_num - window_size)
     end = min(len(lines), line_num + window_size)
-    return f"[File: {file_path} ({total_lines} lines total)]\n" + format_lines(
-        lines[start:end], start
-    ) + ("[End of file]" if end == len(lines) else f"[{len(lines) - end} more lines]")
+    return (
+        f"[File: {file_path} ({total_lines} lines total)]\n"
+        + format_lines(lines[start:end], start)
+        + ("[End of file]" if end == len(lines) else f"[{len(lines) - end} more lines]")
+    )
 
 
 def open_file(file_path: str, line_num: int = 0, window_size: int = 100) -> str:
@@ -245,7 +248,9 @@ def search_file(search_term: str, file_path: str) -> str:
     if not search_results:
         return f"[No matches found for {search_term} in {file_path}]"
 
-    return_str = f"[Found {len(search_results)} matches for {search_term} in {file_path}]\n"
+    return_str = (
+        f"[Found {len(search_results)} matches for {search_term} in {file_path}]\n"
+    )
     for result in search_results:
         return_str += result
 
@@ -330,7 +335,7 @@ def edit_file(file_path: str, start: int, end: int, content: str) -> str:
     tmp_file.unlink()
     if stdout != "":
         stdout = stdout.replace(tmp_file.name, file_path)
-        error_msg = f"[Edit failed with the following status]\n" + stdout
+        error_msg = "[Edit failed with the following status]\n" + stdout
         original_view = view_lines(
             lines,
             start + ((end - start) // 2),

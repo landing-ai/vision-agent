@@ -5,7 +5,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
 import anthropic
 import requests
@@ -15,6 +15,7 @@ from PIL import Image
 
 import vision_agent.tools as T
 from vision_agent.tools.prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
+from .types import Message
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,10 +52,6 @@ def encode_media(media: Union[str, Path]) -> str:
     else:
         image_bytes = open(media, "rb").read()
     return encode_image_bytes(image_bytes)
-
-
-TextOrImage = Union[str, List[Union[str, Path]]]
-Message = Dict[str, TextOrImage]
 
 
 class LMM(ABC):
@@ -136,7 +133,7 @@ class OpenAILMM(LMM):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/png;base64,{encoded_media}",  # type: ignore
+                                "url": f"data:image/png;base64,{encoded_media}",
                                 "detail": "low",
                             },
                         },
