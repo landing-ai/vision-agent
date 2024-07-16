@@ -377,6 +377,7 @@ class OllamaLMM(LMM):
         response = response.json()
         return response["response"]  # type: ignore
 
+
 class ClaudeSonnetLMM(LMM):
     r"""An LMM class for Anthropic's Claude Sonnet model."""
 
