@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import anthropic
 import requests
+from anthropic.types import ContentBlock, ImageBlockParam, MessageParam, TextBlock
 from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
@@ -379,8 +380,6 @@ class OllamaLMM(LMM):
 
 
 class ClaudeSonnetLMM(LMM):
-    r"""An LMM class for Anthropic's Claude Sonnet model."""
-
     def __init__(
         self,
         api_key: str,
@@ -397,7 +396,7 @@ class ClaudeSonnetLMM(LMM):
 
     def __call__(
         self,
-        input: Union[str, List[Dict[str, Any]]],
+        input: Union[str, List[Message]],
     ) -> str:
         if isinstance(input, str):
             return self.generate(input)
@@ -407,31 +406,27 @@ class ClaudeSonnetLMM(LMM):
         self,
         chat: List[Dict[str, Any]],
     ) -> str:
-        """Chat with the LMM model.
-
-        Parameters:
-            chat (List[Dict[str, Any]]): A list of dictionaries containing the chat
-                messages. The messages can be in the format:
-                [{"role": "user", "content": "Hello!"}, ...]
-                or if it contains media, it should be in the format:
-                [{"role": "user", "content": "Hello!", "media": ["image1.jpg", ...]}, ...]
-        """
-        messages = []
+        messages: List[MessageParam] = []
         for msg in chat:
-            content = [{"type": "text", "text": msg["content"]}]
-            if "media" in msg:
-                for media_path in msg["media"]:
-                    encoded_media = self.encode_image(media_path)
-                    content.append(
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/png",
-                                "data": encoded_media,
-                            },
-                        }
-                    )
+            content: List[Union[TextBlock, ImageBlockParam]] = []
+            if isinstance(msg["content"], str):
+                content.append(TextBlock(type="text", text=msg["content"]))
+            elif isinstance(msg["content"], list):
+                for item in msg["content"]:
+                    if isinstance(item, str):
+                        content.append(TextBlock(type="text", text=item))
+                    elif isinstance(item, (str, Path)):
+                        encoded_media = self.encode_image(item)
+                        content.append(
+                            ImageBlockParam(
+                                type="image",
+                                source={
+                                    "type": "base64",
+                                    "media_type": "image/png",
+                                    "data": encoded_media,
+                                },
+                            )
+                        )
             messages.append({"role": msg["role"], "content": content})
 
         response = self.client.messages.create(
@@ -448,19 +443,21 @@ class ClaudeSonnetLMM(LMM):
         prompt: str,
         media: Optional[List[Union[str, Path]]] = None,
     ) -> str:
-        content = [{"type": "text", "text": prompt}]
+        content: List[Union[TextBlock, ImageBlockParam]] = [
+            TextBlock(type="text", text=prompt)
+        ]
         if media:
             for m in media:
                 encoded_media = self.encode_image(m)
                 content.append(
-                    {
-                        "type": "image",
-                        "source": {
+                    ImageBlockParam(
+                        type="image",
+                        source={
                             "type": "base64",
                             "media_type": "image/png",
                             "data": encoded_media,
                         },
-                    }
+                    )
                 )
         response = self.client.messages.create(
             model=self.model_name,
@@ -478,4 +475,4 @@ class ClaudeSonnetLMM(LMM):
             image.save(buffer, format="PNG")
             encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-            return encoded_image
+        return encoded_image
