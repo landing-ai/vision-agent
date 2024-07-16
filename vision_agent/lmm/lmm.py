@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import anthropic
 import requests
-from anthropic.types import ContentBlock, ImageBlockParam, MessageParam, TextBlock
+from anthropic.types import ImageBlockParam, MessageParam, TextBlock
 from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
