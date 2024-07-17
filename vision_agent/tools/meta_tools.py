@@ -5,6 +5,7 @@ from typing import List, Union
 import vision_agent as va
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
+from vision_agent.tools.tools import TOOL_DESCRIPTIONS
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
@@ -359,8 +360,16 @@ def edit_file(file_path: str, start: int, end: int, content: str) -> str:
     return open_file(file_path, cur_line)
 
 
+def get_tool_descriptions() -> str:
+    """Returns a description of all the tools that `generate_vision_code` has access to.
+    Helpful for answerings questions about what types of vision tasks you can do with
+    `generate_vision_code`."""
+    return TOOL_DESCRIPTIONS
+
+
 META_TOOL_DOCSTRING = get_tool_documentation(
     [
+        get_tool_descriptions,
         generate_vision_code,
         edit_vision_code,
         open_file,
