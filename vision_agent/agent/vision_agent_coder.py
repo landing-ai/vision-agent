@@ -139,6 +139,7 @@ def pick_plan(
     model: LMM,
     code_interpreter: CodeInterpreter,
     verbosity: int = 0,
+    max_retries: int = 3,
 ) -> Tuple[str, str]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -155,13 +156,13 @@ def pick_plan(
     if len(tool_output.logs.stdout) > 0:
         tool_output_str = tool_output.logs.stdout[0]
 
-    if verbosity >= 1:
+    if verbosity == 2:
         _print_code("Initial code and tests:", code)
         _LOGGER.info(f"Initial code execution result:\n{tool_output.text()}")
 
     # retry if the tool output is empty or code fails
-    count = 1
-    while (not tool_output.success or tool_output_str == "") and count < 3:
+    count = 0
+    while (not tool_output.success or tool_output_str == "") and count < max_retries:
         prompt = TEST_PLANS.format(
             docstring=tool_info,
             plans=plan_str,
@@ -177,11 +178,14 @@ def pick_plan(
         if len(tool_output.logs.stdout) > 0:
             tool_output_str = tool_output.logs.stdout[0]
 
-        if verbosity == 1:
+        if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
             _LOGGER.info(f"Code execution result after attempte {count}")
 
         count += 1
+
+    if verbosity >= 1:
+        _print_code("Final code:", code)
 
     user_req = chat[-1]["content"]
     context = USER_REQ.format(user_request=user_req)
@@ -538,14 +542,16 @@ class VisionAgentCoder(Agent):
         self.debugger = (
             OpenAILMM(temperature=0.0, json_mode=True) if debugger is None else debugger
         )
+        self.verbosity = verbosity
+        if self.verbosity > 0:
+            _LOGGER.setLevel(logging.INFO)
+        
 
         self.tool_recommender = (
             Sim(T.TOOLS_DF, sim_key="desc")
             if tool_recommender is None
             else tool_recommender
         )
-        self.verbosity = verbosity
-        self.max_retries = 2
         self.report_progress_callback = report_progress_callback
         self.code_sandbox_runtime = code_sandbox_runtime
 
@@ -616,7 +622,15 @@ class VisionAgentCoder(Agent):
             int_chat = cast(
                 List[Message],
                 [
-                    {"role": c["role"], "content": c["content"], "media": c["media"]}
+                    (
+                        {
+                            "role": c["role"],
+                            "content": c["content"],
+                            "media": c["media"],
+                        }
+                        if "media" in c
+                        else {"role": c["role"], "content": c["content"]}
+                    )
                     for c in chat
                 ],
             )
@@ -627,91 +641,84 @@ class VisionAgentCoder(Agent):
             results = {"code": "", "test": "", "plan": []}
             plan = []
             success = False
-            retries = 0
+            self.log_progress(
+                {
+                    "type": "plans",
+                    "status": "started",
+                }
+            )
+            plans = write_plans(
+                int_chat,
+                T.TOOL_DESCRIPTIONS,
+                format_memory(working_memory),
+                self.planner,
+            )
 
-            while not success and retries < self.max_retries:
-                self.log_progress(
-                    {
-                        "type": "plans",
-                        "status": "started",
-                    }
-                )
-                plans = write_plans(
-                    int_chat,
-                    T.TOOL_DESCRIPTIONS,
-                    format_memory(working_memory),
-                    self.planner,
-                )
-
-                if self.verbosity >= 1:
-                    for p in plans:
-                        _LOGGER.info(
-                            f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
-                        )
-
-                tool_infos = retrieve_tools(
-                    plans,
-                    self.tool_recommender,
-                    self.log_progress,
-                    self.verbosity,
-                )
-                best_plan, tool_output_str = pick_plan(
-                    int_chat,
-                    plans,
-                    tool_infos["all"],
-                    self.coder,
-                    code_interpreter,
-                    verbosity=self.verbosity,
-                )
-
-                if best_plan in plans and best_plan in tool_infos:
-                    plan_i = plans[best_plan]
-                    tool_info = tool_infos[best_plan]
-                else:
-                    if self.verbosity >= 1:
-                        _LOGGER.warning(
-                            f"Best plan {best_plan} not found in plans or tool_infos. Using the first plan and tool info."
-                        )
-                    k = list(plans.keys())[0]
-                    plan_i = plans[k]
-                    tool_info = tool_infos[k]
-
-                self.log_progress(
-                    {
-                        "type": "plans",
-                        "status": "completed",
-                        "payload": plan_i,
-                    }
-                )
-                if self.verbosity >= 1:
+            if self.verbosity >= 1:
+                for p in plans:
                     _LOGGER.info(
-                        f"Picked best plan:\n{tabulate(tabular_data=plan_i, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                        f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
 
-                results = write_and_test_code(
-                    chat=[
-                        {"role": c["role"], "content": c["content"]} for c in int_chat
-                    ],
-                    plan="\n-" + "\n-".join([e["instructions"] for e in plan_i]),
-                    tool_info=tool_info,
-                    tool_output=tool_output_str,
-                    tool_utils=T.UTILITIES_DOCSTRING,
-                    working_memory=working_memory,
-                    coder=self.coder,
-                    tester=self.tester,
-                    debugger=self.debugger,
-                    code_interpreter=code_interpreter,
-                    log_progress=self.log_progress,
-                    verbosity=self.verbosity,
-                    media=media_list,
-                )
-                success = cast(bool, results["success"])
-                code = cast(str, results["code"])
-                test = cast(str, results["test"])
-                working_memory.extend(results["working_memory"])  # type: ignore
-                plan.append({"code": code, "test": test, "plan": plan_i})
+            tool_infos = retrieve_tools(
+                plans,
+                self.tool_recommender,
+                self.log_progress,
+                self.verbosity,
+            )
+            best_plan, tool_output_str = pick_plan(
+                int_chat,
+                plans,
+                tool_infos["all"],
+                self.coder,
+                code_interpreter,
+                verbosity=self.verbosity,
+            )
 
-                retries += 1
+            if best_plan in plans and best_plan in tool_infos:
+                plan_i = plans[best_plan]
+                tool_info = tool_infos[best_plan]
+            else:
+                if self.verbosity >= 1:
+                    _LOGGER.warning(
+                        f"Best plan {best_plan} not found in plans or tool_infos. Using the first plan and tool info."
+                    )
+                k = list(plans.keys())[0]
+                plan_i = plans[k]
+                tool_info = tool_infos[k]
+
+            self.log_progress(
+                {
+                    "type": "plans",
+                    "status": "completed",
+                    "payload": plan_i,
+                }
+            )
+            if self.verbosity >= 1:
+                _LOGGER.info(
+                    f"Picked best plan:\n{tabulate(tabular_data=plan_i, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                )
+
+            results = write_and_test_code(
+                chat=[{"role": c["role"], "content": c["content"]} for c in int_chat],
+                plan="\n-" + "\n-".join([e["instructions"] for e in plan_i]),
+                tool_info=tool_info,
+                tool_output=tool_output_str,
+                tool_utils=T.UTILITIES_DOCSTRING,
+                working_memory=working_memory,
+                coder=self.coder,
+                tester=self.tester,
+                debugger=self.debugger,
+                code_interpreter=code_interpreter,
+                log_progress=self.log_progress,
+                verbosity=self.verbosity,
+                media=media_list,
+            )
+            success = cast(bool, results["success"])
+            code = cast(str, results["code"])
+            test = cast(str, results["test"])
+            working_memory.extend(results["working_memory"])  # type: ignore
+            plan.append({"code": code, "test": test, "plan": plan_i})
 
             execution_result = cast(Execution, results["test_result"])
             self.log_progress(
