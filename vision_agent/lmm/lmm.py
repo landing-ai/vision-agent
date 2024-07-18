@@ -381,6 +381,7 @@ class OllamaLMM(LMM):
 
 class ClaudeSonnetLMM(LMM):
     r"""An LMM class for Anthropic's Claude Sonnet model."""
+
     def __init__(
         self,
         api_key: Optional[str] = None,
