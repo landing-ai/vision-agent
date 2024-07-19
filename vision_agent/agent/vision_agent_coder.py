@@ -584,6 +584,7 @@ class VisionAgentCoder(Agent):
     def chat_with_workflow(
         self,
         chat: List[Message],
+        test_multi_plan: bool = True,
         display_visualization: bool = False,
     ) -> Dict[str, Any]:
         """Chat with VisionAgentCoder and return intermediate information regarding the
@@ -595,6 +596,9 @@ class VisionAgentCoder(Agent):
                 [{"role": "user", "content": "describe your task here..."}]
                 or if it contains media files, it should be in the format of:
                 [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
+            test_multi_plan (bool): If True, it will test tools for multiple plans and
+                pick the best one based off of the tool results. If False, it will go
+                with the first plan.
             display_visualization (bool): If True, it opens a new window locally to
                 show the image(s) created by visualization code (if there is any).
 
@@ -666,14 +670,19 @@ class VisionAgentCoder(Agent):
                 self.log_progress,
                 self.verbosity,
             )
-            best_plan, tool_output_str = pick_plan(
-                int_chat,
-                plans,
-                tool_infos["all"],
-                self.coder,
-                code_interpreter,
-                verbosity=self.verbosity,
-            )
+
+            if test_multi_plan:
+                best_plan, tool_output_str = pick_plan(
+                    int_chat,
+                    plans,
+                    tool_infos["all"],
+                    self.coder,
+                    code_interpreter,
+                    verbosity=self.verbosity,
+                )
+            else:
+                best_plan = list(plans.keys())[0]
+                tool_output_str = ""
 
             if best_plan in plans and best_plan in tool_infos:
                 plan_i = plans[best_plan]
