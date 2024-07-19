@@ -99,7 +99,7 @@ def edit_vision_code(code_file: str, chat_history: List[str], media: List[str]) 
             fixed_chat_history.append({"role": "user", "content": chat})
 
     try:
-        response = agent.chat_with_workflow(fixed_chat_history)
+        response = agent.chat_with_workflow(fixed_chat_history, test_multi_plan=False)
         code = response["code"]
         with open(code_file, "w") as f:
             f.write(code)
