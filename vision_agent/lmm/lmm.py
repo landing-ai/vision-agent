@@ -7,7 +7,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
+import anthropic
 import requests
+from anthropic.types import ImageBlockParam, MessageParam, TextBlockParam
 from openai import AzureOpenAI, OpenAI
 from PIL import Image
 
@@ -375,3 +377,92 @@ class OllamaLMM(LMM):
 
         response = response.json()
         return response["response"]  # type: ignore
+
+
+class ClaudeSonnetLMM(LMM):
+    r"""An LMM class for Anthropic's Claude Sonnet model."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model_name: str = "claude-3-sonnet-20240229",
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ):
+        self.client = anthropic.Anthropic(api_key=api_key)
+        self.model_name = model_name
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.kwargs = kwargs
+
+    def __call__(
+        self,
+        input: Union[str, List[Dict[str, Any]]],
+    ) -> str:
+        if isinstance(input, str):
+            return self.generate(input)
+        return self.chat(input)
+
+    def chat(
+        self,
+        chat: List[Dict[str, Any]],
+    ) -> str:
+        messages: List[MessageParam] = []
+        for msg in chat:
+            content: List[Union[TextBlockParam, ImageBlockParam]] = [
+                TextBlockParam(type="text", text=msg["content"])
+            ]
+            if "media" in msg:
+                for media_path in msg["media"]:
+                    encoded_media = encode_media(media_path)
+                    content.append(
+                        ImageBlockParam(
+                            type="image",
+                            source={
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": encoded_media,
+                            },
+                        )
+                    )
+            messages.append({"role": msg["role"], "content": content})
+
+        response = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=messages,
+            **self.kwargs,
+        )
+        return cast(str, response.content[0].text)
+
+    def generate(
+        self,
+        prompt: str,
+        media: Optional[List[Union[str, Path]]] = None,
+    ) -> str:
+        content: List[Union[TextBlockParam, ImageBlockParam]] = [
+            TextBlockParam(type="text", text=prompt)
+        ]
+        if media:
+            for m in media:
+                encoded_media = encode_media(m)
+                content.append(
+                    ImageBlockParam(
+                        type="image",
+                        source={
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": encoded_media,
+                        },
+                    )
+                )
+        response = self.client.messages.create(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            messages=[{"role": "user", "content": content}],
+            **self.kwargs,
+        )
+        return cast(str, response.content[0].text)
