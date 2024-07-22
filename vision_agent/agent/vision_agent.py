@@ -715,14 +715,13 @@ class VisionAgent(Agent):
                 self.planner,
             )
 
-            if not test_multi_plan:
-                self.log_progress(
-                    {
-                        "type": "plans",
-                        "status": "completed",
-                        "payload": plans[list(plans.keys())[0]],
-                    }
-                )
+            self.log_progress(
+                {
+                    "type": "plans",
+                    "status": "completed",
+                    "payload": plans[list(plans.keys())[0]],
+                }
+            )
 
             if self.verbosity >= 1 and test_multi_plan:
                 for p in plans:
