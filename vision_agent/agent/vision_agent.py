@@ -178,7 +178,7 @@ def pick_plan(
     test_multi_plan: bool,
     verbosity: int = 0,
     max_retries: int = 3,
-) -> Tuple[str, str]:
+) -> Tuple[str, str, str]:
     if not test_multi_plan:
         k = list(plans.keys())[0]
         return plans[k], tool_infos[k], ""
