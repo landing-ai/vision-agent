@@ -245,12 +245,12 @@ def pick_plan(
         _LOGGER.info(f"Best plan:\n{best_plan}")
 
     plan = best_plan["best_plan"]
-    if plan in plans and best_plan in tool_infos:
-        return plans[best_plan], tool_infos[best_plan], tool_output_str
+    if plan in plans and plan in tool_infos:
+        return plans[plan], tool_infos[plan], tool_output_str
     else:
         if verbosity >= 1:
             _LOGGER.warning(
-                f"Best plan {best_plan} not found in plans or tool_infos. Using the first plan and tool info."
+                f"Best plan {plan} not found in plans or tool_infos. Using the first plan and tool info."
             )
         k = list(plans.keys())[0]
         return plans[k], tool_infos[k], tool_output_str
