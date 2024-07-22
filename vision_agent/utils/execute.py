@@ -1,6 +1,5 @@
 import abc
 import base64
-import copy
 import logging
 import os
 import platform
@@ -17,6 +16,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import nbformat
 import tenacity
 from dotenv import load_dotenv
+from e2b import TimeoutException
 from e2b_code_interpreter import CodeInterpreter as E2BCodeInterpreterImpl
 from e2b_code_interpreter import Execution as E2BExecution
 from e2b_code_interpreter import Result as E2BResult
@@ -29,7 +29,6 @@ from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
 
 from vision_agent.utils.exceptions import (
-    RemoteSandboxClosedError,
     RemoteSandboxCreationError,
     RemoteSandboxExecutionError,
 )
@@ -44,17 +43,17 @@ class MimeType(str, Enum):
     Represents a MIME type.
     """
 
-    TEXT_PLAIN = "text/plain"
-    TEXT_HTML = "text/html"
-    TEXT_MARKDOWN = "text/markdown"
-    IMAGE_SVG = "image/svg+xml"
-    IMAGE_PNG = "image/png"
-    IMAGE_JPEG = "image/jpeg"
+    TEXT_PLAIN = "text"
+    TEXT_HTML = "html"
+    TEXT_MARKDOWN = "markdown"
+    IMAGE_SVG = "svg"
+    IMAGE_PNG = "png"
+    IMAGE_JPEG = "jpeg"
     VIDEO_MP4_B64 = "video/mp4/base64"
-    APPLICATION_PDF = "application/pdf"
-    TEXT_LATEX = "text/latex"
-    APPLICATION_JSON = "application/json"
-    APPLICATION_JAVASCRIPT = "application/javascript"
+    APPLICATION_PDF = "pdf"
+    TEXT_LATEX = "latex"
+    APPLICATION_JSON = "json"
+    APPLICATION_JAVASCRIPT = "javascript"
 
 
 class FileSerializer:
@@ -104,13 +103,8 @@ class Result:
     is_main_result: bool
     "Whether this data is the result of the cell. Data can be produced by display calls of which can be multiple in a cell."
 
-    raw: Dict[str, str]
-    "Dictionary that maps MIME types to their corresponding string representations of the data."
-
     def __init__(self, is_main_result: bool, data: Dict[str, Any]):
         self.is_main_result = is_main_result
-        self.raw = copy.deepcopy(data)
-
         self.text = data.pop(MimeType.TEXT_PLAIN, None)
         if self.text and (self.text.startswith("'") and self.text.endswith("'")):
             # This is a workaround for the issue that str result is wrapped with single quotes by notebook.
@@ -134,13 +128,13 @@ class Result:
 
     # Allows to iterate over formats()
     def __getitem__(self, key: Any) -> Any:
-        return self.raw[key] if key in self.raw else getattr(self, key)
+        return getattr(self, key)
 
     def __str__(self) -> str:
         return repr(self)
 
     def __repr__(self) -> str:
-        return str(self.raw)
+        return str(self.text)
 
     def _repr_html_(self) -> Optional[str]:
         """
@@ -232,9 +226,10 @@ class Result:
         """
         Creates a Result object from an E2BResult object.
         """
+        data = {key: result[key] for key in result.formats()}
         return Result(
             is_main_result=result.is_main_result,
-            data=result.raw,
+            data=data,
         )
 
 
@@ -394,7 +389,7 @@ class Execution(BaseModel):
                     value=_remove_escape_and_color_codes(exec.error.value),
                     traceback_raw=[
                         _remove_escape_and_color_codes(line)
-                        for line in exec.error.traceback_raw
+                        for line in exec.error.traceback.split("\n")
                     ],
                 )
                 if exec.error
@@ -463,11 +458,12 @@ va_version = importlib.metadata.version("vision-agent")
 print(f"Vision Agent version: {va_version}")"""
         )
         sys_versions = "\n".join(result.logs.stdout)
-        _LOGGER.info(f"E2BCodeInterpreter initialized:\n{sys_versions}")
+        _LOGGER.info(
+            f"E2BCodeInterpreter (sandbox id: {self.interpreter.sandbox_id}) initialized:\n{sys_versions}"
+        )
 
     def close(self, *args: Any, **kwargs: Any) -> None:
         try:
-            self.interpreter.notebook.close()
             self.interpreter.kill(request_timeout=2)
             _LOGGER.info(
                 f"The sandbox {self.interpreter.sandbox_id} is closed successfully."
@@ -478,28 +474,33 @@ print(f"Vision Agent version: {va_version}")"""
             )
 
     def restart_kernel(self) -> None:
-        self._check_sandbox_liveness()
         self.interpreter.notebook.restart_kernel()
 
     @tenacity.retry(
         wait=tenacity.wait_exponential_jitter(),
         stop=tenacity.stop_after_attempt(2),
         # TODO: change TimeoutError to a more specific exception when e2b team provides more granular retryable exceptions
-        retry=tenacity.retry_if_exception_type(TimeoutError),
+        retry=tenacity.retry_if_exception_type(TimeoutException),
+        before_sleep=tenacity.before_sleep_log(_LOGGER, logging.INFO),
+        after=tenacity.after_log(_LOGGER, logging.INFO),
     )
     def exec_cell(self, code: str) -> Execution:
-        self._check_sandbox_liveness()
         self.interpreter.set_timeout(_SESSION_TIMEOUT)  # Extend the life of the sandbox
         try:
-            execution = self.interpreter.notebook.exec_cell(code, timeout=self.timeout)
+            _LOGGER.info(
+                f"Start code execution in remote sandbox {self.interpreter.sandbox_id}. Timeout: {_SESSION_TIMEOUT}. Code hash: {hash(code)}"
+            )
+            execution = self.interpreter.notebook.exec_cell(code)
+            _LOGGER.info(
+                f"Finished code execution in remote sandbox {self.interpreter.sandbox_id}. Code hash: {hash(code)}"
+            )
             return Execution.from_e2b_execution(execution)
         except Exception as e:
             raise RemoteSandboxExecutionError(
-                f"Failed executing code in remote sandbox due to {e}: {code}"
+                f"Failed executing code in remote sandbox ({self.interpreter.sandbox_id}) due to error '{type(e).__name__} {str(e)}', code: {code}"
             ) from e
 
     def upload_file(self, file: Union[str, Path]) -> str:
-        self._check_sandbox_liveness()
         file_name = Path(file).name
         remote_path = f"/home/user/{file_name}"
         with open(file, "rb") as f:
@@ -508,28 +509,18 @@ print(f"Vision Agent version: {va_version}")"""
             return remote_path
 
     def download_file(self, file_path: str) -> Path:
-        self._check_sandbox_liveness()
         with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as file:
             file.write(self.interpreter.files.read(path=file_path, format="bytes"))
             _LOGGER.info(f"File ({file_path}) is downloaded to: {file.name}")
             return Path(file.name)
 
-    def _check_sandbox_liveness(self) -> None:
-        try:
-            alive = self.interpreter.is_running(request_timeout=2)
-        except Exception as e:
-            _LOGGER.error(
-                f"Failed to check the health of the remote sandbox ({self.interpreter.sandbox_id}) due to {e}. Consider the sandbox as dead."
-            )
-            alive = False
-        if not alive:
-            raise RemoteSandboxClosedError(
-                "Remote sandbox is closed unexpectedly. Please start a new VisionAgent instance."
-            )
-
     @staticmethod
     def _new_e2b_interpreter_impl(*args, **kwargs) -> E2BCodeInterpreterImpl:  # type: ignore
-        return E2BCodeInterpreterImpl(template="va-sandbox", *args, **kwargs)
+        template_name = os.environ.get("E2B_TEMPLATE_NAME", "va-sandbox")
+        _LOGGER.info(
+            f"Creating a new E2BCodeInterpreter using template: {template_name}"
+        )
+        return E2BCodeInterpreterImpl(template=template_name, *args, **kwargs)
 
 
 class LocalCodeInterpreter(CodeInterpreter):

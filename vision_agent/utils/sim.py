@@ -9,6 +9,7 @@ from openai import AzureOpenAI, Client, OpenAI
 from scipy.spatial.distance import cosine  # type: ignore
 
 
+@lru_cache(maxsize=512)
 def get_embedding(
     client: Client, text: str, model: str = "text-embedding-3-small"
 ) -> List[float]:
