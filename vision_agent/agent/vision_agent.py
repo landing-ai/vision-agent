@@ -156,6 +156,7 @@ def write_plans(
     tool_desc: str,
     working_memory: str,
     model: LMM,
+    test_multi_plan: bool,
 ) -> Dict[str, Any]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -737,14 +738,6 @@ class VisionAgent(Agent):
                 plan_i = plans[k]
                 tool_info = tool_infos[k]
 
-            if test_multi_plan:
-                self.log_progress(
-                    {
-                        "type": "plans",
-                        "status": "completed",
-                        "payload": tool_lists[best_plan],
-                    }
-                )
             self.log_progress(
                 {
                     "type": "tools",
