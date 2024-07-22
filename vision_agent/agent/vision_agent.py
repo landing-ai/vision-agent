@@ -771,7 +771,7 @@ class VisionAgent(Agent):
             code = cast(str, results["code"])
             test = cast(str, results["test"])
             working_memory.extend(results["working_memory"])  # type: ignore
-            plan.append({"code": code, "test": test, "plan": plan_i})
+            plan.append({"code": code, "test": test, "plan": best_plan})
 
             execution_result = cast(Execution, results["test_result"])
             self.log_progress(
