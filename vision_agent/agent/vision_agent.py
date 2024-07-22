@@ -156,7 +156,6 @@ def write_plans(
     tool_desc: str,
     working_memory: str,
     model: LMM,
-    test_multi_plan: bool,
 ) -> Dict[str, Any]:
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
@@ -173,19 +172,25 @@ def write_plans(
 def pick_plan(
     chat: List[Message],
     plans: Dict[str, Any],
-    tool_info: str,
+    tool_infos: Dict[str, str],
     model: LMM,
     code_interpreter: CodeInterpreter,
+    test_multi_plan: bool,
     verbosity: int = 0,
     max_retries: int = 3,
 ) -> Tuple[str, str]:
+    if not test_multi_plan:
+        k = list(plans.keys())[0]
+        return plans[k], tool_infos[k], ""
+
+    all_tool_info = tool_infos["all"]
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
         raise ValueError("Last chat message must be from the user.")
 
     plan_str = format_plans(plans)
     prompt = TEST_PLANS.format(
-        docstring=tool_info, plans=plan_str, previous_attempts=""
+        docstring=all_tool_info, plans=plan_str, previous_attempts=""
     )
 
     code = extract_code(model(prompt))
@@ -202,7 +207,7 @@ def pick_plan(
     count = 0
     while (not tool_output.success or tool_output_str == "") and count < max_retries:
         prompt = TEST_PLANS.format(
-            docstring=tool_info,
+            docstring=all_tool_info,
             plans=plan_str,
             previous_attempts=PREVIOUS_FAILED.format(
                 code=code, error=tool_output.text()
@@ -238,7 +243,17 @@ def pick_plan(
     best_plan = extract_json(model(chat))
     if verbosity >= 1:
         _LOGGER.info(f"Best plan:\n{best_plan}")
-    return best_plan["best_plan"], tool_output_str
+
+    plan = best_plan["best_plan"]
+    if plan in plans and best_plan in tool_infos:
+        return plans[best_plan], tool_infos[best_plan], tool_output_str
+    else:
+        if verbosity >= 1:
+            _LOGGER.warning(
+                f"Best plan {best_plan} not found in plans or tool_infos. Using the first plan and tool info."
+            )
+        k = list(plans.keys())[0]
+        return plans[k], tool_infos[k], tool_output_str
 
 
 @traceable
@@ -492,8 +507,15 @@ def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
 def retrieve_tools(
     plans: Dict[str, List[Dict[str, str]]],
     tool_recommender: Sim,
+    log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
 ) -> Dict[str, str]:
+    log_progress(
+        {
+            "type": "tools",
+            "status": "started",
+        }
+    )
     tool_info = []
     tool_desc = []
     tool_lists: Dict[str, List[Dict[str, str]]] = {}
@@ -518,7 +540,14 @@ def retrieve_tools(
         )
     all_tools = "\n\n".join(set(tool_info))
     tool_lists_unique["all"] = all_tools
-    return tool_lists_unique, tool_lists
+    log_progress(
+        {
+            "type": "tools",
+            "status": "completed",
+            "payload": tool_lists[list(plans.keys())[0]],
+        }
+    )
+    return tool_lists_unique
 
 
 class VisionAgent(Agent):
@@ -694,12 +723,6 @@ class VisionAgent(Agent):
                         "payload": plans[list(plans.keys())[0]],
                     }
                 )
-                self.log_progress(
-                    {
-                        "type": "tools",
-                        "status": "started",
-                    }
-                )
 
             if self.verbosity >= 1 and test_multi_plan:
                 for p in plans:
@@ -707,53 +730,32 @@ class VisionAgent(Agent):
                         f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
 
-            tool_infos, tool_lists = retrieve_tools(
+            tool_infos = retrieve_tools(
                 plans,
                 self.tool_recommender,
+                self.log_progress,
                 self.verbosity,
             )
 
-            if test_multi_plan:
-                best_plan, tool_output_str = pick_plan(
-                    int_chat,
-                    plans,
-                    tool_infos["all"],
-                    self.coder,
-                    code_interpreter,
-                    verbosity=self.verbosity,
-                )
-            else:
-                best_plan = list(plans.keys())[0]
-                tool_output_str = ""
-
-            if best_plan in plans and best_plan in tool_infos:
-                plan_i = plans[best_plan]
-                tool_info = tool_infos[best_plan]
-            else:
-                if self.verbosity >= 1:
-                    _LOGGER.warning(
-                        f"Best plan {best_plan} not found in plans or tool_infos. Using the first plan and tool info."
-                    )
-                k = list(plans.keys())[0]
-                plan_i = plans[k]
-                tool_info = tool_infos[k]
-
-            self.log_progress(
-                {
-                    "type": "tools",
-                    "status": "completed",
-                    "payload": tool_lists[best_plan],
-                }
+            best_plan, best_tool_info, tool_output_str = pick_plan(
+                int_chat,
+                plans,
+                tool_infos,
+                self.coder,
+                code_interpreter,
+                test_multi_plan,
+                verbosity=self.verbosity,
             )
+
             if self.verbosity >= 1:
                 _LOGGER.info(
-                    f"Picked best plan:\n{tabulate(tabular_data=plan_i, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                    f"Picked best plan:\n{tabulate(tabular_data=best_plan, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                 )
 
             results = write_and_test_code(
                 chat=[{"role": c["role"], "content": c["content"]} for c in int_chat],
-                plan="\n-" + "\n-".join([e["instructions"] for e in plan_i]),
-                tool_info=tool_info,
+                plan="\n-" + "\n-".join([e["instructions"] for e in best_plan]),
+                tool_info=best_tool_info,
                 tool_output=tool_output_str,
                 tool_utils=T.UTILITIES_DOCSTRING,
                 working_memory=working_memory,
