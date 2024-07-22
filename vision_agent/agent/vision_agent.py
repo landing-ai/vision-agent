@@ -491,15 +491,8 @@ def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
 def retrieve_tools(
     plans: Dict[str, List[Dict[str, str]]],
     tool_recommender: Sim,
-    log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
 ) -> Dict[str, str]:
-    log_progress(
-        {
-            "type": "tools",
-            "status": "started",
-        }
-    )
     tool_info = []
     tool_desc = []
     tool_lists: Dict[str, List[Dict[str, str]]] = {}
@@ -524,7 +517,7 @@ def retrieve_tools(
         )
     all_tools = "\n\n".join(set(tool_info))
     tool_lists_unique["all"] = all_tools
-    return tool_lists_unique
+    return tool_lists_unique, tool_lists
 
 
 class VisionAgent(Agent):
@@ -692,16 +685,30 @@ class VisionAgent(Agent):
                 self.planner,
             )
 
+            if not test_multi_plan:
+                self.log_progress(
+                    {
+                        "type": "plans",
+                        "status": "completed",
+                        "payload": plans[list(plans.keys())[0]],
+                    }
+                )
+                self.log_progress(
+                    {
+                        "type": "tools",
+                        "status": "started",
+                    }
+                )
+
             if self.verbosity >= 1 and test_multi_plan:
                 for p in plans:
                     _LOGGER.info(
                         f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
 
-            tool_infos = retrieve_tools(
+            tool_infos, tool_lists = retrieve_tools(
                 plans,
                 self.tool_recommender,
-                self.log_progress,
                 self.verbosity,
             )
 
@@ -730,11 +737,19 @@ class VisionAgent(Agent):
                 plan_i = plans[k]
                 tool_info = tool_infos[k]
 
+            if test_multi_plan:
+                self.log_progress(
+                    {
+                        "type": "plans",
+                        "status": "completed",
+                        "payload": tool_lists[best_plan],
+                    }
+                )
             self.log_progress(
                 {
-                    "type": "plans",
+                    "type": "tools",
                     "status": "completed",
-                    "payload": plan_i,
+                    "payload": tool_lists[best_plan],
                 }
             )
             if self.verbosity >= 1:
