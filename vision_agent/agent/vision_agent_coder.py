@@ -545,7 +545,6 @@ class VisionAgentCoder(Agent):
         self.verbosity = verbosity
         if self.verbosity > 0:
             _LOGGER.setLevel(logging.INFO)
-        
 
         self.tool_recommender = (
             Sim(T.TOOLS_DF, sim_key="desc")
