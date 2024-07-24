@@ -1,6 +1,8 @@
+import json
+import os
 import subprocess
 from pathlib import Path
-from typing import List, Union
+from typing import Any, Dict, List, Union
 
 import vision_agent as va
 from vision_agent.lmm.types import Message
@@ -12,6 +14,16 @@ from vision_agent.tools.tools import TOOL_DESCRIPTIONS
 CURRENT_FILE = None
 CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100
+ZMQ_PORT = os.environ.get("ZMQ_PORT", None)
+
+
+def report_progress_callback(port: int, inp: Dict[str, Any]) -> None:
+    import zmq
+
+    context = zmq.Context()
+    socket = context.socket(zmq.PUSH)
+    socket.connect(f"tcp://localhost:{port}")
+    socket.send_json(inp)
 
 
 def filter_file(file_name: Union[str, Path]) -> bool:
@@ -45,7 +57,14 @@ def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
             return dogs
     """
 
-    agent = va.agent.VisionAgentCoder()
+    if ZMQ_PORT is not None:
+        agent = va.agent.VisionAgentCoder(
+            report_progress_callback=lambda inp: report_progress_callback(
+                int(ZMQ_PORT), inp  # type: ignore
+            )
+        )
+    else:
+        agent = va.agent.VisionAgentCoder()
     try:
         fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
         response = agent.chat_with_workflow(fixed_chat)

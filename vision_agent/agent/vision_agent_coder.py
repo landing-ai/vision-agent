@@ -138,9 +138,17 @@ def pick_plan(
     tool_info: str,
     model: LMM,
     code_interpreter: CodeInterpreter,
+    log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
 ) -> Tuple[str, str]:
+    log_progress(
+        {
+            "type": "pick_plan",
+            "status": "started",
+        }
+    )
+
     chat = copy.deepcopy(chat)
     if chat[-1]["role"] != "user":
         raise ValueError("Last chat message must be from the user.")
@@ -151,6 +159,15 @@ def pick_plan(
     )
 
     code = extract_code(model(prompt))
+    log_progress(
+        {
+            "type": "pick_plan",
+            "status": "running",
+            "payload": {
+                "code": DefaultImports.prepend_imports(code),
+            },
+        }
+    )
     tool_output = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
     tool_output_str = ""
     if len(tool_output.logs.stdout) > 0:
@@ -171,6 +188,15 @@ def pick_plan(
             ),
         )
         code = extract_code(model(prompt))
+        log_progress(
+            {
+                "type": "pick_plan",
+                "status": "running",
+                "payload": {
+                    "code": DefaultImports.prepend_imports(code),
+                },
+            }
+        )
         tool_output = code_interpreter.exec_isolation(
             DefaultImports.prepend_imports(code)
         )
@@ -198,8 +224,16 @@ def pick_plan(
     )
     chat[-1]["content"] = prompt
     best_plan = extract_json(model(chat))
+
     if verbosity >= 1:
         _LOGGER.info(f"Best plan:\n{best_plan}")
+    log_progress(
+        {
+            "type": "pick_plan",
+            "status": "completed",
+            "payload": best_plan,
+        }
+    )
     return best_plan["best_plan"], tool_output_str
 
 
@@ -662,6 +696,13 @@ class VisionAgentCoder(Agent):
                     _LOGGER.info(
                         f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
+            self.log_progress(
+                {
+                    "type": "plans",
+                    "status": "completed",
+                    "payload": plans,
+                }
+            )
 
             tool_infos = retrieve_tools(
                 plans,
@@ -677,6 +718,7 @@ class VisionAgentCoder(Agent):
                     tool_infos["all"],
                     self.coder,
                     code_interpreter,
+                    self.log_progress,
                     verbosity=self.verbosity,
                 )
             else:

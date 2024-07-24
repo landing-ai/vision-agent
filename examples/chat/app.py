@@ -1,19 +1,21 @@
 import os
-import pickle as pkl
+import threading
+import time
 from pathlib import Path
-from typing import Dict, List
 
 import streamlit as st
+import zmq
 from code_editor import code_editor
+from streamlit_autorefresh import st_autorefresh
 
 import vision_agent as va
 
 WORKSPACE = Path(os.environ.get("WORKSPACE", ""))
+ZMQ_PORT = os.environ.get("ZMQ_PORT", None)
+if ZMQ_PORT is None:
+    ZMQ_PORT = "5555"
+    os.environ["ZMQ_PORT"] = ZMQ_PORT
 
-st.set_page_config(layout="wide")
-
-st.title("Vision Agent")
-left_column, right_column = st.columns([2, 3])
 
 CACHE = Path(".cache.pkl")
 SAVE = {
@@ -26,75 +28,124 @@ SAVE = {
 }
 agent = va.agent.VisionAgent(verbosity=1)
 
-
-def generate_response(chat: List[Dict]) -> List[Dict]:
-    return agent.chat_with_code(chat)
-
+st.set_page_config(layout="wide")
 
 if "file_path" not in st.session_state:
     st.session_state.file_path = None
 
-
 if "messages" not in st.session_state:
-    if CACHE.exists():
-        with open(CACHE, "rb") as f:
-            st.session_state.messages = pkl.load(f)
-    else:
-        st.session_state.messages = []
+    st.session_state.messages = []
 
-with left_column:
-    st.title("Chat")
+if "updates" not in st.session_state:
+    st.session_state.updates = []
 
-    messages = st.container(height=400)
-    for message in st.session_state.messages:
-        messages.chat_message(message["role"]).write(message["content"])
-
-    if prompt := st.chat_input("Chat here"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        messages.chat_message("user").write(prompt)
-
-        updated_chat = generate_response(st.session_state.messages)
-        for chat in updated_chat:
-            if chat not in st.session_state.messages:
-                st.session_state.messages.append(chat)
-                if chat["role"] in {"user", "assistant"}:
-                    msg = chat["content"]
-                    msg = msg.replace("<execute_python>", "<execute_python>`")
-                    msg = msg.replace("</execute_python>", "`</execute_python>")
-                    messages.chat_message(chat["role"]).write(msg)
-                else:
-                    messages.chat_message("observation").text(chat["content"])
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
 
 
-with right_column:
-    st.title("File & Code Editor")
+def update_messages(messages, lock):
+    new_chat = agent.chat_with_code(messages)
+    with lock:
+        for new_message in new_chat:
+            if new_message not in messages:
+                messages.append(new_message)
 
-    tabs = st.tabs(["File Browser", "Code Editor"])
 
-    with tabs[0]:
-        uploaded_file = st.file_uploader("Upload a file")
-        if uploaded_file is not None:
-            with open(WORKSPACE / uploaded_file.name, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+def get_updates(updates, lock):
+    context = zmq.Context()
+    socket = context.socket(zmq.PULL)
+    socket.bind(f"tcp://*:{ZMQ_PORT}")
 
-        for file in WORKSPACE.iterdir():
-            if "__pycache__" not in str(file) and not str(file).startswith("."):
-                if st.button(file.name):
-                    st.session_state.file_path = file
+    while True:
+        message = socket.recv_json()
+        with lock:
+            updates.append(message)
+        time.sleep(0.1)
 
-    with tabs[1]:
-        if (
-            "file_path" not in st.session_state
-            or st.session_state.file_path is None
-            or st.session_state.file_path.suffix != ".py"
-        ):
-            st.write("Please select a python file from the file browser.")
-        else:
-            with open(WORKSPACE / st.session_state.file_path, "r") as f:
-                code = f.read()
 
-            resp = code_editor(code, lang="python", buttons=[SAVE])
-            if resp["type"] == "saved":
-                text = resp["text"]
-                with open(st.session_state.file_path, "w") as f:
-                    f.write(text)
+def submit():
+    st.session_state.input_text = st.session_state.widget
+    st.session_state.widget = ""
+
+
+update_lock = threading.Lock()
+message_lock = threading.Lock()
+
+st_autorefresh(interval=1000, key="refresh")
+
+
+def main():
+    st.title("Vision Agent")
+    left_column, right_column = st.columns([2, 3])
+
+    with left_column:
+        st.title("Chat & Code Execution")
+        tabs = st.tabs(["Chat", "Code Execution"])
+
+        with tabs[0]:
+            messages = st.container(height=400)
+            for message in st.session_state.messages:
+                messages.chat_message(message["role"]).write(message["content"])
+
+            st.text_input("Chat here", key="widget", on_change=submit)
+            prompt = st.session_state.input_text
+
+            if prompt:
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                messages.chat_message("user").write(prompt)
+                message_thread = threading.Thread(
+                    target=update_messages,
+                    args=(st.session_state.messages, message_lock),
+                )
+                message_thread.daemon = True
+                message_thread.start()
+                st.session_state.input_text = ""
+
+        with tabs[1]:
+            updates = st.container(height=400)
+            for update in st.session_state.updates:
+                updates.chat_message("coder").write(update)
+
+    with right_column:
+        st.title("File Browser & Code Editor")
+        tabs = st.tabs(["File Browser", "Code Editor"])
+
+        with tabs[0]:
+            uploaded_file = st.file_uploader("Upload a file")
+            if uploaded_file is not None:
+                with open(WORKSPACE / uploaded_file.name, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+
+            for file in WORKSPACE.iterdir():
+                if "__pycache__" not in str(file) and not str(file).startswith("."):
+                    if st.button(file.name):
+                        st.session_state.file_path = file
+
+        with tabs[1]:
+            if (
+                "file_path" not in st.session_state
+                or st.session_state.file_path is None
+                or st.session_state.file_path.suffix != ".py"
+            ):
+                st.write("Please select a python file from the file browser.")
+            else:
+                with open(WORKSPACE / st.session_state.file_path, "r") as f:
+                    code = f.read()
+
+                resp = code_editor(code, lang="python", buttons=[SAVE])
+                if resp["type"] == "saved":
+                    text = resp["text"]
+                    with open(st.session_state.file_path, "w") as f:
+                        f.write(text)
+
+    if "update_thread_started" not in st.session_state:
+        update_thread = threading.Thread(
+            target=get_updates, args=(st.session_state.updates, update_lock)
+        )
+        update_thread.daemon = True
+        update_thread.start()
+        st.session_state.update_thread_started = True
+
+
+if __name__ == "__main__":
+    main()
