@@ -13,6 +13,15 @@ For more information, see https://landing-ai.github.io/landingai-python/landinga
         return self.message
 
 
+class RemoteToolCallFailed(Exception):
+    """Exception raised when an error occurs during a tool call."""
+
+    def __init__(self, tool_name: str, status_code: int, message: str):
+        self.message = (
+            f"""Tool call ({tool_name}) failed due to {status_code} - {message}"""
+        )
+
+
 class RemoteSandboxError(Exception):
     """Exception related to remote sandbox."""
 

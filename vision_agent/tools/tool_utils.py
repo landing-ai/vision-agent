@@ -1,11 +1,15 @@
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, MutableMapping, Optional
 
+from IPython.display import display
+from pydantic import BaseModel
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from vision_agent.utils.exceptions import RemoteToolCallFailed
+from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
@@ -13,34 +17,56 @@ _LND_API_KEY = LandingaiAPIKey().api_key
 _LND_API_URL = "https://api.staging.landing.ai/v1/agent"
 
 
+class ToolCallTrace(BaseModel):
+    endpoint_url: str
+    request: MutableMapping[str, Any]
+    response: MutableMapping[str, Any]
+    error: Optional[Error]
+
+
 def send_inference_request(
     payload: Dict[str, Any], endpoint_name: str
 ) -> Dict[str, Any]:
-    if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
-        payload["runtime_tag"] = runtime_tag
+    try:
+        if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
+            payload["runtime_tag"] = runtime_tag
 
-    url = f"{_LND_API_URL}/model/{endpoint_name}"
-    if "TOOL_ENDPOINT_URL" in os.environ:
-        url = os.environ["TOOL_ENDPOINT_URL"]
+        url = f"{_LND_API_URL}/model/{endpoint_name}"
+        if "TOOL_ENDPOINT_URL" in os.environ:
+            url = os.environ["TOOL_ENDPOINT_URL"]
 
-    headers = {"Content-Type": "application/json", "apikey": _LND_API_KEY}
-    if "TOOL_ENDPOINT_AUTH" in os.environ:
-        headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
-        headers.pop("apikey")
+        tool_call_trace = ToolCallTrace(
+            endpoint_url=url,
+            request=payload,
+            response={},
+            error=None,
+        )
+        headers = {"Content-Type": "application/json", "apikey": _LND_API_KEY}
+        if "TOOL_ENDPOINT_AUTH" in os.environ:
+            headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
+            headers.pop("apikey")
 
-    session = _create_requests_session(
-        url=url,
-        num_retry=3,
-        headers=headers,
-    )
-    res = session.post(url, json=payload)
-    if res.status_code != 200:
-        _LOGGER.error(f"Request failed: {res.status_code} {res.text}")
-        raise ValueError(f"Request failed: {res.status_code} {res.text}")
+        session = _create_requests_session(
+            url=url,
+            num_retry=3,
+            headers=headers,
+        )
+        res = session.post(url, json=payload)
+        if res.status_code != 200:
+            tool_call_trace.error = Error(
+                name="RemoteToolCallFailed",
+                value=f"{res.status_code} - {res.text}",
+                traceback_raw=[],
+            )
+            _LOGGER.error(f"Request failed: {res.status_code} {res.text}")
+            raise RemoteToolCallFailed(payload["tool"], res.status_code, res.text)
 
-    resp = res.json()
-    # TODO: consider making the response schema the same between below two sources
-    return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]  # type: ignore
+        resp = res.json()
+        tool_call_trace.response = resp
+        # TODO: consider making the response schema the same between below two sources
+        return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]  # type: ignore
+    finally:
+        display({MimeType.APPLICATION_JSON: tool_call_trace.model_dump()}, raw=True)
 
 
 def _create_requests_session(
