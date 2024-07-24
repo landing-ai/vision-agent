@@ -59,7 +59,7 @@ def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
     if ZMQ_PORT is not None:
         agent = va.agent.VisionAgentCoder(
             report_progress_callback=lambda inp: report_progress_callback(
-                int(ZMQ_PORT), inp  # type: ignore
+                int(ZMQ_PORT), inp
             )
         )
     else:
