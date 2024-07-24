@@ -66,7 +66,9 @@ def send_inference_request(
         # TODO: consider making the response schema the same between below two sources
         return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]  # type: ignore
     finally:
-        display({MimeType.APPLICATION_JSON: tool_call_trace.model_dump()}, raw=True)
+        trace = tool_call_trace.model_dump()
+        trace["type"] = "tool_call"
+        display({MimeType.APPLICATION_JSON: trace}, raw=True)
 
 
 def _create_requests_session(
