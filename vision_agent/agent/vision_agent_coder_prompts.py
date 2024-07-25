@@ -66,8 +66,9 @@ This is the documentation for the functions you have access to. You may call any
 
 **Instructions**:
 1. Write a program to load the media and call each tool and save it's output.
-2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove any array types from the printed dictionary.
-3. Print this final dictionary.
+2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
+3. Your test case MUST run only on the given images which are {media}
+4. Print this final dictionary.
 
 **Example**:
 plan1:

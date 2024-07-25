@@ -138,6 +138,7 @@ def pick_plan(
     tool_info: str,
     model: LMM,
     code_interpreter: CodeInterpreter,
+    media: List[str],
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
@@ -155,7 +156,7 @@ def pick_plan(
 
     plan_str = format_plans(plans)
     prompt = TEST_PLANS.format(
-        docstring=tool_info, plans=plan_str, previous_attempts=""
+        docstring=tool_info, plans=plan_str, previous_attempts="", media=media
     )
 
     code = extract_code(model(prompt))
@@ -186,6 +187,7 @@ def pick_plan(
             previous_attempts=PREVIOUS_FAILED.format(
                 code=code, error=tool_output.text()
             ),
+            media=media,
         )
         code = extract_code(model(prompt))
         log_progress(
@@ -718,6 +720,7 @@ class VisionAgentCoder(Agent):
                     tool_infos["all"],
                     self.coder,
                     code_interpreter,
+                    media_list,
                     self.log_progress,
                     verbosity=self.verbosity,
                 )
