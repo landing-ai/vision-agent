@@ -85,7 +85,13 @@ def main():
         with tabs[0]:
             messages = st.container(height=400)
             for message in st.session_state.messages:
-                messages.chat_message(message["role"]).write(message["content"])
+                if message["role"] in {"user", "assistant"}:
+                    msg = message["content"]
+                    msg = msg.replace("<execute_python>", "<execute_python>`")
+                    msg = msg.replace("</execute_python>", "`</execute_python>")
+                    messages.chat_message(message["role"]).write(msg)
+                else:
+                    messages.chat_message("observation").write(message["content"])
 
             st.text_input("Chat here", key="widget", on_change=submit)
             prompt = st.session_state.input_text
