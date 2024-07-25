@@ -277,6 +277,17 @@ class Error(BaseModel):
         text = "\n".join(self.traceback_raw)
         return _remove_escape_and_color_codes(text) if return_clean_text else text
 
+    @staticmethod
+    def from_exception(e: Exception) -> "Error":
+        """
+        Creates an Error object from an exception.
+        """
+        return Error(
+            name=e.__class__.__name__,
+            value=str(e),
+            traceback_raw=traceback.format_exception(type(e), e, e.__traceback__),
+        )
+
 
 class Execution(BaseModel):
     """
