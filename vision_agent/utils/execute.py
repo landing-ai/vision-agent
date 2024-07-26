@@ -16,10 +16,14 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import nbformat
 import tenacity
 from dotenv import load_dotenv
-from e2b import TimeoutException
+from e2b.exceptions import SandboxException
 from e2b_code_interpreter import CodeInterpreter as E2BCodeInterpreterImpl
 from e2b_code_interpreter import Execution as E2BExecution
 from e2b_code_interpreter import Result as E2BResult
+from h11._util import LocalProtocolError
+from httpx import ConnectError
+from httpx import RemoteProtocolError as HttpcoreRemoteProtocolError
+from httpx import RemoteProtocolError as HttpxRemoteProtocolError
 from nbclient import NotebookClient
 from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
@@ -43,17 +47,17 @@ class MimeType(str, Enum):
     Represents a MIME type.
     """
 
-    TEXT_PLAIN = "text"
-    TEXT_HTML = "html"
-    TEXT_MARKDOWN = "markdown"
-    IMAGE_SVG = "svg"
-    IMAGE_PNG = "png"
-    IMAGE_JPEG = "jpeg"
+    TEXT_PLAIN = "text/plain"
+    TEXT_HTML = "text/html"
+    TEXT_MARKDOWN = "text/markdown"
+    IMAGE_SVG = "image/svg+xml"
+    IMAGE_PNG = "image/png"
+    IMAGE_JPEG = "image/jpeg"
     VIDEO_MP4_B64 = "video/mp4/base64"
-    APPLICATION_PDF = "pdf"
-    TEXT_LATEX = "latex"
-    APPLICATION_JSON = "json"
-    APPLICATION_JAVASCRIPT = "javascript"
+    APPLICATION_PDF = "application/pdf"
+    TEXT_LATEX = "text/latex"
+    APPLICATION_JSON = "application/json"
+    APPLICATION_JAVASCRIPT = "application/javascript"
 
 
 class FileSerializer:
@@ -226,7 +230,13 @@ class Result:
         """
         Creates a Result object from an E2BResult object.
         """
-        data = {key: result[key] for key in result.formats()}
+        data = {
+            MimeType.TEXT_PLAIN.value: result.text,
+            MimeType.IMAGE_PNG.value: result.png,
+            MimeType.APPLICATION_JSON.value: result.json,
+        }
+        for k, v in result.extra.items():
+            data[k] = v
         return Result(
             is_main_result=result.is_main_result,
             data=data,
@@ -478,9 +488,16 @@ print(f"Vision Agent version: {va_version}")"""
 
     @tenacity.retry(
         wait=tenacity.wait_exponential_jitter(),
-        stop=tenacity.stop_after_attempt(2),
-        # TODO: change TimeoutError to a more specific exception when e2b team provides more granular retryable exceptions
-        retry=tenacity.retry_if_exception_type(TimeoutException),
+        stop=tenacity.stop_after_attempt(3),
+        retry=tenacity.retry_if_exception_type(
+            (
+                LocalProtocolError,
+                HttpxRemoteProtocolError,
+                HttpcoreRemoteProtocolError,
+                ConnectError,
+                SandboxException,
+            )
+        ),
         before_sleep=tenacity.before_sleep_log(_LOGGER, logging.INFO),
         after=tenacity.after_log(_LOGGER, logging.INFO),
     )
@@ -490,16 +507,43 @@ print(f"Vision Agent version: {va_version}")"""
             _LOGGER.info(
                 f"Start code execution in remote sandbox {self.interpreter.sandbox_id}. Timeout: {_SESSION_TIMEOUT}. Code hash: {hash(code)}"
             )
-            execution = self.interpreter.notebook.exec_cell(code)
+            execution = self.interpreter.notebook.exec_cell(
+                code=code,
+                on_stdout=lambda msg: _LOGGER.info(msg),
+                on_stderr=lambda msg: _LOGGER.info(msg),
+            )
             _LOGGER.info(
                 f"Finished code execution in remote sandbox {self.interpreter.sandbox_id}. Code hash: {hash(code)}"
             )
             return Execution.from_e2b_execution(execution)
+        except (
+            LocalProtocolError,
+            HttpxRemoteProtocolError,
+            HttpcoreRemoteProtocolError,
+            ConnectError,
+            SandboxException,
+        ) as e:
+            raise e
         except Exception as e:
             raise RemoteSandboxExecutionError(
                 f"Failed executing code in remote sandbox ({self.interpreter.sandbox_id}) due to error '{type(e).__name__} {str(e)}', code: {code}"
             ) from e
 
+    @tenacity.retry(
+        wait=tenacity.wait_exponential_jitter(),
+        stop=tenacity.stop_after_attempt(3),
+        retry=tenacity.retry_if_exception_type(
+            (
+                LocalProtocolError,
+                HttpxRemoteProtocolError,
+                HttpcoreRemoteProtocolError,
+                ConnectError,
+                SandboxException,
+            )
+        ),
+        before_sleep=tenacity.before_sleep_log(_LOGGER, logging.INFO),
+        after=tenacity.after_log(_LOGGER, logging.INFO),
+    )
     def upload_file(self, file: Union[str, Path]) -> str:
         file_name = Path(file).name
         remote_path = f"/home/user/{file_name}"
