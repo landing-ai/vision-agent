@@ -428,7 +428,9 @@ def write_and_test_code(
     log_progress(
         {
             "type": "log",
-            "log_content": "Code exeuction succeed" if result.success else "Code execution failed",
+            "log_content": (
+                "Code exeuction succeed" if result.success else "Code execution failed"
+            ),
             "status": "completed" if result.success else "failed",
             "code": DefaultImports.prepend_imports(code),
             "payload": {
