@@ -127,6 +127,22 @@ def main():
                     if st.button(file.name):
                         st.session_state.file_path = file
 
+            if (
+                "file_path" in st.session_state
+                and st.session_state.file_path is not None
+                and st.session_state.file_path.suffix
+                in (
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".bmp",
+                    ".webp",
+                )
+            ):
+                st.image(
+                    str(WORKSPACE / st.session_state.file_path), use_column_width=True
+                )
+
         with tabs[1]:
             if (
                 "file_path" not in st.session_state
