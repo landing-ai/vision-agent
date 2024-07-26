@@ -812,6 +812,7 @@ class VisionAgent(Agent):
                 self.coder,
                 code_interpreter,
                 test_multi_plan,
+                self.log_progress,
                 verbosity=self.verbosity,
             )
 
