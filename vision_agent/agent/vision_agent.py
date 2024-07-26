@@ -195,7 +195,7 @@ def pick_plan(
     log_progress(
         {
             "type": "logs",
-            "log_content": "Picking plan",
+            "log_content": "Generating code to pick best plan",
             "status": "started",
         }
     )
@@ -213,7 +213,7 @@ def pick_plan(
     log_progress(
         {
             "type": "logs",
-            "log_content": "Running code",
+            "log_content": "Executing code to test plan",
             "code": code,
             "status": "running",
         }
@@ -231,7 +231,7 @@ def pick_plan(
         {
             "type": "logs",
             "log_content": (
-                "Code exeuction succeed"
+                "Code execution succeed"
                 if tool_output.success
                 else "Code execution failed"
             ),
@@ -265,7 +265,7 @@ def pick_plan(
             {
                 "type": "logs",
                 "log_content": (
-                    "Code exeuction succeed"
+                    "Code execution succeed"
                     if tool_output.success
                     else "Code execution failed"
                 ),
@@ -429,7 +429,7 @@ def write_and_test_code(
         {
             "type": "log",
             "log_content": (
-                "Code exeuction succeed" if result.success else "Code execution failed"
+                "Code execution succeed" if result.success else "Code execution failed"
             ),
             "status": "completed" if result.success else "failed",
             "code": DefaultImports.prepend_imports(code),
@@ -584,7 +584,7 @@ def retrieve_tools(
     plans: Dict[str, List[Dict[str, str]]],
     tool_recommender: Sim,
     verbosity: int = 0,
-) -> Tuple[Dict[str, str], Dict[str, List[str, str]]]:
+) -> Tuple[Dict[str, str], Dict[str, List[Dict[str, str]]]]:
     tool_info = []
     tool_desc = []
     tool_lists: Dict[str, List[Dict[str, str]]] = {}
