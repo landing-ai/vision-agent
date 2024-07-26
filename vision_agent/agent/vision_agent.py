@@ -272,7 +272,7 @@ def pick_plan(
                 "code": code,
                 "payload": {
                     "result": tool_output.to_json(),
-                }
+                },
                 "status": "completed" if tool_output.success else "failed",
             }
         )
