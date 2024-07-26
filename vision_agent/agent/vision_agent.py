@@ -792,7 +792,6 @@ class VisionAgent(Agent):
             tool_infos, tool_lists = retrieve_tools(
                 plans,
                 self.tool_recommender,
-                self.log_progress,
                 self.verbosity,
             )
 
