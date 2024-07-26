@@ -91,7 +91,7 @@ def main():
                     msg = msg.replace("</execute_python>", "`</execute_python>")
                     messages.chat_message(message["role"]).write(msg)
                 else:
-                    messages.chat_message("observation").write(message["content"])
+                    messages.chat_message("observation").text(message["content"])
 
             st.text_input("Chat here", key="widget", on_change=submit)
             prompt = st.session_state.input_text
