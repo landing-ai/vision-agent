@@ -846,8 +846,8 @@ class VisionAgent(Agent):
                 {
                     "type": "final_code",
                     "status": "completed" if success else "failed",
-                    "code": DefaultImports.prepend_imports(code),
                     "payload": {
+                        "code": DefaultImports.prepend_imports(code),
                         "test": test,
                         "result": execution_result.to_json(),
                     },
