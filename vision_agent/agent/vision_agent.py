@@ -184,7 +184,7 @@ def pick_plan(
         k = list(plans.keys())[0]
         log_progress(
             {
-                "type": "logs",
+                "type": "log",
                 "log_content": "Plans created",
                 "status": "completed",
                 "payload": plans[k],
@@ -194,7 +194,7 @@ def pick_plan(
 
     log_progress(
         {
-            "type": "logs",
+            "type": "log",
             "log_content": "Generating code to pick best plan",
             "status": "started",
         }
@@ -212,7 +212,7 @@ def pick_plan(
     code = extract_code(model(prompt))
     log_progress(
         {
-            "type": "logs",
+            "type": "log",
             "log_content": "Executing code to test plan",
             "code": code,
             "status": "running",
@@ -229,7 +229,7 @@ def pick_plan(
 
     log_progress(
         {
-            "type": "logs",
+            "type": "log",
             "log_content": (
                 "Code execution succeed"
                 if tool_output.success
@@ -251,7 +251,7 @@ def pick_plan(
         )
         log_progress(
             {
-                "type": "logs",
+                "type": "log",
                 "log_content": "Retry running code",
                 "code": code,
                 "status": "running",
@@ -263,7 +263,7 @@ def pick_plan(
         )
         log_progress(
             {
-                "type": "logs",
+                "type": "log",
                 "log_content": (
                     "Code execution succeed"
                     if tool_output.success
@@ -318,7 +318,7 @@ def pick_plan(
 
     log_progress(
         {
-            "type": "logs",
+            "type": "log",
             "log_content": "Picked best plan",
             "status": "complete",
             "payload": best_plans,
@@ -771,7 +771,7 @@ class VisionAgent(Agent):
 
             self.log_progress(
                 {
-                    "type": "logs",
+                    "type": "log",
                     "log_content": "Creating plans",
                     "status": "started",
                 }
@@ -798,7 +798,7 @@ class VisionAgent(Agent):
             if test_multi_plan:
                 self.log_progress(
                     {
-                        "type": "logs",
+                        "type": "log",
                         "log_content": "Creating plans",
                         "status": "completed",
                         "payload": tool_lists,
