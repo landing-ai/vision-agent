@@ -80,7 +80,7 @@ def main():
 
     with left_column:
         st.title("Chat & Code Execution")
-        tabs = st.tabs(["Chat", "Code Execution"])
+        tabs = st.tabs(["Chat", "Code Execution Logs"])
 
         with tabs[0]:
             messages = st.container(height=400)
