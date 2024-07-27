@@ -26,6 +26,13 @@ Finally you can launch the app with the following command:
 streamlit run app.py
 ```
 
+You can upload an image to your workspace in the right column first tab, then ask the
+agent to do a task, (be sure to include which image you want it to use for testing) for
+example:
+```
+Can you count the number of people in this image? Use image.jpg for testing.
+```
+
 ## Layout
 The are two columns, left and right, each with two tabs.
 
