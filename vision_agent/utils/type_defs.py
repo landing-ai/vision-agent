@@ -14,7 +14,7 @@ class LandingaiAPIKey(BaseSettings):
     """
 
     api_key: str = Field(
-        default="land_sk_IJrojHarPXRjqDj1Fng76mX7yCbzVm1s5rZYxaNXu5v0cNLn0w",
+        default="land_sk_fnmSzD0ksknSfvhyD8UGu9R4ss3bKfLL1Im5gb6tDQTy2z1Oy5",
         alias="LANDINGAI_API_KEY",
         description="The API key of LandingAI.",
     )
