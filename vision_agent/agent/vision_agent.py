@@ -98,6 +98,7 @@ def parse_execution(response: str) -> Optional[str]:
         code = code[: code.find("</execute_python>")]
     return code
 
+
 class VisionAgent(Agent):
     """Vision Agent is an agent that can chat with the user and call tools or other
     agents to generate code for it. Vision Agent uses python code to execute actions for

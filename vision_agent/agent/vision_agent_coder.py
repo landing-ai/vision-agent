@@ -145,7 +145,8 @@ def pick_plan(
 ) -> Tuple[str, str]:
     log_progress(
         {
-            "type": "pick_plan",
+            "type": "log",
+            "log_content": "Generating code to pick the best plan",
             "status": "started",
         }
     )
@@ -162,11 +163,10 @@ def pick_plan(
     code = extract_code(model(prompt))
     log_progress(
         {
-            "type": "pick_plan",
+            "type": "log",
+            "log_content": "Executing code to test plans",
+            "code": DefaultImports.prepend_imports(code),
             "status": "running",
-            "payload": {
-                "code": DefaultImports.prepend_imports(code),
-            },
         }
     )
     tool_output = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
@@ -177,6 +177,19 @@ def pick_plan(
     if verbosity == 2:
         _print_code("Initial code and tests:", code)
         _LOGGER.info(f"Initial code execution result:\n{tool_output.text()}")
+
+    log_progress(
+        {
+            "type": "log",
+            "log_content": (
+                "Code execution succeeded"
+                if tool_output.success
+                else "Code execution failed"
+            ),
+            "payload": tool_output.to_json(),
+            "status": "completed" if tool_output.success else "failed",
+        }
+    )
 
     # retry if the tool output is empty or code fails
     count = 0
@@ -189,14 +202,26 @@ def pick_plan(
             ),
             media=media,
         )
+        log_progress(
+            {
+                "type": "log",
+                "log_content": "Retrying code to test plans",
+                "status": "running",
+                "code": DefaultImports.prepend_imports(code),
+            }
+        )
         code = extract_code(model(prompt))
         log_progress(
             {
-                "type": "pick_plan",
-                "status": "running",
-                "payload": {
-                    "code": DefaultImports.prepend_imports(code),
-                },
+                "type": "log",
+                "log_content": (
+                    "Code execution succeeded"
+                    if tool_output.success
+                    else "Code execution failed"
+                ),
+                "code": DefaultImports.prepend_imports(code),
+                "payload": tool_output.to_json(),
+                "status": "completed" if tool_output.success else "failed",
             }
         )
         tool_output = code_interpreter.exec_isolation(
@@ -231,9 +256,10 @@ def pick_plan(
         _LOGGER.info(f"Best plan:\n{best_plan}")
     log_progress(
         {
-            "type": "pick_plan",
+            "type": "log",
+            "log_content": "Picked best plan",
             "status": "completed",
-            "payload": best_plan,
+            "payload": plans[best_plan["best_plan"]],
         }
     )
     return best_plan["best_plan"], tool_output_str
@@ -304,7 +330,8 @@ def write_and_test_code(
 ) -> Dict[str, Any]:
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": "Generating code",
             "status": "started",
         }
     )
@@ -322,10 +349,11 @@ def write_and_test_code(
 
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": "Running code",
             "status": "running",
+            "code": DefaultImports.prepend_imports(code),
             "payload": {
-                "code": DefaultImports.prepend_imports(code),
                 "test": test,
             },
         }
@@ -335,10 +363,15 @@ def write_and_test_code(
     )
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": (
+                "Code execution succeeded"
+                if result.success
+                else "Code execution failed"
+            ),
             "status": "completed" if result.success else "failed",
+            "code": DefaultImports.prepend_imports(code),
             "payload": {
-                "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "result": result.to_json(),
             },
@@ -682,7 +715,8 @@ class VisionAgentCoder(Agent):
             success = False
             self.log_progress(
                 {
-                    "type": "plans",
+                    "type": "log",
+                    "log_content": "Creating plans",
                     "status": "started",
                 }
             )
@@ -698,13 +732,6 @@ class VisionAgentCoder(Agent):
                     _LOGGER.info(
                         f"\n{tabulate(tabular_data=plans[p], headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
-            self.log_progress(
-                {
-                    "type": "plans",
-                    "status": "completed",
-                    "payload": plans,
-                }
-            )
 
             tool_infos = retrieve_tools(
                 plans,
@@ -742,11 +769,13 @@ class VisionAgentCoder(Agent):
 
             self.log_progress(
                 {
-                    "type": "plans",
+                    "type": "log",
+                    "log_content": "Creating plans",
                     "status": "completed",
-                    "payload": plan_i,
+                    "payload": tool_info,
                 }
             )
+
             if self.verbosity >= 1:
                 _LOGGER.info(
                     f"Picked best plan:\n{tabulate(tabular_data=plan_i, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
