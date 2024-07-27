@@ -10,7 +10,7 @@ code to solve the task for them. Check out our discord for updates and roadmaps!
 
 ## Web Application
 
-Try Vision Agent live on [va.landing.ai](https://va.landing.ai/)
+Try Vision Agent live on (note this may not be running the most up-to-date version) [va.landing.ai](https://va.landing.ai/)
 
 ## Documentation
 
@@ -32,18 +32,27 @@ using Azure OpenAI please see the Azure setup section):
 export OPENAI_API_KEY="your-api-key"
 ```
 
-### Important Note on API Usage
-Please be aware that using the API in this project requires you to have API credits (minimum of five US dollars). This is different from the OpenAI subscription used in this chatbot. If you don't have credit, further information can be found [here](https://github.com/landing-ai/vision-agent?tab=readme-ov-file#how-to-get-started-with-openai-api-credits)
-
-
 ### Vision Agent
 There are two agents that you can use. Vision Agent is a conversational agent that has
-access to tools that allow it to write an navigate python code. It can converse with
-the user in natural language. VisionAgentCoder is an agent that can write code for
-vision tasks, such as counting people in an image. However, it cannot converse and can
-only respond with code. VisionAgent can call VisionAgentCoder to write vision code.
+access to tools that allow it to write an navigate python code and file systems. It can
+converse with the user in natural language. VisionAgentCoder is an agent that can write
+code for vision tasks, such as counting people in an image. However, it cannot converse
+and can only respond with code. VisionAgent can call VisionAgentCoder to write vision
+code.
 
 #### Basic Usage
+To run the streamlit app locally to chat with Vision Agent, you can run the following
+command:
+
+```bash
+pip install -r examples/chat/requirements.txt
+export WORKSPACE=/path/to/your/workspace
+export ZMQ_PORT=5555
+streamlit run examples/chat/app.py
+```
+You can find more details about the streamlit app [here](examples/chat/).
+
+#### Basic Programmatic Usage
 ```python
 >>> from vision_agent.agent import VisionAgent
 >>> agent = VisionAgent()
@@ -231,7 +240,7 @@ agent = va.agent.AzureVisionAgentCoder()
 
 #### How to get started with OpenAI API credits
 
-1. Visit the[OpenAI API platform](https://beta.openai.com/signup/) to sign up for an API key.
+1. Visit the [OpenAI API platform](https://beta.openai.com/signup/) to sign up for an API key.
 2. Follow the instructions to purchase and manage your API credits.
 3. Ensure your API key is correctly configured in your project settings.
 

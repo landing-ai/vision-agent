@@ -560,8 +560,7 @@ class VisionAgentCoder(Agent):
     """Vision Agent Coder is an agentic framework that can output code based on a user
     request. It can plan tasks, retrieve relevant tools, write code, write tests and
     reflect on failed test cases to debug code. It is inspired by AgentCoder
-    https://arxiv.org/abs/2312.13010 and Data Interpeter
-    https://arxiv.org/abs/2402.18679
+    https://arxiv.org/abs/2312.13010 and Data Interpeter https://arxiv.org/abs/2402.18679
 
     Example
     -------
