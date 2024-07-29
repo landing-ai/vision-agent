@@ -1,22 +1,25 @@
-import inspect
 import io
 import json
 import logging
 import tempfile
 from importlib import resources
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
 import numpy as np
-import pandas as pd
 import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
-from vision_agent.tools.tool_utils import send_inference_request
+from vision_agent.tools.tool_utils import (
+    get_tool_descriptions,
+    get_tool_documentation,
+    get_tools_df,
+    send_inference_request,
+)
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -54,7 +57,6 @@ COLORS = [
 ]
 _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
 _OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
-logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -1218,50 +1220,6 @@ def overlay_heat_map(
         pil_image.convert("RGBA"), overlay.resize(pil_image.size)
     )
     return np.array(combined)
-
-
-def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
-    docstrings = ""
-    for func in funcs:
-        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}\n\n"
-
-    return docstrings
-
-
-def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
-    descriptions = ""
-    for func in funcs:
-        description = func.__doc__
-        if description is None:
-            description = ""
-
-        if "Parameters:" in description:
-            description = (
-                description[: description.find("Parameters:")]
-                .replace("\n", " ")
-                .strip()
-            )
-
-        description = " ".join(description.split())
-        descriptions += f"- {func.__name__}{inspect.signature(func)}: {description}\n"
-    return descriptions
-
-
-def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
-    data: Dict[str, List[str]] = {"desc": [], "doc": []}
-
-    for func in funcs:
-        desc = func.__doc__
-        if desc is None:
-            desc = ""
-        desc = desc[: desc.find("Parameters:")].replace("\n", " ").strip()
-        desc = " ".join(desc.split())
-
-        doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
-        data["desc"].append(desc)
-        data["doc"].append(doc)
-
-    return pd.DataFrame(data)  # type: ignore
 
 
 TOOLS = [

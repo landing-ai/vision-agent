@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Laird"
+  given-names: "Dillon"
+- family-names: "Jagadeesan"
+  given-name: "Shankar"
+- family-name: "Cao"
+  given-name: "Yazhou"
+- family-name: "Ng"
+  given-name: "Andrew"
+title: "Vision Agent"
+version: 0.2
+date-released: 2024-02-12
+url: "https://github.com/landing-ai/vision-agent"

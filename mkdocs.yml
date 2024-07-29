@@ -3,18 +3,59 @@ site_url: https://landing-ai.github.io/
 repo_url: https://github.com/landing-ai/vision-agent
 edit_uri: edit/main/docs/
 
-
 theme:
-  name: "material"
+  name: material
   custom_dir: docs/_overrides
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
   features:
-    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - navigation.indexes
+    - content.tooltips
+    - navigation.path
     - content.code.annotate
-    - content.action.edit
+    - content.code.copy
+    - content.code.select
+    - navigation.tabs
+  icon:
+    repo: fontawesome/brands/github-alt
+
 
 plugins:
-  - mkdocstrings
-  - search
+  search: null
+  mkdocstrings:
+    handlers:
+      python:
+        options:
+          show_root_heading: true
+          show_if_no_docstring: true
+          inherited_members: true
+          members_order: source
+          separate_signature: true
+          unwrap_annotated: true
+          filters:
+          - '!^_'
+          merge_init_into_class: true
+          docstring_section_style: spacy
+          signature_crossrefs: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+
 
 markdown_extensions:
   # Syntax highlight
@@ -33,8 +74,7 @@ markdown_extensions:
 nav:
   - Quick start: index.md
   - APIs:
-    - vision_agent.agent: api/agent.md
-    - vision_agent.tools: api/tools.md
-    - vision_agent.llm: api/llm.md
-    - vision_agent.lmm: api/lmm.md
-    - vision_agent.utils: api/utils.md
+      - vision_agent.agent: api/agent.md
+      - vision_agent.tools: api/tools.md
+      - vision_agent.lmm: api/lmm.md
+      - vision_agent.utils: api/utils.md
