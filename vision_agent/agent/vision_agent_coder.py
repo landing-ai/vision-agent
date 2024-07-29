@@ -531,9 +531,7 @@ def retrieve_tools(
     log_progress(
         {
             "type": "log",
-            "log_content": (
-                "Retrieving tools for each plan"
-            ),
+            "log_content": ("Retrieving tools for each plan"),
             "status": "started",
         }
     )
