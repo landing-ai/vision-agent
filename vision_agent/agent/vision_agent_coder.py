@@ -484,7 +484,7 @@ def debug_code(
         f"{DefaultImports.to_code_string()}\n{code}\n{test}"
     )
     log_progress(
-                {
+        {
             "type": "log",
             "log_content": (
                 "Code execution succeed" if result.success else "Code execution failed"
@@ -819,6 +819,7 @@ class VisionAgentCoder(Agent):
                         play_video(res.mp4)
 
             return {
+                "status": "completed" if success else "failed",
                 "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
