@@ -128,7 +128,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
 
 
 def extract_image(
-    media: Optional[Sequence[Union[str, Path]]]
+    media: Optional[Sequence[Union[str, Path]]],
 ) -> Optional[Sequence[Union[str, Path]]]:
     if media is None:
         return None
@@ -490,9 +490,7 @@ def debug_code(
     log_progress(
         {
             "type": "log",
-            "log_content": (
-                "Debugging code"
-            ),
+            "log_content": ("Debugging code"),
             "status": "started",
         }
     )
@@ -535,9 +533,7 @@ def debug_code(
     log_progress(
         {
             "type": "log",
-            "log_content": (
-                "Running code"
-            ),
+            "log_content": ("Running code"),
             "status": "running",
             "code": DefaultImports.prepend_imports(code),
             "payload": {
@@ -860,6 +856,7 @@ class VisionAgent(Agent):
                         play_video(res.mp4)
 
             return {
+                "status": "completed" if success else "failed",
                 "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
