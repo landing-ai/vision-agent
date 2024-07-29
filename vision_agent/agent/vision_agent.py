@@ -435,7 +435,7 @@ def write_and_test_code(
             "code": DefaultImports.prepend_imports(code),
             "payload": {
                 "test": test,
-                "result": result.to_json(),
+                # "result": result.to_json(),
             },
         }
     )
@@ -489,11 +489,13 @@ def debug_code(
 ) -> tuple[str, str, Execution]:
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": (
+                "Debugging code"
+            ),
             "status": "started",
         }
     )
-
     fixed_code_and_test = {"code": "", "test": "", "reflections": ""}
     success = False
     count = 0
@@ -532,10 +534,13 @@ def debug_code(
     )
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": (
+                "Running code"
+            ),
             "status": "running",
+            "code": DefaultImports.prepend_imports(code),
             "payload": {
-                "code": DefaultImports.prepend_imports(code),
                 "test": test,
             },
         }
@@ -546,12 +551,15 @@ def debug_code(
     )
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": (
+                "Code execution succeed" if result.success else "Code execution failed"
+            ),
             "status": "completed" if result.success else "failed",
+            "code": DefaultImports.prepend_imports(code),
             "payload": {
-                "code": DefaultImports.prepend_imports(code),
                 "test": test,
-                "result": result.to_json(),
+                # "result": result.to_json(),
             },
         }
     )
@@ -843,17 +851,6 @@ class VisionAgent(Agent):
             plan.append({"code": code, "test": test, "plan": best_plan})
 
             execution_result = cast(Execution, results["test_result"])
-            self.log_progress(
-                {
-                    "type": "final_code",
-                    "status": "completed" if success else "failed",
-                    "payload": {
-                        "code": DefaultImports.prepend_imports(code),
-                        "test": test,
-                        "result": execution_result.to_json(),
-                    },
-                }
-            )
 
             if display_visualization:
                 for res in execution_result.results:
