@@ -5,9 +5,9 @@ authors:
   given-names: "Dillon"
 - family-names: "Jagadeesan"
   given-name: "Shankar"
-- family-name: "Cao"
+- family-names: "Cao"
   given-name: "Yazhou"
-- family-name: "Ng"
+- family-names: "Ng"
   given-name: "Andrew"
 title: "Vision Agent"
 version: 0.2
