@@ -232,7 +232,7 @@ def overlay_heat_map(
 
     Parameters:
         image: the input image
-        masks: the heatmap to overlay
+        heat_map: the heatmap to overlay
         alpha: the transparency of the overlay
 
     Returns:
