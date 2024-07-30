@@ -373,7 +373,7 @@ def write_and_test_code(
             "code": DefaultImports.prepend_imports(code),
             "payload": {
                 "test": test,
-                "result": result.to_json(),
+                # "result": result.to_json(),
             },
         }
     )
@@ -426,7 +426,8 @@ def debug_code(
 ) -> tuple[str, str, Execution]:
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": ("Debugging code"),
             "status": "started",
         }
     )
@@ -469,10 +470,11 @@ def debug_code(
     )
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": ("Running code"),
             "status": "running",
+            "code": DefaultImports.prepend_imports(code),
             "payload": {
-                "code": DefaultImports.prepend_imports(code),
                 "test": test,
             },
         }
@@ -483,12 +485,15 @@ def debug_code(
     )
     log_progress(
         {
-            "type": "code",
+            "type": "log",
+            "log_content": (
+                "Code execution succeed" if result.success else "Code execution failed"
+            ),
             "status": "completed" if result.success else "failed",
+            "code": DefaultImports.prepend_imports(code),
             "payload": {
-                "code": DefaultImports.prepend_imports(code),
                 "test": test,
-                "result": result.to_json(),
+                # "result": result.to_json(),
             },
         }
     )
@@ -525,7 +530,8 @@ def retrieve_tools(
 ) -> Dict[str, str]:
     log_progress(
         {
-            "type": "tools",
+            "type": "log",
+            "log_content": ("Retrieving tools for each plan"),
             "status": "started",
         }
     )
@@ -802,17 +808,6 @@ class VisionAgentCoder(Agent):
             plan.append({"code": code, "test": test, "plan": plan_i})
 
             execution_result = cast(Execution, results["test_result"])
-            self.log_progress(
-                {
-                    "type": "final_code",
-                    "status": "completed" if success else "failed",
-                    "payload": {
-                        "code": DefaultImports.prepend_imports(code),
-                        "test": test,
-                        "result": execution_result.to_json(),
-                    },
-                }
-            )
 
             if display_visualization:
                 for res in execution_result.results:
@@ -822,6 +817,7 @@ class VisionAgentCoder(Agent):
                         play_video(res.mp4)
 
             return {
+                "status": "completed" if success else "failed",
                 "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
