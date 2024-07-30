@@ -35,11 +35,12 @@ rich = "^13.7.1"
 langsmith = "^0.1.58"
 ipykernel = "^6.29.4"
 e2b = "^0.17.1"
-e2b-code-interpreter = "0.0.11a2"
+e2b-code-interpreter = "0.0.11a17"
 tenacity = "^8.3.0"
 pillow-heif = "^0.16.0"
 pytube = "15.0.0"
 anthropic = "^0.31.0"
+pydantic = "2.7.4"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
