@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 import cv2
 import numpy as np
 import requests
-from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
@@ -1044,15 +1043,21 @@ def save_video(
     if fps <= 0:
         _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
         fps = 4
-    with ImageSequenceClip(frames, fps=fps) as video:
-        if output_video_path:
-            f = open(output_video_path, "wb")
-        else:
-            f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)  # type: ignore
-        video.write_videofile(f.name, codec="libx264")
-        f.close()
-        _save_video_to_result(f.name)
-        return f.name
+
+    if not output_video_path:
+        output_video_path = tempfile.NamedTemporaryFile(
+            suffix=".mp4", delete=False
+        ).name
+
+    height, width, layers = frames[0].shape if frames else (0, 0, 0)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
+    video = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+    for frame in frames:
+        video.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+    video.release()
+
+    _save_video_to_result(output_video_path)
+    return output_video_path
 
 
 def _save_video_to_result(video_uri: str) -> None:
