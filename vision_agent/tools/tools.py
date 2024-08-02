@@ -1069,7 +1069,7 @@ def save_video(
         ).name
 
     height, width, layers = frames[0].shape if frames else (0, 0, 0)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
+    fourcc = cv2.VideoWriter_fourcc(*"X264")  # type: ignore
     video = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
     for frame in frames:
         video.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
