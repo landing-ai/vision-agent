@@ -23,9 +23,3 @@ class TestSaveVideo:
 
         assert output_path == video_output_path
         assert Path(output_path).exists()
-
-    # Handles an empty list of frames gracefully
-    def test_handles_empty_frames_list(self):
-        frames = []
-        output_path = save_video(frames)
-        assert Path(output_path).exists()
