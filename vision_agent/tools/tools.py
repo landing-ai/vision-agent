@@ -879,6 +879,7 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
     data = {
         "image": image_b64,
         "tool": "generate_pose",
+        "function_name": "generate_pose_image",
     }
 
     answer = send_inference_request(data, "tools")
