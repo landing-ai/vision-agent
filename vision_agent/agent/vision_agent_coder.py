@@ -186,6 +186,7 @@ def pick_plan(
                 if tool_output.success
                 else "Code execution failed"
             ),
+            "code": DefaultImports.prepend_imports(code),
             # "payload": tool_output.to_json(),
             "status": "completed" if tool_output.success else "failed",
         }
