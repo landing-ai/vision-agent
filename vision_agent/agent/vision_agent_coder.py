@@ -93,7 +93,7 @@ def format_plans(plans: Dict[str, Any]) -> str:
 
 
 def extract_image(
-    media: Optional[Sequence[Union[str, Path]]]
+    media: Optional[Sequence[Union[str, Path]]],
 ) -> Optional[Sequence[Union[str, Path]]]:
     if media is None:
         return None
@@ -186,7 +186,8 @@ def pick_plan(
                 if tool_output.success
                 else "Code execution failed"
             ),
-            "payload": tool_output.to_json(),
+            "code": DefaultImports.prepend_imports(code),
+            # "payload": tool_output.to_json(),
             "status": "completed" if tool_output.success else "failed",
         }
     )
@@ -211,6 +212,9 @@ def pick_plan(
             }
         )
         code = extract_code(model(prompt))
+        tool_output = code_interpreter.exec_isolation(
+            DefaultImports.prepend_imports(code)
+        )
         log_progress(
             {
                 "type": "log",
@@ -220,12 +224,9 @@ def pick_plan(
                     else "Code execution failed"
                 ),
                 "code": DefaultImports.prepend_imports(code),
-                "payload": tool_output.to_json(),
+                # "payload": tool_output.to_json(),
                 "status": "completed" if tool_output.success else "failed",
             }
-        )
-        tool_output = code_interpreter.exec_isolation(
-            DefaultImports.prepend_imports(code)
         )
         tool_output_str = ""
         if len(tool_output.logs.stdout) > 0:
