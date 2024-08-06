@@ -20,7 +20,7 @@ class LandingPublicAPI(BaseHTTP):
         url = "v1/agent/jobs/fine-tuning"
         data = {
             "model": {"name": model_name, "task": task},
-            "bboxes": [bbox.model_dump(by_alias=True) for bbox in bboxes]
+            "bboxes": [bbox.model_dump(by_alias=True) for bbox in bboxes],
         }
         response = self.post(url, payload=data)
         return UUID(response["jobId"])

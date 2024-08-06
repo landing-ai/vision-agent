@@ -13,7 +13,9 @@ class BaseHTTP:
     _TIMEOUT = 30  # seconds
     _MAX_RETRIES = 3
 
-    def __init__(self, base_endpoint: str, *, headers: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self, base_endpoint: str, *, headers: Optional[Dict[str, Any]] = None
+    ) -> None:
         self._headers = headers
         if headers is None:
             self._headers = {
@@ -22,16 +24,16 @@ class BaseHTTP:
         self._base_endpoint = base_endpoint
         self._session = Session()
         self._session.headers.update(self._headers)
-        self._session.mount(self._base_endpoint, HTTPAdapter(max_retries=self._MAX_RETRIES))
+        self._session.mount(
+            self._base_endpoint, HTTPAdapter(max_retries=self._MAX_RETRIES)
+        )
 
     def post(self, url: str, payload: Dict[str, Any]) -> None:
         formatted_url = f"{self._base_endpoint}/{url}"
         _LOGGER.info(f"Sending data to {formatted_url}")
         try:
             response = self._session.post(
-                url=formatted_url,
-                json=payload,
-                timeout=self._TIMEOUT
+                url=formatted_url, json=payload, timeout=self._TIMEOUT
             )
             response.raise_for_status()
             _LOGGER.info(json.dumps(response.json()))
