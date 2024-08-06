@@ -23,12 +23,12 @@ class BaseHTTP:
             }
         self._base_endpoint = base_endpoint
         self._session = Session()
-        self._session.headers.update(self._headers)
+        self._session.headers.update(self._headers)  # type: ignore
         self._session.mount(
             self._base_endpoint, HTTPAdapter(max_retries=self._MAX_RETRIES)
         )
 
-    def post(self, url: str, payload: Dict[str, Any]) -> None:
+    def post(self, url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         formatted_url = f"{self._base_endpoint}/{url}"
         _LOGGER.info(f"Sending data to {formatted_url}")
         try:
@@ -36,9 +36,11 @@ class BaseHTTP:
                 url=formatted_url, json=payload, timeout=self._TIMEOUT
             )
             response.raise_for_status()
-            _LOGGER.info(json.dumps(response.json()))
+            result: Dict[str, Any] = response.json()
+            _LOGGER.info(json.dumps(result))
         except (ConnectionError, Timeout, RequestException) as err:
             _LOGGER.warning(f"Error: {err}.")
         except json.JSONDecodeError:
             resp_text = response.text
             _LOGGER.warning(f"Response seems incorrect: '{resp_text}'.")
+        return result
