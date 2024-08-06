@@ -17,6 +17,7 @@ packages = [{include = "vision_agent"}]
 
 [tool.poetry.dependencies]  # main dependency group
 python = ">=3.9,<4.0"
+
 numpy = ">=1.21.0,<2.0.0"
 pillow = "10.*"
 requests = "2.*"
@@ -41,6 +42,7 @@ pillow-heif = "^0.16.0"
 pytube = "15.0.0"
 anthropic = "^0.31.0"
 pydantic = "2.7.4"
+nptyping = "2.5.0"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
@@ -76,6 +78,8 @@ line_length = 88
 profile = "black"
 
 [tool.mypy]
+plugins = ["pydantic.mypy"]
+
 exclude = "tests"
 show_error_context = true
 pretty = true
