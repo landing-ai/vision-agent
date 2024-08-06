@@ -19,6 +19,7 @@ from .tools import (
     florencev2_image_caption,
     florencev2_object_detection,
     florencev2_roberta_vqa,
+    florencev2_fine_tuning,
     generate_pose_image,
     generate_soft_edge_image,
     get_tool_documentation,

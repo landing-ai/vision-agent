@@ -1,24 +1,25 @@
 import io
 import json
+import inspect
 import logging
 import tempfile
-from importlib import resources
+from uuid import UUID
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from importlib import resources
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
-import numpy as np
 import requests
+import numpy as np
+import pandas as pd
+from pytube import YouTube  # type: ignore
+from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
-from pytube import YouTube  # type: ignore
 
-from vision_agent.tools.tool_utils import (
-    get_tool_descriptions,
-    get_tool_documentation,
-    get_tools_df,
-    send_inference_request,
-)
+from vision_agent.clients.landing_public_api import LandingPublicAPI
+from vision_agent.tools.tool_types import BboxInput, BboxInputBase64
+from vision_agent.tools.tool_utils import send_inference_request
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -56,6 +57,7 @@ COLORS = [
 ]
 _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
 _OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
+logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -106,7 +108,6 @@ def grounding_dino(
             "visual_grounding" if model_size == "large" else "visual_grounding_tiny"
         ),
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "grounding_dino",
     }
     data: Dict[str, Any] = send_inference_request(request_data, "tools")
     return_data = []
@@ -162,7 +163,6 @@ def owl_v2(
         "image": image_b64,
         "tool": "open_vocab_detection",
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "owl_v2",
     }
     data: Dict[str, Any] = send_inference_request(request_data, "tools")
     return_data = []
@@ -227,7 +227,6 @@ def grounding_sam(
         "image": image_b64,
         "tool": "visual_grounding_segment",
         "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "grounding_sam",
     }
     data: Dict[str, Any] = send_inference_request(request_data, "tools")
     return_data = []
@@ -367,7 +366,6 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
     data = {
         "image": image_b64,
         "tool": "zero_shot_counting",
-        "function_name": "loca_zero_shot_counting",
     }
     resp_data = send_inference_request(data, "tools")
     resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
@@ -403,7 +401,6 @@ def loca_visual_prompt_counting(
         "image": image_b64,
         "prompt": bbox_str,
         "tool": "few_shot_counting",
-        "function_name": "loca_visual_prompt_counting",
     }
     resp_data = send_inference_request(data, "tools")
     resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
@@ -433,7 +430,6 @@ def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
         "image": image_b64,
         "prompt": prompt,
         "tool": "image_question_answering_with_context",
-        "function_name": "florencev2_roberta_vqa",
     }
 
     answer = send_inference_request(data, "tools")
@@ -463,7 +459,6 @@ def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
         "image": image_b64,
         "prompt": prompt,
         "tool": "image_question_answering",
-        "function_name": "git_vqa_v2",
     }
 
     answer = send_inference_request(data, "tools")
@@ -494,7 +489,6 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
         "prompt": ",".join(classes),
         "image": image_b64,
         "tool": "closed_set_image_classification",
-        "function_name": "clip",
     }
     resp_data = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
@@ -522,7 +516,6 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
     data = {
         "image": image_b64,
         "tool": "image_classification",
-        "function_name": "vit_image_classification",
     }
     resp_data = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
@@ -550,7 +543,6 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
     data = {
         "image": image_b64,
         "tool": "nsfw_image_classification",
-        "function_name": "vit_nsfw_classification",
     }
     resp_data = send_inference_request(data, "tools")
     resp_data["scores"] = round(resp_data["scores"], 4)
@@ -577,7 +569,6 @@ def blip_image_caption(image: np.ndarray) -> str:
     data = {
         "image": image_b64,
         "tool": "image_captioning",
-        "function_name": "blip_image_caption",
     }
 
     answer = send_inference_request(data, "tools")
@@ -606,7 +597,6 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
         "image": image_b64,
         "tool": "florence2_image_captioning",
         "detail_caption": detail_caption,
-        "function_name": "florencev2_image_caption",
     }
 
     answer = send_inference_request(data, "tools")
@@ -642,7 +632,6 @@ def florencev2_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
     data = {
         "image": image_b64,
         "tool": "object_detection",
-        "function_name": "florencev2_object_detection",
     }
 
     answer = send_inference_request(data, "tools")
@@ -656,6 +645,42 @@ def florencev2_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
             }
         )
     return return_data
+
+
+def florencev2_fine_tuning(bboxes: List[Dict[str, Any]]) -> UUID:
+    """'florencev2_fine_tuning' is a tool that fine-tune florencev2 to be able
+    to detect objects in an image based on a given dataset. It returns the fine
+    tuning job id.
+
+    Parameters:
+        bboxes (List[BboxInput]): A list of BboxInput containing the
+            image object, image filename, labels and bounding boxes.
+
+    Returns:
+        UUID: The fine tuning job id, this id will used to retrieve the fine
+            tuned model.
+
+    Example
+    -------
+        >>> fine_tuning_job_id = florencev2_fine_tuning(
+            [{'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[370, 30, 560, 290]]},
+             {'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[120, 0, 300, 170]]}]
+        )
+    """
+    bboxes_input = [BboxInput.model_validate(bbox) for bbox in bboxes]
+    fine_tuning_request = [
+        BboxInputBase64(
+            image=convert_to_b64(bbox_input.image),
+            filename=bbox_input.filename,
+            labels=bbox_input.labels,
+            bboxes=bbox_input.bboxes
+        )
+        for bbox_input in bboxes_input
+    ]
+    # TODO: receive the task from user prompt
+    task = "<OD>"
+    landing_api = LandingPublicAPI()
+    return landing_api.launch_fine_tuning_job("florencev2", task, fine_tuning_request)
 
 
 def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -699,7 +724,6 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
     data = {
         "image": image_b64,
         "tool": "panoptic_segmentation",
-        "function_name": "detr_segmentation",
     }
 
     answer = send_inference_request(data, "tools")
@@ -742,7 +766,6 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
     data = {
         "image": image_b64,
         "tool": "generate_depth",
-        "function_name": "depth_anything_v2",
     }
 
     answer = send_inference_request(data, "tools")
@@ -774,7 +797,6 @@ def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
     data = {
         "image": image_b64,
         "tool": "generate_hed",
-        "function_name": "generate_soft_edge_image",
     }
 
     answer = send_inference_request(data, "tools")
@@ -807,7 +829,6 @@ def dpt_hybrid_midas(image: np.ndarray) -> np.ndarray:
     data = {
         "image": image_b64,
         "tool": "generate_normal",
-        "function_name": "dpt_hybrid_midas",
     }
 
     answer = send_inference_request(data, "tools")
@@ -839,7 +860,6 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
     data = {
         "image": image_b64,
         "tool": "generate_pose",
-        "function_name": "generate_pose_image",
     }
 
     answer = send_inference_request(data, "tools")
@@ -880,7 +900,6 @@ def template_match(
         "image": image_b64,
         "template": template_image_b64,
         "tool": "template_match",
-        "function_name": "template_match",
     }
 
     answer = send_inference_request(data, "tools")
@@ -1062,21 +1081,15 @@ def save_video(
     if fps <= 0:
         _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
         fps = 4
-
-    if not output_video_path:
-        output_video_path = tempfile.NamedTemporaryFile(
-            suffix=".mp4", delete=False
-        ).name
-
-    height, width, layers = frames[0].shape if frames else (0, 0, 0)
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
-    video = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
-    for frame in frames:
-        video.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-    video.release()
-
-    _save_video_to_result(output_video_path)
-    return output_video_path
+    with ImageSequenceClip(frames, fps=fps) as video:
+        if output_video_path:
+            f = open(output_video_path, "wb")
+        else:
+            f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)  # type: ignore
+        video.write_videofile(f.name, codec="libx264")
+        f.close()
+        _save_video_to_result(f.name)
+        return f.name
 
 
 def _save_video_to_result(video_uri: str) -> None:
@@ -1246,6 +1259,50 @@ def overlay_heat_map(
     return np.array(combined)
 
 
+def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
+    docstrings = ""
+    for func in funcs:
+        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}\n\n"
+
+    return docstrings
+
+
+def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
+    descriptions = ""
+    for func in funcs:
+        description = func.__doc__
+        if description is None:
+            description = ""
+
+        if "Parameters:" in description:
+            description = (
+                description[: description.find("Parameters:")]
+                .replace("\n", " ")
+                .strip()
+            )
+
+        description = " ".join(description.split())
+        descriptions += f"- {func.__name__}{inspect.signature(func)}: {description}\n"
+    return descriptions
+
+
+def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
+    data: Dict[str, List[str]] = {"desc": [], "doc": []}
+
+    for func in funcs:
+        desc = func.__doc__
+        if desc is None:
+            desc = ""
+        desc = desc[: desc.find("Parameters:")].replace("\n", " ").strip()
+        desc = " ".join(desc.split())
+
+        doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
+        data["desc"].append(desc)
+        data["doc"].append(doc)
+
+    return pd.DataFrame(data)  # type: ignore
+
+
 TOOLS = [
     owl_v2,
     grounding_sam,
@@ -1259,6 +1316,7 @@ TOOLS = [
     florencev2_roberta_vqa,
     florencev2_image_caption,
     florencev2_object_detection,
+    florencev2_fine_tuning,
     detr_segmentation,
     depth_anything_v2,
     generate_soft_edge_image,
