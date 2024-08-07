@@ -55,7 +55,7 @@ types-requests = "^2.31.0.0"
 types-pillow = "^9.5.0.4"
 data-science-types = "^0.2.23"
 types-tqdm = "^4.65.0.1"
-setuptools = "^68.0.0"
+setuptools = ">=68,<71"
 mkdocs = "^1.5.3"
 mkdocstrings = {extras = ["python"], version = "^0.23.0"}
 mkdocs-material = "^9.4.2"
