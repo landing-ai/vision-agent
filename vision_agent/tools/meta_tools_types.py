@@ -1,15 +1,11 @@
 from enum import Enum
-from typing import List, Tuple, Literal
+from typing import List, Tuple
 
-from nptyping import UInt8, NDArray
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class BboxInput(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    image: NDArray[Literal["Height, Width, 3"], UInt8]
-    filename: str
+    image_path: str
     labels: List[str]
     bboxes: List[Tuple[int, int, int, int]]
 

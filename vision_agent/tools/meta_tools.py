@@ -396,7 +396,7 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
 
     Parameters:
         bboxes (List[BboxInput]): A list of BboxInput containing the
-            image object, image filename, labels and bounding boxes.
+            image path, labels and bounding boxes.
         task (PromptTask): The florencev2 fine-tuning task. The options are
             CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
 
@@ -407,8 +407,8 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     Example
     -------
         >>> fine_tuning_job_id = florencev2_fine_tuning(
-            [{'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[370, 30, 560, 290]]},
-             {'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[120, 0, 300, 170]]}],
+            [{'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[370, 30, 560, 290]]},
+             {'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[120, 0, 300, 170]]}],
              "OBJECT_DETECTION"
         )
     """
@@ -416,8 +416,8 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     task_input = PromptTask[task]
     fine_tuning_request = [
         BboxInputBase64(
-            image=convert_to_b64(bbox_input.image),
-            filename=bbox_input.filename,
+            image=convert_to_b64(bbox_input.image_path),
+            filename=bbox_input.image_path.split("/")[-1],
             labels=bbox_input.labels,
             bboxes=bbox_input.bboxes,
         )
