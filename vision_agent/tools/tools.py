@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.tools.tool_types import BboxInput, BboxInputBase64
+from vision_agent.tools.tool_types import BboxInput, BboxInputBase64, PromptTask
 from vision_agent.tools.tool_utils import (
     send_inference_request,
     get_tool_descriptions,
@@ -662,7 +662,7 @@ def florencev2_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
     return return_data
 
 
-def florencev2_fine_tuning(bboxes: List[Dict[str, Any]]) -> UUID:
+def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     """'florencev2_fine_tuning' is a tool that fine-tune florencev2 to be able
     to detect objects in an image based on a given dataset. It returns the fine
     tuning job id.
@@ -670,6 +670,8 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]]) -> UUID:
     Parameters:
         bboxes (List[BboxInput]): A list of BboxInput containing the
             image object, image filename, labels and bounding boxes.
+        task (PromptTask): The florencev2 fine-tuning task. The options are
+            CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
 
     Returns:
         UUID: The fine tuning job id, this id will used to retrieve the fine
@@ -679,10 +681,12 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]]) -> UUID:
     -------
         >>> fine_tuning_job_id = florencev2_fine_tuning(
             [{'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[370, 30, 560, 290]]},
-             {'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[120, 0, 300, 170]]}]
+             {'image': image, 'filename': 'filename.png', 'label': ['screw'], 'bbox': [[120, 0, 300, 170]]}],
+             "OBJECT_DETECTION"
         )
     """
     bboxes_input = [BboxInput.model_validate(bbox) for bbox in bboxes]
+    task_input = PromptTask[task]
     fine_tuning_request = [
         BboxInputBase64(
             image=convert_to_b64(bbox_input.image),
@@ -692,10 +696,10 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]]) -> UUID:
         )
         for bbox_input in bboxes_input
     ]
-    # TODO: receive the task from user prompt
-    task = "<OD>"
     landing_api = LandingPublicAPI()
-    return landing_api.launch_fine_tuning_job("florencev2", task, fine_tuning_request)
+    return landing_api.launch_fine_tuning_job(
+        "florencev2", task_input, fine_tuning_request
+    )
 
 
 def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
