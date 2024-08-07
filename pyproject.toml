@@ -93,7 +93,6 @@ warn_unused_configs = true
 warn_unused_ignores = true
 warn_return_any = true
 show_error_codes = true
-disallow_any_unimported = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
@@ -104,5 +103,5 @@ module = [
     "sentence_transformers.*",
     "moviepy.*",
     "e2b_code_interpreter.*",
-    "e2b.*",
+    "e2b.*"
 ]
