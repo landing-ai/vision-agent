@@ -2,23 +2,23 @@ import io
 import json
 import logging
 import tempfile
-from importlib import resources
 from pathlib import Path
+from importlib import resources
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
-import numpy as np
 import requests
+import numpy as np
+from pytube import YouTube  # type: ignore
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
-from pytube import YouTube  # type: ignore
 
 from vision_agent.tools.tool_utils import (
+    send_inference_request,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
-    send_inference_request,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -1063,7 +1063,6 @@ def save_video(
     if fps <= 0:
         _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
         fps = 4
-
     with ImageSequenceClip(frames, fps=fps) as video:
         if output_video_path:
             f = open(output_video_path, "wb")

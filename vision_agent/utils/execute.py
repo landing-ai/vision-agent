@@ -209,7 +209,7 @@ class Result:
         return formats
 
     @staticmethod
-    def from_e2b_result(result: E2BResult) -> "Result":  # type: ignore
+    def from_e2b_result(result: E2BResult) -> "Result":
         """
         Creates a Result object from an E2BResult object.
         """
@@ -361,7 +361,7 @@ class Execution(BaseModel):
         )
 
     @staticmethod
-    def from_e2b_execution(exec: E2BExecution) -> "Execution":  # type: ignore
+    def from_e2b_execution(exec: E2BExecution) -> "Execution":
         """Creates an Execution object from an E2BResult object."""
         return Execution(
             results=[Result.from_e2b_result(res) for res in exec.results],

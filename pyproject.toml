@@ -17,6 +17,7 @@ packages = [{include = "vision_agent"}]
 
 [tool.poetry.dependencies]  # main dependency group
 python = ">=3.9,<4.0"
+
 numpy = ">=1.21.0,<2.0.0"
 pillow = "10.*"
 requests = "2.*"
@@ -60,6 +61,7 @@ mkdocstrings = {extras = ["python"], version = "^0.23.0"}
 mkdocs-material = "^9.4.2"
 types-tabulate = "^0.9.0.20240106"
 scikit-image = "<0.23.1"
+pre-commit = "^3.8.0"
 
 [tool.pytest.ini_options]
 log_cli = true
@@ -90,7 +92,6 @@ warn_unused_configs = true
 warn_unused_ignores = true
 warn_return_any = true
 show_error_codes = true
-disallow_any_unimported = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
@@ -101,5 +102,5 @@ module = [
     "sentence_transformers.*",
     "moviepy.*",
     "e2b_code_interpreter.*",
-    "e2b.*",
+    "e2b.*"
 ]
