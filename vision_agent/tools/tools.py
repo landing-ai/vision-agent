@@ -126,7 +126,6 @@ def owl_v2(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.10,
-    iou_threshold: float = 0.10,
 ) -> List[Dict[str, Any]]:
     """'owl_v2' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions. The categories in text prompt
@@ -138,8 +137,6 @@ def owl_v2(
         image (np.ndarray): The image to ground the prompt to.
         box_threshold (float, optional): The threshold for the box detection. Defaults
             to 0.10.
-        iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.10.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -159,22 +156,22 @@ def owl_v2(
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
     request_data = {
-        "prompt": prompt,
+        "prompts": prompt.split("."),
         "image": image_b64,
-        "tool": "open_vocab_detection",
-        "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
+        "confidence": box_threshold,
         "function_name": "owl_v2",
     }
-    data: Dict[str, Any] = send_inference_request(request_data, "tools")
+    data: Dict[str, Any] = send_inference_request(request_data, "owlv2", v2=True)
     return_data = []
-    for i in range(len(data["bboxes"])):
-        return_data.append(
-            {
-                "score": round(data["scores"][i], 2),
-                "label": data["labels"][i].strip(),
-                "bbox": normalize_bbox(data["bboxes"][i], image_size),
-            }
-        )
+    if data is not None:
+        for elt in data:
+            return_data.append(
+                {
+                    "bbox": normalize_bbox(elt["bbox"], image_size),  # type: ignore
+                    "label": elt["label"],  # type: ignore
+                    "score": round(elt["score"], 2),  # type: ignore
+                }
+            )
     return return_data
 
 
@@ -367,11 +364,10 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "zero_shot_counting",
         "function_name": "loca_zero_shot_counting",
     }
-    resp_data = send_inference_request(data, "tools")
-    resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
+    resp_data = send_inference_request(data, "loca", v2=True)
+    resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
     return resp_data
 
 
@@ -397,17 +393,15 @@ def loca_visual_prompt_counting(
 
     image_size = get_image_size(image)
     bbox = visual_prompt["bbox"]
-    bbox_str = ", ".join(map(str, denormalize_bbox(bbox, image_size)))
     image_b64 = convert_to_b64(image)
 
     data = {
         "image": image_b64,
-        "prompt": bbox_str,
-        "tool": "few_shot_counting",
+        "bbox": list(map(int, denormalize_bbox(bbox, image_size))),
         "function_name": "loca_visual_prompt_counting",
     }
-    resp_data = send_inference_request(data, "tools")
-    resp_data["heat_map"] = np.array(b64_to_pil(resp_data["heat_map"][0]))
+    resp_data = send_inference_request(data, "loca", v2=True)
+    resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
     return resp_data
 
 
@@ -603,14 +597,15 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
         'This image contains a cat sitting on a table with a bowl of milk.'
     """
     image_b64 = convert_to_b64(image)
+    task = "<MORE_DETAILED_CAPTION>" if detail_caption else "<DETAILED_CAPTION>"
     data = {
         "image": image_b64,
-        "tool": "florence2_image_captioning",
-        "detail_caption": detail_caption,
+        "task": task,
         "function_name": "florencev2_image_caption",
     }
 
-    answer = send_inference_request(data, "tools")
+    __import__("ipdb").set_trace()
+    answer = send_inference_request(data, "florence2", v2=True)
     return answer["text"][0]  # type: ignore
 
 
