@@ -63,7 +63,7 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         dir=WORKSPACE,
         conversation=conversation,
     )
-    return extract_json(orch([{"role": "user", "content": prompt}]))
+    return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
 
 
 def run_code_action(code: str, code_interpreter: CodeInterpreter) -> str:
