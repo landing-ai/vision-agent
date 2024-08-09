@@ -160,7 +160,7 @@ def pick_plan(
         docstring=tool_info, plans=plan_str, previous_attempts="", media=media
     )
 
-    code = extract_code(model(prompt, stream=False)) # type: ignore
+    code = extract_code(model(prompt, stream=False))  # type: ignore
     log_progress(
         {
             "type": "log",
@@ -211,7 +211,7 @@ def pick_plan(
                 "code": DefaultImports.prepend_imports(code),
             }
         )
-        code = extract_code(model(prompt, stream=False)) # type: ignore
+        code = extract_code(model(prompt, stream=False))  # type: ignore
         tool_output = code_interpreter.exec_isolation(
             DefaultImports.prepend_imports(code)
         )
@@ -251,7 +251,7 @@ def pick_plan(
         tool_output=tool_output_str[:20_000],
     )
     chat[-1]["content"] = prompt
-    best_plan = extract_json(model(chat, stream=False)) # type: ignore
+    best_plan = extract_json(model(chat, stream=False))  # type: ignore
 
     if verbosity >= 1:
         _LOGGER.info(f"Best plan:\n{best_plan}")
@@ -286,7 +286,7 @@ def write_code(
         feedback=feedback,
     )
     chat[-1]["content"] = prompt
-    return extract_code(coder(chat, stream=False)) # type: ignore
+    return extract_code(coder(chat, stream=False))  # type: ignore
 
 
 def write_test(
@@ -310,7 +310,7 @@ def write_test(
         media=media,
     )
     chat[-1]["content"] = prompt
-    return extract_code(tester(chat, stream=False)) # type: ignore
+    return extract_code(tester(chat, stream=False))  # type: ignore
 
 
 def write_and_test_code(
@@ -439,7 +439,7 @@ def debug_code(
     while not success and count < 3:
         try:
             fixed_code_and_test = extract_json(
-                debugger( # type: ignore
+                debugger(  # type: ignore
                     FIX_BUG.format(
                         code=code,
                         tests=test,
