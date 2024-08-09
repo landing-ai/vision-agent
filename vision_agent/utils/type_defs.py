@@ -14,17 +14,11 @@ class LandingaiAPIKey(BaseSettings):
     """
 
     api_key: str = Field(
-        default="land_sk_fnmSzD0ksknSfvhyD8UGu9R4ss3bKfLL1Im5gb6tDQTy2z1Oy5",
+        default="land_sk_zKvyPcPV2bVoq7q87KwduoerAxuQpx33DnqP8M1BliOCiZOSoI",
         alias="LANDINGAI_API_KEY",
         description="The API key of LandingAI.",
     )
     
-    api_key_v2: str = Field(
-        default="land_sk_fnmSzD0ksknSfvhyD8UGu9R4ss3bKfLL1Im5gb6tDQTy2z1Oy5",
-        alias="LANDINGAI_API_KEY",
-        description="The API key of LandingAI.",
-    )
-
     @field_validator("api_key")
     @classmethod
     def is_api_key_valid(cls, key: str) -> str:

@@ -604,7 +604,6 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
         "function_name": "florencev2_image_caption",
     }
 
-    __import__("ipdb").set_trace()
     answer = send_inference_request(data, "florence2", v2=True)
     return answer["text"][0]  # type: ignore
 
