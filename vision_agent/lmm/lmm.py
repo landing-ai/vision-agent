@@ -152,7 +152,7 @@ class OpenAILMM(LMM):
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
             for chunk in response:
-                chunk_message = chunk.choices[0].delta.content # type: ignore
+                chunk_message = chunk.choices[0].delta.content  # type: ignore
                 yield chunk_message
         else:
             return cast(str, response.choices[0].message.content)
@@ -191,7 +191,7 @@ class OpenAILMM(LMM):
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
             for chunk in response:
-                chunk_message = chunk.choices[0].delta.content # type: ignore
+                chunk_message = chunk.choices[0].delta.content  # type: ignore
                 yield chunk_message
         else:
             return cast(str, response.choices[0].message.content)
