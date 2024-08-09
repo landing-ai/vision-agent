@@ -5,7 +5,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, Iterator, List, Optional, Union, cast
+from typing import Any, Callable, Dict, Iterator, List, Optional, Union, cast
 
 import anthropic
 import requests
@@ -58,22 +58,24 @@ def encode_media(media: Union[str, Path]) -> str:
 class LMM(ABC):
     @abstractmethod
     def generate(
-        self, prompt: str, media: Optional[List[Union[str, Path]]] = None
-    ) -> str:
+        self, prompt: str, media: Optional[List[Union[str, Path]]] = None, **kwargs: Any
+    ) -> Union[str, Iterator[Optional[str]]]:
         pass
 
     @abstractmethod
     def chat(
         self,
         chat: List[Message],
-    ) -> str:
+        **kwargs: Any,
+    ) -> Union[str, Iterator[Optional[str]]]:
         pass
 
     @abstractmethod
     def __call__(
         self,
         input: Union[str, List[Message]],
-    ) -> str:
+        **kwargs: Any,
+    ) -> Union[str, Iterator[Optional[str]]]:
         pass
 
 
@@ -150,7 +152,7 @@ class OpenAILMM(LMM):
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
             for chunk in response:
-                chunk_message = chunk.choices[0].delta.content
+                chunk_message = chunk.choices[0].delta.content # type: ignore
                 yield chunk_message
         else:
             return cast(str, response.choices[0].message.content)
@@ -189,8 +191,8 @@ class OpenAILMM(LMM):
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
             for chunk in response:
-                chunk_message = chunk.choices[0].delta.content
-                yield chunk_message  # type: ignore
+                chunk_message = chunk.choices[0].delta.content # type: ignore
+                yield chunk_message
         else:
             return cast(str, response.choices[0].message.content)
 
