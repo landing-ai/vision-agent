@@ -16,7 +16,8 @@ from vision_agent.utils.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = LandingaiAPIKey().api_key
-_LND_API_URL = "https://api.landing.ai/v1/agent"
+_LND_API_URL = "https://api.landing.ai/v1/agent/model"
+_LND_API_URL_v2 = "https://api.landing.ai/v1/tools"
 
 
 class ToolCallTrace(BaseModel):
@@ -27,13 +28,13 @@ class ToolCallTrace(BaseModel):
 
 
 def send_inference_request(
-    payload: Dict[str, Any], endpoint_name: str
+    payload: Dict[str, Any], endpoint_name: str, v2: bool = False
 ) -> Dict[str, Any]:
     try:
         if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
             payload["runtime_tag"] = runtime_tag
 
-        url = f"{_LND_API_URL}/model/{endpoint_name}"
+        url = f"{_LND_API_URL_v2 if v2 else _LND_API_URL}/{endpoint_name}"
         if "TOOL_ENDPOINT_URL" in os.environ:
             url = os.environ["TOOL_ENDPOINT_URL"]
 

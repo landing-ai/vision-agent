@@ -61,9 +61,10 @@ def test_object_detection():
     img = ski.data.coins()
     result = florencev2_object_detection(
         image=img,
+        prompt="coin",
     )
-    assert len(result) == 24
-    assert [res["label"] for res in result] == ["coin"] * 24
+    assert len(result) == 25
+    assert [res["label"] for res in result] == ["coin"] * 25
 
 
 def test_template_match():
@@ -118,7 +119,7 @@ def test_nsfw_classification():
     result = vit_nsfw_classification(
         image=img,
     )
-    assert result["labels"] == "normal"
+    assert result["label"] == "normal"
 
 
 def test_image_caption() -> None:
