@@ -18,7 +18,7 @@ class LandingaiAPIKey(BaseSettings):
         alias="LANDINGAI_API_KEY",
         description="The API key of LandingAI.",
     )
-    
+
     @field_validator("api_key")
     @classmethod
     def is_api_key_valid(cls, key: str) -> str:

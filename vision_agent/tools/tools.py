@@ -426,13 +426,12 @@ def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "prompt": prompt,
-        "tool": "image_question_answering_with_context",
+        "question": prompt,
         "function_name": "florencev2_roberta_vqa",
     }
 
-    answer = send_inference_request(data, "tools")
-    return answer["text"][0]  # type: ignore
+    answer = send_inference_request(data, "florence2-qa", v2=True)
+    return answer  # type: ignore
 
 
 def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
@@ -544,11 +543,10 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "nsfw_image_classification",
         "function_name": "vit_nsfw_classification",
     }
-    resp_data = send_inference_request(data, "tools")
-    resp_data["scores"] = round(resp_data["scores"], 4)
+    resp_data = send_inference_request(data, "nsfw-classification", v2=True)
+    resp_data["score"] = round(resp_data["score"], 4)
     return resp_data
 
 
@@ -636,18 +634,19 @@ def florencev2_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "object_detection",
+        "task": "<OD>",
         "function_name": "florencev2_object_detection",
     }
 
-    answer = send_inference_request(data, "tools")
+    detections = send_inference_request(data, "florence2", v2=True)
+    detections = detections["<OD>"]
     return_data = []
-    for i in range(len(answer["bboxes"])):
+    for i in range(len(detections["bboxes"])):
         return_data.append(
             {
-                "score": round(answer["scores"][i], 2),
-                "label": answer["labels"][i],
-                "bbox": normalize_bbox(answer["bboxes"][i], image_size),
+                "score": 1.0,
+                "label": detections["labels"][i],
+                "bbox": normalize_bbox(detections["bboxes"][i], image_size),
             }
         )
     return return_data
@@ -736,13 +735,16 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "generate_depth",
         "function_name": "depth_anything_v2",
     }
 
-    answer = send_inference_request(data, "tools")
-    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("L"))
-    return return_data
+    depth_map = send_inference_request(data, "depth-anything-v2", v2=True)
+    depth_map_np = np.array(depth_map["map"])
+    depth_map_np = (depth_map_np - depth_map_np.min()) / (
+        depth_map_np.max() - depth_map_np.min()
+    )
+    depth_map_np = (255 * depth_map_np).astype(np.uint8)
+    return depth_map_np
 
 
 def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
@@ -833,12 +835,11 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
-        "tool": "generate_pose",
         "function_name": "generate_pose_image",
     }
 
-    answer = send_inference_request(data, "tools")
-    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("RGB"))
+    pos_img = send_inference_request(data, "pose-detector", v2=True)
+    return_data = np.array(b64_to_pil(pos_img["data"]).convert("RGB"))
     return return_data
 
 
