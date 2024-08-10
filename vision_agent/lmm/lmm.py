@@ -151,10 +151,12 @@ class OpenAILMM(LMM):
             model=self.model_name, messages=fixed_chat, **tmp_kwargs  # type: ignore
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
             def f() -> Iterator[Optional[str]]:
                 for chunk in response:
                     chunk_message = chunk.choices[0].delta.content  # type: ignore
                     yield chunk_message
+
             return f()
         else:
             return cast(str, response.choices[0].message.content)
@@ -192,10 +194,12 @@ class OpenAILMM(LMM):
             model=self.model_name, messages=message, **tmp_kwargs  # type: ignore
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
             def f() -> Iterator[Optional[str]]:
                 for chunk in response:
                     chunk_message = chunk.choices[0].delta.content  # type: ignore
                     yield chunk_message
+
             return f()
         else:
             return cast(str, response.choices[0].message.content)
@@ -371,6 +375,7 @@ class OllamaLMM(LMM):
         data.update(tmp_kwargs)
         json_data = json.dumps(data)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
             def f() -> Iterator[Optional[str]]:
                 with requests.post(url, data=json_data, stream=True) as stream:
                     if stream.status_code != 200:
@@ -384,6 +389,7 @@ class OllamaLMM(LMM):
                             yield None
                         else:
                             yield chunk_data["message"]["content"]
+
             return f()
         else:
             stream = requests.post(url, data=json_data)
@@ -416,6 +422,7 @@ class OllamaLMM(LMM):
         data.update(tmp_kwargs)
         json_data = json.dumps(data)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
             def f() -> Iterator[Optional[str]]:
                 with requests.post(url, data=json_data, stream=True) as stream:
                     if stream.status_code != 200:
@@ -429,6 +436,7 @@ class OllamaLMM(LMM):
                             yield None
                         else:
                             yield chunk_data["response"]
+
             return f()
         else:
             stream = requests.post(url, data=json_data)
@@ -498,14 +506,19 @@ class ClaudeSonnetLMM(LMM):
             model=self.model_name, messages=messages, **tmp_kwargs
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
             def f() -> Iterator[Optional[str]]:
                 for chunk in response:
-                    if chunk.type == "message_start" or chunk.type == "content_block_start":
+                    if (
+                        chunk.type == "message_start"
+                        or chunk.type == "content_block_start"
+                    ):
                         continue
                     elif chunk.type == "content_block_delta":
                         yield chunk.delta.text
                     elif chunk.type == "message_stop":
                         yield None
+
             return f()
         else:
             return cast(str, response.content[0].text)
@@ -541,14 +554,19 @@ class ClaudeSonnetLMM(LMM):
             **tmp_kwargs,
         )
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
             def f() -> Iterator[Optional[str]]:
                 for chunk in response:
-                    if chunk.type == "message_start" or chunk.type == "content_block_start":
+                    if (
+                        chunk.type == "message_start"
+                        or chunk.type == "content_block_start"
+                    ):
                         continue
                     elif chunk.type == "content_block_delta":
                         yield chunk.delta.text
                     elif chunk.type == "message_stop":
                         yield None
+
             return f()
         else:
             return cast(str, response.content[0].text)
