@@ -118,7 +118,7 @@ def test_nsfw_classification():
     result = vit_nsfw_classification(
         image=img,
     )
-    assert result["labels"] == "normal"
+    assert result["label"] == "normal"
 
 
 def test_image_caption() -> None:

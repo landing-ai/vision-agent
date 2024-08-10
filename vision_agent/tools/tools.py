@@ -537,7 +537,7 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
     Example
     -------
         >>> vit_nsfw_classification(image)
-        {"labels": "normal", "scores": 0.68},
+        {"label": "normal", "scores": 0.68},
     """
 
     image_b64 = convert_to_b64(image)
@@ -603,7 +603,7 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
     }
 
     answer = send_inference_request(data, "florence2", v2=True)
-    return answer["text"][0]  # type: ignore
+    return answer[task]  # type: ignore
 
 
 def florencev2_object_detection(image: np.ndarray) -> List[Dict[str, Any]]:
