@@ -5,17 +5,18 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
-    florencev2_image_caption,
     depth_anything_v2,
+    detr_segmentation,
     dpt_hybrid_midas,
+    florencev2_image_caption,
+    florencev2_object_detection,
+    florencev2_roberta_vqa,
+    florencev2_ocr,
     generate_pose_image,
     generate_soft_edge_image,
-    florencev2_object_detection,
-    detr_segmentation,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
-    florencev2_roberta_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
     ocr,
@@ -177,6 +178,14 @@ def test_image_qa_with_context() -> None:
 def test_ocr() -> None:
     img = ski.data.page()
     result = ocr(
+        image=img,
+    )
+    assert any("Region-based segmentation" in res["label"] for res in result)
+
+
+def test_florencev2_ocr() -> None:
+    img = ski.data.page()
+    result = florencev2_ocr(
         image=img,
     )
     assert any("Region-based segmentation" in res["label"] for res in result)
