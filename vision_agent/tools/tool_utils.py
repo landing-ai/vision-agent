@@ -62,7 +62,7 @@ def send_inference_request(
                 traceback_raw=[],
             )
             _LOGGER.error(f"Request failed: {res.status_code} {res.text}")
-            raise RemoteToolCallFailed(payload["tool"], res.status_code, res.text)
+            raise RemoteToolCallFailed(payload["function_name"], res.status_code, res.text)
 
         resp = res.json()
         tool_call_trace.response = resp
