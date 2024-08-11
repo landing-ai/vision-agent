@@ -28,6 +28,7 @@ from vision_agent.utils.image_utils import (
     denormalize_bbox,
     get_image_size,
     normalize_bbox,
+    convert_quad_box_to_bbox,
     rle_decode,
 )
 
@@ -652,6 +653,50 @@ def florencev2_object_detection(image: np.ndarray, prompt: str) -> List[Dict[str
     return return_data
 
 
+def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florencev2_ocr' is a tool that can detect text in an image without any text
+    prompt. It returns a list of detected text, bounding boxes with normalized coordinates,
+    and confidence scores. The results are sorted from top-left to bottom right.
+
+    Parameters:
+        image (np.ndarray): The image to extract text from.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the detected text, bbox
+            with nornmalized coordinates, and confidence score.
+
+    Example
+    -------
+        >>> florencev2_ocr(image)
+        [
+            {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
+        ]
+    """
+
+    image_size = image.shape[:2]
+    image_b64 = convert_to_b64(image)
+    data = {
+        "image": image_b64,
+        "task": "<OCR_WITH_REGION>",
+        "function_name": "florencev2_ocr",
+    }
+
+    detections = send_inference_request(data, "florence2", v2=True)
+    detections = detections["<OCR_WITH_REGION>"]
+    return_data = []
+    for i in range(len(detections["quad_boxes"])):
+        return_data.append(
+            {
+                "label": detections["labels"][i],
+                "bbox": normalize_bbox(
+                    convert_quad_box_to_bbox(detections["quad_boxes"][i]), image_size
+                ),
+                "score": 1.0,
+            }
+        )
+    return return_data
+
+
 def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
     """'detr_segmentation' is a tool that can segment common objects in an
     image without any text prompt. It returns a list of detected objects
@@ -1248,6 +1293,7 @@ TOOLS = [
     loca_visual_prompt_counting,
     florencev2_roberta_vqa,
     florencev2_image_caption,
+    florencev2_ocr,
     detr_segmentation,
     depth_anything_v2,
     generate_soft_edge_image,
