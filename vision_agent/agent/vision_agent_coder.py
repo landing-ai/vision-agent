@@ -736,7 +736,7 @@ class VisionAgentCoder(Agent):
             if self.verbosity >= 1:
                 for p in plans:
                     # tabulate will fail if the keys are not the same for all elements
-                    p = [
+                    p_fixed = [
                         {
                             "instructions": (
                                 e["instructions"] if "instructions" in e else ""
@@ -745,7 +745,7 @@ class VisionAgentCoder(Agent):
                         for e in plans[p]
                     ]
                     _LOGGER.info(
-                        f"\n{tabulate(tabular_data=p, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                        f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
 
             tool_infos = retrieve_tools(
