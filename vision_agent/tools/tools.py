@@ -654,9 +654,10 @@ def florencev2_object_detection(image: np.ndarray, prompt: str) -> List[Dict[str
 
 
 def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_ocr' is a tool that can detect text in an image without any text
-    prompt. It returns a list of detected text, bounding boxes with normalized coordinates,
-    and confidence scores. The results are sorted from top-left to bottom right.
+    """'florencev2_ocr' is a tool that can detect text and text regions in an image.
+    Each text region contains one line of text. It returns a list of detected text,
+    the text region as a bounding box with normalized coordinates, and confidence
+    scores. The results are sorted from top-left to bottom right.
 
     Parameters:
         image (np.ndarray): The image to extract text from.
