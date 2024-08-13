@@ -2,7 +2,7 @@ from uuid import UUID
 from enum import Enum
 from typing import List, Tuple, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, SerializationInfo
 
 
 class BboxInput(BaseModel):
@@ -37,7 +37,7 @@ class FineTuning(BaseModel):
     job_id: UUID = Field(alias="jobId")
 
     @field_serializer("job_id")
-    def serialize_job_id(self, job_id: UUID, _info):
+    def serialize_job_id(self, job_id: UUID, _info: SerializationInfo) -> str:
         return str(job_id)
 
 
