@@ -140,6 +140,23 @@ def denormalize_bbox(
         return bbox
 
 
+def convert_quad_box_to_bbox(quad_box: List[Union[int, float]]) -> List[float]:
+    r"""Convert a quadrilateral bounding box to a rectangular bounding box.
+
+    Parameters:
+        quad_box: the quadrilateral bounding box
+
+    Returns:
+        The rectangular bounding box
+    """
+    x1, y1, x2, y2, x3, y3, x4, y4 = quad_box
+    x_min = min(x1, x2, x3, x4)
+    x_max = max(x1, x2, x3, x4)
+    y_min = min(y1, y2, y3, y4)
+    y_max = max(y1, y2, y3, y4)
+    return [x_min, y_min, x_max, y_max]
+
+
 def overlay_bboxes(
     image: Union[str, Path, np.ndarray, ImageType], bboxes: Dict
 ) -> ImageType:
