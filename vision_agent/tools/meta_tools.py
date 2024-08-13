@@ -491,7 +491,9 @@ def florencev2_fine_tuned_object_detection(
             image,
             'person looking at a coyote',
             UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83"),
-            model_is_ready=True
+            model_is_ready=check_if_fine_tuned_florencev2_is_ready(
+                UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83")
+            )
         )
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
