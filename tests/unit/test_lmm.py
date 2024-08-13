@@ -37,10 +37,45 @@ def test_generate_with_mock(openai_lmm_mock):  # noqa: F811
 @pytest.mark.parametrize(
     "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
 )
+def test_generate_with_mock_stream(openai_lmm_mock):  # noqa: F811
+    temp_image = create_temp_image()
+    lmm = OpenAILMM()
+    response = lmm.generate("test prompt", media=[temp_image], stream=True)
+    expected_response = ["mocked", "response", None]
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
+    assert (
+        "image_url"
+        in openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][1]
+    )
+
+
+@pytest.mark.parametrize(
+    "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
+)
 def test_chat_with_mock(openai_lmm_mock):  # noqa: F811
     lmm = OpenAILMM()
     response = lmm.chat([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
+    assert (
+        openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][0]["text"]
+        == "test prompt"
+    )
+
+
+@pytest.mark.parametrize(
+    "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
+)
+def test_chat_with_mock_stream(openai_lmm_mock):  # noqa: F811
+    lmm = OpenAILMM()
+    response = lmm.chat([{"role": "user", "content": "test prompt"}], stream=True)
+    expected_response = ["mocked", "response", None]
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
     assert (
         openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
             "content"
@@ -65,6 +100,33 @@ def test_call_with_mock(openai_lmm_mock):  # noqa: F811
 
     response = lmm([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
+    assert (
+        openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][0]["text"]
+        == "test prompt"
+    )
+
+
+@pytest.mark.parametrize(
+    "openai_lmm_mock", ["mocked response"], indirect=["openai_lmm_mock"]
+)
+def test_call_with_mock_stream(openai_lmm_mock):  # noqa: F811
+    expected_response = ["mocked", "response", None]
+    lmm = OpenAILMM()
+    response = lmm("test prompt", stream=True)
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
+    assert (
+        openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
+            "content"
+        ][0]["text"]
+        == "test prompt"
+    )
+
+    response = lmm([{"role": "user", "content": "test prompt"}], stream=True)
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
     assert (
         openai_lmm_mock.chat.completions.create.call_args.kwargs["messages"][0][
             "content"
