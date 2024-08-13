@@ -4,7 +4,7 @@ from typing import List
 
 from vision_agent.clients.http import BaseHTTP
 from vision_agent.utils.type_defs import LandingaiAPIKey
-from vision_agent.tools.meta_tools_types import BboxInputBase64, PromptTask
+from vision_agent.tools.meta_tools_types import BboxInputBase64, PromptTask, JobStatus
 
 
 class LandingPublicAPI(BaseHTTP):
@@ -24,3 +24,7 @@ class LandingPublicAPI(BaseHTTP):
         }
         response = self.post(url, payload=data)
         return UUID(response["jobId"])
+
+    def check_fine_tuning_job(self, job_id: UUID) -> JobStatus:
+        url = f"v1/agent/jobs/fine-tuning/{job_id}/status"
+        return JobStatus(self.get(url)["status"])

@@ -4,13 +4,22 @@ from uuid import UUID
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
+import numpy as np
+
 import vision_agent as va
 from vision_agent.lmm.types import Message
-from vision_agent.tools.tool_utils import get_tool_documentation
+from vision_agent.tools.tool_utils import get_tool_documentation, send_inference_request
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
-from vision_agent.utils.image_utils import convert_to_b64
+from vision_agent.utils.image_utils import convert_to_b64, normalize_bbox
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.tools.meta_tools_types import BboxInput, BboxInputBase64, PromptTask
+from vision_agent.tools.meta_tools_types import (
+    BboxInput,
+    BboxInputBase64,
+    PromptTask,
+    Florencev2FtRequest,
+    FineTuning,
+    JobStatus,
+)
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
@@ -384,7 +393,7 @@ def edit_file(file_path: str, start: int, end: int, content: str) -> str:
 
 def get_tool_descriptions() -> str:
     """Returns a description of all the tools that `generate_vision_code` has access to.
-    Helpful for answerings questions about what types of vision tasks you can do with
+    Helpful for answering questions about what types of vision tasks you can do with
     `generate_vision_code`."""
     return TOOL_DESCRIPTIONS
 
@@ -429,6 +438,100 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     )
 
 
+def check_if_fine_tuned_florencev2_is_ready(model_id: UUID) -> bool:
+    """'check_if_fine_tuned_florencev2_is_ready' is a tool that checks whether
+    is possible to use a certain florencev2 model. It checks if the status
+    is SUCCEEDED.
+
+    Parameters:
+        model_id (UUID): The fine-tuned model id.
+
+    Returns:
+        bool: The indication if the model is ready to be used or not. If this
+        is False, it's recommended to wait 5 seconds before checking again.
+
+    Example
+    -------
+        >>> check_if_fine_tuned_florencev2_is_ready(UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83"))
+        True
+    """
+    # check if job succeeded first
+    landing_api = LandingPublicAPI()
+    status = landing_api.check_fine_tuning_job(model_id)
+    return status is JobStatus.SUCCEEDED
+
+
+def florencev2_fine_tuned_object_detection(
+    image: np.ndarray, prompt: str, model_id: UUID, task: str, model_is_ready: bool
+) -> List[Dict[str, Any]]:
+    """'florencev2_fine_tuned_object_detection' is a tool that uses a fine tuned model
+    to detect objects given a text prompt such as a phrase or class names separated by
+    commas. It returns a list of detected objects as labels and their location as
+    bounding boxes with score of 1.0.
+
+    Parameters:
+        image (np.ndarray): The image to used to detect objects.
+        prompt (str): The prompt to help find objects in the image.
+        model_id (UUID): The fine-tuned model id.
+        task (PromptTask): The florencev2 fine-tuning task. The options are
+            CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
+        model_is_ready (bool): If the model is ready to be used. It's recommended
+            to get this value from the function check_if_fine_tuned_florencev2_is_ready.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box. The scores are always 1.0 and cannot be thresholded
+
+    Example
+    -------
+        >>> florencev2_fine_tuned_object_detection(
+            image,
+            'person looking at a coyote',
+            UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83"),
+            model_is_ready=True
+        )
+        [
+            {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
+        ]
+    """
+    if not model_is_ready:
+        return []
+
+    task = PromptTask[task]
+    if task is PromptTask.OBJECT_DETECTION:
+        prompt = ""
+
+    data_obj = Florencev2FtRequest(
+        image=convert_to_b64(image),
+        task=task,
+        tool="florencev2_fine_tuning",
+        prompt=prompt,
+        fine_tuning=FineTuning(job_id=model_id),
+    )
+    data = data_obj.model_dump(by_alias=True)
+    metadata_payload = {"function_name": "florencev2_fine_tuned_object_detection"}
+    detections = send_inference_request(
+        data, "tools", v2=False, metadata_payload=metadata_payload
+    )
+
+    detections = detections[task.value]
+    return_data = []
+    image_size = image.shape[:2]
+    for i in range(len(detections["bboxes"])):
+        return_data.append(
+            {
+                "score": 1.0,
+                "label": detections["labels"][i],
+                "bbox": normalize_bbox(detections["bboxes"][i], image_size),
+            }
+        )
+    return return_data
+
+
 META_TOOL_DOCSTRING = get_tool_documentation(
     [
         get_tool_descriptions,
@@ -443,5 +546,7 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         search_file,
         find_file,
         florencev2_fine_tuning,
+        florencev2_fine_tuned_object_detection,
+        check_if_fine_tuned_florencev2_is_ready,
     ]
 )

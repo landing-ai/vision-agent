@@ -1,6 +1,11 @@
 from typing import Callable, List, Optional
 
-from .meta_tools import META_TOOL_DOCSTRING, florencev2_fine_tuning
+from .meta_tools import (
+    META_TOOL_DOCSTRING,
+    florencev2_fine_tuning,
+    florencev2_fine_tuned_object_detection,
+    check_if_fine_tuned_florencev2_is_ready,
+)
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     TOOL_DESCRIPTIONS,
