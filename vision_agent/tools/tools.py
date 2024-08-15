@@ -148,7 +148,7 @@ def owl_v2(
 
     Example
     -------
-        >>> owl_v2("car. dinosaur", image)
+        >>> owl_v2("car, dinosaur", image)
         [
             {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -157,7 +157,7 @@ def owl_v2(
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
     request_data = {
-        "prompts": prompt.split("."),
+        "prompts": prompt.split(","),
         "image": image_b64,
         "confidence": box_threshold,
         "function_name": "owl_v2",
