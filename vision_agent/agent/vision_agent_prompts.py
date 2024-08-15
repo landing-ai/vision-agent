@@ -31,6 +31,7 @@ Here is the current conversation so far:
 {conversation}
 """
 
+
 EXAMPLES_CODE1 = """
 USER: Can you detect the dogs in this image? Media name dog.jpg
 
@@ -75,6 +76,7 @@ OBSERVATION:
 
 AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to detect one dog and shown you the output, do the results look good to you?", "let_user_respond": true}
 """
+
 
 EXAMPLES_CODE2 = """
 USER: Can you create a function to count workers with helmets?

@@ -1,6 +1,8 @@
 import copy
 import logging
 import os
+import tempfile
+import pickle as pkl
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -12,12 +14,14 @@ from vision_agent.agent.vision_agent_prompts import (
     VA_CODE,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
+from vision_agent.tools.meta_tools import Artifacts
 from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
+ARTIFACT = "artifacts.pkl"
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 if str(WORKSPACE) != "":
@@ -28,7 +32,8 @@ class DefaultImports:
     code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import generate_vision_code, edit_vision_code, open_file, create_file, scroll_up, scroll_down, edit_file, get_tool_descriptions",
+        "from vision_agent.tools.meta_tools import Artifacts, open_artifact, create_artifact, edit_artifact, get_tool_descriptions",
+        f"artifacts = Artifacts({ARTIFACT})",
     ]
 
     @staticmethod
@@ -66,9 +71,21 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
 
 
-def run_code_action(code: str, code_interpreter: CodeInterpreter) -> str:
-    # Note the code interpreter needs to keep running in the same environment because
-    # the SWE tools hold state like line numbers and currently open files.
+def run_code_action(code: str, artifacts: Artifacts, code_interpreter: CodeInterpreter) -> str:
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        for name in artifacts:
+            temp_file_path = Path(tmpdirname) / name + ".py"
+            with open(temp_file_path, "w") as f:
+                f.write(artifacts[name])
+            code_interpreter.upload_file(temp_file_path)
+            temp_file_path.unlink()
+
+        temp_file_path = Path(tmpdirname) / ARTIFACT
+        with open(temp_file_path, "wb") as f:
+            pkl.dump(artifacts.artifacts, f)
+        code_interpreter.upload_file(temp_file_path)
+        temp_file_path.unlink()
+
     result = code_interpreter.exec_cell(DefaultImports.prepend_imports(code))
 
     return_str = ""
