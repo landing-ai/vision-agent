@@ -607,12 +607,13 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
     return answer[task]  # type: ignore
 
 
-def florencev2_object_detection(image: np.ndarray, prompt: str) -> List[Dict[str, Any]]:
+def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
     """'florencev2_object_detection' is a tool that can detect objects given a text
     prompt such as a phrase or class names separated by commas. It returns a list of
     detected objects as labels and their location as bounding boxes with score of 1.0.
 
     Parameters:
+        prompt (str): The prompt to ground to the image.
         image (np.ndarray): The image to used to detect objects
 
     Returns:
@@ -624,7 +625,7 @@ def florencev2_object_detection(image: np.ndarray, prompt: str) -> List[Dict[str
 
     Example
     -------
-        >>> florencev2_object_detection(image, 'person looking at a coyote')
+        >>> florencev2_object_detection('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
