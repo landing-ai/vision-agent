@@ -40,6 +40,7 @@ from vision_agent.utils.exceptions import (
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
 _SESSION_TIMEOUT = 600  # 10 minutes
+WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 
 
 class MimeType(str, Enum):
@@ -606,6 +607,22 @@ Timeout: {self.timeout}"""
         except Exception as e:
             traceback_raw = traceback.format_exc().splitlines()
             return Execution.from_exception(e, traceback_raw)
+
+    def upload_file(self, file_path: str) -> Path:
+        with open(file_path) as f:
+            contents = f.read()
+        with open(WORKSPACE / file_path, "wb") as f:
+            f.write(contents)
+
+        return Path(WORKSPACE / file_path)
+
+    def download_file(self, file_path: str) -> Path:
+        with open(file_path, "rb") as f:
+            contents = f.read()
+        with open(WORKSPACE / file_path, "wb") as f:
+            f.write(contents)
+        return Path(WORKSPACE / file_path)
+
 
 
 class CodeInterpreterFactory:
