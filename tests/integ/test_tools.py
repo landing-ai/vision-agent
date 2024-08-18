@@ -8,10 +8,10 @@ from vision_agent.tools import (
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
-    florencev2_image_caption,
-    florencev2_object_detection,
-    florencev2_roberta_vqa,
-    florencev2_ocr,
+    florence2_image_caption,
+    florence2_object_detection,
+    florence2_roberta_vqa,
+    florence2_ocr,
     generate_pose_image,
     generate_soft_edge_image,
     git_vqa_v2,
@@ -60,7 +60,7 @@ def test_owl():
 
 def test_object_detection():
     img = ski.data.coins()
-    result = florencev2_object_detection(
+    result = florence2_object_detection(
         image=img,
         prompt="coin",
     )
@@ -133,7 +133,7 @@ def test_image_caption() -> None:
 
 def test_florence_image_caption() -> None:
     img = ski.data.rocket()
-    result = florencev2_image_caption(
+    result = florence2_image_caption(
         image=img,
     )
     assert "The image shows a rocket on a launch pad at night" in result.strip()
@@ -168,7 +168,7 @@ def test_git_vqa_v2() -> None:
 
 def test_image_qa_with_context() -> None:
     img = ski.data.rocket()
-    result = florencev2_roberta_vqa(
+    result = florence2_roberta_vqa(
         prompt="Is the scene captured during day or night ?",
         image=img,
     )
@@ -183,9 +183,9 @@ def test_ocr() -> None:
     assert any("Region-based segmentation" in res["label"] for res in result)
 
 
-def test_florencev2_ocr() -> None:
+def test_florence2_ocr() -> None:
     img = ski.data.page()
-    result = florencev2_ocr(
+    result = florence2_ocr(
         image=img,
     )
     assert any("Region-based segmentation" in res["label"] for res in result)

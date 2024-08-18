@@ -408,8 +408,8 @@ def loca_visual_prompt_counting(
     return resp_data
 
 
-def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
-    """'florencev2_roberta_vqa' is a tool that takes an image and analyzes
+def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
+    """'florence2_roberta_vqa' is a tool that takes an image and analyzes
     its contents, generates detailed captions and then tries to answer the given
     question using the generated context. It returns text as an answer to the question.
 
@@ -422,7 +422,7 @@ def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
 
     Example
     -------
-        >>> florencev2_roberta_vqa('What is the top left animal in this image ?', image)
+        >>> florence2_roberta_vqa('What is the top left animal in this image ?', image)
         'white tiger'
     """
 
@@ -430,7 +430,7 @@ def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
     data = {
         "image": image_b64,
         "question": prompt,
-        "function_name": "florencev2_roberta_vqa",
+        "function_name": "florence2_roberta_vqa",
     }
 
     answer = send_inference_request(data, "florence2-qa", v2=True)
@@ -580,8 +580,8 @@ def blip_image_caption(image: np.ndarray) -> str:
     return answer["text"][0]  # type: ignore
 
 
-def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
-    """'florencev2_image_caption' is a tool that can caption or describe an image based
+def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
+    """'florence2_image_caption' is a tool that can caption or describe an image based
     on its contents. It returns a text describing the image.
 
     Parameters:
@@ -594,7 +594,7 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
 
     Example
     -------
-        >>> florencev2_image_caption(image, False)
+        >>> florence2_image_caption(image, False)
         'This image contains a cat sitting on a table with a bowl of milk.'
     """
     image_b64 = convert_to_b64(image)
@@ -602,15 +602,15 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
     data = {
         "image": image_b64,
         "task": task,
-        "function_name": "florencev2_image_caption",
+        "function_name": "florence2_image_caption",
     }
 
     answer = send_inference_request(data, "florence2", v2=True)
     return answer[task]  # type: ignore
 
 
-def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_object_detection' is a tool that can detect objects given a text
+def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_object_detection' is a tool that can detect objects given a text
     prompt such as a phrase or class names separated by commas. It returns a list of
     detected objects as labels and their location as bounding boxes with score of 1.0.
 
@@ -627,7 +627,7 @@ def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str
 
     Example
     -------
-        >>> florencev2_object_detection('person looking at a coyote', image)
+        >>> florence2_object_detection('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -639,7 +639,7 @@ def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str
         "image": image_b64,
         "task": "<CAPTION_TO_PHRASE_GROUNDING>",
         "prompt": prompt,
-        "function_name": "florencev2_object_detection",
+        "function_name": "florence2_object_detection",
     }
 
     detections = send_inference_request(data, "florence2", v2=True)
@@ -656,8 +656,8 @@ def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str
     return return_data
 
 
-def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_ocr' is a tool that can detect text and text regions in an image.
+def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_ocr' is a tool that can detect text and text regions in an image.
     Each text region contains one line of text. It returns a list of detected text,
     the text region as a bounding box with normalized coordinates, and confidence
     scores. The results are sorted from top-left to bottom right.
@@ -671,7 +671,7 @@ def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Example
     -------
-        >>> florencev2_ocr(image)
+        >>> florence2_ocr(image)
         [
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
         ]
@@ -682,7 +682,7 @@ def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     data = {
         "image": image_b64,
         "task": "<OCR_WITH_REGION>",
-        "function_name": "florencev2_ocr",
+        "function_name": "florence2_ocr",
     }
 
     detections = send_inference_request(data, "florence2", v2=True)
@@ -1295,9 +1295,9 @@ TOOLS = [
     vit_nsfw_classification,
     loca_zero_shot_counting,
     loca_visual_prompt_counting,
-    florencev2_roberta_vqa,
-    florencev2_image_caption,
-    florencev2_ocr,
+    florence2_roberta_vqa,
+    florence2_image_caption,
+    florence2_ocr,
     detr_segmentation,
     depth_anything_v2,
     generate_soft_edge_image,
