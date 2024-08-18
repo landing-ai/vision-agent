@@ -12,6 +12,7 @@ from vision_agent.tools import (
     florence2_object_detection,
     florence2_roberta_vqa,
     florence2_ocr,
+    florence2_sam2_image,
     generate_pose_image,
     generate_soft_edge_image,
     git_vqa_v2,
@@ -86,6 +87,17 @@ def test_grounding_sam():
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
     assert len([res["mask"] for res in result]) == 24
+
+
+def test_florence2_sam2_image():
+    img = ski.data.coins()
+    result = florence2_sam2_image(
+        prompt="coin",
+        image=img,
+    )
+    assert len(result) == 25
+    assert [res["label"] for res in result] == ["coin"] * 25
+    assert len([res["mask"] for res in result]) == 25
 
 
 def test_segmentation():

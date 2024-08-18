@@ -2,34 +2,36 @@ import io
 import json
 import logging
 import tempfile
-from pathlib import Path
 from importlib import resources
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
-import requests
 import numpy as np
-from pytube import YouTube  # type: ignore
+import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
+from pytube import YouTube  # type: ignore
 
 from vision_agent.tools.tool_utils import (
-    send_inference_request,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
+    send_inference_request,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
     b64_to_pil,
+    convert_quad_box_to_bbox,
     convert_to_b64,
     denormalize_bbox,
     get_image_size,
     normalize_bbox,
-    convert_quad_box_to_bbox,
+    numpy_to_bytes,
     rle_decode,
+    rle_decode_array,
 )
 
 register_heif_opener()
@@ -239,6 +241,59 @@ def grounding_sam(
                 "mask": rle_decode(mask_rle=data["masks"][i], shape=data["mask_shape"]),
             }
         )
+    return return_data
+
+
+def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_sam2_image' is a tool that can segment multiple objects given a
+    text prompt such as category names or referring expressions. The categories in text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> florence2_sam2_image("car, dinosaur", image)
+        [
+            {
+                'score': 0.99,
+                'label': 'dinosaur',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    buffer_bytes = numpy_to_bytes(image)
+
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompts": prompt.split(","),
+        "function_name": "florence2_sam2_image",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "florence2-sam2", files=files, v2=True
+    )
+    return_data = []
+    for _, data_i in data["0"].items():
+        mask = rle_decode_array(data_i["mask"])
+        label = data_i["label"]
+        bbox = normalize_bbox(data_i["bounding_box"], data_i["mask"]["size"])
+        return_data.append({"label": label, "bbox": bbox, "mask": mask, "score": 1.0})
     return return_data
 
 

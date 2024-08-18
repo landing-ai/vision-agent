@@ -1,6 +1,7 @@
 """Utility functions for image processing."""
 
 import base64
+import io
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
@@ -63,6 +64,28 @@ def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
     return img.reshape(shape)
 
 
+def rle_decode_array(rle: Dict[str, List[int]]) -> np.ndarray:
+    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
+
+    Parameters:
+        mask: The mask in run-length encoded as an array.
+    """
+    size = rle["size"]
+    counts = rle["counts"]
+
+    total_elements = size[0] * size[1]
+    flattened_mask = np.zeros(total_elements, dtype=np.uint8)
+
+    current_pos = 0
+    for i, count in enumerate(counts):
+        if i % 2 == 1:
+            flattened_mask[current_pos : current_pos + count] = 1
+        current_pos += count
+
+    binary_mask = flattened_mask.reshape(size, order="F")
+    return binary_mask
+
+
 def b64_to_pil(b64_str: str) -> ImageType:
     r"""Convert a base64 string to a PIL Image.
 
@@ -76,6 +99,15 @@ def b64_to_pil(b64_str: str) -> ImageType:
     if "," in b64_str:
         b64_str = b64_str.split(",")[1]
     return Image.open(BytesIO(base64.b64decode(b64_str)))
+
+
+def numpy_to_bytes(image: np.ndarray) -> bytes:
+    pil_image = Image.fromarray(image).convert("RGB")
+    image_buffer = io.BytesIO()
+    pil_image.save(image_buffer, format="PNG")
+    buffer_bytes = image_buffer.getvalue()
+    image_buffer.close()
+    return buffer_bytes
 
 
 def get_image_size(data: Union[str, Path, np.ndarray, ImageType]) -> Tuple[int, ...]:
