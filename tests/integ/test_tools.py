@@ -13,6 +13,7 @@ from vision_agent.tools import (
     florence2_roberta_vqa,
     florence2_ocr,
     florence2_sam2_image,
+    ixc25_image_vqa,
     generate_pose_image,
     generate_soft_edge_image,
     git_vqa_v2,
@@ -185,6 +186,15 @@ def test_image_qa_with_context() -> None:
         image=img,
     )
     assert "night" in result.strip()
+
+
+def test_ixc25_image_vqa() -> None:
+    img = ski.data.cat()
+    result = ixc25_image_vqa(
+        prompt="What animal is in this image?",
+        image=img,
+    )
+    assert "cat" in result.strip()
 
 
 def test_ocr() -> None:

@@ -477,7 +477,7 @@ def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
 
     Example
     -------
-        >>> florence2_roberta_vqa('What is the top left animal in this image ?', image)
+        >>> florence2_roberta_vqa('What is the top left animal in this image?', image)
         'white tiger'
     """
 
@@ -490,6 +490,36 @@ def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
 
     answer = send_inference_request(data, "florence2-qa", v2=True)
     return answer  # type: ignore
+
+
+def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
+    """'ixc25_image_vqa' is a tool that can answer any questions about arbitrary images
+    including regular images or images of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the image
+        image (np.ndarray): The reference image used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> ixc25_image_vqa('What is the cat doing?', image)
+        'drinking milk'
+    """
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "function_name": "ixc25_image_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "internlm-xcomposer2", files=files, v2=True
+    )
+    return data["answer"]
 
 
 def git_vqa_v2(prompt: str, image: np.ndarray) -> str:

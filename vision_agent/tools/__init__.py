@@ -27,6 +27,7 @@ from .tools import (
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    ixc25_image_vqa,
     load_image,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
