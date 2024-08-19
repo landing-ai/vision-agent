@@ -529,7 +529,7 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
     data: Dict[str, Any] = send_inference_request(
         payload, "internlm-xcomposer2", files=files, v2=True
     )
-    return data["answer"]
+    return cast(str, data["answer"])
 
 
 def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
@@ -548,7 +548,7 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     data: Dict[str, Any] = send_inference_request(
         payload, "internlm-xcomposer2", files=files, v2=True
     )
-    return data["answer"]
+    return cast(str, data["answer"])
 
 
 def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
@@ -1449,7 +1449,7 @@ def overlay_segmentation_masks(
                     text_box = draw.textbbox((x, y), text=label, font=font)
                     draw.rectangle((x, y, text_box[2], text_box[3]), fill=color[label])
                     draw.text((x, y), label, fill="black", font=font)
-        frame_out.append(np.array(pil_image))  # type: ignore
+        frame_out.append(np.array(pil_image))
     return frame_out[0] if len(frame_out) == 1 else frame_out
 
 
