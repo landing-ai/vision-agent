@@ -21,6 +21,7 @@ from .tools import (
     florence2_ocr,
     florence2_roberta_vqa,
     florence2_sam2_image,
+    florence2_sam2_video,
     generate_pose_image,
     generate_soft_edge_image,
     get_tool_documentation,
