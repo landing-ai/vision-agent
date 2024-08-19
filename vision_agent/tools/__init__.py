@@ -29,6 +29,7 @@ from .tools import (
     grounding_dino,
     grounding_sam,
     ixc25_image_vqa,
+    ixc25_video_vqa,
     load_image,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,

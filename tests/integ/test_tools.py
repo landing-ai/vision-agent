@@ -1,5 +1,6 @@
 import numpy as np
 import skimage as ski
+from PIL import Image
 
 from vision_agent.tools import (
     blip_image_caption,
@@ -10,15 +11,17 @@ from vision_agent.tools import (
     dpt_hybrid_midas,
     florence2_image_caption,
     florence2_object_detection,
-    florence2_roberta_vqa,
     florence2_ocr,
+    florence2_roberta_vqa,
     florence2_sam2_image,
-    ixc25_image_vqa,
+    florence2_sam2_video,
     generate_pose_image,
     generate_soft_edge_image,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    ixc25_image_vqa,
+    ixc25_video_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
     ocr,
@@ -99,6 +102,19 @@ def test_florence2_sam2_image():
     assert len(result) == 25
     assert [res["label"] for res in result] == ["coin"] * 25
     assert len([res["mask"] for res in result]) == 25
+
+
+def test_florence2_sam2_video():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    result = florence2_sam2_video(
+        prompt="coin",
+        frames=frames,
+    )
+    assert len(result) == 10
+    assert len([res["label"] for res in result[0]]) == 25
+    assert len([res["mask"] for res in result[0]]) == 25
 
 
 def test_segmentation():
@@ -193,6 +209,17 @@ def test_ixc25_image_vqa() -> None:
     result = ixc25_image_vqa(
         prompt="What animal is in this image?",
         image=img,
+    )
+    assert "cat" in result.strip()
+
+
+def test_ixc25_video_vqa() -> None:
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
+    ]
+    result = ixc25_video_vqa(
+        prompt="What animal is in this video?",
+        frames=frames,
     )
     assert "cat" in result.strip()
 

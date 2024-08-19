@@ -355,54 +355,6 @@ def florence2_sam2_video(
     return return_data
 
 
-def extract_frames(
-    video_uri: Union[str, Path], fps: float = 0.5
-) -> List[Tuple[np.ndarray, float]]:
-    """'extract_frames' extracts frames from a video which can be a file path or youtube
-    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
-    time in seconds where the frame was captured. The frame is a numpy array.
-
-    Parameters:
-        video_uri (Union[str, Path]): The path to the video file or youtube link
-        fps (float, optional): The frame rate per second to extract the frames. Defaults
-            to 0.5.
-
-    Returns:
-        List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
-            as a numpy array and the timestamp in seconds.
-
-    Example
-    -------
-        >>> extract_frames("path/to/video.mp4")
-        [(frame1, 0.0), (frame2, 0.5), ...]
-    """
-
-    if str(video_uri).startswith(
-        (
-            "http://www.youtube.com/",
-            "https://www.youtube.com/",
-            "http://youtu.be/",
-            "https://youtu.be/",
-        )
-    ):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            yt = YouTube(str(video_uri))
-            # Download the highest resolution video
-            video = (
-                yt.streams.filter(progressive=True, file_extension="mp4")
-                .order_by("resolution")
-                .desc()
-                .first()
-            )
-            if not video:
-                raise Exception("No suitable video stream found")
-            video_file_path = video.download(output_path=temp_dir)
-
-            return extract_frames_from_video(video_file_path, fps)
-
-    return extract_frames_from_video(str(video_uri), fps)
-
-
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     """'ocr' extracts text from an image. It returns a list of detected text, bounding
     boxes with normalized coordinates, and confidence scores. The results are sorted
@@ -573,6 +525,25 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
     payload = {
         "prompt": prompt,
         "function_name": "ixc25_image_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "internlm-xcomposer2", files=files, v2=True
+    )
+    return data["answer"]
+
+
+def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
+    """'ixc25_video_vqa' is a tool that can answer any questions about arbitrary videos
+    including regular videos or videos of documents or presentations. It returns text
+    as an answer to the question.
+
+
+    """
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "function_name": "ixc25_video_vqa",
     }
     data: Dict[str, Any] = send_inference_request(
         payload, "internlm-xcomposer2", files=files, v2=True
@@ -1164,6 +1135,54 @@ def closest_box_distance(
 
 
 # Utility and visualization functions
+
+
+def extract_frames(
+    video_uri: Union[str, Path], fps: float = 0.5
+) -> List[Tuple[np.ndarray, float]]:
+    """'extract_frames' extracts frames from a video which can be a file path or youtube
+    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
+    time in seconds where the frame was captured. The frame is a numpy array.
+
+    Parameters:
+        video_uri (Union[str, Path]): The path to the video file or youtube link
+        fps (float, optional): The frame rate per second to extract the frames. Defaults
+            to 0.5.
+
+    Returns:
+        List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
+            as a numpy array and the timestamp in seconds.
+
+    Example
+    -------
+        >>> extract_frames("path/to/video.mp4")
+        [(frame1, 0.0), (frame2, 0.5), ...]
+    """
+
+    if str(video_uri).startswith(
+        (
+            "http://www.youtube.com/",
+            "https://www.youtube.com/",
+            "http://youtu.be/",
+            "https://youtu.be/",
+        )
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yt = YouTube(str(video_uri))
+            # Download the highest resolution video
+            video = (
+                yt.streams.filter(progressive=True, file_extension="mp4")
+                .order_by("resolution")
+                .desc()
+                .first()
+            )
+            if not video:
+                raise Exception("No suitable video stream found")
+            video_file_path = video.download(output_path=temp_dir)
+
+            return extract_frames_from_video(video_file_path, fps)
+
+    return extract_frames_from_video(str(video_uri), fps)
 
 
 def save_json(data: Any, file_path: str) -> None:
