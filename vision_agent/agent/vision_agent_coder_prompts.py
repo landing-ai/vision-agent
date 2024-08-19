@@ -39,6 +39,7 @@ Output a list of jsons in the following format
     "plan1":
         [
             {{
+                "thoughts": str # your thought process for this plan
                 "instructions": str # what you should do in this task associated with a tool
             }}
         ],
@@ -127,7 +128,8 @@ PICK_PLAN = """
 
 **Instructions**:
 1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
-2. Output a JSON object with the following format:
+2. Try solving the problem yourself given the image and pick the plan which matches your solution the best.
+3. Output a JSON object with the following format:
 {{
     "thoughts": str # your thought process for choosing the best plan
     "best_plan": str # the best plan you have chosen
