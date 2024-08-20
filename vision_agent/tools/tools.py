@@ -312,6 +312,8 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     pil_image = Image.fromarray(image).convert("RGB")
     image_size = pil_image.size[::-1]
+    if image_size[0] < 1 and image_size[1] < 1:
+        return []
     image_buffer = io.BytesIO()
     pil_image.save(image_buffer, format="PNG")
     buffer_bytes = image_buffer.getvalue()
