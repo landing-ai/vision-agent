@@ -22,7 +22,7 @@ call out which tool you want to use. For example:
 ```python
 import vision_agent as va
 
-agent = va.agent.VisionAgent(verbosity=2)
+agent = va.agent.VisionAgentCoder(verbosity=2)
 agent(
     "Can you use the 'template_match_' tool to find the location of pid_template.png in pid.png?",
     media="pid.png",
