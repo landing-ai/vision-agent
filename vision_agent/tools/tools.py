@@ -157,7 +157,7 @@ def owl_v2(
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
     request_data = {
-        "prompts": prompt.split(","),
+        "prompts": [s.strip() for s in prompt.split(",")],
         "image": image_b64,
         "confidence": box_threshold,
         "function_name": "owl_v2",
