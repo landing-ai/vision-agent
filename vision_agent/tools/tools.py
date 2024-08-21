@@ -283,7 +283,7 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
 
     files = [("image", buffer_bytes)]
     payload = {
-        "prompts": prompt.split(","),
+        "prompts": [s.strip() for s in prompt.split(",")],
         "function_name": "florence2_sam2_image",
     }
     data: Dict[str, Any] = send_inference_request(
