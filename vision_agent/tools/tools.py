@@ -738,10 +738,9 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
 
 
 def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florence2_object_detection' that can detect and count multiple objects given a
-    text prompt such as category names or referring expressions. The categories in text
-    prompt are separated by commas. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated probability scores set to 1.0
+    """'florencev2_object_detection' is a tool that can detect objects given a text
+    prompt such as a phrase or class names separated by commas. It returns a list of
+    detected objects as labels and their location as bounding boxes with score of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
