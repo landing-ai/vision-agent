@@ -132,9 +132,9 @@ def owl_v2(
     box_threshold: float = 0.10,
 ) -> List[Dict[str, Any]]:
     """'owl_v2' is a tool that can detect and count multiple objects given a text
-    prompt such as category names or referring expressions. The categories in text prompt
-    are separated by commas. It returns a list of bounding boxes with
-    normalized coordinates, label names and associated probability scores.
+    prompt such as category names or referring expressions. The categories in text
+    prompt are separated by commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -249,7 +249,7 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
     """'florence2_sam2_image' is a tool that can segment multiple objects given a text
     prompt such as category names or referring expressions. The categories in the text
     prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
+    mask file names and associated probability scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -268,7 +268,7 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
         >>> florence2_sam2_image("car, dinosaur", image)
         [
             {
-                'score': 0.99,
+                'score': 1.0,
                 'label': 'dinosaur',
                 'bbox': [0.1, 0.11, 0.35, 0.4],
                 'mask': array([[0, 0, 0, ..., 0, 0, 0],
@@ -301,21 +301,22 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
 def florence2_sam2_video(
     prompt: str, frames: List[np.ndarray]
 ) -> List[List[Dict[str, Any]]]:
-    """'florence2_sam2_video' is a tool that can segment and track multiple objects
-    in a video given a text prompt such as category names or referring expressions. The
-    categories in the text prompt are separated by commas. It is useful for tracking
-    and counting across frames without counting duplicates.
+    """'florence2_sam2_video' is a tool that can segment and track multiple entities
+    in a video given a text prompt such as category names or referring expressions. You
+    can optionally separate the categories in the text with commas. It only tracks
+    entities present in the first frame and only returns segmentation masks. It is
+    useful for tracking and counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the video.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
 
     Returns:
-        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label,
-        score and mask of the detected objects. The outer list represents each frame
-        and the inner list is the objects per frame. The label contains the object ID
-        followed by the label name. The objects are only identified in the first framed
-        and tracked throughout the video.
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
+        and segment mask. The outer list represents each frame and the inner list is
+        the entities per frame. The label contains the object ID followed by the label
+        name. The objects are only identified in the first framed and tracked
+        throughout the video.
 
     Example
     -------
@@ -324,7 +325,6 @@ def florence2_sam2_video(
             [
                 {
                     'label': '0: dinosaur',
-                    'score': 1.0,
                     'mask': array([[0, 0, 0, ..., 0, 0, 0],
                         [0, 0, 0, ..., 0, 0, 0],
                         ...,
@@ -738,9 +738,11 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
 
 
 def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_object_detection' is a tool that can detect objects given a text
-    prompt such as a phrase or class names separated by commas. It returns a list of
-    detected objects as labels and their location as bounding boxes with score of 1.0.
+    """'florencev2_object_detection' is a tool that can detect and count multiple
+    objects given a text prompt such as category names or referring expressions. You
+    can optionally separate the categories in the text with commas. It returns a list
+    of bounding boxes with normalized coordinates, label names and associated
+    probability scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
