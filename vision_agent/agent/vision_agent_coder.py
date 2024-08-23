@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import tempfile
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
 
@@ -251,7 +252,18 @@ def pick_plan(
         tool_output=tool_output_str[:20_000],
     )
     chat[-1]["content"] = prompt
-    best_plan = extract_json(model(chat, stream=False))  # type: ignore
+
+    count = 0
+    best_plan = None
+    while best_plan is None or count < max_retries:
+        try:
+            best_plan = extract_json(model(chat, stream=False))  # type: ignore
+        except JSONDecodeError as _:
+            pass
+        count += 1
+
+    if count == max_retries:
+        best_plan = {"best_plan": list(plans.keys())[0]}
 
     if verbosity >= 1:
         _LOGGER.info(f"Best plan:\n{best_plan}")
