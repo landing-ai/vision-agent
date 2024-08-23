@@ -235,7 +235,7 @@ def pick_plan(
 
         if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
-            _LOGGER.info(f"Code execution result after attempte {count}")
+            _LOGGER.info(f"Code execution result after attempt {count}")
 
         count += 1
 
