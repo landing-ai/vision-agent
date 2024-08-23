@@ -1337,6 +1337,7 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     )
 
 
+# TODO: add this function to the imports so that is picked in the agent
 def florencev2_fine_tuned_object_detection(
     image: np.ndarray, prompt: str, model_id: UUID, task: str
 ) -> List[Dict[str, Any]]:
