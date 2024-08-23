@@ -21,6 +21,7 @@ from vision_agent.tools.tool_utils import (
     get_tool_documentation,
     get_tools_df,
 )
+from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -1336,31 +1337,8 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     )
 
 
-def check_if_fine_tuned_florencev2_is_ready(model_id: UUID) -> bool:
-    """'check_if_fine_tuned_florencev2_is_ready' is a tool that checks whether
-    is possible to use a certain florencev2 model. It checks if the status
-    is SUCCEEDED.
-
-    Parameters:
-        model_id (UUID): The fine-tuned model id.
-
-    Returns:
-        bool: The indication if the model is ready to be used or not. If this
-        is False, it's recommended to wait 5 seconds before checking again.
-
-    Example
-    -------
-        >>> check_if_fine_tuned_florencev2_is_ready(UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83"))
-        True
-    """
-    # check if job succeeded first
-    landing_api = LandingPublicAPI()
-    status = landing_api.check_fine_tuning_job(model_id)
-    return status is JobStatus.SUCCEEDED
-
-
 def florencev2_fine_tuned_object_detection(
-    image: np.ndarray, prompt: str, model_id: UUID, task: str, model_is_ready: bool
+    image: np.ndarray, prompt: str, model_id: UUID, task: str
 ) -> List[Dict[str, Any]]:
     """'florencev2_fine_tuned_object_detection' is a tool that uses a fine tuned model
     to detect objects given a text prompt such as a phrase or class names separated by
@@ -1373,8 +1351,6 @@ def florencev2_fine_tuned_object_detection(
         model_id (UUID): The fine-tuned model id.
         task (PromptTask): The florencev2 fine-tuning task. The options are
             CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
-        model_is_ready (bool): If the model is ready to be used. It's recommended
-            to get this value from the function check_if_fine_tuned_florencev2_is_ready.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1388,18 +1364,18 @@ def florencev2_fine_tuned_object_detection(
         >>> florencev2_fine_tuned_object_detection(
             image,
             'person looking at a coyote',
-            UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83"),
-            model_is_ready=check_if_fine_tuned_florencev2_is_ready(
-                UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83")
-            )
+            UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83")
         )
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
         ]
     """
-    if not model_is_ready:
-        return []
+    # check if job succeeded first
+    landing_api = LandingPublicAPI()
+    status = landing_api.check_fine_tuning_job(model_id)
+    if status is not JobStatus.SUCCEEDED:
+        raise FineTuneModelIsNotReady()
 
     task = PromptTask[task]
     if task is PromptTask.OBJECT_DETECTION:

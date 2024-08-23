@@ -49,3 +49,10 @@ class RemoteSandboxClosedError(RemoteSandboxError):
     """
 
     is_retryable = True
+
+
+class FineTuneModelIsNotReady(Exception):
+    """Exception raised when the fine-tune model is not ready.
+    If this is raised, it's recommended to wait 5 seconds before trying to use
+    the model again.
+    """
