@@ -28,7 +28,7 @@ class DefaultImports:
     code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import generate_vision_code, edit_vision_code, open_file, create_file, scroll_up, scroll_down, edit_file, get_tool_descriptions, florencev2_fine_tuning, florencev2_fine_tuned_object_detection, check_if_fine_tuned_florencev2_is_ready",
+        "from vision_agent.tools.meta_tools import generate_vision_code, edit_vision_code, open_file, create_file, scroll_up, scroll_down, edit_file, get_tool_descriptions",
     ]
 
     @staticmethod

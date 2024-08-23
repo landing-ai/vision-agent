@@ -4,7 +4,7 @@ from typing import List
 
 from vision_agent.clients.http import BaseHTTP
 from vision_agent.utils.type_defs import LandingaiAPIKey
-from vision_agent.tools.meta_tools_types import BboxInputBase64, PromptTask, JobStatus
+from vision_agent.tools.tools_types import BboxInputBase64, PromptTask, JobStatus
 
 
 class LandingPublicAPI(BaseHTTP):
