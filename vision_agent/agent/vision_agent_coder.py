@@ -256,8 +256,8 @@ def pick_plan(
     while best_plan is None and count < max_retries:
         try:
             best_plan = extract_json(model(chat, stream=False))  # type: ignore
-        except JSONDecodeError as _:
-            _LOGGER.exception("Error while extracting JSON during picking best plan")
+        except JSONDecodeError as e:
+            _LOGGER.exception(f"Error while extracting JSON during picking best plan {str(e)}")
             pass
         count += 1
 
