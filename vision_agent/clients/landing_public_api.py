@@ -2,8 +2,11 @@ import os
 from uuid import UUID
 from typing import List
 
+from requests.exceptions import HTTPError
+
 from vision_agent.clients.http import BaseHTTP
 from vision_agent.utils.type_defs import LandingaiAPIKey
+from vision_agent.utils.exceptions import FineTuneModelNotFound
 from vision_agent.tools.tools_types import BboxInputBase64, PromptTask, JobStatus
 
 
@@ -27,4 +30,9 @@ class LandingPublicAPI(BaseHTTP):
 
     def check_fine_tuning_job(self, job_id: UUID) -> JobStatus:
         url = f"v1/agent/jobs/fine-tuning/{job_id}/status"
-        return JobStatus(self.get(url)["status"])
+        try:
+            get_job = self.get(url)
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                raise FineTuneModelNotFound()
+        return JobStatus(get_job["status"])

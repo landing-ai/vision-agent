@@ -56,3 +56,9 @@ class FineTuneModelIsNotReady(Exception):
     If this is raised, it's recommended to wait 5 seconds before trying to use
     the model again.
     """
+
+
+class FineTuneModelNotFound(Exception):
+    """Exception raised when the fine-tune model is not found.
+    If this is raised, it's recommended to try another model id.
+    """
