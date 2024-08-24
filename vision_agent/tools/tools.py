@@ -551,8 +551,19 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     including regular videos or videos of documents or presentations. It returns text
     as an answer to the question.
 
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
 
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> ixc25_video_vqa('Which football player made the goal?', frames)
+        'Lionel Messi'
     """
+
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     payload = {
@@ -1542,7 +1553,6 @@ TOOLS = [
     overlay_bounding_boxes,
     overlay_segmentation_masks,
     overlay_heat_map,
-    template_match,
 ]
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
