@@ -8,6 +8,7 @@ logging.basicConfig(stream=sys.stdout)
 
 def extract_json(json_str: str) -> Dict[str, Any]:
     try:
+        json_str = json_str.replace("\n", " ")
         json_dict = json.loads(json_str)
     except json.JSONDecodeError:
         if "```json" in json_str:
