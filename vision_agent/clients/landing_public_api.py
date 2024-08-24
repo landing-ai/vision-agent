@@ -1,10 +1,10 @@
 import os
-from uuid import UUID
 from typing import List
+from uuid import UUID
 
 from vision_agent.clients.http import BaseHTTP
-from vision_agent.utils.type_defs import LandingaiAPIKey
 from vision_agent.tools.meta_tools_types import BboxInputBase64, PromptTask
+from vision_agent.utils.type_defs import LandingaiAPIKey
 
 
 class LandingPublicAPI(BaseHTTP):

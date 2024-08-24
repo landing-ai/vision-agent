@@ -257,7 +257,9 @@ def pick_plan(
         try:
             best_plan = extract_json(model(chat, stream=False))  # type: ignore
         except JSONDecodeError as e:
-            _LOGGER.exception(f"Error while extracting JSON during picking best plan {str(e)}")
+            _LOGGER.exception(
+                f"Error while extracting JSON during picking best plan {str(e)}"
+            )
             pass
         count += 1
 
@@ -804,7 +806,8 @@ class VisionAgentCoder(Agent):
 
             results = write_and_test_code(
                 chat=[{"role": c["role"], "content": c["content"]} for c in int_chat],
-                plan=f"\n{plan_i['thoughts']}\n-" + "\n-".join([e for e in plan_i["instructions"]]),
+                plan=f"\n{plan_i['thoughts']}\n-"
+                + "\n-".join([e for e in plan_i["instructions"]]),
                 tool_info=tool_info,
                 tool_output=tool_output_str,
                 tool_utils=T.UTILITIES_DOCSTRING,
