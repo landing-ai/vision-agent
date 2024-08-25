@@ -1,20 +1,21 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
-from openai import AzureOpenAI, Client, OpenAI
+import requests
+from openai import AzureOpenAI, OpenAI
 from scipy.spatial.distance import cosine  # type: ignore
 
 
 @lru_cache(maxsize=512)
 def get_embedding(
-    client: Client, text: str, model: str = "text-embedding-3-small"
+    emb_call: Callable[[List[str]], List[float]], text: str
 ) -> List[float]:
     text = text.replace("\n", " ")
-    return client.embeddings.create(input=[text], model=model).data[0].embedding
+    return emb_call([text])
 
 
 class Sim:
@@ -35,14 +36,19 @@ class Sim:
             model: str: The model to use for embeddings.
         """
         self.df = df
-        self.client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key)
+        self.emb_call = (
+            lambda text: client.embeddings.create(input=text, model=model)
+            .data[0]
+            .embedding
+        )
         self.model = model
         if "embs" not in df.columns and sim_key is None:
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
             self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(self.client, x, model=self.model)
+                lambda x: get_embedding(self.emb_call, x)
             )
 
     def save(self, sim_file: Union[str, Path]) -> None:
@@ -70,7 +76,7 @@ class Sim:
             Sequence[Dict]: The top k most similar items.
         """
 
-        embedding = get_embedding(self.client, query, model=self.model)
+        embedding = get_embedding(self.emb_call, query)
         self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
         res = self.df.sort_values("sim", ascending=False).head(k)
         if thresh is not None:
@@ -105,8 +111,13 @@ class AzureSim(Sim):
             )
 
         self.df = df
-        self.client = AzureOpenAI(
+        client = AzureOpenAI(
             api_key=api_key, api_version=api_version, azure_endpoint=azure_endpoint
+        )
+        self.emb_call = (
+            lambda text: client.embeddings.create(input=text, model=model)
+            .data[0]
+            .embedding
         )
 
         self.model = model
@@ -114,8 +125,37 @@ class AzureSim(Sim):
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
+            self.df["embs"] = self.df[sim_key].apply(lambda x: get_embedding(client, x))
+
+
+class OllamaSim(Sim):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        sim_key: Optional[str] = None,
+        model_name: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> None:
+        self.df = df
+        if base_url is None:
+            base_url = "http://localhost:11434/api/embeddings"
+        if model_name is None:
+            model_name = "mxbai-embed-large"
+
+        def emb_call(text: List[str]) -> List[float]:
+            resp = requests.post(
+                base_url, json={"prompt": text[0], "model": model_name}
+            )
+            return resp.json()["embedding"]
+
+        self.emb_call = emb_call
+
+        if "embs" not in df.columns and sim_key is None:
+            raise ValueError("key is required if no column 'embs' is present.")
+
+        if sim_key is not None:
             self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(self.client, x, model=self.model)
+                lambda x: get_embedding(emb_call, x)
             )
 
 
