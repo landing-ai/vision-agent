@@ -373,8 +373,9 @@ class OllamaLMM(LMM):
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
-        json_data = json.dumps(data)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
+            json_data = json.dumps(data)
 
             def f() -> Iterator[Optional[str]]:
                 with requests.post(url, data=json_data, stream=True) as stream:
@@ -392,13 +393,14 @@ class OllamaLMM(LMM):
 
             return f()
         else:
-            stream = requests.post(url, data=json_data)
-            if stream.status_code != 200:
-                raise ValueError(
-                    f"Request failed with status code {stream.status_code}"
-                )
-            stream = stream.json()
-            return stream["message"]["content"]  # type: ignore
+            data["stream"] = False
+            json_data = json.dumps(data)
+            resp = requests.post(url, data=json_data)
+
+            if resp.status_code != 200:
+                raise ValueError(f"Request failed with status code {resp.status_code}")
+            resp = resp.json()
+            return resp["message"]["content"]  # type: ignore
 
     def generate(
         self,
@@ -420,8 +422,9 @@ class OllamaLMM(LMM):
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
-        json_data = json.dumps(data)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
+            json_data = json.dumps(data)
 
             def f() -> Iterator[Optional[str]]:
                 with requests.post(url, data=json_data, stream=True) as stream:
@@ -439,15 +442,15 @@ class OllamaLMM(LMM):
 
             return f()
         else:
-            stream = requests.post(url, data=json_data)
+            data["stream"] = False
+            json_data = json.dumps(data)
+            resp = requests.post(url, data=json_data)
 
-            if stream.status_code != 200:
-                raise ValueError(
-                    f"Request failed with status code {stream.status_code}"
-                )
+            if resp.status_code != 200:
+                raise ValueError(f"Request failed with status code {resp.status_code}")
 
-            stream = stream.json()
-            return stream["response"]  # type: ignore
+            resp = resp.json()
+            return resp["response"]  # type: ignore
 
 
 class ClaudeSonnetLMM(LMM):
