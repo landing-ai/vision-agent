@@ -334,7 +334,8 @@ class OllamaLMM(LMM):
     ):
         self.url = base_url
         self.model_name = model_name
-        self.json_mode = json_mode
+        if json_mode:
+            kwargs["format"] = "json"
         self.kwargs = kwargs
 
     def __call__(
