@@ -1,6 +1,8 @@
 from typing import Callable, List, Optional
 
-from .meta_tools import META_TOOL_DOCSTRING, florencev2_fine_tuning
+from .meta_tools import (
+    META_TOOL_DOCSTRING,
+)
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     FUNCTION_TOOLS,
@@ -19,10 +21,19 @@ from .tools import (
     detr_segmentation,
     dpt_hybrid_midas,
     extract_frames,
+<<<<<<< HEAD
     florencev2_image_caption,
     florencev2_object_detection,
     florencev2_ocr,
     florencev2_roberta_vqa,
+=======
+    florence2_image_caption,
+    florence2_object_detection,
+    florence2_ocr,
+    florence2_roberta_vqa,
+    florence2_sam2_image,
+    florence2_sam2_video,
+>>>>>>> 7e149d14aec6a10989a8798d7df19987b475004c
     generate_pose_image,
     generate_soft_edge_image,
     get_tool_descriptions_by_names,
@@ -30,6 +41,8 @@ from .tools import (
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    ixc25_image_vqa,
+    ixc25_video_vqa,
     load_image,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
