@@ -1,7 +1,7 @@
 import inspect
 import logging
 import os
-from typing import Any, Callable, Dict, List, MutableMapping, Optional
+from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
 import pandas as pd
 from IPython.display import display
@@ -31,6 +31,7 @@ class ToolCallTrace(BaseModel):
 def send_inference_request(
     payload: Dict[str, Any],
     endpoint_name: str,
+    files: Optional[List[Tuple[Any, ...]]] = None,
     v2: bool = False,
     metadata_payload: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
@@ -50,7 +51,7 @@ def send_inference_request(
             response={},
             error=None,
         )
-        headers = {"Content-Type": "application/json", "apikey": _LND_API_KEY}
+        headers = {"apikey": _LND_API_KEY}
         if "TOOL_ENDPOINT_AUTH" in os.environ:
             headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
             headers.pop("apikey")
@@ -60,7 +61,11 @@ def send_inference_request(
             num_retry=3,
             headers=headers,
         )
-        res = session.post(url, json=payload)
+
+        if files is not None:
+            res = session.post(url, data=payload, files=files)
+        else:
+            res = session.post(url, json=payload)
         if res.status_code != 200:
             tool_call_trace.error = Error(
                 name="RemoteToolCallFailed",

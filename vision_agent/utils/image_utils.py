@@ -1,12 +1,15 @@
 """Utility functions for image processing."""
 
 import base64
+import io
+import tempfile
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
+from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as ImageType
 
@@ -63,6 +66,46 @@ def rle_decode(mask_rle: str, shape: Tuple[int, int]) -> np.ndarray:
     return img.reshape(shape)
 
 
+def rle_decode_array(rle: Dict[str, List[int]]) -> np.ndarray:
+    r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
+
+    Parameters:
+        mask: The mask in run-length encoded as an array.
+    """
+    size = rle["size"]
+    counts = rle["counts"]
+
+    total_elements = size[0] * size[1]
+    flattened_mask = np.zeros(total_elements, dtype=np.uint8)
+
+    current_pos = 0
+    for i, count in enumerate(counts):
+        if i % 2 == 1:
+            flattened_mask[current_pos : current_pos + count] = 1
+        current_pos += count
+
+    binary_mask = flattened_mask.reshape(size, order="F")
+    return binary_mask
+
+
+def frames_to_bytes(
+    frames: List[np.ndarray], fps: float = 10, file_ext: str = "mp4"
+) -> bytes:
+    r"""Convert a list of frames to a video file encoded into a byte string.
+
+    Parameters:
+        frames: the list of frames
+        fps: the frames per second of the video
+        file_ext: the file extension of the video file
+    """
+    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+        clip = ImageSequenceClip(frames, fps=fps)
+        clip.write_videofile(temp_file.name + f".{file_ext}", fps=fps)
+        with open(temp_file.name + f".{file_ext}", "rb") as f:
+            buffer_bytes = f.read()
+    return buffer_bytes
+
+
 def b64_to_pil(b64_str: str) -> ImageType:
     r"""Convert a base64 string to a PIL Image.
 
@@ -76,6 +119,15 @@ def b64_to_pil(b64_str: str) -> ImageType:
     if "," in b64_str:
         b64_str = b64_str.split(",")[1]
     return Image.open(BytesIO(base64.b64decode(b64_str)))
+
+
+def numpy_to_bytes(image: np.ndarray) -> bytes:
+    pil_image = Image.fromarray(image).convert("RGB")
+    image_buffer = io.BytesIO()
+    pil_image.save(image_buffer, format="PNG")
+    buffer_bytes = image_buffer.getvalue()
+    image_buffer.close()
+    return buffer_bytes
 
 
 def get_image_size(data: Union[str, Path, np.ndarray, ImageType]) -> Tuple[int, ...]:

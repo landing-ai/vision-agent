@@ -2,47 +2,50 @@ import io
 import json
 import logging
 import tempfile
-from uuid import UUID
-from pathlib import Path
 from importlib import resources
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from uuid import UUID
 
 import cv2
-import requests
 import numpy as np
-from pytube import YouTube  # type: ignore
+import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
+from pytube import YouTube  # type: ignore
 
+from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.tools.tool_utils import (
-    send_inference_request,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
     get_tools_info,
-)
-from vision_agent.utils.exceptions import FineTuneModelIsNotReady
-from vision_agent.utils import extract_frames_from_video
-from vision_agent.utils.execute import FileSerializer, MimeType
-from vision_agent.utils.image_utils import (
-    b64_to_pil,
-    convert_to_b64,
-    denormalize_bbox,
-    get_image_size,
-    normalize_bbox,
-    convert_quad_box_to_bbox,
-    rle_decode,
+    send_inference_request,
 )
 from vision_agent.tools.tools_types import (
     BboxInput,
     BboxInputBase64,
-    PromptTask,
-    Florencev2FtRequest,
     FineTuning,
+    Florencev2FtRequest,
     JobStatus,
+    PromptTask,
 )
-from vision_agent.clients.landing_public_api import LandingPublicAPI
+from vision_agent.utils import extract_frames_from_video
+from vision_agent.utils.exceptions import FineTuneModelIsNotReady
+from vision_agent.utils.execute import FileSerializer, MimeType
+from vision_agent.utils.image_utils import (
+    b64_to_pil,
+    convert_quad_box_to_bbox,
+    convert_to_b64,
+    denormalize_bbox,
+    frames_to_bytes,
+    get_image_size,
+    normalize_bbox,
+    numpy_to_bytes,
+    rle_decode,
+    rle_decode_array,
+)
 
 register_heif_opener()
 
@@ -141,9 +144,9 @@ def owl_v2(
     box_threshold: float = 0.10,
 ) -> List[Dict[str, Any]]:
     """'owl_v2' is a tool that can detect and count multiple objects given a text
-    prompt such as category names or referring expressions. The categories in text prompt
-    are separated by commas. It returns a list of bounding boxes with
-    normalized coordinates, label names and associated probability scores.
+    prompt such as category names or referring expressions. The categories in text
+    prompt are separated by commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -194,10 +197,10 @@ def grounding_sam(
     box_threshold: float = 0.20,
     iou_threshold: float = 0.20,
 ) -> List[Dict[str, Any]]:
-    """'grounding_sam' is a tool that can segment multiple objects given a
-    text prompt such as category names or referring expressions. The categories in text
-    prompt are separated by commas or periods. It returns a list of bounding boxes,
-    label names, mask file names and associated probability scores.
+    """'grounding_sam' is a tool that can segment multiple objects given a text prompt
+    such as category names or referring expressions. The categories in text prompt are
+    separated by commas or periods. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -254,52 +257,114 @@ def grounding_sam(
     return return_data
 
 
-def extract_frames(
-    video_uri: Union[str, Path], fps: float = 0.5
-) -> List[Tuple[np.ndarray, float]]:
-    """'extract_frames' extracts frames from a video which can be a file path or youtube
-    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
-    time in seconds where the frame was captured. The frame is a numpy array.
+def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_sam2_image' is a tool that can segment multiple objects given a text
+    prompt such as category names or referring expressions. The categories in the text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores of 1.0.
 
     Parameters:
-        video_uri (Union[str, Path]): The path to the video file or youtube link
-        fps (float, optional): The frame rate per second to extract the frames. Defaults
-            to 0.5.
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
 
     Returns:
-        List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
-            as a numpy array and the timestamp in seconds.
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
 
     Example
     -------
-        >>> extract_frames("path/to/video.mp4")
-        [(frame1, 0.0), (frame2, 0.5), ...]
+        >>> florence2_sam2_image("car, dinosaur", image)
+        [
+            {
+                'score': 1.0,
+                'label': 'dinosaur',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    buffer_bytes = numpy_to_bytes(image)
+
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "function_name": "florence2_sam2_image",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "florence2-sam2", files=files, v2=True
+    )
+    return_data = []
+    for _, data_i in data["0"].items():
+        mask = rle_decode_array(data_i["mask"])
+        label = data_i["label"]
+        bbox = normalize_bbox(data_i["bounding_box"], data_i["mask"]["size"])
+        return_data.append({"label": label, "bbox": bbox, "mask": mask, "score": 1.0})
+    return return_data
+
+
+def florence2_sam2_video(
+    prompt: str, frames: List[np.ndarray]
+) -> List[List[Dict[str, Any]]]:
+    """'florence2_sam2_video' is a tool that can segment and track multiple entities
+    in a video given a text prompt such as category names or referring expressions. You
+    can optionally separate the categories in the text with commas. It only tracks
+    entities present in the first frame and only returns segmentation masks. It is
+    useful for tracking and counting without duplicating counts.
+
+    Parameters:
+        prompt (str): The prompt to ground to the video.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
+        and segment mask. The outer list represents each frame and the inner list is
+        the entities per frame. The label contains the object ID followed by the label
+        name. The objects are only identified in the first framed and tracked
+        throughout the video.
+
+    Example
+    -------
+        >>> florence2_sam2_video("car, dinosaur", frames)
+        [
+            [
+                {
+                    'label': '0: dinosaur',
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+        ]
     """
 
-    if str(video_uri).startswith(
-        (
-            "http://www.youtube.com/",
-            "https://www.youtube.com/",
-            "http://youtu.be/",
-            "https://youtu.be/",
-        )
-    ):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            yt = YouTube(str(video_uri))
-            # Download the highest resolution video
-            video = (
-                yt.streams.filter(progressive=True, file_extension="mp4")
-                .order_by("resolution")
-                .desc()
-                .first()
-            )
-            if not video:
-                raise Exception("No suitable video stream found")
-            video_file_path = video.download(output_path=temp_dir)
-
-            return extract_frames_from_video(video_file_path, fps)
-
-    return extract_frames_from_video(str(video_uri), fps)
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompts": prompt.split(","),
+        "function_name": "florence2_sam2_video",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "florence2-sam2", files=files, v2=True
+    )
+    return_data = []
+    for frame_i in data.keys():
+        return_frame_data = []
+        for obj_id, data_j in data[frame_i].items():
+            mask = rle_decode_array(data_j["mask"])
+            label = obj_id + ": " + data_j["label"]
+            return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
+        return_data.append(return_frame_data)
+    return return_data
 
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -368,12 +433,19 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value. E.g. {count: 12}.
+            value, e.g. {count: 12} and a heat map for visaulization purposes.
 
     Example
     -------
         >>> loca_zero_shot_counting(image)
-        {'count': 45},
+        {'count': 83,
+        'heat_map': array([[ 0,  0,  0, ...,  0,  0,  0],
+            [ 0,  0,  0, ...,  0,  0,  0],
+            [ 0,  0,  0, ...,  0,  0,  1],
+            ...,
+            [ 0,  0,  0, ..., 30, 35, 41],
+            [ 0,  0,  0, ..., 41, 47, 53],
+            [ 0,  0,  0, ..., 53, 59, 64]], dtype=uint8)}
     """
 
     image_b64 = convert_to_b64(image)
@@ -398,12 +470,19 @@ def loca_visual_prompt_counting(
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value. E.g. {count: 12}.
+            value, e.g. {count: 12} and a heat map for visaulization purposes.
 
     Example
     -------
         >>> loca_visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
-        {'count': 45},
+        {'count': 83,
+        'heat_map': array([[ 0,  0,  0, ...,  0,  0,  0],
+            [ 0,  0,  0, ...,  0,  0,  0],
+            [ 0,  0,  0, ...,  0,  0,  1],
+            ...,
+            [ 0,  0,  0, ..., 30, 35, 41],
+            [ 0,  0,  0, ..., 41, 47, 53],
+            [ 0,  0,  0, ..., 53, 59, 64]], dtype=uint8)}
     """
 
     image_size = get_image_size(image)
@@ -420,8 +499,8 @@ def loca_visual_prompt_counting(
     return resp_data
 
 
-def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
-    """'florencev2_roberta_vqa' is a tool that takes an image and analyzes
+def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
+    """'florence2_roberta_vqa' is a tool that takes an image and analyzes
     its contents, generates detailed captions and then tries to answer the given
     question using the generated context. It returns text as an answer to the question.
 
@@ -434,7 +513,7 @@ def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
 
     Example
     -------
-        >>> florencev2_roberta_vqa('What is the top left animal in this image ?', image)
+        >>> florence2_roberta_vqa('What is the top left animal in this image?', image)
         'white tiger'
     """
 
@@ -442,11 +521,71 @@ def florencev2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
     data = {
         "image": image_b64,
         "question": prompt,
-        "function_name": "florencev2_roberta_vqa",
+        "function_name": "florence2_roberta_vqa",
     }
 
     answer = send_inference_request(data, "florence2-qa", v2=True)
     return answer  # type: ignore
+
+
+def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
+    """'ixc25_image_vqa' is a tool that can answer any questions about arbitrary images
+    including regular images or images of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the image
+        image (np.ndarray): The reference image used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> ixc25_image_vqa('What is the cat doing?', image)
+        'drinking milk'
+    """
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "function_name": "ixc25_image_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "internlm-xcomposer2", files=files, v2=True
+    )
+    return cast(str, data["answer"])
+
+
+def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
+    """'ixc25_video_vqa' is a tool that can answer any questions about arbitrary videos
+    including regular videos or videos of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> ixc25_video_vqa('Which football player made the goal?', frames)
+        'Lionel Messi'
+    """
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "function_name": "ixc25_video_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "internlm-xcomposer2", files=files, v2=True
+    )
+    return cast(str, data["answer"])
 
 
 def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
@@ -592,8 +731,8 @@ def blip_image_caption(image: np.ndarray) -> str:
     return answer["text"][0]  # type: ignore
 
 
-def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
-    """'florencev2_image_caption' is a tool that can caption or describe an image based
+def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
+    """'florence2_image_caption' is a tool that can caption or describe an image based
     on its contents. It returns a text describing the image.
 
     Parameters:
@@ -606,7 +745,7 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
 
     Example
     -------
-        >>> florencev2_image_caption(image, False)
+        >>> florence2_image_caption(image, False)
         'This image contains a cat sitting on a table with a bowl of milk.'
     """
     image_b64 = convert_to_b64(image)
@@ -614,17 +753,19 @@ def florencev2_image_caption(image: np.ndarray, detail_caption: bool = True) -> 
     data = {
         "image": image_b64,
         "task": task,
-        "function_name": "florencev2_image_caption",
+        "function_name": "florence2_image_caption",
     }
 
     answer = send_inference_request(data, "florence2", v2=True)
     return answer[task]  # type: ignore
 
 
-def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_object_detection' is a tool that can detect objects given a text
-    prompt such as a phrase or class names separated by commas. It returns a list of
-    detected objects as labels and their location as bounding boxes with score of 1.0.
+def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florencev2_object_detection' is a tool that can detect and count multiple
+    objects given a text prompt such as category names or referring expressions. You
+    can optionally separate the categories in the text with commas. It returns a list
+    of bounding boxes with normalized coordinates, label names and associated
+    probability scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -639,7 +780,7 @@ def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str
 
     Example
     -------
-        >>> florencev2_object_detection('person looking at a coyote', image)
+        >>> florence2_object_detection('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -651,7 +792,7 @@ def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str
         "image": image_b64,
         "task": "<CAPTION_TO_PHRASE_GROUNDING>",
         "prompt": prompt,
-        "function_name": "florencev2_object_detection",
+        "function_name": "florence2_object_detection",
     }
 
     detections = send_inference_request(data, "florence2", v2=True)
@@ -668,8 +809,8 @@ def florencev2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str
     return return_data
 
 
-def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_ocr' is a tool that can detect text and text regions in an image.
+def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_ocr' is a tool that can detect text and text regions in an image.
     Each text region contains one line of text. It returns a list of detected text,
     the text region as a bounding box with normalized coordinates, and confidence
     scores. The results are sorted from top-left to bottom right.
@@ -683,7 +824,7 @@ def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Example
     -------
-        >>> florencev2_ocr(image)
+        >>> florence2_ocr(image)
         [
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
         ]
@@ -694,7 +835,7 @@ def florencev2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     data = {
         "image": image_b64,
         "task": "<OCR_WITH_REGION>",
-        "function_name": "florencev2_ocr",
+        "function_name": "florence2_ocr",
     }
 
     detections = send_inference_request(data, "florence2", v2=True)
@@ -1035,6 +1176,54 @@ def closest_box_distance(
 # Utility and visualization functions
 
 
+def extract_frames(
+    video_uri: Union[str, Path], fps: float = 1
+) -> List[Tuple[np.ndarray, float]]:
+    """'extract_frames' extracts frames from a video which can be a file path or youtube
+    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
+    time in seconds where the frame was captured. The frame is a numpy array.
+
+    Parameters:
+        video_uri (Union[str, Path]): The path to the video file or youtube link
+        fps (float, optional): The frame rate per second to extract the frames. Defaults
+            to 10.
+
+    Returns:
+        List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
+            as a numpy array and the timestamp in seconds.
+
+    Example
+    -------
+        >>> extract_frames("path/to/video.mp4")
+        [(frame1, 0.0), (frame2, 0.5), ...]
+    """
+
+    if str(video_uri).startswith(
+        (
+            "http://www.youtube.com/",
+            "https://www.youtube.com/",
+            "http://youtu.be/",
+            "https://youtu.be/",
+        )
+    ):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yt = YouTube(str(video_uri))
+            # Download the highest resolution video
+            video = (
+                yt.streams.filter(progressive=True, file_extension="mp4")
+                .order_by("resolution")
+                .desc()
+                .first()
+            )
+            if not video:
+                raise Exception("No suitable video stream found")
+            video_file_path = video.download(output_path=temp_dir)
+
+            return extract_frames_from_video(video_file_path, fps)
+
+    return extract_frames_from_video(str(video_uri), fps)
+
+
 def save_json(data: Any, file_path: str) -> None:
     """'save_json' is a utility function that saves data as a JSON file. It is helpful
     for saving data that contains NumPy arrays which are not JSON serializable.
@@ -1099,7 +1288,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
 
 
 def save_video(
-    frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 4
+    frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 1
 ) -> str:
     """'save_video' is a utility function that saves a list of frames as a mp4 video file on disk.
 
@@ -1201,15 +1390,43 @@ def overlay_bounding_boxes(
     return np.array(pil_image)
 
 
+def _get_text_coords_from_mask(
+    mask: np.ndarray, v_gap: int = 10, h_gap: int = 10
+) -> Tuple[int, int]:
+    mask = mask.astype(np.uint8)
+    if np.sum(mask) == 0:
+        return (0, 0)
+
+    rows, cols = np.nonzero(mask)
+    top = rows.min()
+    bottom = rows.max()
+    left = cols.min()
+    right = cols.max()
+
+    if top - v_gap < 0:
+        if bottom + v_gap > mask.shape[0]:
+            top = top
+        else:
+            top = bottom + v_gap
+    else:
+        top = top - v_gap
+
+    return left + (right - left) // 2 - h_gap, top
+
+
 def overlay_segmentation_masks(
-    image: np.ndarray, masks: List[Dict[str, Any]]
-) -> np.ndarray:
+    medias: Union[np.ndarray, List[np.ndarray]],
+    masks: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]],
+    draw_label: bool = True,
+) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_segmentation_masks' is a utility function that displays segmentation
     masks.
 
     Parameters:
-        image (np.ndarray): The image to display the masks on.
-        masks (List[Dict[str, Any]]): A list of dictionaries containing the masks.
+        medias (Union[np.ndarray, List[np.ndarray]]): The image or frames to display
+            the masks on.
+        masks (Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]): A list of
+            dictionaries containing the masks.
 
     Returns:
         np.ndarray: The image with the masks displayed.
@@ -1229,27 +1446,50 @@ def overlay_segmentation_masks(
             }],
         )
     """
-    pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGBA")
+    medias_int: List[np.ndarray] = (
+        [medias] if isinstance(medias, np.ndarray) else medias
+    )
+    masks_int = [masks] if isinstance(masks[0], dict) else masks
+    masks_int = cast(List[List[Dict[str, Any]]], masks_int)
 
-    if len(set([mask["label"] for mask in masks])) > len(COLORS):
-        _LOGGER.warning(
-            "Number of unique labels exceeds the number of available colors. Some labels may have the same color."
-        )
+    labels = set()
+    for mask_i in masks_int:
+        for mask_j in mask_i:
+            labels.add(mask_j["label"])
+    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(labels)}
 
-    color = {
-        label: COLORS[i % len(COLORS)]
-        for i, label in enumerate(set([mask["label"] for mask in masks]))
-    }
-    masks = sorted(masks, key=lambda x: x["label"], reverse=True)
+    width, height = Image.fromarray(medias_int[0]).size
+    fontsize = max(12, int(min(width, height) / 40))
+    font = ImageFont.truetype(
+        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
+        fontsize,
+    )
 
-    for elt in masks:
-        mask = elt["mask"]
-        label = elt["label"]
-        np_mask = np.zeros((pil_image.size[1], pil_image.size[0], 4))
-        np_mask[mask > 0, :] = color[label] + (255 * 0.5,)
-        mask_img = Image.fromarray(np_mask.astype(np.uint8))
-        pil_image = Image.alpha_composite(pil_image, mask_img)
-    return np.array(pil_image)
+    frame_out = []
+    for i, frame in enumerate(medias_int):
+        pil_image = Image.fromarray(frame.astype(np.uint8)).convert("RGBA")
+        for elt in masks_int[i]:
+            mask = elt["mask"]
+            label = elt["label"]
+            np_mask = np.zeros((pil_image.size[1], pil_image.size[0], 4))
+            np_mask[mask > 0, :] = color[label] + (255 * 0.5,)
+            mask_img = Image.fromarray(np_mask.astype(np.uint8))
+            pil_image = Image.alpha_composite(pil_image, mask_img)
+
+            if draw_label:
+                draw = ImageDraw.Draw(pil_image)
+                text_box = draw.textbbox((0, 0), text=label, font=font)
+                x, y = _get_text_coords_from_mask(
+                    mask,
+                    v_gap=(text_box[3] - text_box[1]) + 10,
+                    h_gap=(text_box[2] - text_box[0]) // 2,
+                )
+                if x != 0 and y != 0:
+                    text_box = draw.textbbox((x, y), text=label, font=font)
+                    draw.rectangle((x, y, text_box[2], text_box[3]), fill=color[label])
+                    draw.text((x, y), label, fill="black", font=font)
+        frame_out.append(np.array(pil_image))
+    return frame_out[0] if len(frame_out) == 1 else frame_out
 
 
 def overlay_heat_map(
@@ -1412,7 +1652,6 @@ def florencev2_fine_tuned_object_detection(
 
 TOOLS = [
     owl_v2,
-    grounding_sam,
     extract_frames,
     ocr,
     clip,
@@ -1420,13 +1659,15 @@ TOOLS = [
     vit_nsfw_classification,
     loca_zero_shot_counting,
     loca_visual_prompt_counting,
-    florencev2_roberta_vqa,
-    florencev2_image_caption,
-    florencev2_ocr,
+    florence2_image_caption,
+    florence2_ocr,
+    florence2_sam2_image,
+    florence2_sam2_video,
+    florence2_object_detection,
+    ixc25_image_vqa,
+    ixc25_video_vqa,
     detr_segmentation,
     depth_anything_v2,
-    generate_soft_edge_image,
-    dpt_hybrid_midas,
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
@@ -1437,7 +1678,6 @@ TOOLS = [
     overlay_bounding_boxes,
     overlay_segmentation_masks,
     overlay_heat_map,
-    template_match,
 ]
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
