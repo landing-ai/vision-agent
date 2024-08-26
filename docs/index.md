@@ -1,4 +1,9 @@
 # 🔍🤖 Vision Agent
+[![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
+![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
+![version](https://img.shields.io/pypi/pyversions/vision-agent)
+</div>
 
 Vision Agent is a library that helps you utilize agent frameworks to generate code to
 solve your vision task. Many current vision problems can easily take hours or days to
@@ -160,20 +165,18 @@ result = agent.chat_with_workflow(conv)
 
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
-while others are hosted for you. You can also ask an LMM directly to build a tool for
-you. For example:
+while others are hosted for you. You can easily access them yourself, for example if
+you want to run `owl_v2` and visualize the output you can run:
 
 ```python
->>> import vision_agent as va
->>> lmm = va.lmm.OpenAILMM()
->>> detector = lmm.generate_detector("Can you build a jar detector for me?")
->>> detector(va.tools.load_image("jar.jpg"))
-[{"labels": ["jar",],
-  "scores": [0.99],
-  "bboxes": [
-    [0.58, 0.2, 0.72, 0.45],
-  ]
-}]
+import vision_agent.tools as T
+import matplotlib.pyplot as plt
+
+image = T.load_image("dogs.jpg")
+dets = T.owl_v2("dogs", image)
+viz = T.overlay_bounding_boxes(image, dets)
+plt.imshow(viz)
+plt.show()
 ```
 
 You can also add custom tools to the agent:
@@ -205,6 +208,40 @@ variables will not be captured by `register_tool` so you need to include them in
 function. Make sure the documentation is in the same format above with description,
 `Parameters:`, `Returns:`, and `Example\n-------`. You can find an example use case
 [here](examples/custom_tools/) as this is what the agent uses to pick and use the tool.
+
+## Additional LLMs
+### Ollama
+We also provide a `VisionAgentCoder` that uses Ollama. To get started you must download
+a few models:
+
+```bash
+ollama pull llama3.1
+ollama pull mxbai-embed-large
+```
+
+`llama3.1` is used for the `OllamaLMM` for `OllamaVisionAgentCoder`. Normally we would
+use an actual LMM such as `llava` but `llava` cannot handle the long context lengths
+required by the agent. Since `llama3.1` cannot handle images you may see some
+performance degredation. `mxbai-embed-large` is the embedding model used to look up
+tools. You can use it just like you would use `VisionAgentCoder`:
+
+```python
+>>> import vision_agent as va
+>>> agent = va.agent.OllamaVisionAgentCoder()
+>>> agent("Count the apples in the image", media="apples.jpg")
+```
+
+### Azure OpenAI
+We also provide a `AzureVisionAgentCoder` that uses Azure OpenAI models. To get started
+follow the Azure Setup section below. You can use it just like you would use=
+`VisionAgentCoder`:
+
+```python
+>>> import vision_agent as va
+>>> agent = va.agent.AzureVisionAgentCoder()
+>>> agent("Count the apples in the image", media="apples.jpg")
+```
+
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you need to have two OpenAI model deployments:
@@ -244,6 +281,6 @@ agent = va.agent.AzureVisionAgentCoder()
 2. Follow the instructions to purchase and manage your API credits.
 3. Ensure your API key is correctly configured in your project settings.
 
-Failure to have sufficient API credits may result in limited or no functionality for the features that rely on the OpenAI API.
-
-For more details on managing your API usage and credits, please refer to the OpenAI API documentation.
+Failure to have sufficient API credits may result in limited or no functionality for
+the features that rely on the OpenAI API. For more details on managing your API usage
+and credits, please refer to the OpenAI API documentation.
