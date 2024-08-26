@@ -330,13 +330,16 @@ class OllamaLMM(LMM):
         model_name: str = "llava",
         base_url: Optional[str] = "http://localhost:11434/api",
         json_mode: bool = False,
+        num_ctx: int = 4096,
         **kwargs: Any,
     ):
         self.url = base_url
         self.model_name = model_name
+        self.kwargs = {"options": kwargs}
+
         if json_mode:
-            kwargs["format"] = "json"
-        self.kwargs = kwargs
+            self.kwargs["format"] = "json"  # type: ignore
+        self.kwargs["options"]["num_cxt"] = num_ctx
 
     def __call__(
         self,
@@ -370,7 +373,7 @@ class OllamaLMM(LMM):
         url = f"{self.url}/chat"
         model = self.model_name
         messages = fixed_chat
-        data = {"model": model, "messages": messages}
+        data: Dict[str, Any] = {"model": model, "messages": messages}
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
@@ -411,7 +414,7 @@ class OllamaLMM(LMM):
     ) -> Union[str, Iterator[Optional[str]]]:
 
         url = f"{self.url}/generate"
-        data = {
+        data: Dict[str, Any] = {
             "model": self.model_name,
             "prompt": prompt,
             "images": [],
@@ -419,7 +422,7 @@ class OllamaLMM(LMM):
 
         if media and len(media) > 0:
             for m in media:
-                data["images"].append(encode_media(m))  # type: ignore
+                data["images"].append(encode_media(m))
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
