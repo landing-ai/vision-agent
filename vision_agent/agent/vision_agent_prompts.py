@@ -32,6 +32,16 @@ Here is the current conversation so far:
 """
 
 
+EXAMPLES_CODE1_ARTIFACT = """
+USER: Can you write a simple application that adds two numbers?
+
+AGENT: {"thoughts": "The user has asked to add two numbers, I will generate the code to add two numbers.", "response": "<execute_python>create_artifact(artifact, 'add_two_numbers')</execute_python>", "let_user_respond": false}
+
+OBSERVATION:
+[Artifact add_two_numbers created]
+"""
+
+
 EXAMPLES_CODE1 = """
 USER: Can you detect the dogs in this image? Media name dog.jpg
 
