@@ -19,6 +19,7 @@ from vision_agent.tools.tool_utils import (
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
+    get_tools_info,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -1317,6 +1318,7 @@ TOOLS = [
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
+TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
     [
         save_json,
