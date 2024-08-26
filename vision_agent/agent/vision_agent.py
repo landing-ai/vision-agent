@@ -1,8 +1,8 @@
 import copy
 import logging
 import os
-import tempfile
 import pickle as pkl
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -14,8 +14,8 @@ from vision_agent.agent.vision_agent_prompts import (
     VA_CODE,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
-from vision_agent.tools.meta_tools import Artifacts
 from vision_agent.tools import META_TOOL_DOCSTRING
+from vision_agent.tools.meta_tools import Artifacts
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter
 
@@ -28,24 +28,30 @@ if str(WORKSPACE) != "":
     os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
 
-class DefaultImports:
-    code = [
+class BoilerplateCode:
+    pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
         "from vision_agent.tools.meta_tools import Artifacts, open_artifact, create_artifact, edit_artifact, get_tool_descriptions",
-        f"artifacts = Artifacts({ARTIFACT})",
+        "artifacts = Artifacts({remote_path})",
+        "artifacts.load({remote_path})",
+    ]
+    post_code = [
+        "artifacts.save()",
     ]
 
     @staticmethod
-    def to_code_string() -> str:
-        return "\n".join(DefaultImports.code)
-
-    @staticmethod
-    def prepend_imports(code: str) -> str:
+    def add_boilerplate(code: str) -> str:
         """Run this method to prepend the default imports to the code.
         NOTE: be sure to run this method after the custom tools have been registered.
         """
-        return DefaultImports.to_code_string() + "\n\n" + code
+        return (
+            "\n".join(BoilerplateCode.pre_code)
+            + "\n\n"
+            + code
+            + "\n\n"
+            + "\n".join(BoilerplateCode.post_code)
+        )
 
 
 def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
@@ -71,22 +77,10 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
 
 
-def run_code_action(code: str, artifacts: Artifacts, code_interpreter: CodeInterpreter) -> str:
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        for name in artifacts:
-            temp_file_path = Path(tmpdirname) / name + ".py"
-            with open(temp_file_path, "w") as f:
-                f.write(artifacts[name])
-            code_interpreter.upload_file(temp_file_path)
-            temp_file_path.unlink()
-
-        temp_file_path = Path(tmpdirname) / ARTIFACT
-        with open(temp_file_path, "wb") as f:
-            pkl.dump(artifacts.artifacts, f)
-        code_interpreter.upload_file(temp_file_path)
-        temp_file_path.unlink()
-
-    result = code_interpreter.exec_cell(DefaultImports.prepend_imports(code))
+def run_code_action(
+    code: str, code_interpreter: CodeInterpreter
+) -> str:
+    result = code_interpreter.exec_cell(BoilerplateCode.add_boilerplate(code))
 
     return_str = ""
     if result.success:
@@ -150,6 +144,7 @@ class VisionAgent(Agent):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
+        artifacts: Optional[Artifacts] = None,
     ) -> str:
         """Chat with VisionAgent and get the conversation response.
 
@@ -172,13 +167,13 @@ class VisionAgent(Agent):
     def chat_with_code(
         self,
         chat: List[Message],
+        artifacts: Optional[Artifacts] = None,
     ) -> List[Message]:
         """Chat with VisionAgent, it will use code to execute actions to accomplish
         its tasks.
 
         Parameters:
-            chat (List[Message]): A conversation
-                in the format of:
+            chat (List[Message]): A conversation in the format of:
                 [{"role": "user", "content": "describe your task here..."}]
                 or if it contains media files, it should be in the format of:
                 [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
@@ -189,6 +184,10 @@ class VisionAgent(Agent):
 
         if not chat:
             raise ValueError("chat cannot be empty")
+
+        if not artifacts:
+            artifacts = Artifacts("artifacts.pkl")
+            artifacts.save()
 
         with CodeInterpreterFactory.new_instance(
             code_sandbox_runtime=self.code_sandbox_runtime
@@ -222,6 +221,8 @@ class VisionAgent(Agent):
             finished = False
             iterations = 0
             while not finished and iterations < self.max_iterations:
+                artifacts_remote_path = code_interpreter.upload_file(artifacts.save_path)
+
                 response = run_conversation(self.agent, int_chat)
                 if self.verbosity >= 1:
                     _LOGGER.info(response)
@@ -235,6 +236,10 @@ class VisionAgent(Agent):
 
                 if code_action is not None:
                     obs = run_code_action(code_action, code_interpreter)
+                    artifacts_local_path = code_interpreter.download_file(artifacts_remote_path)
+                    artifacts.load(artifacts_local_path)
+                    artifacts.save()
+
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
                     int_chat.append({"role": "observation", "content": obs})
