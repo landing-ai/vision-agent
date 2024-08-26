@@ -146,7 +146,7 @@ class OllamaSim(Sim):
             resp = requests.post(
                 base_url, json={"prompt": text[0], "model": model_name}
             )
-            return resp.json()["embedding"]
+            return resp.json()["embedding"]  # type: ignore
 
         self.emb_call = emb_call
 
