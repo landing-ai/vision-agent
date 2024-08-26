@@ -330,7 +330,7 @@ class OllamaLMM(LMM):
         model_name: str = "llava",
         base_url: Optional[str] = "http://localhost:11434/api",
         json_mode: bool = False,
-        num_ctx: int = 4096,
+        num_ctx: int = 128_000,
         **kwargs: Any,
     ):
         self.url = base_url
