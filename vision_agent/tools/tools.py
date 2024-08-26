@@ -2,33 +2,34 @@ import io
 import json
 import logging
 import tempfile
-from pathlib import Path
 from importlib import resources
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
-import requests
 import numpy as np
-from pytube import YouTube  # type: ignore
+import requests
 from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
+from pytube import YouTube  # type: ignore
 
 from vision_agent.tools.tool_utils import (
-    send_inference_request,
     get_tool_descriptions,
+    get_tool_descriptions_by_names,
     get_tool_documentation,
     get_tools_df,
+    send_inference_request,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
     b64_to_pil,
+    convert_quad_box_to_bbox,
     convert_to_b64,
     denormalize_bbox,
     get_image_size,
     normalize_bbox,
-    convert_quad_box_to_bbox,
     rle_decode,
 )
 
@@ -1285,7 +1286,17 @@ def overlay_heat_map(
     return np.array(combined)
 
 
-TOOLS = [
+UTIL_TOOLS = [
+    save_json,
+    load_image,
+    save_image,
+    save_video,
+    overlay_bounding_boxes,
+    overlay_segmentation_masks,
+    overlay_heat_map,
+]
+
+FUNCTION_TOOLS = [
     owl_v2,
     grounding_sam,
     extract_frames,
@@ -1305,15 +1316,11 @@ TOOLS = [
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
-    save_json,
-    load_image,
-    save_image,
-    save_video,
-    overlay_bounding_boxes,
-    overlay_segmentation_masks,
-    overlay_heat_map,
     template_match,
 ]
+
+TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
+
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
