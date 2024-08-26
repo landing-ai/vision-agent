@@ -263,7 +263,11 @@ def pick_plan(
             pass
         count += 1
 
-    if best_plan is None:
+    if (
+        best_plan is None
+        or "best_plan" not in best_plan
+        or ("best_plan" in best_plan and best_plan["best_plan"] not in plans)
+    ):
         best_plan = {"best_plan": list(plans.keys())[0]}
 
     if verbosity >= 1:
@@ -820,6 +824,7 @@ class VisionAgentCoder(Agent):
                 verbosity=self.verbosity,
                 media=media_list,
             )
+            __import__("ipdb").set_trace()
             success = cast(bool, results["success"])
             code = cast(str, results["code"])
             test = cast(str, results["test"])
