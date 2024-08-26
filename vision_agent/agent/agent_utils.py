@@ -22,7 +22,6 @@ def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
 
 
 def extract_json(json_str: str) -> Dict[str, Any]:
-    __import__("ipdb").set_trace()
     try:
         json_dict = json.loads(json_str)
     except json.JSONDecodeError:
