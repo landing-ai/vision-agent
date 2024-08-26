@@ -1,6 +1,8 @@
 from typing import Callable, List, Optional
 
-from .meta_tools import META_TOOL_DOCSTRING, florencev2_fine_tuning
+from .meta_tools import (
+    META_TOOL_DOCSTRING,
+)
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     TOOL_DESCRIPTIONS,

@@ -78,6 +78,8 @@ line_length = 88
 profile = "black"
 
 [tool.mypy]
+plugins = "pydantic.mypy"
+
 exclude = "tests"
 show_error_context = true
 pretty = true
