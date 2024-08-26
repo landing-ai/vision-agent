@@ -750,7 +750,7 @@ class VisionAgentCoder(Agent):
             plans = write_plans(
                 int_chat,
                 T.get_tool_descriptions_by_names(
-                    customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS
+                    customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
                 ),
                 format_memory(working_memory),
                 self.planner,

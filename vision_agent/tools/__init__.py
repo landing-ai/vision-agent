@@ -2,6 +2,7 @@ from typing import Callable, List, Optional
 
 from .meta_tools import META_TOOL_DOCSTRING
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
+from .tool_utils import get_tool_descriptions_by_names
 from .tools import (
     FUNCTION_TOOLS,
     TOOL_DESCRIPTIONS,
@@ -27,7 +28,6 @@ from .tools import (
     florence2_sam2_video,
     generate_pose_image,
     generate_soft_edge_image,
-    get_tool_descriptions_by_names,
     get_tool_documentation,
     git_vqa_v2,
     grounding_dino,
