@@ -8,7 +8,6 @@ from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
 
-
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
 CURRENT_FILE = None
