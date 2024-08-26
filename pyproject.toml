@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "vision-agent"
-version = "0.2.109"
+version = "0.2.111"
 description = "Toolset for Vision Agent"
 authors = ["Landing AI <dev@landing.ai>"]
 readme = "README.md"
@@ -78,6 +78,8 @@ line_length = 88
 profile = "black"
 
 [tool.mypy]
+plugins = "pydantic.mypy"
+
 exclude = "tests"
 show_error_context = true
 pretty = true
