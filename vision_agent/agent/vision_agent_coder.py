@@ -132,7 +132,6 @@ def write_plans(
         tool_desc=tool_desc,
         feedback=working_memory,
     )
-    print(prompt)
     chat[-1]["content"] = prompt
     return extract_json(model(chat, stream=False))  # type: ignore
 
@@ -615,8 +614,6 @@ class VisionAgentCoder(Agent):
                  also None, the local python runtime environment will be used.
         """
 
-        print("testing1")
-
         self.planner = (
             OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
         )
@@ -691,8 +688,6 @@ class VisionAgentCoder(Agent):
             Dict[str, Any]: A dictionary containing the code, test, test result, plan,
                 and working memory of the agent.
         """
-
-        print("chat with workflow - start")
 
         if not chat:
             raise ValueError("Chat cannot be empty.")

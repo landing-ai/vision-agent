@@ -8,6 +8,7 @@ from .tools import (
     TOOL_DOCSTRING,
     TOOLS,
     TOOLS_DF,
+    TOOLS_INFO,
     UTIL_TOOLS,
     UTILITIES_DOCSTRING,
     blip_image_caption,
@@ -55,15 +56,16 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from .tools import get_tool_descriptions, get_tools_df
+        from .tools import get_tool_descriptions, get_tools_df, get_tools_info
 
-        global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING
+        global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
 
         if tool not in TOOLS:
             TOOLS.append(tool)
             TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
             TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
             TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
+            TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
 
             globals()[tool.__name__] = tool
             if imports is not None:

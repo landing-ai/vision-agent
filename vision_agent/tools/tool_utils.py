@@ -165,3 +165,16 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
         data["doc"].append(doc)
 
     return pd.DataFrame(data)  # type: ignore
+
+
+def get_tools_info(funcs: List[Callable[..., Any]]) -> Dict[str, str]:
+    data: Dict[str, str] = {}
+
+    for func in funcs:
+        desc = func.__doc__
+        if desc is None:
+            desc = ""
+
+        data[func.__name__] = f"{func.__name__}{inspect.signature(func)}:\n{desc}"
+
+    return data
