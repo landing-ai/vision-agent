@@ -1,6 +1,6 @@
-import re
 import json
 import logging
+import re
 import sys
 from typing import Any, Dict, Optional
 
@@ -15,7 +15,7 @@ def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
         json_str = match.group()
         try:
             json_dict = json.loads(json_str)
-            return json_dict
+            return json_dict  # type: ignore
         except json.JSONDecodeError:
             return None
     return None
@@ -39,7 +39,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
         except json.JSONDecodeError as e:
             json_dict = _extract_sub_json(json_str)
             if json_dict is not None:
-                return json_dict
+                return json_dict  # type: ignore
             error_msg = f"Could not extract JSON from the given str: {json_str}.\nFunction input:\n{input_json_str}"
             _LOGGER.exception(error_msg)
             raise ValueError(error_msg) from e
