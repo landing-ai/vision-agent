@@ -5,7 +5,6 @@ import sys
 from typing import Any, Dict, Optional
 
 logging.basicConfig(stream=sys.stdout)
-_LOGGER = logging.getLogger(__name__)
 
 
 def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
@@ -23,9 +22,9 @@ def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
 
 def extract_json(json_str: str) -> Dict[str, Any]:
     try:
+        json_str = json_str.replace("\n", " ")
         json_dict = json.loads(json_str)
     except json.JSONDecodeError:
-        input_json_str = json_str
         if "```json" in json_str:
             json_str = json_str[json_str.find("```json") + len("```json") :]
             json_str = json_str[: json_str.find("```")]
@@ -42,6 +41,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
             error_msg = f"Could not extract JSON from the given str: {json_str}.\nFunction input:\n{input_json_str}"
             _LOGGER.exception(error_msg)
             raise ValueError(error_msg) from e
+
     return json_dict  # type: ignore
 
 

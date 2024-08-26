@@ -1,12 +1,15 @@
 from typing import Callable, List, Optional
 
-from .meta_tools import META_TOOL_DOCSTRING, florencev2_fine_tuning
+from .meta_tools import (
+    META_TOOL_DOCSTRING,
+)
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     TOOL_DESCRIPTIONS,
     TOOL_DOCSTRING,
     TOOLS,
     TOOLS_DF,
+    TOOLS_INFO,
     UTILITIES_DOCSTRING,
     blip_image_caption,
     clip,
@@ -16,16 +19,20 @@ from .tools import (
     detr_segmentation,
     dpt_hybrid_midas,
     extract_frames,
-    florencev2_image_caption,
-    florencev2_object_detection,
-    florencev2_roberta_vqa,
-    florencev2_ocr,
+    florence2_image_caption,
+    florence2_object_detection,
+    florence2_ocr,
+    florence2_roberta_vqa,
+    florence2_sam2_image,
+    florence2_sam2_video,
     generate_pose_image,
     generate_soft_edge_image,
     get_tool_documentation,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    ixc25_image_vqa,
+    ixc25_video_vqa,
     load_image,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
@@ -52,15 +59,16 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from .tools import get_tool_descriptions, get_tools_df
+        from .tools import get_tool_descriptions, get_tools_df, get_tools_info
 
-        global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING
+        global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
 
         if tool not in TOOLS:
             TOOLS.append(tool)
             TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
             TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
             TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
+            TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
 
             globals()[tool.__name__] = tool
             if imports is not None:

@@ -1,5 +1,6 @@
 import numpy as np
 import skimage as ski
+from PIL import Image
 
 from vision_agent.tools import (
     blip_image_caption,
@@ -8,15 +9,19 @@ from vision_agent.tools import (
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
-    florencev2_image_caption,
-    florencev2_object_detection,
-    florencev2_roberta_vqa,
-    florencev2_ocr,
+    florence2_image_caption,
+    florence2_object_detection,
+    florence2_ocr,
+    florence2_roberta_vqa,
+    florence2_sam2_image,
+    florence2_sam2_video,
     generate_pose_image,
     generate_soft_edge_image,
     git_vqa_v2,
     grounding_dino,
     grounding_sam,
+    ixc25_image_vqa,
+    ixc25_video_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
     ocr,
@@ -60,7 +65,7 @@ def test_owl():
 
 def test_object_detection():
     img = ski.data.coins()
-    result = florencev2_object_detection(
+    result = florence2_object_detection(
         image=img,
         prompt="coin",
     )
@@ -86,6 +91,30 @@ def test_grounding_sam():
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
     assert len([res["mask"] for res in result]) == 24
+
+
+def test_florence2_sam2_image():
+    img = ski.data.coins()
+    result = florence2_sam2_image(
+        prompt="coin",
+        image=img,
+    )
+    assert len(result) == 25
+    assert [res["label"] for res in result] == ["coin"] * 25
+    assert len([res["mask"] for res in result]) == 25
+
+
+def test_florence2_sam2_video():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    result = florence2_sam2_video(
+        prompt="coin",
+        frames=frames,
+    )
+    assert len(result) == 10
+    assert len([res["label"] for res in result[0]]) == 25
+    assert len([res["mask"] for res in result[0]]) == 25
 
 
 def test_segmentation():
@@ -133,7 +162,7 @@ def test_image_caption() -> None:
 
 def test_florence_image_caption() -> None:
     img = ski.data.rocket()
-    result = florencev2_image_caption(
+    result = florence2_image_caption(
         image=img,
     )
     assert "The image shows a rocket on a launch pad at night" in result.strip()
@@ -168,11 +197,31 @@ def test_git_vqa_v2() -> None:
 
 def test_image_qa_with_context() -> None:
     img = ski.data.rocket()
-    result = florencev2_roberta_vqa(
+    result = florence2_roberta_vqa(
         prompt="Is the scene captured during day or night ?",
         image=img,
     )
     assert "night" in result.strip()
+
+
+def test_ixc25_image_vqa() -> None:
+    img = ski.data.cat()
+    result = ixc25_image_vqa(
+        prompt="What animal is in this image?",
+        image=img,
+    )
+    assert "cat" in result.strip()
+
+
+def test_ixc25_video_vqa() -> None:
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
+    ]
+    result = ixc25_video_vqa(
+        prompt="What animal is in this video?",
+        frames=frames,
+    )
+    assert "cat" in result.strip()
 
 
 def test_ocr() -> None:
@@ -183,9 +232,9 @@ def test_ocr() -> None:
     assert any("Region-based segmentation" in res["label"] for res in result)
 
 
-def test_florencev2_ocr() -> None:
+def test_florence2_ocr() -> None:
     img = ski.data.page()
-    result = florencev2_ocr(
+    result = florence2_ocr(
         image=img,
     )
     assert any("Region-based segmentation" in res["label"] for res in result)

@@ -416,7 +416,6 @@ class CodeInterpreter(abc.ABC):
 
 
 class E2BCodeInterpreter(CodeInterpreter):
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         assert os.getenv("E2B_API_KEY"), "E2B_API_KEY environment variable must be set"

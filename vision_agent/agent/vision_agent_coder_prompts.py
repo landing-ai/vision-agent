@@ -30,18 +30,19 @@ PLAN = """
 
 **Instructions**:
 1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
-2. Output three different plans each utilize a different strategy or tool.
+2. Output three different plans each utilize a different strategy or set of tools.
 
 Output a list of jsons in the following format
 
 ```json
 {{
     "plan1":
-        [
-            {{
-                "instructions": str # what you should do in this task associated with a tool
-            }}
-        ],
+        {{
+            "thoughts": str # your thought process for choosing this plan
+            "instructions": [
+                str # what you should do in this task associated with a tool
+            ]
+        }},
     "plan2": ...,
     "plan3": ...
 }}
@@ -127,7 +128,8 @@ PICK_PLAN = """
 
 **Instructions**:
 1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
-2. Output a JSON object with the following format:
+2. Try solving the problem yourself given the image and pick the plan that matches your solution the best.
+3. Output a JSON object with the following format:
 {{
     "thoughts": str # your thought process for choosing the best plan
     "best_plan": str # the best plan you have chosen

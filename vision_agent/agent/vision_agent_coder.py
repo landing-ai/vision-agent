@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import tempfile
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
 
@@ -86,8 +87,8 @@ def format_memory(memory: List[Dict[str, str]]) -> str:
 def format_plans(plans: Dict[str, Any]) -> str:
     plan_str = ""
     for k, v in plans.items():
-        plan_str += f"{k}:\n"
-        plan_str += "-" + "\n-".join([e["instructions"] for e in v])
+        plan_str += "\n" + f"{k}: {v['thoughts']}\n"
+        plan_str += "    -" + "\n    -".join([e for e in v["instructions"]])
 
     return plan_str
 
@@ -228,13 +229,11 @@ def pick_plan(
                 "status": "completed" if tool_output.success else "failed",
             }
         )
-        tool_output_str = ""
-        if len(tool_output.logs.stdout) > 0:
-            tool_output_str = tool_output.logs.stdout[0]
+        tool_output_str = tool_output.text().strip()
 
         if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
-            _LOGGER.info(f"Code execution result after attempte {count}")
+            _LOGGER.info(f"Code execution result after attempt {count}")
 
         count += 1
 
@@ -251,7 +250,21 @@ def pick_plan(
         tool_output=tool_output_str[:20_000],
     )
     chat[-1]["content"] = prompt
-    best_plan = extract_json(model(chat, stream=False))  # type: ignore
+
+    count = 0
+    best_plan = None
+    while best_plan is None and count < max_retries:
+        try:
+            best_plan = extract_json(model(chat, stream=False))  # type: ignore
+        except JSONDecodeError as e:
+            _LOGGER.exception(
+                f"Error while extracting JSON during picking best plan {str(e)}"
+            )
+            pass
+        count += 1
+
+    if best_plan is None:
+        best_plan = {"best_plan": list(plans.keys())[0]}
 
     if verbosity >= 1:
         _LOGGER.info(f"Best plan:\n{best_plan}")
@@ -525,7 +538,7 @@ def _print_code(title: str, code: str, test: Optional[str] = None) -> None:
 
 
 def retrieve_tools(
-    plans: Dict[str, List[Dict[str, str]]],
+    plans: Dict[str, Dict[str, Any]],
     tool_recommender: Sim,
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
@@ -542,8 +555,8 @@ def retrieve_tools(
     tool_lists: Dict[str, List[Dict[str, str]]] = {}
     for k, plan in plans.items():
         tool_lists[k] = []
-        for task in plan:
-            tools = tool_recommender.top_k(task["instructions"], k=2, thresh=0.3)
+        for task in plan["instructions"]:
+            tools = tool_recommender.top_k(task, k=2, thresh=0.3)
             tool_info.extend([e["doc"] for e in tools])
             tool_desc.extend([e["desc"] for e in tools])
             tool_lists[k].extend(
@@ -737,14 +750,7 @@ class VisionAgentCoder(Agent):
             if self.verbosity >= 1:
                 for p in plans:
                     # tabulate will fail if the keys are not the same for all elements
-                    p_fixed = [
-                        {
-                            "instructions": (
-                                e["instructions"] if "instructions" in e else ""
-                            )
-                        }
-                        for e in plans[p]
-                    ]
+                    p_fixed = [{"instructions": e} for e in plans[p]["instructions"]]
                     _LOGGER.info(
                         f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
@@ -793,13 +799,15 @@ class VisionAgentCoder(Agent):
             )
 
             if self.verbosity >= 1:
+                plan_i_fixed = [{"instructions": e} for e in plan_i["instructions"]]
                 _LOGGER.info(
-                    f"Picked best plan:\n{tabulate(tabular_data=plan_i, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                    f"Picked best plan:\n{tabulate(tabular_data=plan_i_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                 )
 
             results = write_and_test_code(
                 chat=[{"role": c["role"], "content": c["content"]} for c in int_chat],
-                plan="\n-" + "\n-".join([e["instructions"] for e in plan_i]),
+                plan=f"\n{plan_i['thoughts']}\n-"
+                + "\n-".join([e for e in plan_i["instructions"]]),
                 tool_info=tool_info,
                 tool_output=tool_output_str,
                 tool_utils=T.UTILITIES_DOCSTRING,
