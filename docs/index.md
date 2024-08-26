@@ -241,7 +241,7 @@ follow the Azure Setup section below. You can use it just like you would use=
 >>> agent = va.agent.AzureVisionAgentCoder()
 >>> agent("Count the apples in the image", media="apples.jpg")
 ```
-
+> WARNING: VisionAgent doesn't work well unless the underlying LMM is sufficiently powerful. Do not expect good results or even working code with smaller models like Llama 3.1 8B.
 
 ### Azure Setup
 If you want to use Azure OpenAI models, you need to have two OpenAI model deployments:

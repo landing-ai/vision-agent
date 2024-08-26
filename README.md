@@ -233,6 +233,7 @@ tools. You can use it just like you would use `VisionAgentCoder`:
 >>> agent = va.agent.OllamaVisionAgentCoder()
 >>> agent("Count the apples in the image", media="apples.jpg")
 ```
+> WARNING: VisionAgent doesn't work well unless the underlying LMM is sufficiently powerful. Do not expect good results or even working code with smaller models like Llama 3.1 8B.
 
 ### Azure OpenAI
 We also provide a `AzureVisionAgentCoder` that uses Azure OpenAI models. To get started
