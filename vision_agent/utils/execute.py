@@ -609,7 +609,7 @@ Timeout: {self.timeout}"""
             return Execution.from_exception(e, traceback_raw)
 
     def upload_file(self, file_path: str) -> Path:
-        with open(file_path) as f:
+        with open(file_path, "rb") as f:
             contents = f.read()
         with open(WORKSPACE / file_path, "wb") as f:
             f.write(contents)
@@ -617,11 +617,11 @@ Timeout: {self.timeout}"""
         return Path(WORKSPACE / file_path)
 
     def download_file(self, file_path: str) -> Path:
-        with open(file_path, "rb") as f:
+        with open(WORKSPACE / file_path, "rb") as f:
             contents = f.read()
-        with open(WORKSPACE / file_path, "wb") as f:
+        with open(file_path, "wb") as f:
             f.write(contents)
-        return Path(WORKSPACE / file_path)
+        return Path(file_path)
 
 
 
