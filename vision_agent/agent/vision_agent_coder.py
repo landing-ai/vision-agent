@@ -678,7 +678,7 @@ class VisionAgentCoder(Agent):
         chat: List[Message],
         test_multi_plan: bool = True,
         display_visualization: bool = False,
-        customized_tool_names: List[str] = [],
+        customized_tool_names: List[str] = None,
     ) -> Dict[str, Any]:
         """Chat with VisionAgentCoder and return intermediate information regarding the
         task.
@@ -763,7 +763,6 @@ class VisionAgentCoder(Agent):
                     _LOGGER.info(
                         f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
-
             tool_infos = retrieve_tools(
                 plans,
                 self.tool_recommender,

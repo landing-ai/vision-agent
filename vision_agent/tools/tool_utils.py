@@ -143,12 +143,14 @@ def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
 
 
 def get_tool_descriptions_by_names(
-    tool_name: List[str],
+    tool_name: List[str] | None,
     funcs: List[Callable[..., Any]],
     util_funcs: List[
         Callable[..., Any]
     ],  # util_funcs will always be added to the list of functions
 ) -> str:
+    if tool_name is None:
+        return get_tool_descriptions(funcs + util_funcs)
 
     invalid_names = [
         name for name in tool_name if name not in {func.__name__ for func in funcs}
