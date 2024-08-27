@@ -1,3 +1,4 @@
+import json
 import tempfile
 from unittest.mock import patch
 
@@ -5,9 +6,13 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from vision_agent.lmm.lmm import OpenAILMM
+from vision_agent.lmm.lmm import OllamaLMM, OpenAILMM
 
-from .fixtures import openai_lmm_mock  # noqa: F401
+from .fixtures import (  # noqa: F401
+    chat_ollama_lmm_mock,
+    generate_ollama_lmm_mock,
+    openai_lmm_mock,
+)
 
 
 def create_temp_image(image_format="jpeg"):
@@ -133,6 +138,31 @@ def test_call_with_mock_stream(openai_lmm_mock):  # noqa: F811
         ][0]["text"]
         == "test prompt"
     )
+
+
+@pytest.mark.parametrize(
+    "generate_ollama_lmm_mock",
+    ["mocked response"],
+    indirect=["generate_ollama_lmm_mock"],
+)
+def test_generate_ollama_mock(generate_ollama_lmm_mock):  # noqa: F811
+    temp_image = create_temp_image()
+    lmm = OllamaLMM()
+    response = lmm.generate("test prompt", media=[temp_image])
+    assert response == "mocked response"
+    call_args = json.loads(generate_ollama_lmm_mock.call_args.kwargs["data"])
+    assert call_args["prompt"] == "test prompt"
+
+
+@pytest.mark.parametrize(
+    "chat_ollama_lmm_mock", ["mocked response"], indirect=["chat_ollama_lmm_mock"]
+)
+def test_chat_ollama_mock(chat_ollama_lmm_mock):  # noqa: F811
+    lmm = OllamaLMM()
+    response = lmm.chat([{"role": "user", "content": "test prompt"}])
+    assert response == "mocked response"
+    call_args = json.loads(chat_ollama_lmm_mock.call_args.kwargs["data"])
+    assert call_args["messages"][0]["content"] == "test prompt"
 
 
 @pytest.mark.parametrize(
