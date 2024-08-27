@@ -760,10 +760,10 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
-def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_object_detection' is a tool that can detect and count multiple
-    objects given a text prompt such as category names or referring expressions. You
-    can optionally separate the categories in the text with commas. It returns a list
+def florence2_phrase_grounding(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_phrase_grounding' is a tool that can detect multiple
+    objects given a text prompt which can be object names or caption. You
+    can optionally separate the object names in the text with commas. It returns a list
     of bounding boxes with normalized coordinates, label names and associated
     probability scores of 1.0.
 
@@ -780,7 +780,7 @@ def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str,
 
     Example
     -------
-        >>> florence2_object_detection('person looking at a coyote', image)
+        >>> florence2_phrase_grounding('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -792,7 +792,7 @@ def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str,
         "image": image_b64,
         "task": "<CAPTION_TO_PHRASE_GROUNDING>",
         "prompt": prompt,
-        "function_name": "florence2_object_detection",
+        "function_name": "florence2_phrase_grounding",
     }
 
     detections = send_inference_request(data, "florence2", v2=True)
@@ -1663,7 +1663,7 @@ FUNCTION_TOOLS = [
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video,
-    florence2_object_detection,
+    florence2_phrase_grounding,
     ixc25_image_vqa,
     ixc25_video_vqa,
     detr_segmentation,
