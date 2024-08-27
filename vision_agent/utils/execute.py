@@ -532,7 +532,7 @@ print(f"Vision Agent version: {va_version}")"""
 
     @staticmethod
     def _new_e2b_interpreter_impl(*args, **kwargs) -> E2BCodeInterpreterImpl:  # type: ignore
-        template_name = os.environ.get("E2B_TEMPLATE_NAME", "nx3fagq7sgdliww9cvm3")
+        template_name = os.environ.get("E2B_TEMPLATE_NAME", "va-sandbox")
         _LOGGER.info(
             f"Creating a new E2BCodeInterpreter using template: {template_name}"
         )
