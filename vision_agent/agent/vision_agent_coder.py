@@ -678,7 +678,7 @@ class VisionAgentCoder(Agent):
         chat: List[Message],
         test_multi_plan: bool = True,
         display_visualization: bool = False,
-        customized_tool_names: List[str] | None = None,
+        customized_tool_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Chat with VisionAgentCoder and return intermediate information regarding the
         task.

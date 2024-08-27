@@ -143,7 +143,7 @@ def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
 
 
 def get_tool_descriptions_by_names(
-    tool_name: List[str] | None,
+    tool_name: Optional[List[str]],
     funcs: List[Callable[..., Any]],
     util_funcs: List[
         Callable[..., Any]
