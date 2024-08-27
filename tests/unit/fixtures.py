@@ -31,3 +31,27 @@ def openai_lmm_mock(request):
         mock_instance = mock.return_value
         mock_instance.chat.completions.create.return_value = mock_generate()
         yield mock_instance
+
+
+@pytest.fixture
+def generate_ollama_lmm_mock(request):
+    content = request.param
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"response": content}
+    with patch("vision_agent.lmm.lmm.requests.post") as mock:
+        mock.return_value = mock_resp
+        yield mock
+
+
+@pytest.fixture
+def chat_ollama_lmm_mock(request):
+    content = request.param
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"message": {"content": content}}
+    with patch("vision_agent.lmm.lmm.requests.post") as mock:
+        mock.return_value = mock_resp
+        yield mock
