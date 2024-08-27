@@ -1650,7 +1650,7 @@ def florencev2_fine_tuned_object_detection(
     return return_data
 
 
-TOOLS = [
+FUNCTION_TOOLS = [
     owl_v2,
     extract_frames,
     ocr,
@@ -1671,6 +1671,9 @@ TOOLS = [
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
+]
+
+UTIL_TOOLS = [
     save_json,
     load_image,
     save_image,
@@ -1679,6 +1682,9 @@ TOOLS = [
     overlay_segmentation_masks,
     overlay_heat_map,
 ]
+
+TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
+
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
