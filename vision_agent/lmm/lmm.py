@@ -330,12 +330,28 @@ class OllamaLMM(LMM):
         model_name: str = "llava",
         base_url: Optional[str] = "http://localhost:11434/api",
         json_mode: bool = False,
+        num_ctx: int = 128_000,
         **kwargs: Any,
     ):
+        """Initializes the Ollama LMM. kwargs are passed as 'options' to the model.
+        More information on options can be found here
+        https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
+
+        Parameters:
+            model_name (str): The ollama name of the model.
+            base_url (str): The base URL of the Ollama API.
+            json_mode (bool): Whether to use JSON mode.
+            num_ctx (int): The context length for the model.
+            kwargs (Any): Additional options to pass to the model.
+        """
+
         self.url = base_url
         self.model_name = model_name
-        self.json_mode = json_mode
-        self.kwargs = kwargs
+        self.kwargs = {"options": kwargs}
+
+        if json_mode:
+            self.kwargs["format"] = "json"  # type: ignore
+        self.kwargs["options"]["num_cxt"] = num_ctx
 
     def __call__(
         self,
@@ -369,12 +385,13 @@ class OllamaLMM(LMM):
         url = f"{self.url}/chat"
         model = self.model_name
         messages = fixed_chat
-        data = {"model": model, "messages": messages}
+        data: Dict[str, Any] = {"model": model, "messages": messages}
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
-        json_data = json.dumps(data)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
+            json_data = json.dumps(data)
 
             def f() -> Iterator[Optional[str]]:
                 with requests.post(url, data=json_data, stream=True) as stream:
@@ -392,13 +409,14 @@ class OllamaLMM(LMM):
 
             return f()
         else:
-            stream = requests.post(url, data=json_data)
-            if stream.status_code != 200:
-                raise ValueError(
-                    f"Request failed with status code {stream.status_code}"
-                )
-            stream = stream.json()
-            return stream["message"]["content"]  # type: ignore
+            data["stream"] = False
+            json_data = json.dumps(data)
+            resp = requests.post(url, data=json_data)
+
+            if resp.status_code != 200:
+                raise ValueError(f"Request failed with status code {resp.status_code}")
+            resp = resp.json()
+            return resp["message"]["content"]  # type: ignore
 
     def generate(
         self,
@@ -408,7 +426,7 @@ class OllamaLMM(LMM):
     ) -> Union[str, Iterator[Optional[str]]]:
 
         url = f"{self.url}/generate"
-        data = {
+        data: Dict[str, Any] = {
             "model": self.model_name,
             "prompt": prompt,
             "images": [],
@@ -416,12 +434,13 @@ class OllamaLMM(LMM):
 
         if media and len(media) > 0:
             for m in media:
-                data["images"].append(encode_media(m))  # type: ignore
+                data["images"].append(encode_media(m))
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
-        json_data = json.dumps(data)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
+
+            json_data = json.dumps(data)
 
             def f() -> Iterator[Optional[str]]:
                 with requests.post(url, data=json_data, stream=True) as stream:
@@ -439,15 +458,15 @@ class OllamaLMM(LMM):
 
             return f()
         else:
-            stream = requests.post(url, data=json_data)
+            data["stream"] = False
+            json_data = json.dumps(data)
+            resp = requests.post(url, data=json_data)
 
-            if stream.status_code != 200:
-                raise ValueError(
-                    f"Request failed with status code {stream.status_code}"
-                )
+            if resp.status_code != 200:
+                raise ValueError(f"Request failed with status code {resp.status_code}")
 
-            stream = stream.json()
-            return stream["response"]  # type: ignore
+            resp = resp.json()
+            return resp["response"]  # type: ignore
 
 
 class ClaudeSonnetLMM(LMM):
