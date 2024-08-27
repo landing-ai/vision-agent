@@ -110,7 +110,7 @@ To better understand how the model came up with it's answer, you can run it in d
 mode by passing in the verbose argument:
 
 ```python
->>> agent = VisionAgentCoder(verbose=2)
+>>> agent = VisionAgentCoder(verbosity=2)
 ```
 
 #### Detailed Usage
