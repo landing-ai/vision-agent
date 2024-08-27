@@ -142,6 +142,31 @@ def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
     return descriptions
 
 
+def get_tool_descriptions_by_names(
+    tool_name: Optional[List[str]],
+    funcs: List[Callable[..., Any]],
+    util_funcs: List[
+        Callable[..., Any]
+    ],  # util_funcs will always be added to the list of functions
+) -> str:
+    if tool_name is None:
+        return get_tool_descriptions(funcs + util_funcs)
+
+    invalid_names = [
+        name for name in tool_name if name not in {func.__name__ for func in funcs}
+    ]
+
+    if invalid_names:
+        raise ValueError(f"Invalid customized tool names: {', '.join(invalid_names)}")
+
+    filtered_funcs = (
+        funcs
+        if not tool_name
+        else [func for func in funcs if func.__name__ in tool_name]
+    )
+    return get_tool_descriptions(filtered_funcs + util_funcs)
+
+
 def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
     data: Dict[str, List[str]] = {"desc": [], "doc": []}
 

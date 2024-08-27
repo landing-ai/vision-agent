@@ -128,7 +128,11 @@ def write_plans(
 
     user_request = chat[-1]["content"]
     context = USER_REQ.format(user_request=user_request)
-    prompt = PLAN.format(context=context, tool_desc=tool_desc, feedback=working_memory)
+    prompt = PLAN.format(
+        context=context,
+        tool_desc=tool_desc,
+        feedback=working_memory,
+    )
     chat[-1]["content"] = prompt
     return extract_json(model(chat, stream=False))  # type: ignore
 
@@ -674,6 +678,7 @@ class VisionAgentCoder(Agent):
         chat: List[Message],
         test_multi_plan: bool = True,
         display_visualization: bool = False,
+        customized_tool_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Chat with VisionAgentCoder and return intermediate information regarding the
         task.
@@ -689,6 +694,8 @@ class VisionAgentCoder(Agent):
                 with the first plan.
             display_visualization (bool): If True, it opens a new window locally to
                 show the image(s) created by visualization code (if there is any).
+            customized_tool_names (List[str]): A list of customized tools for agent to pick and use.
+                If not provided, default to full tool set from vision_agent.tools.
 
         Returns:
             Dict[str, Any]: A dictionary containing the code, test, test result, plan,
@@ -742,7 +749,9 @@ class VisionAgentCoder(Agent):
             )
             plans = write_plans(
                 int_chat,
-                T.TOOL_DESCRIPTIONS,
+                T.get_tool_descriptions_by_names(
+                    customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
+                ),
                 format_memory(working_memory),
                 self.planner,
             )
@@ -754,7 +763,6 @@ class VisionAgentCoder(Agent):
                     _LOGGER.info(
                         f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
                     )
-
             tool_infos = retrieve_tools(
                 plans,
                 self.tool_recommender,
