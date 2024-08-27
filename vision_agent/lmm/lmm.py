@@ -333,6 +333,18 @@ class OllamaLMM(LMM):
         num_ctx: int = 128_000,
         **kwargs: Any,
     ):
+        """Initializes the Ollama LMM. kwargs are passed as 'options' to the model.
+        More information on options can be found here
+        https://github.com/ollama/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values
+
+        Parameters:
+            model_name (str): The ollama name of the model.
+            base_url (str): The base URL of the Ollama API.
+            json_mode (bool): Whether to use JSON mode.
+            num_ctx (int): The context length for the model.
+            kwargs (Any): Additional options to pass to the model.
+        """
+
         self.url = base_url
         self.model_name = model_name
         self.kwargs = {"options": kwargs}
