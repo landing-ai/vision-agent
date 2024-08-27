@@ -740,32 +740,13 @@ class VisionAgentCoder(Agent):
             results = {"code": "", "test": "", "plan": []}
             plan = []
             success = False
-            self.log_progress(
-                {
-                    "type": "log",
-                    "log_content": "Creating plans",
-                    "status": "started",
-                }
-            )
-            plans = write_plans(
-                int_chat,
-                T.get_tool_descriptions_by_names(
-                    customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
-                ),
-                format_memory(working_memory),
-                self.planner,
+
+            plans = self.create_plans(
+                int_chat, customized_tool_names, working_memory, self.planner
             )
 
             if test_multi_plan:
-                if self.verbosity >= 1:
-                    for p in plans:
-                        # tabulate will fail if the keys are not the same for all elements
-                        p_fixed = [
-                            {"instructions": e} for e in plans[p]["instructions"]
-                        ]
-                        _LOGGER.info(
-                            f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
-                        )
+                self.log_plans(plans, self.verbosity)
 
             tool_infos = retrieve_tools(
                 plans,
@@ -859,6 +840,33 @@ class VisionAgentCoder(Agent):
     def log_progress(self, data: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
+
+    def create_plans(self, int_chat, customized_tool_names, working_memory, planner):
+        self.log_progress(
+            {
+                "type": "log",
+                "log_content": "Creating plans",
+                "status": "started",
+            }
+        )
+        plans = write_plans(
+            int_chat,
+            T.get_tool_descriptions_by_names(
+                customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
+            ),
+            format_memory(working_memory),
+            planner,
+        )
+        return plans
+
+    def log_plans(self, plans, verbosity):
+        if verbosity >= 1:
+            for p in plans:
+                # tabulate will fail if the keys are not the same for all elements
+                p_fixed = [{"instructions": e} for e in plans[p]["instructions"]]
+                _LOGGER.info(
+                    f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                )
 
 
 class AzureVisionAgentCoder(VisionAgentCoder):
