@@ -824,7 +824,6 @@ class VisionAgentCoder(Agent):
                 verbosity=self.verbosity,
                 media=media_list,
             )
-            __import__("ipdb").set_trace()
             success = cast(bool, results["success"])
             code = cast(str, results["code"])
             test = cast(str, results["test"])
