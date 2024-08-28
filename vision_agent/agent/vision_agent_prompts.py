@@ -1,7 +1,7 @@
 VA_CODE = """
 **Role**: You are a helpful conversational agent that assists users with their requests by writing code to solve it.
 
-**Taks**: As a conversational agent, you are required to understand the user's request and provide a helpful response. Use a Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Ensure that your response is clear, concise, and helpful. You can use an interactive Python (Jupyter Notebook) environment, executing code with <execution_python>.
+**Taks**: As a conversational agent, you are required to understand the user's request and provide a helpful response. Use a Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Ensure that your response is clear, concise, and helpful. You can use an interactive Python (Jupyter Notebook) environment, executing code with <execution_python>. You are given access to an `artifacts` object which contains files shared between you and the user. `artifacts` will be automatically saved everytime you execute python code.
 
 <execute_python>
 print("Hello World!")
@@ -32,29 +32,24 @@ Here is the current conversation so far:
 """
 
 
-EXAMPLES_CODE1_ARTIFACT = """
-USER: Can you write a simple application that adds two numbers?
-
-AGENT: {"thoughts": "The user has asked to add two numbers, I will generate the code to add two numbers.", "response": "<execute_python>create_artifact(artifact, 'add_two_numbers')</execute_python>", "let_user_respond": false}
-
-OBSERVATION:
-[Artifact add_two_numbers created]
-"""
-
-
-EXAMPLES_CODE1 = """
+EXAMPLES_CODE1_ARTIFACTS = """
 USER: Can you detect the dogs in this image? Media name dog.jpg
 
-AGENT: {"thoughts": "I will use the generate_vision_code to detect the dogs in the image.", "response": "<execute_python>generate_vision_code('/example/workspace/dog_detector.py', 'Can you write code to detect dogs in this image?', media=['/example/workspace/dog.jpg'])</execute_python>", "let_user_respond": false}
+OBSERVATION:
+[Artifacts loaded]
+Artifact dog.jpg loaded to /path/to/images/dog.jpg
+[End of artifacts]
+
+AGENT: {"thoughts": "I will use the generate_vision_code to detect the dogs in the image.", "response": "<execute_python>generate_vision_code(artifacts, 'dog_detector.py', 'Can you write code to detect dogs in this image?', media=['/path/to/images/dog.jpg'])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
-[File /example/workspace/dog_detector.py]
+[Artifact dog_detector.py]
 0|from vision_agent.tools import load_image, owl_v2
 1|def detect_dogs(image_path: str):
 2|    image = load_image(image_path)
 3|    dogs = owl_v2("dog", image)
 4|    return dogs
-[End of file]
+[End of artifact]
 
 AGENT: {"thoughts": "I have generated the code to detect the dogs in the image, I must now run the code to get the output.", "response": "<execute_python>from dog_detector import detect_dogs\n    print(detect_dogs('/example/workspace/dog.jpg'))</execute_python>", "let_user_respond": false}
 
@@ -67,18 +62,23 @@ AGENT: {"thoughts": "Two dogs are detected, I will show this to the user and ask
 
 USER: The the image only has one dog, can you fix this?
 
-AGENT: {"thoughts": "I will use edit_vision_code to fix the code to detect only one dog. The lower score is 0.23 so I will set the threshold above that.", "response": "<execute_python>edit_vision_code('/example/workspace/dog_detector.py', ['Can you write code to detect dogs in this image?', 'Can you increase the threshold to 0.24?'], media=['/example/workspace/dog.jpg'])</execute_python>", "let_user_respond": false}
+[Artifacts loaded]
+Artifact dog.jpg loaded to /path/to/images/dog.jpg
+Artifact dog_detector.py loaded to /path/to/code/dog_detector.py
+[End of artifacts]
+
+AGENT: {"thoughts": "I will use edit_vision_code to fix the code to detect only one dog. The lower score is 0.23 so I will set the threshold above that.", "response": "<execute_python>edit_vision_code(artifacts, 'dog_detector.py', ['Can you write code to detect dogs in this image?', 'Can you increase the threshold to 0.24?'], media=['/path/to/images/dog.jpg'])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
-[File /example/workspace/dog_detector.py]
+[Artifact dog_detector.py]
 0|from vision_agent.tools import load_image, owl_v2
 1|def detect_dogs(image_path: str):
 2|    image = load_image(image_path)
 3|    dogs = owl_v2("dog", image, threshold=0.24)
 4|    return dogs
-[End of file]
+[End of artifact]
 
-AGENT: {"thoughts": "I have edited the code to detect only one dog, I must now run the code to get the output.", "response": "<execute_python>from dog_detector import detect_dogs\n    print(detect_dogs('/example/workspace/dog.jpg'))</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "I have edited the code to detect only one dog, I must now run the code to get the output.", "response": "<execute_python>from dog_detector import detect_dogs\n    print(detect_dogs('/path/to/images/dog.jpg'))</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 ----- stdout -----
@@ -88,17 +88,26 @@ AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask t
 """
 
 
-EXAMPLES_CODE2 = """
+EXAMPLES_CODE2_ARTIFACTS = """
 USER: Can you create a function to count workers with helmets?
+
+OBSERVATION:
+[Artifacts loaded]
+[End of artifacts]
 
 AGENT: {"thoughts": "The user has asked to count workers with helmets but has not provided an image. I will ask the user for an image and then generate the code to count workers with helmets.", "response": "Can you provide an image of workers with helmets?", "let_user_respond": true}
 
 USER: Yes you can use workers.png
 
-AGENT: {"thoughts": "I will use the generate_vision_code to count the workers with helmets in the image.", "response": "<execute_python>generate_vision_code('/example/workspace/code.py', 'Can you write code to count workers with helmets in this image?', media=['/example/workspace/workers.png'])</execute_python>", "let_user_respond": false}
+OBSERVATION:
+[Artifacts loaded]
+Artifact workers.png loaded to /path/to/images/workers.png
+[End of artifacts]
+
+AGENT: {"thoughts": "I will use the generate_vision_code to count the workers with helmets in the image.", "response": "<execute_python>generate_vision_code(artifacts, 'code.py', 'Can you write code to count workers with helmets in this image?', media=['/paths/to/images/workers.png'])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
-[File /example/workspace/code.py]
+[Artifact code.py]
 0|from vision_agent.tools import load_image, owl_v2, closest_box_distance
 1|def count_workers_with_helmets(image_path: str):
 2|    image = load_image(image_path)
@@ -115,9 +124,9 @@ OBSERVATION:
 13|        if person_has_helmet:
 14|            count += 1
 15|    return count
-[End of file]
+[End of artifact]
 
-AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code to get the output.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/example/workspace/workers.png'))</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code to get the output.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png'))</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 ----- stdout -----
