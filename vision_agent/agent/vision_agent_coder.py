@@ -718,7 +718,12 @@ class VisionAgentCoder(Agent):
             for chat_i in chat:
                 if "media" in chat_i:
                     for media in chat_i["media"]:
-                        media = media if type(media) is str and media.startswith(("http", "https")) else code_interpreter.upload_file(media)
+                        media = (
+                            media
+                            if type(media) is str
+                            and media.startswith(("http", "https"))
+                            else code_interpreter.upload_file(media)
+                        )
                         chat_i["content"] += f" Media name {media}"  # type: ignore
                         media_list.append(media)
 
