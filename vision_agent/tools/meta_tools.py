@@ -3,7 +3,7 @@ import pickle as pkl
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 from uuid import UUID
 
 import vision_agent as va
@@ -11,8 +11,8 @@ from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
-from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils import CodeInterpreterFactory
+from vision_agent.utils.image_utils import convert_to_b64
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
@@ -43,7 +43,7 @@ def filter_file(file_name: Union[str, Path]) -> bool:
 
 class Artifacts:
     def __init__(self, save_path: Union[str, Path]) -> None:
-        self.save_path = save_path
+        self.save_path = Path(save_path)
         self.artifacts = {}
 
         self.code_sandbox_runtime = None
@@ -51,6 +51,16 @@ class Artifacts:
     def load(self, file_path: Union[str, Path]) -> None:
         with open(file_path, "rb") as f:
             self.artifacts = pkl.load(f)
+        for k, v in self.artifacts.items():
+            with open(self.save_path.parent / k, "w") as f:
+                f.write(v)
+
+    def show(self) -> str:
+        out_str = "[Artifacts loaded]\n"
+        for k in self.artifacts.keys():
+            out_str += f"Artifact {k} loaded to {str(self.save_path.parent / k)}\n"
+        out_str += "[End of artifacts]\n"
+        return out_str
 
     def save(self) -> None:
         with open(self.save_path, "wb") as f:
@@ -81,7 +91,7 @@ def view_lines(
 ) -> str:
     start = max(0, line_num - window_size)
     end = min(len(lines), line_num + window_size)
-    return (
+    return_str = (
         f"[Artifact: {name} ({total_lines} lines total)]\n"
         + format_lines(lines[start:end], start)
         + (
@@ -90,6 +100,8 @@ def view_lines(
             else f"[{len(lines) - end} more lines]"
         )
     )
+    print(return_str)
+    return return_str
 
 
 def open_artifact(
@@ -116,7 +128,7 @@ def open_artifact(
     elif line_num >= total_lines:
         line_num = total_lines - 1 - window_size
 
-    lines = artifacts[name].splitlines()
+    lines = artifacts[name].splitlines(keepends=True)
 
     return view_lines(lines, line_num, window_size, name, total_lines)
 
@@ -129,9 +141,12 @@ def create_artifact(artifacts: Artifacts, name: str) -> str:
         name (str): The name of the new artifact.
     """
     if name in artifacts:
-        return f"[Artifact {name} already exists]"
-    artifacts[name] = ""
-    return f"[Artifact {name} created]"
+        return_str = f"[Artifact {name} already exists]"
+    else:
+        artifacts[name] = ""
+        return_str = f"[Artifact {name} created]"
+    print(return_str)
+    return return_str
 
 
 def edit_artifact(
@@ -151,8 +166,10 @@ def edit_artifact(
         end (int): The line number to end the edit.
         content (str): The content to insert.
     """
+    # just make the artifact if it doesn't exist instead of forcing agent to call
+    # create_artifact
     if name not in artifacts:
-        return f"[Artifact {name} does not exist]"
+        artifacts[name] = ""
 
     total_lines = len(artifacts[name].splitlines())
     if start < 0 or end < 0 or start > end or end > total_lines:
@@ -206,6 +223,101 @@ def edit_artifact(
     artifacts[name] = "".join(edited_lines)
 
     return open_artifact(artifacts, name, cur_line)
+
+
+def generate_vision_code(
+    artifacts: Artifacts, name: str, chat: str, media: List[str]
+) -> str:
+    """Generates python code to solve vision based tasks.
+
+    Parameters:
+        artifacts (Artifacts): The artifacts object to save the code to.
+        name (str): The name of the artifact to save the code to.
+        chat (str): The chat message from the user.
+        media (List[str]): The media files to use.
+
+    Returns:
+        str: The generated code.
+
+    Examples
+    --------
+        >>> generate_vision_code(artifacts, "code.py", "Can you detect the dogs in this image?", ["image.jpg"])
+        from vision_agent.tools import load_image, owl_v2
+        def detect_dogs(image_path: str):
+            image = load_image(image_path)
+            dogs = owl_v2("dog", image)
+            return dogs
+    """
+
+    if ZMQ_PORT is not None:
+        agent = va.agent.VisionAgentCoder(
+            report_progress_callback=lambda inp: report_progress_callback(
+                int(ZMQ_PORT), inp
+            )
+        )
+    else:
+        agent = va.agent.VisionAgentCoder()
+
+    fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
+    response = agent.chat_with_workflow(fixed_chat)
+    code = response["code"]
+    artifacts[name] = code
+    code_lines = code.splitlines(keepends=True)
+    total_lines = len(code_lines)
+    return view_lines(code_lines, 0, total_lines, name, total_lines)
+
+
+def edit_vision_code(
+    artifacts: Artifacts, name: str, chat_history: List[str], media: List[str]
+) -> str:
+    """Edits python code to solve a vision based task.
+
+    Parameters:
+        artifacts (Artifacts): The artifacts object to save the code to.
+        name (str): The file path to the code.
+        chat_history (List[str]): The chat history to used to generate the code.
+
+    Returns:
+        str: The edited code.
+
+    Examples
+    --------
+        >>> edit_vision_code(
+        >>>     artifacts,
+        >>>     "code.py",
+        >>>     ["Can you detect the dogs in this image?", "Can you use a higher threshold?"],
+        >>>     ["dog.jpg"],
+        >>> )
+        from vision_agent.tools import load_image, owl_v2
+        def detect_dogs(image_path: str):
+            image = load_image(image_path)
+            dogs = owl_v2("dog", image, threshold=0.8)
+            return dogs
+    """
+
+    agent = va.agent.VisionAgentCoder()
+    if name not in artifacts:
+        return f"[Artifact {name} does not exist]"
+
+    code = artifacts[name]
+
+    # Append latest code to second to last message from assistant
+    fixed_chat_history: List[Message] = []
+    for i, chat in enumerate(chat_history):
+        if i == 0:
+            fixed_chat_history.append({"role": "user", "content": chat, "media": media})
+        elif i > 0 and i < len(chat_history) - 1:
+            fixed_chat_history.append({"role": "user", "content": chat})
+        elif i == len(chat_history) - 1:
+            fixed_chat_history.append({"role": "assistant", "content": code})
+            fixed_chat_history.append({"role": "user", "content": chat})
+
+    response = agent.chat_with_workflow(fixed_chat_history, test_multi_plan=False)
+    code = response["code"]
+    artifacts[name] = code
+    code_lines = code.splitlines(keepends=True)
+    total_lines = len(code_lines)
+    return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
 # def generate_vision_code(save_file: str, chat: str, media: List[str]) -> str:
@@ -564,8 +676,8 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         open_artifact,
         create_artifact,
         edit_artifact,
-        # generate_vision_code,
-        # edit_vision_code,
+        generate_vision_code,
+        edit_vision_code,
         # open_file,
         # create_file,
         # scroll_up,
