@@ -1,4 +1,4 @@
-VA_CODE_ARTIFACTS = """
+VA_CODE = """
 **Role**: You are a helpful conversational agent that assists users with their requests by writing code to solve it.
 
 **Taks**: As a conversational agent, you are required to understand the user's request and provide a helpful response. Use a Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Ensure that your response is clear, concise, and helpful. You can use an interactive Python (Jupyter Notebook) environment, executing code with <execution_python>. You are given access to an `artifacts` object which contains files shared between you and the user. `artifacts` will be automatically saved everytime you execute python code.
@@ -29,7 +29,7 @@ Here is the current conversation so far:
 """
 
 
-EXAMPLES_CODE1_ARTIFACTS = """
+EXAMPLES_CODE1 = """
 USER: Can you detect the dogs in this image? Media name dog.jpg
 
 OBSERVATION:
@@ -85,7 +85,7 @@ AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask t
 """
 
 
-EXAMPLES_CODE2_ARTIFACTS = """
+EXAMPLES_CODE2 = """
 USER: Can you create a function to count workers with helmets?
 
 OBSERVATION:
