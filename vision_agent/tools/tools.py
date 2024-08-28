@@ -1273,8 +1273,6 @@ def load_image(image_path: str) -> np.ndarray:
             # Download the image and save it to the temporary file
             with urllib.request.urlopen(image_path) as response:
                 tmp_file.write(response.read())
-            _LOGGER.info(f"{image_path} saved to {tmp_file.name}")
-            print(f"{image_path} saved to {tmp_file.name}")
             image_path = tmp_file.name
     image = Image.open(image_path).convert("RGB")
     return np.array(image)
