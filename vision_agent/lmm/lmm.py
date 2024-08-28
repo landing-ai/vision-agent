@@ -30,6 +30,10 @@ def encode_image_bytes(image: bytes) -> str:
 
 
 def encode_media(media: Union[str, Path]) -> str:
+    if type(media) is str and media.startswith(("http", "https")):
+        if media.endswith(".mp4"):
+            return media[:-4] + ".png"
+        return media
     extension = "png"
     extension = Path(media).suffix
     if extension.lower() not in {
@@ -138,7 +142,9 @@ class OpenAILMM(LMM):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/png;base64,{encoded_media}",
+                                "url": encoded_media
+                                if encoded_media.startswith(("http", "https"))
+                                else f"data:image/png;base64,{encoded_media}",
                                 "detail": "low",
                             },
                         },
