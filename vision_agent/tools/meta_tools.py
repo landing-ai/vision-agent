@@ -46,7 +46,7 @@ class Artifacts:
 
     def __init__(self, remote_save_path: Union[str, Path]) -> None:
         self.remote_save_path = Path(remote_save_path)
-        self.artifacts = {}
+        self.artifacts: Dict[str, Any] = {}
 
         self.code_sandbox_runtime = None
 
@@ -81,10 +81,10 @@ class Artifacts:
         with open(save_path, "wb") as f:
             pkl.dump(self.artifacts, f)
 
-    def __iter__(self):
+    def __iter__(self) -> Any:
         return iter(self.artifacts)
 
-    def __getitem__(self, name: str) -> str:
+    def __getitem__(self, name: str) -> Any:
         return self.artifacts[name]
 
     def __setitem__(self, name: str, value: str) -> None:
@@ -201,7 +201,7 @@ def edit_artifact(
 
     cur_line = start + len(content.split("\n")) // 2
     with tempfile.NamedTemporaryFile(delete=True) as f:
-        with open(f.name, "w") as f:
+        with open(f.name, "w") as f:  # type: ignore
             f.writelines(edited_lines)
 
         process = subprocess.Popen(

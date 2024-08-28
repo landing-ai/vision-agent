@@ -38,7 +38,7 @@ class BoilerplateCode:
     ]
 
     @staticmethod
-    def add_boilerplate(code: str, **format) -> str:
+    def add_boilerplate(code: str, **format: Any) -> str:
         """Run this method to prepend the default imports to the code.
         NOTE: be sure to run this method after the custom tools have been registered.
         """
@@ -131,10 +131,13 @@ class VisionAgent(Agent):
         self.code_sandbox_runtime = code_sandbox_runtime
         if self.verbosity >= 1:
             _LOGGER.setLevel(logging.INFO)
-        self.local_artifacts_path = (
-            Path(local_artifacts_path)
-            if local_artifacts_path is not None
-            else "artifacts.pkl"
+        self.local_artifacts_path = cast(
+            str,
+            (
+                Path(local_artifacts_path)
+                if local_artifacts_path is not None
+                else "artifacts.pkl"
+            ),
         )
 
     def __call__(
@@ -160,7 +163,7 @@ class VisionAgent(Agent):
             if media is not None:
                 input[0]["media"] = [media]
         results = self.chat_with_code(input, artifacts)
-        return results  # type: ignore
+        return results
 
     def chat_with_code(
         self,

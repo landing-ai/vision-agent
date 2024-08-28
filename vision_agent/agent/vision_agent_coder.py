@@ -725,7 +725,7 @@ class VisionAgentCoder(Agent):
                             else code_interpreter.upload_file(media)
                         )
                         chat_i["content"] += f" Media name {media}"  # type: ignore
-                        media_list.append(media)
+                        media_list.append(str(media))
 
             int_chat = cast(
                 List[Message],

@@ -410,7 +410,7 @@ class CodeInterpreter(abc.ABC):
         # Default behavior is a no-op (for local code interpreter)
         return Path(file)
 
-    def download_file(self, remote_file_path: str, local_file_path: str) -> Path:
+    def download_file(self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]) -> Path:
         # Default behavior is a no-op (for local code interpreter)
         return Path(local_file_path)
 
@@ -528,9 +528,9 @@ print(f"Vision Agent version: {va_version}")"""
         _LOGGER.info(f"File ({file}) is uploaded to: {str(self.remote_path)}")
         return self.remote_path
 
-    def download_file(self, remote_file_path: str, local_file_path: str) -> Path:
+    def download_file(self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]) -> Path:
         with open(local_file_path, "w+b") as f:
-            f.write(self.interpreter.files.read(path=remote_file_path, format="bytes"))
+            f.write(self.interpreter.files.read(path=str(remote_file_path), format="bytes"))
         _LOGGER.info(f"File ({remote_file_path}) is downloaded to: {local_file_path}")
         return Path(local_file_path)
 
@@ -616,7 +616,7 @@ Timeout: {self.timeout}"""
             traceback_raw = traceback.format_exc().splitlines()
             return Execution.from_exception(e, traceback_raw)
 
-    def upload_file(self, file_path: str) -> Path:
+    def upload_file(self, file_path: Union[str, Path]) -> Path:
         with open(file_path, "rb") as f:
             contents = f.read()
         with open(self.remote_path / Path(file_path).name, "wb") as f:
@@ -625,7 +625,7 @@ Timeout: {self.timeout}"""
 
         return Path(self.remote_path / file_path)
 
-    def download_file(self, remote_file_path: str, local_file_path: str) -> Path:
+    def download_file(self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]) -> Path:
         with open(self.remote_path / remote_file_path, "rb") as f:
             contents = f.read()
         with open(local_file_path, "wb") as f:
