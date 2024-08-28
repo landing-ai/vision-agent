@@ -718,7 +718,6 @@ class VisionAgentCoder(Agent):
             for chat_i in chat:
                 if "media" in chat_i:
                     for media in chat_i["media"]:
-                        media = code_interpreter.upload_file(media)
                         chat_i["content"] += f" Media name {media}"  # type: ignore
                         media_list.append(media)
 
@@ -754,7 +753,9 @@ class VisionAgentCoder(Agent):
             plans = write_plans(
                 int_chat,
                 T.get_tool_descriptions_by_names(
-                    customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
+                    customized_tool_names,
+                    T.FUNCTION_TOOLS,
+                    T.UTIL_TOOLS,  # type: ignore
                 ),
                 format_memory(working_memory),
                 self.planner,
