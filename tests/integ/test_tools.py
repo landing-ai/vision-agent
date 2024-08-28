@@ -198,7 +198,7 @@ def test_countgd_counting() -> None:
 def test_countgd_example_based_counting() -> None:
     img = ski.data.coins()
     result = countgd_example_based_counting(
-        visual_prompt=[[85, 106, 122, 145]],
+        visual_prompts=[[85, 106, 122, 145]],
         image=img,
     )
     assert result["count"] == 24

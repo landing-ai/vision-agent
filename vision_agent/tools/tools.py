@@ -541,7 +541,7 @@ def countgd_counting(
         "box_threshold": box_threshold,
         "function_name": "countgd_counting",
     }
-    data: Dict[str, Any] = send_inference_request(
+    data: List[Dict[str, Any]] = send_inference_request(
         payload, "countgd_counting", files=files, v2=True
     )
     return data
@@ -588,7 +588,7 @@ def countgd_example_based_counting(
         "box_threshold": box_threshold,
         "function_name": "countgd_example_based_counting",
     }
-    data: Dict[str, Any] = send_inference_request(
+    data: List[Dict[str, Any]] = send_inference_request(
         payload, "countgd_example_based_counting", files=files, v2=True
     )
     return data
