@@ -5,7 +5,6 @@ import os
 import platform
 import re
 import sys
-import tempfile
 import traceback
 import warnings
 from enum import Enum
