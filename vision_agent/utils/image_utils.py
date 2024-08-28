@@ -70,7 +70,7 @@ def rle_decode_array(rle: Dict[str, List[int]]) -> np.ndarray:
     r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
 
     Parameters:
-        mask: The mask in run-length encoded as an array.
+        rle: The run-length encoded mask.
     """
     size = rle["size"]
     counts = rle["counts"]
