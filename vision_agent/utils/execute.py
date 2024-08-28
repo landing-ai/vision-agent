@@ -407,17 +407,19 @@ class CodeInterpreter(abc.ABC):
         self.restart_kernel()
         return self.exec_cell(code)
 
-    def upload_file(self, file: Union[str, Path]) -> str:
+    def upload_file(self, file: Union[str, Path]) -> Path:
         # Default behavior is a no-op (for local code interpreter)
-        return str(file)
+        return Path(file)
 
-    def download_file(self, file_path: str) -> Path:
+    def download_file(self, remote_file_path: str, local_file_path: str) -> Path:
         # Default behavior is a no-op (for local code interpreter)
-        return Path(file_path)
+        return Path(local_file_path)
 
 
 class E2BCodeInterpreter(CodeInterpreter):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, remote_path: Optional[Union[str, Path]] = None, *args: Any, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
         assert os.getenv("E2B_API_KEY"), "E2B_API_KEY environment variable must be set"
         try:
@@ -443,6 +445,9 @@ print(f"Vision Agent version: {va_version}")"""
         sys_versions = "\n".join(result.logs.stdout)
         _LOGGER.info(
             f"E2BCodeInterpreter (sandbox id: {self.interpreter.sandbox_id}) initialized:\n{sys_versions}"
+        )
+        self.remote_path = Path(
+            remote_path if remote_path is not None else "/home/user"
         )
 
     def close(self, *args: Any, **kwargs: Any) -> None:
@@ -517,19 +522,18 @@ print(f"Vision Agent version: {va_version}")"""
         before_sleep=tenacity.before_sleep_log(_LOGGER, logging.INFO),
         after=tenacity.after_log(_LOGGER, logging.INFO),
     )
-    def upload_file(self, file: Union[str, Path]) -> str:
+    def upload_file(self, file: Union[str, Path]) -> Path:
         file_name = Path(file).name
-        remote_path = f"/home/user/{file_name}"
         with open(file, "rb") as f:
-            self.interpreter.files.write(path=remote_path, data=f)
-            _LOGGER.info(f"File ({file}) is uploaded to: {remote_path}")
-            return remote_path
+            self.interpreter.files.write(path=str(self.remote_path / file_name), data=f)
+        _LOGGER.info(f"File ({file}) is uploaded to: {str(self.remote_path)}")
+        return self.remote_path
 
-    def download_file(self, file_path: str) -> Path:
-        with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as file:
-            file.write(self.interpreter.files.read(path=file_path, format="bytes"))
-            _LOGGER.info(f"File ({file_path}) is downloaded to: {file.name}")
-            return Path(file.name)
+    def download_file(self, remote_file_path: str, local_file_path: str) -> Path:
+        with open(local_file_path, "w+b") as f:
+            f.write(self.interpreter.files.read(path=remote_file_path, format="bytes"))
+        _LOGGER.info(f"File ({remote_file_path}) is downloaded to: {local_file_path}")
+        return Path(local_file_path)
 
     @staticmethod
     def _new_e2b_interpreter_impl(*args, **kwargs) -> E2BCodeInterpreterImpl:  # type: ignore
@@ -541,7 +545,11 @@ print(f"Vision Agent version: {va_version}")"""
 
 
 class LocalCodeInterpreter(CodeInterpreter):
-    def __init__(self, timeout: int = _SESSION_TIMEOUT) -> None:
+    def __init__(
+        self,
+        timeout: int = _SESSION_TIMEOUT,
+        remote_path: Optional[Union[str, Path]] = None,
+    ) -> None:
         super().__init__(timeout=timeout)
         self.nb = nbformat.v4.new_notebook()
         self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
@@ -555,6 +563,7 @@ Timeout: {self.timeout}"""
         )
         sleep(1)
         self._new_kernel()
+        self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
 
     def _new_kernel(self) -> None:
         if self.nb_client.kc is None or not run_sync(self.nb_client.kc.is_alive)():  # type: ignore
@@ -611,18 +620,19 @@ Timeout: {self.timeout}"""
     def upload_file(self, file_path: str) -> Path:
         with open(file_path, "rb") as f:
             contents = f.read()
-        with open(WORKSPACE / file_path, "wb") as f:
+        with open(self.remote_path / Path(file_path).name, "wb") as f:
             f.write(contents)
+        _LOGGER.info(f"File ({file_path}) is uploaded to: {str(self.remote_path)}")
 
-        return Path(WORKSPACE / file_path)
+        return Path(self.remote_path / file_path)
 
-    def download_file(self, file_path: str) -> Path:
-        with open(WORKSPACE / file_path, "rb") as f:
+    def download_file(self, remote_file_path: str, local_file_path: str) -> Path:
+        with open(self.remote_path / remote_file_path, "rb") as f:
             contents = f.read()
-        with open(file_path, "wb") as f:
+        with open(local_file_path, "wb") as f:
             f.write(contents)
-        return Path(file_path)
-
+        _LOGGER.info(f"File ({remote_file_path}) is downloaded to: {local_file_path}")
+        return Path(local_file_path)
 
 
 class CodeInterpreterFactory:
@@ -647,13 +657,19 @@ class CodeInterpreterFactory:
         return instance
 
     @staticmethod
-    def new_instance(code_sandbox_runtime: Optional[str] = None) -> CodeInterpreter:
+    def new_instance(
+        code_sandbox_runtime: Optional[str] = None, remote_path: Optional[str] = None
+    ) -> CodeInterpreter:
         if not code_sandbox_runtime:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
         if code_sandbox_runtime == "e2b":
-            instance: CodeInterpreter = E2BCodeInterpreter(timeout=_SESSION_TIMEOUT)
+            instance: CodeInterpreter = E2BCodeInterpreter(
+                timeout=_SESSION_TIMEOUT, remote_path=remote_path
+            )
         elif code_sandbox_runtime == "local":
-            instance = LocalCodeInterpreter(timeout=_SESSION_TIMEOUT)
+            instance = LocalCodeInterpreter(
+                timeout=_SESSION_TIMEOUT, remote_path=remote_path
+            )
         else:
             raise ValueError(
                 f"Unsupported code sandbox runtime: {code_sandbox_runtime}. Supported runtimes: e2b, local"
