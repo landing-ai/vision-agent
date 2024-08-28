@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import requests
 from moviepy.editor import ImageSequenceClip
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
@@ -1632,6 +1632,71 @@ def overlay_heat_map(
     return np.array(combined)
 
 
+def overlay_counting_results(
+    image: np.ndarray, instances: List[Dict[str, Any]]
+) -> np.ndarray:
+    """'overlay_counting_results' is a utility function that displays counting results on
+    an image.
+
+    Parameters:
+        image (np.ndarray): The image to display the bounding boxes on.
+        instances (List[Dict[str, Any]]): A list of dictionaries containing the bounding
+            box information of each instance
+
+    Returns:
+        np.ndarray: The image with the instance_id dislpayed
+
+    Example
+    -------
+        >>> image_with_bboxes = overlay_counting_results(
+            image, [{'score': 0.99, 'label': 'object', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
+        )
+    """
+    pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
+    color = (158, 218, 229)
+
+    width, height = pil_image.size
+    fontsize = max(10, int(min(width, height) / 80))
+    pil_image = ImageEnhance.Brightness(pil_image).enhance(0.5)
+    draw = ImageDraw.Draw(pil_image)
+    font = ImageFont.load_default(size=fontsize)
+
+    for i, elt in enumerate(instances):
+        label = f"{i}"
+        box = elt["bbox"]
+
+        # denormalize the box if it is normalized
+        box = denormalize_bbox(box, (height, width))
+        x0, y0, x1, y1 = box
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+
+        text_box = draw.textbbox(
+            (cx, cy), text=label, font=font, align="center", anchor="mm"
+        )
+
+        # Calculate the offset to center the text within the bounding box
+        text_width = text_box[2] - text_box[0]
+        text_height = text_box[3] - text_box[1]
+        text_x0 = cx - text_width / 2
+        text_y0 = cy - text_height / 2
+        text_x1 = cx + text_width / 2
+        text_y1 = cy + text_height / 2
+
+        # Draw the rectangle encapsulating the text
+        draw.rectangle((text_x0, text_y0, text_x1, text_y1), fill=color)
+
+        # Draw the text at the center of the bounding box
+        draw.text(
+            (text_x0, text_y0),
+            label,
+            fill="black",
+            font=font,
+            anchor="lt",
+        )
+
+    return np.array(pil_image)
+
+
 # TODO: add this function to the imports so that is picked in the agent
 def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
     """'florencev2_fine_tuning' is a tool that fine-tune florencev2 to be able
@@ -1775,6 +1840,7 @@ UTIL_TOOLS = [
     overlay_bounding_boxes,
     overlay_segmentation_masks,
     overlay_heat_map,
+    overlay_counting_results,
 ]
 
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
@@ -1792,5 +1858,6 @@ UTILITIES_DOCSTRING = get_tool_documentation(
         overlay_bounding_boxes,
         overlay_segmentation_masks,
         overlay_heat_map,
+        overlay_counting_results,
     ]
 )

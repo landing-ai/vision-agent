@@ -43,6 +43,7 @@ from .tools import (
     overlay_bounding_boxes,
     overlay_heat_map,
     overlay_segmentation_masks,
+    overlay_counting_results,
     owl_v2,
     save_image,
     save_json,
