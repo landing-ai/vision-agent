@@ -33,7 +33,7 @@ def encode_media(media: Union[str, Path]) -> str:
     if type(media) is str and media.startswith(("http", "https")):
         # for mp4 video url, we assume there is a same url but ends with png
         # vision-agent-ui will upload this png when uploading the video
-        if media.endswith((".mp4", "mov")):
+        if media.endswith((".mp4", "mov")) and media.find('vision-agent-dev.s3') != -1:
             return media[:-4] + ".png"
         return media
     extension = "png"
