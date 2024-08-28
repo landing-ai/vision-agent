@@ -7,9 +7,9 @@ from typing import Any, Dict, List, Optional, Union, cast
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import extract_json
 from vision_agent.agent.vision_agent_prompts import (
-    EXAMPLES_CODE1_ARTIFACT,
-    EXAMPLES_CODE2_ARTIFACT,
-    VA_CODE_ARTIFACT,
+    EXAMPLES_CODE1,
+    EXAMPLES_CODE2,
+    VA_CODE,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
@@ -65,9 +65,9 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         else:
             raise ValueError(f"role {chat_i['role']} is not supported")
 
-    prompt = VA_CODE_ARTIFACT.format(
+    prompt = VA_CODE.format(
         documentation=META_TOOL_DOCSTRING,
-        examples=f"{EXAMPLES_CODE1_ARTIFACT}\n{EXAMPLES_CODE2_ARTIFACT}",
+        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}",
         conversation=conversation,
     )
     return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
@@ -109,8 +109,20 @@ class VisionAgent(Agent):
         self,
         agent: Optional[LMM] = None,
         verbosity: int = 0,
+        local_artifacts_path: Optional[Union[str, Path]] = None,
         code_sandbox_runtime: Optional[str] = None,
     ) -> None:
+        """Initialize the VisionAgent.
+
+        Parameters:
+            agent (Optional[LMM]): The agent to use for conversation and orchestration
+                of other agents.
+            verbosity (int): The verbosity level of the agent.
+            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+        """
+
         self.agent = (
             OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
         )
@@ -119,13 +131,18 @@ class VisionAgent(Agent):
         self.code_sandbox_runtime = code_sandbox_runtime
         if self.verbosity >= 1:
             _LOGGER.setLevel(logging.INFO)
+        self.local_artifacts_path = (
+            Path(local_artifacts_path)
+            if local_artifacts_path is not None
+            else "artifacts.pkl"
+        )
 
     def __call__(
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
         artifacts: Optional[Artifacts] = None,
-    ) -> str:
+    ) -> List[Message]:
         """Chat with VisionAgent and get the conversation response.
 
         Parameters:
@@ -133,6 +150,7 @@ class VisionAgent(Agent):
                 [{"role": "user", "content": "describe your task here..."}, ...] or a
                 string of just the contents.
             media (Optional[Union[str, Path]]): The media file to be used in the task.
+            artifacts (Optional[Artifacts]): The artifacts to use in the task.
 
         Returns:
             str: The conversation response.
@@ -157,6 +175,7 @@ class VisionAgent(Agent):
                 [{"role": "user", "content": "describe your task here..."}]
                 or if it contains media files, it should be in the format of:
                 [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
+            artifacts (Optional[Artifacts]): The artifacts to use in the task.
 
         Returns:
             List[Message]: The conversation response.
@@ -166,8 +185,7 @@ class VisionAgent(Agent):
             raise ValueError("chat cannot be empty")
 
         if not artifacts:
-            artifacts = Artifacts("artifacts.pkl")
-            artifacts.save()
+            artifacts = Artifacts(WORKSPACE / "artifacts.pkl")
 
         with CodeInterpreterFactory.new_instance(
             code_sandbox_runtime=self.code_sandbox_runtime
@@ -183,7 +201,7 @@ class VisionAgent(Agent):
                         # Save dummy value for now since we just need to know the path
                         # name in the key 'media'. Later on we can add artifact support
                         # for byte data.
-                        artifacts.artifacts[media] = ""
+                        artifacts.artifacts[Path(media).name] = None
                         media_list.append(media)
 
             int_chat = cast(
@@ -205,14 +223,22 @@ class VisionAgent(Agent):
             finished = False
             iterations = 0
             last_response = None
-            while not finished and iterations < self.max_iterations:
-                artifacts_remote_path = code_interpreter.upload_file(
-                    artifacts.save_path
-                )
-                artifacts_loaded = artifacts.show()
-                int_chat.append({"role": "observation", "content": artifacts_loaded})
-                orig_chat.append({"role": "observation", "content": artifacts_loaded})
 
+            # Save the current state of artifacts, will include any images the user
+            # passed in.
+            artifacts.save(self.local_artifacts_path)
+
+            # Upload artifacts to remote location and show where they are going
+            # to be loaded to. The actual loading happens in BoilerplateCode as
+            # part of the pre_code.
+            remote_artifacts_path = code_interpreter.upload_file(
+                self.local_artifacts_path
+            )
+            artifacts_loaded = artifacts.show()
+            int_chat.append({"role": "observation", "content": artifacts_loaded})
+            orig_chat.append({"role": "observation", "content": artifacts_loaded})
+
+            while not finished and iterations < self.max_iterations:
                 response = run_conversation(self.agent, int_chat)
                 if self.verbosity >= 1:
                     _LOGGER.info(response)
@@ -230,13 +256,8 @@ class VisionAgent(Agent):
 
                 if code_action is not None:
                     obs = run_code_action(
-                        code_action, code_interpreter, artifacts_remote_path
+                        code_action, code_interpreter, str(remote_artifacts_path)
                     )
-                    artifacts_local_path = code_interpreter.download_file(
-                        artifacts_remote_path
-                    )
-                    artifacts.load(artifacts_local_path)
-                    artifacts.save()
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
@@ -245,6 +266,13 @@ class VisionAgent(Agent):
 
                 iterations += 1
                 last_response = response
+
+            # after running the agent, download the artifacts locally
+            code_interpreter.download_file(
+                str(remote_artifacts_path.name), str(self.local_artifacts_path)
+            )
+            artifacts.load(self.local_artifacts_path)
+            artifacts.save()
         return orig_chat
 
     def log_progress(self, data: Dict[str, Any]) -> None:
