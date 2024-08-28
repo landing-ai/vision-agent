@@ -5,9 +5,9 @@ from uuid import UUID
 from requests.exceptions import HTTPError
 
 from vision_agent.clients.http import BaseHTTP
-from vision_agent.utils.type_defs import LandingaiAPIKey
+from vision_agent.tools.tools_types import BboxInputBase64, JobStatus, PromptTask
 from vision_agent.utils.exceptions import FineTuneModelNotFound
-from vision_agent.tools.tools_types import BboxInputBase64, PromptTask, JobStatus
+from vision_agent.utils.type_defs import LandingaiAPIKey
 
 
 class LandingPublicAPI(BaseHTTP):
