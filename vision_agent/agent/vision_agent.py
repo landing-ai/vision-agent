@@ -1,17 +1,15 @@
 import copy
 import logging
 import os
-import pickle as pkl
-import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import extract_json
 from vision_agent.agent.vision_agent_prompts import (
-    EXAMPLES_CODE1,
-    EXAMPLES_CODE2,
-    VA_CODE,
+    EXAMPLES_CODE1_ARTIFACT,
+    EXAMPLES_CODE2_ARTIFACT,
+    VA_CODE_ARTIFACT,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
@@ -21,7 +19,6 @@ from vision_agent.utils.execute import CodeInterpreter
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
-ARTIFACT = "artifacts.pkl"
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 if str(WORKSPACE) != "":
@@ -32,25 +29,25 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_artifact, create_artifact, edit_artifact, get_tool_descriptions",
-        "artifacts = Artifacts({remote_path})",
-        "artifacts.load({remote_path})",
+        "from vision_agent.tools.meta_tools import Artifacts, open_artifact, create_artifact, edit_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code",
+        "artifacts = Artifacts('{remote_path}')",
+        "artifacts.load('{remote_path}')",
     ]
     post_code = [
         "artifacts.save()",
     ]
 
     @staticmethod
-    def add_boilerplate(code: str) -> str:
+    def add_boilerplate(code: str, **format) -> str:
         """Run this method to prepend the default imports to the code.
         NOTE: be sure to run this method after the custom tools have been registered.
         """
         return (
-            "\n".join(BoilerplateCode.pre_code)
+            "\n".join([s.format(**format) for s in BoilerplateCode.pre_code])
             + "\n\n"
             + code
             + "\n\n"
-            + "\n".join(BoilerplateCode.post_code)
+            + "\n".join([s.format(**format) for s in BoilerplateCode.post_code])
         )
 
 
@@ -68,38 +65,21 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         else:
             raise ValueError(f"role {chat_i['role']} is not supported")
 
-    prompt = VA_CODE.format(
+    prompt = VA_CODE_ARTIFACT.format(
         documentation=META_TOOL_DOCSTRING,
-        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}",
-        dir=WORKSPACE,
+        examples=f"{EXAMPLES_CODE1_ARTIFACT}\n{EXAMPLES_CODE2_ARTIFACT}",
         conversation=conversation,
     )
     return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
 
 
 def run_code_action(
-    code: str, code_interpreter: CodeInterpreter
+    code: str, code_interpreter: CodeInterpreter, artifact_remote_path: str
 ) -> str:
-    result = code_interpreter.exec_cell(BoilerplateCode.add_boilerplate(code))
-
-    return_str = ""
-    if result.success:
-        for res in result.results:
-            if res.text is not None:
-                return_str += res.text.replace("\\n", "\n")
-        if result.logs.stdout:
-            return_str += "----- stdout -----\n"
-            for log in result.logs.stdout:
-                return_str += log.replace("\\n", "\n")
-    else:
-        # for log in result.logs.stderr:
-        #     return_str += log.replace("\\n", "\n")
-        if result.error:
-            return_str += (
-                "\n" + result.error.value + "\n".join(result.error.traceback_raw)
-            )
-
-    return return_str
+    result = code_interpreter.exec_cell(
+        BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
+    )
+    return result.text()
 
 
 def parse_execution(response: str) -> Optional[str]:
@@ -112,8 +92,8 @@ def parse_execution(response: str) -> Optional[str]:
 
 class VisionAgent(Agent):
     """Vision Agent is an agent that can chat with the user and call tools or other
-    agents to generate code for it. Vision Agent uses python code to execute actions for
-    the user. Vision Agent is inspired by by OpenDev
+    agents to generate code for it. Vision Agent uses python code to execute actions
+    for the user. Vision Agent is inspired by by OpenDev
     https://github.com/OpenDevin/OpenDevin and CodeAct https://arxiv.org/abs/2402.01030
 
     Example
@@ -161,7 +141,7 @@ class VisionAgent(Agent):
             input = [{"role": "user", "content": input}]
             if media is not None:
                 input[0]["media"] = [media]
-        results = self.chat_with_code(input)
+        results = self.chat_with_code(input, artifacts)
         return results  # type: ignore
 
     def chat_with_code(
@@ -200,6 +180,10 @@ class VisionAgent(Agent):
                     for media in chat_i["media"]:
                         media = code_interpreter.upload_file(media)
                         chat_i["content"] += f" Media name {media}"  # type: ignore
+                        # Save dummy value for now since we just need to know the path
+                        # name in the key 'media'. Later on we can add artifact support
+                        # for byte data.
+                        artifacts.artifacts[media] = ""
                         media_list.append(media)
 
             int_chat = cast(
@@ -220,8 +204,14 @@ class VisionAgent(Agent):
 
             finished = False
             iterations = 0
+            last_response = None
             while not finished and iterations < self.max_iterations:
-                artifacts_remote_path = code_interpreter.upload_file(artifacts.save_path)
+                artifacts_remote_path = code_interpreter.upload_file(
+                    artifacts.save_path
+                )
+                artifacts_loaded = artifacts.show()
+                int_chat.append({"role": "observation", "content": artifacts_loaded})
+                orig_chat.append({"role": "observation", "content": artifacts_loaded})
 
                 response = run_conversation(self.agent, int_chat)
                 if self.verbosity >= 1:
@@ -229,14 +219,22 @@ class VisionAgent(Agent):
                 int_chat.append({"role": "assistant", "content": str(response)})
                 orig_chat.append({"role": "assistant", "content": str(response)})
 
+                # sometimes it gets stuck in a loop, so we force it to exit
+                if last_response == response:
+                    response["let_user_respond"] = True
+
                 if response["let_user_respond"]:
                     break
 
                 code_action = parse_execution(response["response"])
 
                 if code_action is not None:
-                    obs = run_code_action(code_action, code_interpreter)
-                    artifacts_local_path = code_interpreter.download_file(artifacts_remote_path)
+                    obs = run_code_action(
+                        code_action, code_interpreter, artifacts_remote_path
+                    )
+                    artifacts_local_path = code_interpreter.download_file(
+                        artifacts_remote_path
+                    )
                     artifacts.load(artifacts_local_path)
                     artifacts.save()
 
@@ -246,6 +244,7 @@ class VisionAgent(Agent):
                     orig_chat.append({"role": "observation", "content": obs})
 
                 iterations += 1
+                last_response = response
         return orig_chat
 
     def log_progress(self, data: Dict[str, Any]) -> None:
