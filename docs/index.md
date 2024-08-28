@@ -209,7 +209,7 @@ function. Make sure the documentation is in the same format above with descripti
 `Parameters:`, `Returns:`, and `Example\n-------`. You can find an example use case
 [here](examples/custom_tools/) as this is what the agent uses to pick and use the tool.
 
-## Additional LLMs
+## Additional Backends
 ### Ollama
 We also provide a `VisionAgentCoder` that uses Ollama. To get started you must download
 a few models:
