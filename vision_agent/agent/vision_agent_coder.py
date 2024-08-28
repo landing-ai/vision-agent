@@ -741,12 +741,12 @@ class VisionAgentCoder(Agent):
             plan = []
             success = False
 
-            plans = self.create_plans(
+            plans = self._create_plans(
                 int_chat, customized_tool_names, working_memory, self.planner
             )
 
             if test_multi_plan:
-                self.log_plans(plans, self.verbosity)
+                self._log_plans(plans, self.verbosity)
 
             tool_infos = retrieve_tools(
                 plans,
@@ -841,7 +841,13 @@ class VisionAgentCoder(Agent):
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
 
-    def create_plans(self, int_chat, customized_tool_names, working_memory, planner):
+    def _create_plans(
+        self,
+        int_chat: List[Message],
+        customized_tool_names: Optional[List[str]],
+        working_memory: List[Dict[str, str]],
+        planner: LMM,
+    ) -> Dict[str, Any]:
         self.log_progress(
             {
                 "type": "log",
@@ -859,7 +865,7 @@ class VisionAgentCoder(Agent):
         )
         return plans
 
-    def log_plans(self, plans, verbosity):
+    def _log_plans(self, plans: Dict[str, Any], verbosity: int) -> None:
         if verbosity >= 1:
             for p in plans:
                 # tabulate will fail if the keys are not the same for all elements
