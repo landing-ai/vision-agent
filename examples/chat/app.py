@@ -26,9 +26,14 @@ SAVE = {
     "response": "saved",
     "style": {"bottom": "calc(50% - 4.25rem", "right": "0.4rem"},
 }
-artifacts = va.tools.Artifacts("artifacts.pkl")
-artifacts.save()
-agent = va.agent.VisionAgent(verbosity=1)
+# set artifacts remote_path to WORKSPACE
+artifacts = va.tools.Artifacts(WORKSPACE / "artifacts.pkl")
+if Path("artifacts.pkl").exists():
+    artifacts.load("artifacts.pkl")
+else:
+    artifacts.save("artifacts.pkl")
+
+agent = va.agent.VisionAgent(verbosity=1, local_artifacts_path="artifacts.pkl")
 
 st.set_page_config(layout="wide")
 
@@ -125,7 +130,9 @@ def main():
             if uploaded_file is not None:
                 with open(WORKSPACE / uploaded_file.name, "wb") as f:
                     f.write(uploaded_file.getbuffer())
-                artifacts.artifacts[WORKSPACE / uploaded_file.name] = ""
+
+                # make it None so it wont load and overwrite the image
+                artifacts.artifacts[uploaded_file.name] = None
 
             for file in WORKSPACE.iterdir():
                 if "__pycache__" not in str(file) and not str(file).startswith("."):
