@@ -24,6 +24,8 @@ from vision_agent.tools import (
     ixc25_video_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
+    countgd_counting,
+    countgd_example_based_counting,
     ocr,
     owl_v2,
     template_match,
@@ -184,6 +186,22 @@ def test_loca_visual_prompt_counting() -> None:
         image=img,
     )
     assert result["count"] == 25
+
+
+def test_countgd_counting() -> None:
+    img = ski.data.coins()
+
+    result = countgd_counting(image=img, prompt="coin")
+    assert result["count"] == 24
+
+
+def test_countgd_example_based_counting() -> None:
+    img = ski.data.coins()
+    result = countgd_example_based_counting(
+        visual_prompt=[[85, 106, 122, 145]],
+        image=img,
+    )
+    assert result["count"] == 24
 
 
 def test_git_vqa_v2() -> None:

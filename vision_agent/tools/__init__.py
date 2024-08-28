@@ -37,6 +37,8 @@ from .tools import (
     load_image,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
+    countgd_counting,
+    countgd_example_based_counting,
     ocr,
     overlay_bounding_boxes,
     overlay_heat_map,
