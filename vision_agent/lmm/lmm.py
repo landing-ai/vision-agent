@@ -144,9 +144,11 @@ class OpenAILMM(LMM):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": encoded_media
-                                if encoded_media.startswith(("http", "https"))
-                                else f"data:image/png;base64,{encoded_media}",
+                                "url": (
+                                    encoded_media
+                                    if encoded_media.startswith(("http", "https"))
+                                    else f"data:image/png;base64,{encoded_media}"
+                                ),
                                 "detail": "low",
                             },
                         },
