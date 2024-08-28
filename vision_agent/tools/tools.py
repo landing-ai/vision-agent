@@ -1222,6 +1222,13 @@ def extract_frames(
             video_file_path = video.download(output_path=temp_dir)
 
             return extract_frames_from_video(video_file_path, fps)
+    elif str(video_uri).startswith(("http", "https")):
+        _, image_suffix = os.path.splitext(video_uri)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
+            # Download the video and save it to the temporary file
+            with urllib.request.urlopen(str(video_uri)) as response:
+                tmp_file.write(response.read())
+            return extract_frames_from_video(tmp_file.name, fps)
 
     return extract_frames_from_video(str(video_uri), fps)
 
