@@ -42,28 +42,47 @@ def filter_file(file_name: Union[str, Path]) -> bool:
 
 
 class Artifacts:
-    def __init__(self, save_path: Union[str, Path]) -> None:
-        self.save_path = Path(save_path)
+    """Artifacts is a class that allows you to sync files between a local and remote
+    environment. In our case, the remote environment could be where the VisionAgent is
+    executing code and as the user adds new images, files or modifies files, those
+    need to be in sync with the remote environment the VisionAgent is running in.
+    """
+
+    def __init__(self, remote_save_path: Union[str, Path]) -> None:
+        self.remote_save_path = Path(remote_save_path)
         self.artifacts = {}
 
         self.code_sandbox_runtime = None
 
     def load(self, file_path: Union[str, Path]) -> None:
+        """Loads are artifacts into the remote environment. If an artifact value is None
+        it will skip loading it.
+
+        Parameters:
+            file_path (Union[str, Path]): The file path to load the artifacts from
+        """
         with open(file_path, "rb") as f:
             self.artifacts = pkl.load(f)
         for k, v in self.artifacts.items():
-            with open(self.save_path.parent / k, "w") as f:
-                f.write(v)
+            if v is not None:
+                with open(self.remote_save_path.parent / k, "w") as f:
+                    f.write(v)
 
     def show(self) -> str:
+        """Shows the artifacts that have been loaded and their remote save paths."""
         out_str = "[Artifacts loaded]\n"
         for k in self.artifacts.keys():
-            out_str += f"Artifact {k} loaded to {str(self.save_path.parent / k)}\n"
+            out_str += (
+                f"Artifact {k} loaded to {str(self.remote_save_path.parent / k)}\n"
+            )
         out_str += "[End of artifacts]\n"
         return out_str
 
-    def save(self) -> None:
-        with open(self.save_path, "wb") as f:
+    def save(self, local_path: Optional[Union[str, Path]] = None) -> None:
+        save_path = (
+            Path(local_path) if local_path is not None else self.remote_save_path
+        )
+        with open(save_path, "wb") as f:
             pkl.dump(self.artifacts, f)
 
     def __iter__(self):
@@ -259,7 +278,7 @@ def generate_vision_code(
         agent = va.agent.VisionAgentCoder()
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
-    response = agent.chat_with_workflow(fixed_chat)
+    response = agent.chat_with_workflow(fixed_chat, test_multi_plan=False)
     code = response["code"]
     artifacts[name] = code
     code_lines = code.splitlines(keepends=True)
