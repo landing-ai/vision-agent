@@ -26,6 +26,8 @@ SAVE = {
     "response": "saved",
     "style": {"bottom": "calc(50% - 4.25rem", "right": "0.4rem"},
 }
+artifacts = va.tools.Artifacts("artifacts.pkl")
+artifacts.save()
 agent = va.agent.VisionAgent(verbosity=1)
 
 st.set_page_config(layout="wide")
@@ -44,7 +46,9 @@ if "input_text" not in st.session_state:
 
 
 def update_messages(messages, lock):
-    new_chat = agent.chat_with_code(messages)
+    if Path("artifacts.pkl").exists():
+        artifacts.load("artifacts.pkl")
+    new_chat = agent.chat_with_code(messages, artifacts=artifacts)
     with lock:
         for new_message in new_chat:
             if new_message not in messages:
@@ -121,6 +125,7 @@ def main():
             if uploaded_file is not None:
                 with open(WORKSPACE / uploaded_file.name, "wb") as f:
                     f.write(uploaded_file.getbuffer())
+                artifacts.artifacts[WORKSPACE / uploaded_file.name] = ""
 
             for file in WORKSPACE.iterdir():
                 if "__pycache__" not in str(file) and not str(file).startswith("."):
