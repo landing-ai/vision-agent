@@ -15,7 +15,7 @@ from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.tools.meta_tools import Artifacts
 from vision_agent.utils import CodeInterpreterFactory
-from vision_agent.utils.execute import CodeInterpreter
+from vision_agent.utils.execute import CodeInterpreter, Execution
 
 logging.basicConfig(level=logging.INFO)
 _LOGGER = logging.getLogger(__name__)
@@ -75,11 +75,10 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
 def run_code_action(
     code: str, code_interpreter: CodeInterpreter, artifact_remote_path: str
-) -> str:
-    result = code_interpreter.exec_cell(
+) -> Execution:
+    return code_interpreter.exec_isolation(
         BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
     )
-    return result.text()
 
 
 def parse_execution(response: str) -> Optional[str]:
@@ -258,14 +257,15 @@ class VisionAgent(Agent):
                 code_action = parse_execution(response["response"])
 
                 if code_action is not None:
-                    obs = run_code_action(
+                    result = run_code_action(
                         code_action, code_interpreter, str(remote_artifacts_path)
                     )
+                    obs = result.text()
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
-                    int_chat.append({"role": "observation", "content": obs})
-                    orig_chat.append({"role": "observation", "content": obs})
+                    int_chat.append({"role": "observation", "content": obs, "execution": result})
+                    orig_chat.append({"role": "observation", "content": obs, "execution": result})
 
                 iterations += 1
                 last_response = response
