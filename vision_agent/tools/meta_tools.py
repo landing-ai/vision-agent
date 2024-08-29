@@ -5,10 +5,13 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from IPython.display import display
+
 import vision_agent as va
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
+from vision_agent.utils.execute import Execution, MimeType
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
@@ -35,6 +38,35 @@ def filter_file(file_name: Union[str, Path]) -> bool:
         and file_name_p.suffix in [".py", ".txt"]
         and not file_name_p.name.startswith(".")
     )
+
+
+def redisplay_results(execution: Execution) -> None:
+    """This function is used to add previous execution results to the current output.
+    This is handy if you are inside a notebook environment, call it notebook1, and you
+    have a nested notebook environment, call it notebook2, and you want the execution
+    results from notebook2 to be included in the execution results for notebook1.
+    """
+    for result in execution.results:
+        if result.text is not None:
+            display({MimeType.TEXT_PLAIN: result.text})
+        if result.html is not None:
+            display({MimeType.TEXT_HTML: result.html})
+        if result.markdown is not None:
+            display({MimeType.TEXT_MARKDOWN: result.markdown})
+        if result.svg is not None:
+            display({MimeType.IMAGE_SVG: result.svg})
+        if result.png is not None:
+            display({MimeType.IMAGE_PNG: result.png})
+        if result.jpeg is not None:
+            display({MimeType.IMAGE_JPEG: result.jpeg})
+        if result.mp4 is not None:
+            display({MimeType.VIDEO_MP4_B64: result.mp4})
+        if result.latex is not None:
+            display({MimeType.TEXT_LATEX: result.latex})
+        if result.json is not None:
+            display({MimeType.APPLICATION_JSON: result.json})
+        if result.extra is not None:
+            display(result.extra)
 
 
 class Artifacts:
@@ -276,6 +308,7 @@ def generate_vision_code(
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.chat_with_workflow(fixed_chat, test_multi_plan=True)
+    redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
     code_lines = code.splitlines(keepends=True)
@@ -329,6 +362,7 @@ def edit_vision_code(
             fixed_chat_history.append({"role": "user", "content": chat})
 
     response = agent.chat_with_workflow(fixed_chat_history, test_multi_plan=False)
+    redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
     code_lines = code.splitlines(keepends=True)
