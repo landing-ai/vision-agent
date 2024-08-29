@@ -1,3 +1,4 @@
+import os
 import io
 import json
 import logging
@@ -14,6 +15,7 @@ from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
+import urllib.request
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.tools.tool_utils import (
@@ -1220,6 +1222,13 @@ def extract_frames(
             video_file_path = video.download(output_path=temp_dir)
 
             return extract_frames_from_video(video_file_path, fps)
+    elif str(video_uri).startswith(("http", "https")):
+        _, image_suffix = os.path.splitext(video_uri)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
+            # Download the video and save it to the temporary file
+            with urllib.request.urlopen(str(video_uri)) as response:
+                tmp_file.write(response.read())
+            return extract_frames_from_video(tmp_file.name, fps)
 
     return extract_frames_from_video(str(video_uri), fps)
 
@@ -1250,10 +1259,10 @@ def save_json(data: Any, file_path: str) -> None:
 
 
 def load_image(image_path: str) -> np.ndarray:
-    """'load_image' is a utility function that loads an image from the given file path string.
+    """'load_image' is a utility function that loads an image from the given file path string or an URL.
 
     Parameters:
-        image_path (str): The path to the image.
+        image_path (str): The path or URL to the image.
 
     Returns:
         np.ndarray: The image as a NumPy array.
@@ -1265,6 +1274,13 @@ def load_image(image_path: str) -> np.ndarray:
     # NOTE: sometimes the generated code pass in a NumPy array
     if isinstance(image_path, np.ndarray):
         return image_path
+    if image_path.startswith(("http", "https")):
+        _, image_suffix = os.path.splitext(image_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
+            # Download the image and save it to the temporary file
+            with urllib.request.urlopen(image_path) as response:
+                tmp_file.write(response.read())
+            image_path = tmp_file.name
     image = Image.open(image_path).convert("RGB")
     return np.array(image)
 

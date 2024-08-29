@@ -30,6 +30,12 @@ def encode_image_bytes(image: bytes) -> str:
 
 
 def encode_media(media: Union[str, Path]) -> str:
+    if type(media) is str and media.startswith(("http", "https")):
+        # for mp4 video url, we assume there is a same url but ends with png
+        # vision-agent-ui will upload this png when uploading the video
+        if media.endswith((".mp4", "mov")) and media.find("vision-agent-dev.s3") != -1:
+            return media[:-4] + ".png"
+        return media
     extension = "png"
     extension = Path(media).suffix
     if extension.lower() not in {
@@ -138,7 +144,11 @@ class OpenAILMM(LMM):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/png;base64,{encoded_media}",
+                                "url": (
+                                    encoded_media
+                                    if encoded_media.startswith(("http", "https"))
+                                    else f"data:image/png;base64,{encoded_media}"
+                                ),
                                 "detail": "low",
                             },
                         },
@@ -390,7 +400,6 @@ class OllamaLMM(LMM):
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
-
             json_data = json.dumps(data)
 
             def f() -> Iterator[Optional[str]]:
@@ -424,7 +433,6 @@ class OllamaLMM(LMM):
         media: Optional[List[Union[str, Path]]] = None,
         **kwargs: Any,
     ) -> Union[str, Iterator[Optional[str]]]:
-
         url = f"{self.url}/generate"
         data: Dict[str, Any] = {
             "model": self.model_name,
@@ -439,7 +447,6 @@ class OllamaLMM(LMM):
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
-
             json_data = json.dumps(data)
 
             def f() -> Iterator[Optional[str]]:
