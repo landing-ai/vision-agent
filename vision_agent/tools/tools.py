@@ -1,8 +1,9 @@
-import os
 import io
 import json
 import logging
+import os
 import tempfile
+import urllib.request
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -15,7 +16,6 @@ from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
-import urllib.request
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.tools.tool_utils import (
@@ -1332,7 +1332,7 @@ def save_video(
         video.write_videofile(f.name, codec="libx264")
         f.close()
         _save_video_to_result(f.name)
-        return f.name
+    return f.name
 
 
 def _save_video_to_result(video_uri: str) -> None:
