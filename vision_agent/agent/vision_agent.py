@@ -198,7 +198,7 @@ class VisionAgent(Agent):
             for chat_i in int_chat:
                 if "media" in chat_i:
                     for media in chat_i["media"]:
-                        media = code_interpreter.upload_file(media)
+                        media = code_interpreter.upload_file(cast(str, media))
                         chat_i["content"] += f" Media name {media}"  # type: ignore
                         # Save dummy value for now since we just need to know the path
                         # name in the key 'media'. Later on we can add artifact support
@@ -264,8 +264,12 @@ class VisionAgent(Agent):
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
-                    int_chat.append({"role": "observation", "content": obs, "execution": result})
-                    orig_chat.append({"role": "observation", "content": obs, "execution": result})
+                    int_chat.append(
+                        {"role": "observation", "content": obs, "execution": result}
+                    )
+                    orig_chat.append(
+                        {"role": "observation", "content": obs, "execution": result}
+                    )
 
                 iterations += 1
                 last_response = response

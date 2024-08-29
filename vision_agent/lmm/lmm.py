@@ -138,7 +138,7 @@ class OpenAILMM(LMM):
             fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
             if "media" in c:
                 for media in c["media"]:
-                    encoded_media = encode_media(media)
+                    encoded_media = encode_media(cast(str, media))
 
                     fixed_c["content"].append(  # type: ignore
                         {
@@ -389,7 +389,9 @@ class OllamaLMM(LMM):
         fixed_chat = []
         for message in chat:
             if "media" in message:
-                message["images"] = [encode_media(m) for m in message["media"]]
+                message["images"] = [
+                    encode_media(cast(str, m)) for m in message["media"]
+                ]
                 del message["media"]
             fixed_chat.append(message)
         url = f"{self.url}/chat"
