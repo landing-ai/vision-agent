@@ -384,8 +384,15 @@ class Execution(BaseModel):
 class CodeInterpreter(abc.ABC):
     """Code interpreter interface."""
 
-    def __init__(self, timeout: int, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        timeout: int,
+        remote_path: Optional[Union[str, Path]] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         self.timeout = timeout
+        self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
 
     def __enter__(self) -> Self:
         return self
