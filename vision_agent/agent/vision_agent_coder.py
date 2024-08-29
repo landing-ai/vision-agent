@@ -744,29 +744,14 @@ class VisionAgentCoder(Agent):
             results = {"code": "", "test": "", "plan": []}
             plan = []
             success = False
-            self.log_progress(
-                {
-                    "type": "log",
-                    "log_content": "Creating plans",
-                    "status": "started",
-                }
-            )
-            plans = write_plans(
-                int_chat,
-                T.get_tool_descriptions_by_names(
-                    customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
-                ),
-                format_memory(working_memory),
-                self.planner,
+
+            plans = self._create_plans(
+                int_chat, customized_tool_names, working_memory, self.planner
             )
 
-            if self.verbosity >= 1:
-                for p in plans:
-                    # tabulate will fail if the keys are not the same for all elements
-                    p_fixed = [{"instructions": e} for e in plans[p]["instructions"]]
-                    _LOGGER.info(
-                        f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
-                    )
+            if test_multi_plan:
+                self._log_plans(plans, self.verbosity)
+
             tool_infos = retrieve_tools(
                 plans,
                 self.tool_recommender,
@@ -859,6 +844,39 @@ class VisionAgentCoder(Agent):
     def log_progress(self, data: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:
             self.report_progress_callback(data)
+
+    def _create_plans(
+        self,
+        int_chat: List[Message],
+        customized_tool_names: Optional[List[str]],
+        working_memory: List[Dict[str, str]],
+        planner: LMM,
+    ) -> Dict[str, Any]:
+        self.log_progress(
+            {
+                "type": "log",
+                "log_content": "Creating plans",
+                "status": "started",
+            }
+        )
+        plans = write_plans(
+            int_chat,
+            T.get_tool_descriptions_by_names(
+                customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
+            ),
+            format_memory(working_memory),
+            planner,
+        )
+        return plans
+
+    def _log_plans(self, plans: Dict[str, Any], verbosity: int) -> None:
+        if verbosity >= 1:
+            for p in plans:
+                # tabulate will fail if the keys are not the same for all elements
+                p_fixed = [{"instructions": e} for e in plans[p]["instructions"]]
+                _LOGGER.info(
+                    f"\n{tabulate(tabular_data=p_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                )
 
 
 class OllamaVisionAgentCoder(VisionAgentCoder):
