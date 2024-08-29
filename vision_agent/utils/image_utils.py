@@ -100,7 +100,7 @@ def frames_to_bytes(
     """
     with tempfile.NamedTemporaryFile(delete=True) as temp_file:
         clip = ImageSequenceClip(frames, fps=fps)
-        clip.write_videofile(temp_file.name + f".{file_ext}", fps=fps)
+        clip.write_videofile(temp_file.name + f".{file_ext}", fps=fps, code="libx264")
         with open(temp_file.name + f".{file_ext}", "rb") as f:
             buffer_bytes = f.read()
     return buffer_bytes
