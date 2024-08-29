@@ -86,7 +86,7 @@ AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask t
 
 
 EXAMPLES_CODE2 = """
-USER: Can you create a function to count workers with helmets?
+USER: Can you create a function to count workers with helmets, return the count and save a visaulization of the bounding boxes?
 
 OBSERVATION:
 [Artifacts loaded]
@@ -101,16 +101,17 @@ OBSERVATION:
 Artifact workers.png loaded to /path/to/images/workers.png
 [End of artifacts]
 
-AGENT: {"thoughts": "I will use the generate_vision_code to count the workers with helmets in the image.", "response": "<execute_python>generate_vision_code(artifacts, 'code.py', 'Can you write code to count workers with helmets in this image?', media=['/paths/to/images/workers.png'])</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "I will use the generate_vision_code to count the workers with helmets in the image.", "response": "<execute_python>generate_vision_code(artifacts, 'code.py', 'Can you create a function to count workers with helmets, return the count and save a visaulization of the bounding boxes?', media=['/paths/to/images/workers.png'])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 [Artifact code.py]
-0|from vision_agent.tools import load_image, owl_v2, closest_box_distance
-1|def count_workers_with_helmets(image_path: str):
+0|from vision_agent.tools import load_image, owl_v2, closest_box_distance, overlay_bounding_boxes, save_image
+1|def count_workers_with_helmets(image_path: str, output_path: str):
 2|    image = load_image(image_path)
-3|    workers = owl_v2("worker", image)
-4|    helmets = owl_v2("helmet", image)
-5|    count = 0
+3|    detections = owl_v2("worker, helmet", image)
+4|    workers = [d for d in detections if d['label'] == 'worker']
+5|    helmets = [d for d in detections if d['label'] == 'helmet']
+6|    count = 0
 6|    for worker in workers:
 7|        person_box = worker['bbox']
 8|        person_has_helmet = False
@@ -120,14 +121,16 @@ OBSERVATION:
 12|                break
 13|        if person_has_helmet:
 14|            count += 1
+15|    overlay_bounding_boxes(image, detections)
+16|    save_image(output_path, image)
 15|    return count
 [End of artifact]
 
-AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code to get the output.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png'))</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code to get the output and write the visualization to the artifacts so the user can see it.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png')</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 ----- stdout -----
 2
 
-AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to count the workers wearing helmets in code.py", "let_user_respond": true}
+AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to count the workers wearing helmets in code.py and saved the visualization under 'workers_viz.png'.", "let_user_respond": true}
 """
