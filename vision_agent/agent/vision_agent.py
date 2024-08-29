@@ -29,7 +29,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_artifact, create_artifact, edit_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -198,13 +198,14 @@ class VisionAgent(Agent):
             for chat_i in int_chat:
                 if "media" in chat_i:
                     for media in chat_i["media"]:
-                        media = code_interpreter.upload_file(cast(str, media))
-                        chat_i["content"] += f" Media name {media}"  # type: ignore
-                        # Save dummy value for now since we just need to know the path
-                        # name in the key 'media'. Later on we can add artifact support
-                        # for byte data.
-                        artifacts.artifacts[Path(media).name] = None
-                        media_list.append(media)
+                        media = cast(str, media)
+                        artifacts.artifacts[Path(media).name] = open(media, "rb").read()
+
+                        media_remote_path = (
+                            Path(code_interpreter.remote_path) / Path(media).name
+                        )
+                        chat_i["content"] += f" Media name {media_remote_path}"  # type: ignore
+                        media_list.append(media_remote_path)
 
             int_chat = cast(
                 List[Message],
