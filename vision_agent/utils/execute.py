@@ -528,7 +528,7 @@ print(f"Vision Agent version: {va_version}")"""
         with open(file, "rb") as f:
             self.interpreter.files.write(path=str(self.remote_path / file_name), data=f)
         _LOGGER.info(f"File ({file}) is uploaded to: {str(self.remote_path)}")
-        return self.remote_path
+        return self.remote_path / file_name
 
     def download_file(
         self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]
