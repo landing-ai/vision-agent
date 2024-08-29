@@ -21,7 +21,7 @@ from .tools import (
     dpt_hybrid_midas,
     extract_frames,
     florence2_image_caption,
-    florence2_object_detection,
+    florence2_phrase_grounding,
     florence2_ocr,
     florence2_roberta_vqa,
     florence2_sam2_image,
