@@ -11,7 +11,7 @@ class Agent(ABC):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ) -> str:
+    ) -> Union[str, List[Message]]:
         pass
 
     @abstractmethod

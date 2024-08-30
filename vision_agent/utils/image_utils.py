@@ -70,7 +70,7 @@ def rle_decode_array(rle: Dict[str, List[int]]) -> np.ndarray:
     r"""Decode a run-length encoded mask. Returns numpy array, 1 - mask, 0 - background.
 
     Parameters:
-        mask: The mask in run-length encoded as an array.
+        rle: The run-length encoded mask.
     """
     size = rle["size"]
     counts = rle["counts"]
@@ -100,7 +100,7 @@ def frames_to_bytes(
     """
     with tempfile.NamedTemporaryFile(delete=True) as temp_file:
         clip = ImageSequenceClip(frames, fps=fps)
-        clip.write_videofile(temp_file.name + f".{file_ext}", fps=fps)
+        clip.write_videofile(temp_file.name + f".{file_ext}", fps=fps, codec="libx264")
         with open(temp_file.name + f".{file_ext}", "rb") as f:
             buffer_bytes = f.read()
     return buffer_bytes
