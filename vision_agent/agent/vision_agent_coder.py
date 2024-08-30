@@ -722,10 +722,10 @@ class VisionAgentCoder(Agent):
                             media
                             if type(media) is str
                             and media.startswith(("http", "https"))
-                            else code_interpreter.upload_file(media)
+                            else code_interpreter.upload_file(cast(str, media))
                         )
                         chat_i["content"] += f" Media name {media}"  # type: ignore
-                        media_list.append(media)
+                        media_list.append(str(media))
 
             int_chat = cast(
                 List[Message],

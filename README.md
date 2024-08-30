@@ -41,15 +41,15 @@ export OPENAI_API_KEY="your-api-key"
 ```
 
 ### Vision Agent
-There are two agents that you can use. Vision Agent is a conversational agent that has
+There are two agents that you can use. `VisionAgent` is a conversational agent that has
 access to tools that allow it to write an navigate python code and file systems. It can
-converse with the user in natural language. VisionAgentCoder is an agent that can write
-code for vision tasks, such as counting people in an image. However, it cannot converse
-and can only respond with code. VisionAgent can call VisionAgentCoder to write vision
-code.
+converse with the user in natural language. `VisionAgentCoder` is an agent specifically
+for writing code for vision tasks, such as counting people in an image. However, it
+cannot chat with you and can only respond with code. `VisionAgent` can call
+`VisionAgentCoder` to write vision code.
 
 #### Basic Usage
-To run the streamlit app locally to chat with Vision Agent, you can run the following
+To run the streamlit app locally to chat with `VisionAgent`, you can run the following
 command:
 
 ```bash
@@ -146,7 +146,7 @@ the code and having it update. You just need to add the code as a response from 
 assistant:
 
 ```python
-agent = va.agent.VisionAgent(verbosity=2)
+agent = va.agent.VisionAgentCoder(verbosity=2)
 conv = [
     {
         "role": "user",
@@ -211,6 +211,10 @@ variables will not be captured by `register_tool` so you need to include them in
 function. Make sure the documentation is in the same format above with description,
 `Parameters:`, `Returns:`, and `Example\n-------`. You can find an example use case
 [here](examples/custom_tools/) as this is what the agent uses to pick and use the tool.
+
+Can't find the tool you need and want add it to `VisionAgent`? Check out our
+[vision-agent-tools](https://github.com/landing-ai/vision-agent-tools) repository where
+we add the source code for all the tools used in `VisionAgent`.
 
 ## Additional Backends
 ### Ollama
