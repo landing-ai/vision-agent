@@ -194,6 +194,8 @@ def create_code_artifact(artifacts: Artifacts, name: str) -> str:
         artifacts[name] = ""
         return_str = f"[Artifact {name} created]"
     print(return_str)
+
+    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
     return return_str
 
 
@@ -270,6 +272,7 @@ def edit_code_artifact(
 
     artifacts[name] = "".join(edited_lines)
 
+    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
     return open_code_artifact(artifacts, name, cur_line)
 
 
@@ -313,6 +316,8 @@ def generate_vision_code(
     artifacts[name] = code
     code_lines = code.splitlines(keepends=True)
     total_lines = len(code_lines)
+
+    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
@@ -367,6 +372,8 @@ def edit_vision_code(
     artifacts[name] = code
     code_lines = code.splitlines(keepends=True)
     total_lines = len(code_lines)
+
+    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
