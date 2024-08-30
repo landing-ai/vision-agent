@@ -533,16 +533,15 @@ def countgd_counting(
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
     """
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
+    image_b64 = convert_to_b64(image)
     payload = {
-        "text": prompt,
-        "visual_prompts": [],
+        "image": image_b64,
+        "prompt": prompt,
         "box_threshold": box_threshold,
-        "function_name": "countgd_counting",
     }
+    metadata_payload = {"function_name": "countgd_counting"}
     data: List[Dict[str, Any]] = send_inference_request(
-        payload, "countgd_counting", files=files, v2=True
+        payload, "countgd", v2=True, metadata_payload=metadata_payload
     )
     return data
 
@@ -572,7 +571,10 @@ def countgd_example_based_counting(
 
     Example
     -------
-        >>> countgd_example_based_counting(visual_prompts=[[0.1, 0.1, 0.4, 0.42], [0.2, 0.3, 0.25, 0.35]], image=image)
+        >>> countgd_example_based_counting(
+            visual_prompts=[[0.1, 0.1, 0.4, 0.42], [0.2, 0.3, 0.25, 0.35]],
+            image=image
+        )
         [
             {'score': 0.49, 'label': 'object', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.68, 'label': 'object', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -580,16 +582,15 @@ def countgd_example_based_counting(
             {'score': 0.98, 'label': 'object', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
     """
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
+    image_b64 = convert_to_b64(image)
     payload = {
-        "text": "",
+        "image": image_b64,
         "visual_prompts": visual_prompts,
         "box_threshold": box_threshold,
-        "function_name": "countgd_example_based_counting",
     }
+    metadata_payload = {"function_name": "countgd_example_based_counting"}
     data: List[Dict[str, Any]] = send_inference_request(
-        payload, "countgd_example_based_counting", files=files, v2=True
+        payload, "countgd", v2=True, metadata_payload=metadata_payload
     )
     return data
 
