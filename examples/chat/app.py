@@ -53,7 +53,7 @@ if "input_text" not in st.session_state:
 def update_messages(messages, lock):
     if Path("artifacts.pkl").exists():
         artifacts.load("artifacts.pkl")
-    new_chat = agent.chat_with_code(messages, artifacts=artifacts)
+    new_chat, _ = agent.chat_with_code(messages, artifacts=artifacts)
     with lock:
         for new_message in new_chat:
             if new_message not in messages:
