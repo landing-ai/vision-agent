@@ -263,7 +263,7 @@ class VisionAgent(Agent):
                     result = run_code_action(
                         code_action, code_interpreter, str(remote_artifacts_path)
                     )
-                    obs = result.text()
+                    obs = str(result.logs)
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
