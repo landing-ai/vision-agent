@@ -4,14 +4,18 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 
 from IPython.display import display
 
 import vision_agent as va
+from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
+from vision_agent.tools.tools_types import BboxInput, BboxInputBase64, PromptTask
 from vision_agent.utils.execute import Execution, MimeType
+from vision_agent.utils.image_utils import convert_to_b64
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
@@ -395,6 +399,45 @@ def get_tool_descriptions() -> str:
     Helpful for answering questions about what types of vision tasks you can do with
     `generate_vision_code`."""
     return TOOL_DESCRIPTIONS
+
+
+def florence2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
+    """'florence2_fine_tuning' is a tool that fine-tune florence2 to be able to detect
+    objects in an image based on a given dataset. It returns the fine tuning job id.
+
+    Parameters:
+        bboxes (List[BboxInput]): A list of BboxInput containing the
+            image path, labels and bounding boxes.
+        task (str): The florencev2 fine-tuning task. The options are
+            'phrase_grounding'.
+
+    Returns:
+        UUID: The fine tuning job id, this id will used to retrieve the fine
+            tuned model.
+
+    Example
+    -------
+        >>> fine_tuning_job_id = florencev2_fine_tuning(
+            [{'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[370, 30, 560, 290]]},
+             {'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[120, 0, 300, 170]]}],
+             "OBJECT_DETECTION"
+        )
+    """
+    bboxes_input = [BboxInput.model_validate(bbox) for bbox in bboxes]
+    task_type = PromptTask(task.upper())
+    fine_tuning_request = [
+        BboxInputBase64(
+            image=convert_to_b64(bbox_input.image_path),
+            filename=bbox_input.image_path.split("/")[-1],
+            labels=bbox_input.labels,
+            bboxes=bbox_input.bboxes,
+        )
+        for bbox_input in bboxes_input
+    ]
+    landing_api = LandingPublicAPI()
+    return landing_api.launch_fine_tuning_job(
+        "florencev2", task_type, fine_tuning_request
+    )
 
 
 META_TOOL_DOCSTRING = get_tool_documentation(

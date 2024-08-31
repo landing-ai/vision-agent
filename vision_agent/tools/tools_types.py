@@ -19,16 +19,8 @@ class BboxInputBase64(BaseModel):
 
 
 class PromptTask(str, Enum):
-    """
-    Valid task prompts options for the Florencev2 model.
-    """
-
-    CAPTION = "<CAPTION>"
-    """"""
-    CAPTION_TO_PHRASE_GROUNDING = "<CAPTION_TO_PHRASE_GROUNDING>"
-    """"""
-    OBJECT_DETECTION = "<OD>"
-    """"""
+    """Valid task prompts options for the Florence2 model."""
+    PHRASE_GROUNDING = "<CAPTION_TO_PHRASE_GROUNDING>"
 
 
 class FineTuning(BaseModel):
@@ -41,7 +33,7 @@ class FineTuning(BaseModel):
         return str(job_id)
 
 
-class Florencev2FtRequest(BaseModel):
+class Florence2FtRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     image: str
