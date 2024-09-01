@@ -540,10 +540,10 @@ def countgd_counting(
         "box_threshold": box_threshold,
     }
     metadata_payload = {"function_name": "countgd_counting"}
-    data: List[Dict[str, Any]] = send_inference_request(
+    resp: List[Dict[str, Any]] = send_inference_request(
         payload, "countgd", v2=True, metadata_payload=metadata_payload
-    )
-    return data
+    )  # type: ignore
+    return resp["data"]
 
 
 def countgd_example_based_counting(
@@ -589,10 +589,10 @@ def countgd_example_based_counting(
         "box_threshold": box_threshold,
     }
     metadata_payload = {"function_name": "countgd_example_based_counting"}
-    data: List[Dict[str, Any]] = send_inference_request(
+    resp: List[Dict[str, Any]] = send_inference_request(
         payload, "countgd", v2=True, metadata_payload=metadata_payload
-    )
-    return data
+    )  # type: ignore
+    return resp["data"]
 
 
 def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
