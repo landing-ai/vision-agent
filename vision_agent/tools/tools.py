@@ -1660,7 +1660,10 @@ def overlay_counting_results(
     fontsize = max(10, int(min(width, height) / 80))
     pil_image = ImageEnhance.Brightness(pil_image).enhance(0.5)
     draw = ImageDraw.Draw(pil_image)
-    font = ImageFont.load_default(size=fontsize)
+    font = ImageFont.truetype(
+        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
+        fontsize,
+    )
 
     for i, elt in enumerate(instances):
         label = f"{i}"

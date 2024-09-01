@@ -1,7 +1,7 @@
 import inspect
 import logging
 import os
-from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple, Union
 
 import pandas as pd
 from IPython.display import display
@@ -34,7 +34,7 @@ def send_inference_request(
     files: Optional[List[Tuple[Any, ...]]] = None,
     v2: bool = False,
     metadata_payload: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
     # TODO: runtime_tag and function_name should be metadata_payload and now included
     # in the service payload
     try:
