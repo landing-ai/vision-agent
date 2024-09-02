@@ -1,5 +1,5 @@
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
 from typing import List, Tuple, Optional, Annotated
 
 from annotated_types import Len

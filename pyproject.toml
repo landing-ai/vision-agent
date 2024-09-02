@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "vision-agent"
-version = "0.2.117"
+version = "0.2.120"
 description = "Toolset for Vision Agent"
 authors = ["Landing AI <dev@landing.ai>"]
 readme = "README.md"
@@ -56,6 +56,7 @@ types-pillow = "^9.5.0.4"
 data-science-types = "^0.2.23"
 types-tqdm = "^4.65.0.1"
 setuptools = "^68.0.0"
+griffe = "^0.45.3"
 mkdocs = "^1.5.3"
 mkdocstrings = {extras = ["python"], version = "^0.23.0"}
 mkdocs-material = "^9.4.2"

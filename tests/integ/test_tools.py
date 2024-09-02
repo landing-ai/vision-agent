@@ -10,7 +10,7 @@ from vision_agent.tools import (
     detr_segmentation,
     dpt_hybrid_midas,
     florence2_image_caption,
-    florence2_object_detection,
+    florence2_phrase_grounding,
     florence2_ocr,
     florence2_roberta_vqa,
     florence2_sam2_image,
@@ -67,7 +67,7 @@ def test_owl():
 
 def test_object_detection():
     img = ski.data.coins()
-    result = florence2_object_detection(
+    result = florence2_phrase_grounding(
         image=img,
         prompt="coin",
     )

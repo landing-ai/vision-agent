@@ -1,7 +1,9 @@
 import io
 import json
 import logging
+import os
 import tempfile
+import urllib.request
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -860,10 +862,10 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
-def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
-    """'florencev2_object_detection' is a tool that can detect and count multiple
-    objects given a text prompt such as category names or referring expressions. You
-    can optionally separate the categories in the text with commas. It returns a list
+def florence2_phrase_grounding(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+    """'florence2_phrase_grounding' is a tool that can detect multiple
+    objects given a text prompt which can be object names or caption. You
+    can optionally separate the object names in the text with commas. It returns a list
     of bounding boxes with normalized coordinates, label names and associated
     probability scores of 1.0.
 
@@ -880,7 +882,7 @@ def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str,
 
     Example
     -------
-        >>> florence2_object_detection('person looking at a coyote', image)
+        >>> florence2_phrase_grounding('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -892,7 +894,7 @@ def florence2_object_detection(prompt: str, image: np.ndarray) -> List[Dict[str,
         "image": image_b64,
         "task": "<CAPTION_TO_PHRASE_GROUNDING>",
         "prompt": prompt,
-        "function_name": "florence2_object_detection",
+        "function_name": "florence2_phrase_grounding",
     }
 
     detections = send_inference_request(data, "florence2", v2=True)
@@ -1320,6 +1322,13 @@ def extract_frames(
             video_file_path = video.download(output_path=temp_dir)
 
             return extract_frames_from_video(video_file_path, fps)
+    elif str(video_uri).startswith(("http", "https")):
+        _, image_suffix = os.path.splitext(video_uri)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
+            # Download the video and save it to the temporary file
+            with urllib.request.urlopen(str(video_uri)) as response:
+                tmp_file.write(response.read())
+            return extract_frames_from_video(tmp_file.name, fps)
 
     return extract_frames_from_video(str(video_uri), fps)
 
@@ -1350,10 +1359,10 @@ def save_json(data: Any, file_path: str) -> None:
 
 
 def load_image(image_path: str) -> np.ndarray:
-    """'load_image' is a utility function that loads an image from the given file path string.
+    """'load_image' is a utility function that loads an image from the given file path string or an URL.
 
     Parameters:
-        image_path (str): The path to the image.
+        image_path (str): The path or URL to the image.
 
     Returns:
         np.ndarray: The image as a NumPy array.
@@ -1365,6 +1374,13 @@ def load_image(image_path: str) -> np.ndarray:
     # NOTE: sometimes the generated code pass in a NumPy array
     if isinstance(image_path, np.ndarray):
         return image_path
+    if image_path.startswith(("http", "https")):
+        _, image_suffix = os.path.splitext(image_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
+            # Download the image and save it to the temporary file
+            with urllib.request.urlopen(image_path) as response:
+                tmp_file.write(response.read())
+            image_path = tmp_file.name
     image = Image.open(image_path).convert("RGB")
     return np.array(image)
 
@@ -1416,7 +1432,7 @@ def save_video(
         video.write_videofile(f.name, codec="libx264")
         f.close()
         _save_video_to_result(f.name)
-        return f.name
+    return f.name
 
 
 def _save_video_to_result(video_uri: str) -> None:
@@ -1518,6 +1534,7 @@ def overlay_segmentation_masks(
     medias: Union[np.ndarray, List[np.ndarray]],
     masks: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]],
     draw_label: bool = True,
+    secondary_label_key: str = "tracking_label",
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_segmentation_masks' is a utility function that displays segmentation
     masks.
@@ -1526,7 +1543,10 @@ def overlay_segmentation_masks(
         medias (Union[np.ndarray, List[np.ndarray]]): The image or frames to display
             the masks on.
         masks (Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]): A list of
-            dictionaries containing the masks.
+            dictionaries containing the masks, labels and scores.
+        draw_label (bool, optional): If True, the labels will be displayed on the image.
+        secondary_label_key (str, optional): The key to use for the secondary
+            tracking label which is needed in videos to display tracking information.
 
     Returns:
         np.ndarray: The image with the masks displayed.
@@ -1571,6 +1591,7 @@ def overlay_segmentation_masks(
         for elt in masks_int[i]:
             mask = elt["mask"]
             label = elt["label"]
+            tracking_lbl = elt.get(secondary_label_key, None)
             np_mask = np.zeros((pil_image.size[1], pil_image.size[0], 4))
             np_mask[mask > 0, :] = color[label] + (255 * 0.5,)
             mask_img = Image.fromarray(np_mask.astype(np.uint8))
@@ -1578,16 +1599,17 @@ def overlay_segmentation_masks(
 
             if draw_label:
                 draw = ImageDraw.Draw(pil_image)
-                text_box = draw.textbbox((0, 0), text=label, font=font)
+                text = tracking_lbl if tracking_lbl else label
+                text_box = draw.textbbox((0, 0), text=text, font=font)
                 x, y = _get_text_coords_from_mask(
                     mask,
                     v_gap=(text_box[3] - text_box[1]) + 10,
                     h_gap=(text_box[2] - text_box[0]) // 2,
                 )
                 if x != 0 and y != 0:
-                    text_box = draw.textbbox((x, y), text=label, font=font)
+                    text_box = draw.textbbox((x, y), text=text, font=font)
                     draw.rectangle((x, y, text_box[2], text_box[3]), fill=color[label])
-                    draw.text((x, y), label, fill="black", font=font)
+                    draw.text((x, y), text, fill="black", font=font)
         frame_out.append(np.array(pil_image))
     return frame_out[0] if len(frame_out) == 1 else frame_out
 
@@ -1830,7 +1852,7 @@ FUNCTION_TOOLS = [
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video,
-    florence2_object_detection,
+    florence2_phrase_grounding,
     ixc25_image_vqa,
     ixc25_video_vqa,
     detr_segmentation,
