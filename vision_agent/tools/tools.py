@@ -540,7 +540,7 @@ def countgd_counting(
     """
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
-    payload = {"prompts": [prompt]}
+    payload = {"prompts": [prompt], "model": "countgd"}
     metadata = {"function_name": "countgd_counting"}
     resp_data: List[Dict[str, Any]] = send_task_inference_request(
         payload, "text-to-object-detection", files=files, metadata=metadata
@@ -591,7 +591,7 @@ def countgd_example_based_counting(
     visual_prompts = [
         denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
     ]
-    payload = {"visual_prompts": json.loads(visual_prompts)}
+    payload = {"visual_prompts": json.loads(visual_prompts), "model": "countgd"}
     metadata = {"function_name": "countgd_example_based_counting"}
     resp_data: List[Dict[str, Any]] = send_task_inference_request(
         payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
