@@ -1,7 +1,8 @@
 from uuid import UUID
 from enum import Enum
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Annotated
 
+from annotated_types import Len
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, SerializationInfo
 
 
@@ -82,3 +83,19 @@ class JobStatus(str, Enum):
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
     STOPPED = "STOPPED"
+
+
+BoundingBox = Annotated[list[int | float], Len(min_length=4, max_length=4)]
+
+
+class ODResponseData(BaseModel):
+    label: str
+    score: float
+    bbox: BoundingBox = Field(alias="bounding_box")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+BoundingBoxes = list[ODResponseData]

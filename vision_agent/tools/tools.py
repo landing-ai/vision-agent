@@ -22,6 +22,8 @@ from vision_agent.tools.tool_utils import (
     get_tools_df,
     get_tools_info,
     send_inference_request,
+    send_task_inference_request,
+    filter_bboxes_by_threshold,
 )
 from vision_agent.tools.tools_types import (
     BboxInput,
@@ -30,6 +32,7 @@ from vision_agent.tools.tools_types import (
     Florencev2FtRequest,
     JobStatus,
     PromptTask,
+    ODResponseData,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
@@ -527,24 +530,22 @@ def countgd_counting(
     -------
         >>> countgd_counting("flower", image)
         [
-            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
-            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
-            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
+            {'score': 0.49, 'label': 'flower', 'bounding_box': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'flower', 'bounding_box': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'flower', 'bounding_box': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'flower', 'bounding_box': [0.44, 0.24, 0.49, 0.58},
         ]
     """
-    image_b64 = convert_to_b64(image)
-    payload = {
-        "image": image_b64,
-        "prompt": prompt,
-        "box_threshold": box_threshold,
-    }
-    metadata_payload = {"function_name": "countgd_counting"}
-    resp_data: List[Dict[str, Any]] = send_inference_request(
-        payload, "countgd", v2=True, metadata_payload=metadata_payload
-    )  # type: ignore
-
-    return resp_data
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {"prompts": [prompt]}
+    metadata = {"function_name": "countgd_counting"}
+    resp_data: List[Dict[str, Any]] = send_task_inference_request(
+        payload, "text-to-object-detection", files=files, metadata=metadata
+    )
+    bboxes_per_frame = resp_data[0]
+    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    return filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
 
 
 def countgd_example_based_counting(
@@ -577,27 +578,25 @@ def countgd_example_based_counting(
             image=image
         )
         [
-            {'score': 0.49, 'label': 'object', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.68, 'label': 'object', 'bbox': [0.2, 0.21, 0.45, 0.5},
-            {'score': 0.78, 'label': 'object', 'bbox': [0.3, 0.35, 0.48, 0.52},
-            {'score': 0.98, 'label': 'object', 'bbox': [0.44, 0.24, 0.49, 0.58},
+            {'score': 0.49, 'label': 'object', 'bounding_box': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'object', 'bounding_box': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'object', 'bounding_box': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'object', 'bounding_box': [0.44, 0.24, 0.49, 0.58},
         ]
     """
-    image_b64 = convert_to_b64(image)
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
     visual_prompts = [
         denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
     ]
-    payload = {
-        "image": image_b64,
-        "visual_prompts": visual_prompts,
-        "box_threshold": box_threshold,
-    }
-    metadata_payload = {"function_name": "countgd_example_based_counting"}
-    resp_data: List[Dict[str, Any]] = send_inference_request(
-        payload, "countgd", v2=True, metadata_payload=metadata_payload
-    )  # type: ignore
-
-    return resp_data
+    payload = {"visual_prompts": json.loads(visual_prompts)}
+    metadata = {"function_name": "countgd_example_based_counting"}
+    resp_data: List[Dict[str, Any]] = send_task_inference_request(
+        payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
+    )
+    bboxes_per_frame = resp_data[0]
+    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    return filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
 
 
 def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
