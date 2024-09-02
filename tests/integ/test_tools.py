@@ -190,9 +190,8 @@ def test_loca_visual_prompt_counting() -> None:
 
 def test_countgd_counting() -> None:
     img = ski.data.coins()
-
     result = countgd_counting(image=img, prompt="coin")
-    assert result["count"] == 24
+    assert len(result) == 24
 
 
 def test_countgd_example_based_counting() -> None:
@@ -201,7 +200,7 @@ def test_countgd_example_based_counting() -> None:
         visual_prompts=[[85, 106, 122, 145]],
         image=img,
     )
-    assert result["count"] == 24
+    assert len(result) == 24
 
 
 def test_git_vqa_v2() -> None:

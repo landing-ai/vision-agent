@@ -540,10 +540,11 @@ def countgd_counting(
         "box_threshold": box_threshold,
     }
     metadata_payload = {"function_name": "countgd_counting"}
-    resp: List[Dict[str, Any]] = send_inference_request(
+    resp_data: List[Dict[str, Any]] = send_inference_request(
         payload, "countgd", v2=True, metadata_payload=metadata_payload
     )  # type: ignore
-    return resp["data"]
+
+    return resp_data
 
 
 def countgd_example_based_counting(
@@ -583,16 +584,20 @@ def countgd_example_based_counting(
         ]
     """
     image_b64 = convert_to_b64(image)
+    visual_prompts = [
+        denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
+    ]
     payload = {
         "image": image_b64,
         "visual_prompts": visual_prompts,
         "box_threshold": box_threshold,
     }
     metadata_payload = {"function_name": "countgd_example_based_counting"}
-    resp: List[Dict[str, Any]] = send_inference_request(
+    resp_data: List[Dict[str, Any]] = send_inference_request(
         payload, "countgd", v2=True, metadata_payload=metadata_payload
     )  # type: ignore
-    return resp["data"]
+
+    return resp_data
 
 
 def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
