@@ -35,7 +35,7 @@ def send_inference_request(
     files: Optional[List[Tuple[Any, ...]]] = None,
     v2: bool = False,
     metadata_payload: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> Any:
     # TODO: runtime_tag and function_name should be metadata_payload and now included
     # in the service payload
     if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
@@ -70,11 +70,11 @@ def send_inference_request(
 
 def send_task_inference_request(
     payload: Dict[str, Any],
-    endpoint_name: str,
+    task_name: str,
     files: Optional[List[Tuple[Any, ...]]] = None,
     metadata: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    url = f"{_LND_API_URL_v2}/{endpoint_name}"
+) -> Any:
+    url = f"{_LND_API_URL_v2}/{task_name}"
     headers = {"apikey": _LND_API_KEY}
     session = _create_requests_session(
         url=url,
@@ -201,7 +201,7 @@ def _call_post(
     session: Session,
     files: Optional[List[Tuple[Any, ...]]] = None,
     function_name: str = "unknown",
-) -> dict[str, Any]:
+) -> Any:
     try:
         tool_call_trace = ToolCallTrace(
             endpoint_url=url,
@@ -238,4 +238,4 @@ def _call_post(
 def filter_bboxes_by_threshold(
     bboxes: BoundingBoxes, threshold: float
 ) -> BoundingBoxes:
-    return list(map(lambda bbox: bbox["score"] >= threshold, bboxes))
+    return list(filter(lambda bbox: bbox.score >= threshold, bboxes))
