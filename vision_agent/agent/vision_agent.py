@@ -76,10 +76,15 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
 def run_code_action(
     code: str, code_interpreter: CodeInterpreter, artifact_remote_path: str
-) -> Execution:
-    return code_interpreter.exec_isolation(
+) -> Tuple[Execution, str]:
+    result = code_interpreter.exec_isolation(
         BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
     )
+
+    obs = str(result.logs)
+    if result.error:
+        obs += f"\n{result.error}"
+    return result, obs
 
 
 def parse_execution(response: str) -> Optional[str]:
@@ -260,10 +265,9 @@ class VisionAgent(Agent):
                 code_action = parse_execution(response["response"])
 
                 if code_action is not None:
-                    result = run_code_action(
+                    result, obs = run_code_action(
                         code_action, code_interpreter, str(remote_artifacts_path)
                     )
-                    obs = str(result.logs)
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
