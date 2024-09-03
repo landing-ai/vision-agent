@@ -20,6 +20,7 @@ class BboxInputBase64(BaseModel):
 
 class PromptTask(str, Enum):
     """Valid task prompts options for the Florence2 model."""
+
     PHRASE_GROUNDING = "<CAPTION_TO_PHRASE_GROUNDING>"
 
 
