@@ -1,8 +1,7 @@
 from enum import Enum
 from uuid import UUID
-from typing import List, Tuple, Optional, Annotated
+from typing import List, Tuple, Optional, Union
 
-from annotated_types import Len
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, SerializationInfo
 
 
@@ -85,13 +84,10 @@ class JobStatus(str, Enum):
     STOPPED = "STOPPED"
 
 
-BoundingBox = Annotated[list[int | float], Len(min_length=4, max_length=4)]
-
-
 class ODResponseData(BaseModel):
     label: str
     score: float
-    bbox: BoundingBox = Field(alias="bounding_box")
+    bbox: Union[list[int], list[float]] = Field(alias="bounding_box")
 
     model_config = ConfigDict(
         populate_by_name=True,
