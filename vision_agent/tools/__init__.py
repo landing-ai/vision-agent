@@ -61,6 +61,8 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
+        print("try")
+
         from .tools import get_tool_descriptions, get_tools_df, get_tools_info
 
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO

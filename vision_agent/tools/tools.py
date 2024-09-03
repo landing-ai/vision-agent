@@ -1639,7 +1639,10 @@ def florence2_phrase_grounding_fine_tune(
     if status is not JobStatus.SUCCEEDED:
         raise FineTuneModelIsNotReady()
 
-    task = PromptTask[task]
+    task = PromptTask[
+        "CAPTION_TO_PHRASE_GROUNDING"
+    ]  # hardcode to <CAPTION_TO_PHRASE_GROUNDING> for now
+
     if task is PromptTask.OBJECT_DETECTION:
         prompt = ""
 
