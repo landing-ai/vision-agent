@@ -141,7 +141,12 @@ def format_lines(lines: List[str], start_idx: int) -> str:
 
 
 def view_lines(
-    lines: List[str], line_num: int, window_size: int, name: str, total_lines: int
+    lines: List[str],
+    line_num: int,
+    window_size: int,
+    name: str,
+    total_lines: int,
+    print_output: bool = True,
 ) -> str:
     start = max(0, line_num - window_size)
     end = min(len(lines), line_num + window_size)
@@ -154,7 +159,9 @@ def view_lines(
             else f"[{len(lines) - end} more lines]"
         )
     )
-    print(return_str)
+
+    if print_output:
+        print(return_str)
     return return_str
 
 
@@ -267,10 +274,16 @@ def edit_code_artifact(
                 DEFAULT_WINDOW_SIZE,
                 name,
                 total_lines,
+                print_output=False,
             )
             total_lines_edit = sum(1 for _ in edited_lines)
             edited_view = view_lines(
-                edited_lines, cur_line, DEFAULT_WINDOW_SIZE, name, total_lines_edit
+                edited_lines,
+                cur_line,
+                DEFAULT_WINDOW_SIZE,
+                name,
+                total_lines_edit,
+                print_output=False,
             )
 
             error_msg += f"\n[This is how your edit would have looked like if applied]\n{edited_view}\n\n[This is the original code before your edit]\n{original_view}"
@@ -480,9 +493,7 @@ def use_florence2_fine_tuning(
         >>> diff = use_florence2_fine_tuning(artifacts, "code.py", "phrase_grounding", "23b3b022-5ebf-4798-9373-20ef36429abf")
     """
 
-    task_to_fn = {
-        "phrase_grounding": "florence2_phrase_grounding"
-    }
+    task_to_fn = {"phrase_grounding": "florence2_phrase_grounding"}
 
     if name not in artifacts:
         output_str = f"[Artifact {name} does not exist]"
@@ -491,10 +502,12 @@ def use_florence2_fine_tuning(
 
     code = artifacts[name]
     if task.lower() == "phrase_grounding":
-        pattern = r'florence2_phrase_grounding\((".*?", .*?)\)'
+        pattern = r"florence2_phrase_grounding\(([^,]+),\s*([^\)]+)\)"
 
         def replacer(match):
-            return f'florence2_phrase_grounding({match.group(1)}, "{fine_tune_id}")'
+            arg1 = match.group(1)
+            arg2 = match.group(2)
+            return f'florence2_phrase_grounding({arg1}, {arg2}, "{fine_tune_id}")'
 
     else:
         raise ValueError(f"Task {task} is not supported.")
@@ -502,7 +515,9 @@ def use_florence2_fine_tuning(
     new_code = re.sub(pattern, replacer, code)
 
     if new_code == code:
-        output_str = f"[Fine tuning task {task} function {task_to_fn[task]} not found in code]"
+        output_str = (
+            f"[Fine tuning task {task} function {task_to_fn[task]} not found in code]"
+        )
         print(output_str)
         return output_str
 
