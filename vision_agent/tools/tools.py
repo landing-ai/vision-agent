@@ -26,8 +26,6 @@ from vision_agent.tools.tool_utils import (
     send_inference_request,
 )
 from vision_agent.tools.tools_types import (
-    BboxInput,
-    BboxInputBase64,
     FineTuning,
     Florence2FtRequest,
     JobStatus,
@@ -1580,78 +1578,6 @@ def overlay_heat_map(
         pil_image.convert("RGBA"), overlay.resize(pil_image.size)
     )
     return np.array(combined)
-
-
-# TODO: add this function to the imports so that is picked in the agent
-# def florencev2_fine_tuned_object_detection(
-#     image: np.ndarray, prompt: str, model_id: UUID, task: str
-# ) -> List[Dict[str, Any]]:
-#     """'florencev2_fine_tuned_object_detection' is a tool that uses a fine tuned model
-#     to detect objects given a text prompt such as a phrase or class names separated by
-#     commas. It returns a list of detected objects as labels and their location as
-#     bounding boxes with score of 1.0.
-
-#     Parameters:
-#         image (np.ndarray): The image to used to detect objects.
-#         prompt (str): The prompt to help find objects in the image.
-#         model_id (UUID): The fine-tuned model id.
-#         task (PromptTask): The florencev2 fine-tuning task. The options are
-#             CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
-
-#     Returns:
-#         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-#             bounding box of the detected objects with normalized coordinates between 0
-#             and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-#             top-left and xmax and ymax are the coordinates of the bottom-right of the
-#             bounding box. The scores are always 1.0 and cannot be thresholded
-
-#     Example
-#     -------
-#         >>> florencev2_fine_tuned_object_detection(
-#             image,
-#             'person looking at a coyote',
-#             UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83")
-#         )
-#         [
-#             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-#             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
-#         ]
-#     """
-#     # check if job succeeded first
-#     landing_api = LandingPublicAPI()
-#     status = landing_api.check_fine_tuning_job(model_id)
-#     if status is not JobStatus.SUCCEEDED:
-#         raise FineTuneModelIsNotReady()
-
-#     task = PromptTask[task]
-#     if task is PromptTask.OBJECT_DETECTION:
-#         prompt = ""
-
-#     data_obj = Florencev2FtRequest(
-#         image=convert_to_b64(image),
-#         task=task,
-#         tool="florencev2_fine_tuning",
-#         prompt=prompt,
-#         fine_tuning=FineTuning(job_id=model_id),
-#     )
-#     data = data_obj.model_dump(by_alias=True)
-#     metadata_payload = {"function_name": "florencev2_fine_tuned_object_detection"}
-#     detections = send_inference_request(
-#         data, "tools", v2=False, metadata_payload=metadata_payload
-#     )
-
-#     detections = detections[task.value]
-#     return_data = []
-#     image_size = image.shape[:2]
-#     for i in range(len(detections["bboxes"])):
-#         return_data.append(
-#             {
-#                 "score": 1.0,
-#                 "label": detections["labels"][i],
-#                 "bbox": normalize_bbox(detections["bboxes"][i], image_size),
-#             }
-#         )
-#     return return_data
 
 
 FUNCTION_TOOLS = [
