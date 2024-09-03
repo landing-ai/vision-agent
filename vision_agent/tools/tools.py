@@ -532,14 +532,15 @@ def countgd_counting(
     -------
         >>> countgd_counting("flower", image)
         [
-            {'score': 0.49, 'label': 'flower', 'bounding_box': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.68, 'label': 'flower', 'bounding_box': [0.2, 0.21, 0.45, 0.5},
-            {'score': 0.78, 'label': 'flower', 'bounding_box': [0.3, 0.35, 0.48, 0.52},
-            {'score': 0.98, 'label': 'flower', 'bounding_box': [0.44, 0.24, 0.49, 0.58},
+            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
     """
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
+    prompt = prompt.replace(", ", " .")
     payload = {"prompts": [prompt], "model": "countgd"}
     metadata = {"function_name": "countgd_counting"}
     resp_data = send_task_inference_request(
