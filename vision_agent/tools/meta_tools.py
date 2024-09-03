@@ -458,9 +458,9 @@ def florence2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> str:
         for bbox_input in bboxes_input
     ]
     landing_api = LandingPublicAPI()
-    fine_tune_id = str(landing_api.launch_fine_tuning_job(
-        "florencev2", task_type, fine_tuning_request
-    ))
+    fine_tune_id = str(
+        landing_api.launch_fine_tuning_job("florencev2", task_type, fine_tuning_request)
+    )
     print(f"[Florence2 fine tuning id: {fine_tune_id}]")
     return fine_tune_id
 
