@@ -30,7 +30,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, florence2_fine_tuning, use_florence2_fine_tuning",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -197,7 +197,7 @@ class VisionAgent(Agent):
             artifacts = Artifacts(WORKSPACE / "artifacts.pkl")
 
         with CodeInterpreterFactory.new_instance(
-            code_sandbox_runtime=self.code_sandbox_runtime
+            code_sandbox_runtime=self.code_sandbox_runtime,
         ) as code_interpreter:
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
