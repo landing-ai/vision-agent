@@ -564,7 +564,12 @@ class LocalCodeInterpreter(CodeInterpreter):
     ) -> None:
         super().__init__(timeout=timeout)
         self.nb = nbformat.v4.new_notebook()
-        self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
+        # Set the notebook execution path to the remote path
+        self.nb_client = NotebookClient(
+            self.nb,
+            timeout=self.timeout,
+            resources={"metadata": {"path": str(self.remote_path)}},
+        )
         _LOGGER.info(
             f"""Local code interpreter initialized
 Python version: {sys.version}
