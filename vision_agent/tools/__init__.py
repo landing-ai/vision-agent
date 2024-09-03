@@ -23,6 +23,7 @@ from .tools import (
     florence2_image_caption,
     florence2_ocr,
     florence2_phrase_grounding,
+    florence2_phrase_grounding_fine_tune,
     florence2_roberta_vqa,
     florence2_sam2_image,
     florence2_sam2_video,

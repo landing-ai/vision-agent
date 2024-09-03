@@ -1601,20 +1601,18 @@ def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
 
 
 # TODO: add this function to the imports so that is picked in the agent
-def florencev2_fine_tuned_object_detection(
-    image: np.ndarray, prompt: str, model_id: UUID, task: str
+def florence2_phrase_grounding_fine_tune(
+    prompt: str, image: np.ndarray, model_id: UUID
 ) -> List[Dict[str, Any]]:
-    """'florencev2_fine_tuned_object_detection' is a tool that uses a fine tuned model
+    """'florence2_phrase_grounding_fine_tune' is a tool that uses a fine tuned model
     to detect objects given a text prompt such as a phrase or class names separated by
     commas. It returns a list of detected objects as labels and their location as
     bounding boxes with score of 1.0.
 
     Parameters:
-        image (np.ndarray): The image to used to detect objects.
         prompt (str): The prompt to help find objects in the image.
+        image (np.ndarray): The image to used to detect objects.
         model_id (UUID): The fine-tuned model id.
-        task (PromptTask): The florencev2 fine-tuning task. The options are
-            CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1626,8 +1624,8 @@ def florencev2_fine_tuned_object_detection(
     Example
     -------
         >>> florencev2_fine_tuned_object_detection(
-            image,
             'person looking at a coyote',
+            image,
             UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83")
         )
         [
@@ -1705,12 +1703,17 @@ UTIL_TOOLS = [
     overlay_heat_map,
 ]
 
+# non-implemented tools
+OTHER_TOOLS = [
+    florence2_phrase_grounding_fine_tune,
+]
+
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
 
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
-TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
+TOOLS_INFO = get_tools_info(TOOLS + OTHER_TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
     [
         save_json,
