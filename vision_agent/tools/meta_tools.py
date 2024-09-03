@@ -501,12 +501,11 @@ def use_florence2_fine_tuning(
 
     code = artifacts[name]
     if task.lower() == "phrase_grounding":
-        pattern = r"florence2_phrase_grounding\(([^,]+),\s*([^\)]+)\)"
+        pattern = r"florence2_phrase_grounding\(\s*([^\)]+)\)"
 
         def replacer(match: re.Match) -> str:
-            arg1 = match.group(1)
-            arg2 = match.group(2)
-            return f'florence2_phrase_grounding({arg1}, {arg2}, "{fine_tune_id}")'
+            arg = match.group(1)  # capture all initial arguments
+            return f'florence2_phrase_grounding({arg}, "{fine_tune_id}")'
 
     else:
         raise ValueError(f"Task {task} is not supported.")
