@@ -458,10 +458,9 @@ def florence2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> str:
         for bbox_input in bboxes_input
     ]
     landing_api = LandingPublicAPI()
-    # fine_tune_id = str(landing_api.launch_fine_tuning_job(
-    #     "florencev2", task_type, fine_tuning_request
-    # ))
-    fine_tune_id = "23b3b022-5ebf-4798-9373-20ef36429abf"
+    fine_tune_id = str(landing_api.launch_fine_tuning_job(
+        "florencev2", task_type, fine_tuning_request
+    ))
     print(f"[Florence2 fine tuning id: {fine_tune_id}]")
     return fine_tune_id
 
@@ -504,7 +503,7 @@ def use_florence2_fine_tuning(
     if task.lower() == "phrase_grounding":
         pattern = r"florence2_phrase_grounding\(([^,]+),\s*([^\)]+)\)"
 
-        def replacer(match):
+        def replacer(match: re.Match) -> str:
             arg1 = match.group(1)
             arg2 = match.group(2)
             return f'florence2_phrase_grounding({arg1}, {arg2}, "{fine_tune_id}")'
