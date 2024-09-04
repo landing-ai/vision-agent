@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 import requests
 from moviepy.editor import ImageSequenceClip
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
@@ -24,12 +24,15 @@ from vision_agent.tools.tool_utils import (
     get_tools_df,
     get_tools_info,
     send_inference_request,
+    send_task_inference_request,
+    filter_bboxes_by_threshold,
 )
 from vision_agent.tools.tools_types import (
     FineTuning,
     Florence2FtRequest,
     JobStatus,
     PromptTask,
+    ODResponseData,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
@@ -453,7 +456,7 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
         "image": image_b64,
         "function_name": "loca_zero_shot_counting",
     }
-    resp_data = send_inference_request(data, "loca", v2=True)
+    resp_data: dict[str, Any] = send_inference_request(data, "loca", v2=True)
     resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
     return resp_data
 
@@ -467,6 +470,8 @@ def loca_visual_prompt_counting(
 
     Parameters:
         image (np.ndarray): The image that contains lot of instances of a single object
+        visual_prompt (Dict[str, List[float]]): Bounding box of the object in format
+        [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
@@ -494,9 +499,107 @@ def loca_visual_prompt_counting(
         "bbox": list(map(int, denormalize_bbox(bbox, image_size))),
         "function_name": "loca_visual_prompt_counting",
     }
-    resp_data = send_inference_request(data, "loca", v2=True)
+    resp_data: dict[str, Any] = send_inference_request(data, "loca", v2=True)
     resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
     return resp_data
+
+
+def countgd_counting(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_counting' is a tool that can precisely count multiple instances of an
+    object given a text prompt. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> countgd_counting("flower", image)
+        [
+            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
+        ]
+    """
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    prompt = prompt.replace(", ", " .")
+    payload = {"prompts": [prompt], "model": "countgd"}
+    metadata = {"function_name": "countgd_counting"}
+    resp_data = send_task_inference_request(
+        payload, "text-to-object-detection", files=files, metadata=metadata
+    )
+    bboxes_per_frame = resp_data[0]
+    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
+    return [bbox.model_dump() for bbox in filtered_bboxes]
+
+
+def countgd_example_based_counting(
+    visual_prompts: List[List[float]],
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_example_based_counting' is a tool that can precisely count multiple
+    instances of an object given few visual example prompts. It returns a list of bounding
+    boxes with normalized coordinates, label names and associated confidence scores.
+
+    Parameters:
+        visual_prompts (List[List[float]]): Bounding boxes of the object in format
+        [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> countgd_example_based_counting(
+            visual_prompts=[[0.1, 0.1, 0.4, 0.42], [0.2, 0.3, 0.25, 0.35]],
+            image=image
+        )
+        [
+            {'score': 0.49, 'label': 'object', 'bounding_box': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'object', 'bounding_box': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'object', 'bounding_box': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'object', 'bounding_box': [0.44, 0.24, 0.49, 0.58},
+        ]
+    """
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    visual_prompts = [
+        denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
+    ]
+    payload = {"visual_prompts": json.dumps(visual_prompts), "model": "countgd"}
+    metadata = {"function_name": "countgd_example_based_counting"}
+    resp_data = send_task_inference_request(
+        payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
+    )
+    bboxes_per_frame = resp_data[0]
+    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
+    return [bbox.model_dump() for bbox in filtered_bboxes]
 
 
 def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
@@ -644,7 +747,7 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
         "tool": "closed_set_image_classification",
         "function_name": "clip",
     }
-    resp_data = send_inference_request(data, "tools")
+    resp_data: dict[str, Any] = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
     return resp_data
 
@@ -672,7 +775,7 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
         "tool": "image_classification",
         "function_name": "vit_image_classification",
     }
-    resp_data = send_inference_request(data, "tools")
+    resp_data: dict[str, Any] = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
     return resp_data
 
@@ -699,7 +802,9 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
         "image": image_b64,
         "function_name": "vit_nsfw_classification",
     }
-    resp_data = send_inference_request(data, "nsfw-classification", v2=True)
+    resp_data: dict[str, Any] = send_inference_request(
+        data, "nsfw-classification", v2=True
+    )
     resp_data["score"] = round(resp_data["score"], 4)
     return resp_data
 
@@ -1580,6 +1685,74 @@ def overlay_heat_map(
     return np.array(combined)
 
 
+def overlay_counting_results(
+    image: np.ndarray, instances: List[Dict[str, Any]]
+) -> np.ndarray:
+    """'overlay_counting_results' is a utility function that displays counting results on
+    an image.
+
+    Parameters:
+        image (np.ndarray): The image to display the bounding boxes on.
+        instances (List[Dict[str, Any]]): A list of dictionaries containing the bounding
+            box information of each instance
+
+    Returns:
+        np.ndarray: The image with the instance_id dislpayed
+
+    Example
+    -------
+        >>> image_with_bboxes = overlay_counting_results(
+            image, [{'score': 0.99, 'label': 'object', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
+        )
+    """
+    pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
+    color = (158, 218, 229)
+
+    width, height = pil_image.size
+    fontsize = max(10, int(min(width, height) / 80))
+    pil_image = ImageEnhance.Brightness(pil_image).enhance(0.5)
+    draw = ImageDraw.Draw(pil_image)
+    font = ImageFont.truetype(
+        str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
+        fontsize,
+    )
+
+    for i, elt in enumerate(instances):
+        label = f"{i}"
+        box = elt["bbox"]
+
+        # denormalize the box if it is normalized
+        box = denormalize_bbox(box, (height, width))
+        x0, y0, x1, y1 = box
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+
+        text_box = draw.textbbox(
+            (cx, cy), text=label, font=font, align="center", anchor="mm"
+        )
+
+        # Calculate the offset to center the text within the bounding box
+        text_width = text_box[2] - text_box[0]
+        text_height = text_box[3] - text_box[1]
+        text_x0 = cx - text_width / 2
+        text_y0 = cy - text_height / 2
+        text_x1 = cx + text_width / 2
+        text_y1 = cy + text_height / 2
+
+        # Draw the rectangle encapsulating the text
+        draw.rectangle((text_x0, text_y0, text_x1, text_y1), fill=color)
+
+        # Draw the text at the center of the bounding box
+        draw.text(
+            (text_x0, text_y0),
+            label,
+            fill="black",
+            font=font,
+            anchor="lt",
+        )
+
+    return np.array(pil_image)
+
+
 FUNCTION_TOOLS = [
     owl_v2,
     extract_frames,
@@ -1587,8 +1760,7 @@ FUNCTION_TOOLS = [
     clip,
     vit_image_classification,
     vit_nsfw_classification,
-    loca_zero_shot_counting,
-    loca_visual_prompt_counting,
+    countgd_counting,
     florence2_image_caption,
     florence2_ocr,
     florence2_sam2_image,
@@ -1611,6 +1783,7 @@ UTIL_TOOLS = [
     overlay_bounding_boxes,
     overlay_segmentation_masks,
     overlay_heat_map,
+    overlay_counting_results,
 ]
 
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
@@ -1628,5 +1801,6 @@ UTILITIES_DOCSTRING = get_tool_documentation(
         overlay_bounding_boxes,
         overlay_segmentation_masks,
         overlay_heat_map,
+        overlay_counting_results,
     ]
 )

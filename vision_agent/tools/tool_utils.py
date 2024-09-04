@@ -1,6 +1,6 @@
+import os
 import inspect
 import logging
-import os
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
 import pandas as pd
@@ -13,6 +13,7 @@ from urllib3.util.retry import Retry
 from vision_agent.utils.exceptions import RemoteToolCallFailed
 from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.type_defs import LandingaiAPIKey
+from vision_agent.tools.tools_types import BoundingBoxes
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = os.environ.get("LANDINGAI_API_KEY", LandingaiAPIKey().api_key)
@@ -34,61 +35,58 @@ def send_inference_request(
     files: Optional[List[Tuple[Any, ...]]] = None,
     v2: bool = False,
     metadata_payload: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> Any:
     # TODO: runtime_tag and function_name should be metadata_payload and now included
     # in the service payload
-    try:
-        if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
-            payload["runtime_tag"] = runtime_tag
+    if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
+        payload["runtime_tag"] = runtime_tag
 
-        url = f"{_LND_API_URL_v2 if v2 else _LND_API_URL}/{endpoint_name}"
-        if "TOOL_ENDPOINT_URL" in os.environ:
-            url = os.environ["TOOL_ENDPOINT_URL"]
+    url = f"{_LND_API_URL_v2 if v2 else _LND_API_URL}/{endpoint_name}"
+    if "TOOL_ENDPOINT_URL" in os.environ:
+        url = os.environ["TOOL_ENDPOINT_URL"]
 
-        tool_call_trace = ToolCallTrace(
-            endpoint_url=url,
-            request=payload,
-            response={},
-            error=None,
-        )
-        headers = {"apikey": _LND_API_KEY}
-        if "TOOL_ENDPOINT_AUTH" in os.environ:
-            headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
-            headers.pop("apikey")
+    headers = {"apikey": _LND_API_KEY}
+    if "TOOL_ENDPOINT_AUTH" in os.environ:
+        headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
+        headers.pop("apikey")
 
-        session = _create_requests_session(
-            url=url,
-            num_retry=3,
-            headers=headers,
-        )
+    session = _create_requests_session(
+        url=url,
+        num_retry=3,
+        headers=headers,
+    )
 
-        if files is not None:
-            res = session.post(url, data=payload, files=files)
-        else:
-            res = session.post(url, json=payload)
-        if res.status_code != 200:
-            tool_call_trace.error = Error(
-                name="RemoteToolCallFailed",
-                value=f"{res.status_code} - {res.text}",
-                traceback_raw=[],
-            )
-            _LOGGER.error(f"Request failed: {res.status_code} {res.text}")
-            # TODO: function_name should be in metadata_payload
-            function_name = "unknown"
-            if "function_name" in payload:
-                function_name = payload["function_name"]
-            elif metadata_payload is not None and "function_name" in metadata_payload:
-                function_name = metadata_payload["function_name"]
-            raise RemoteToolCallFailed(function_name, res.status_code, res.text)
+    function_name = "unknown"
+    if "function_name" in payload:
+        function_name = payload["function_name"]
+    elif metadata_payload is not None and "function_name" in metadata_payload:
+        function_name = metadata_payload["function_name"]
 
-        resp = res.json()
-        tool_call_trace.response = resp
-        # TODO: consider making the response schema the same between below two sources
-        return resp if "TOOL_ENDPOINT_AUTH" in os.environ else resp["data"]  # type: ignore
-    finally:
-        trace = tool_call_trace.model_dump()
-        trace["type"] = "tool_call"
-        display({MimeType.APPLICATION_JSON: trace}, raw=True)
+    response = _call_post(url, payload, session, files, function_name)
+
+    # TODO: consider making the response schema the same between below two sources
+    return response if "TOOL_ENDPOINT_AUTH" in os.environ else response["data"]
+
+
+def send_task_inference_request(
+    payload: Dict[str, Any],
+    task_name: str,
+    files: Optional[List[Tuple[Any, ...]]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Any:
+    url = f"{_LND_API_URL_v2}/{task_name}"
+    headers = {"apikey": _LND_API_KEY}
+    session = _create_requests_session(
+        url=url,
+        num_retry=3,
+        headers=headers,
+    )
+
+    function_name = "unknown"
+    if metadata is not None and "function_name" in metadata:
+        function_name = metadata["function_name"]
+    response = _call_post(url, payload, session, files, function_name)
+    return response["data"]
 
 
 def _create_requests_session(
@@ -195,3 +193,49 @@ def get_tools_info(funcs: List[Callable[..., Any]]) -> Dict[str, str]:
         data[func.__name__] = f"{func.__name__}{inspect.signature(func)}:\n{desc}"
 
     return data
+
+
+def _call_post(
+    url: str,
+    payload: dict[str, Any],
+    session: Session,
+    files: Optional[List[Tuple[Any, ...]]] = None,
+    function_name: str = "unknown",
+) -> Any:
+    try:
+        tool_call_trace = ToolCallTrace(
+            endpoint_url=url,
+            request=payload,
+            response={},
+            error=None,
+        )
+
+        if files is not None:
+            response = session.post(url, data=payload, files=files)
+        else:
+            response = session.post(url, json=payload)
+
+        if response.status_code != 200:
+            tool_call_trace.error = Error(
+                name="RemoteToolCallFailed",
+                value=f"{response.status_code} - {response.text}",
+                traceback_raw=[],
+            )
+            _LOGGER.error(f"Request failed: {response.status_code} {response.text}")
+            raise RemoteToolCallFailed(
+                function_name, response.status_code, response.text
+            )
+
+        result = response.json()
+        tool_call_trace.response = result
+        return result
+    finally:
+        trace = tool_call_trace.model_dump()
+        trace["type"] = "tool_call"
+        display({MimeType.APPLICATION_JSON: trace}, raw=True)
+
+
+def filter_bboxes_by_threshold(
+    bboxes: BoundingBoxes, threshold: float
+) -> BoundingBoxes:
+    return list(filter(lambda bbox: bbox.score >= threshold, bboxes))
