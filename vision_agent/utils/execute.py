@@ -644,7 +644,7 @@ Timeout: {self.timeout}"""
             f.write(contents)
         _LOGGER.info(f"File ({file_path}) is uploaded to: {str(self.remote_path)}")
 
-        return Path(self.remote_path / file_path)
+        return Path(self.remote_path / Path(file_path).name)
 
     def download_file(
         self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]
