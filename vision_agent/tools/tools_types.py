@@ -1,8 +1,8 @@
 from enum import Enum
+from typing import List, Optional, Tuple, Union
 from uuid import UUID
-from typing import List, Tuple, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, SerializationInfo
+from pydantic import BaseModel, ConfigDict, Field, SerializationInfo, field_serializer
 
 
 class BboxInput(BaseModel):
