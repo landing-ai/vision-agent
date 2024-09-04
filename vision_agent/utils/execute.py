@@ -564,7 +564,13 @@ class LocalCodeInterpreter(CodeInterpreter):
     ) -> None:
         super().__init__(timeout=timeout)
         self.nb = nbformat.v4.new_notebook()
-        self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
+        # Set the notebook execution path to the remote path
+        self.resources = {"metadata": {"path": str(self.remote_path)}}
+        self.nb_client = NotebookClient(
+            self.nb,
+            timeout=self.timeout,
+            resources=self.resources,
+        )
         _LOGGER.info(
             f"""Local code interpreter initialized
 Python version: {sys.version}
@@ -606,7 +612,9 @@ Timeout: {self.timeout}"""
     def restart_kernel(self) -> None:
         self.close()
         self.nb = nbformat.v4.new_notebook()
-        self.nb_client = NotebookClient(self.nb, timeout=self.timeout)
+        self.nb_client = NotebookClient(
+            self.nb, timeout=self.timeout, resources=self.resources
+        )
         sleep(1)
         self._new_kernel()
 
@@ -636,7 +644,7 @@ Timeout: {self.timeout}"""
             f.write(contents)
         _LOGGER.info(f"File ({file_path}) is uploaded to: {str(self.remote_path)}")
 
-        return Path(self.remote_path / file_path)
+        return Path(self.remote_path / Path(file_path).name)
 
     def download_file(
         self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]
@@ -672,7 +680,8 @@ class CodeInterpreterFactory:
 
     @staticmethod
     def new_instance(
-        code_sandbox_runtime: Optional[str] = None, remote_path: Optional[str] = None
+        code_sandbox_runtime: Optional[str] = None,
+        remote_path: Optional[Union[str, Path]] = None,
     ) -> CodeInterpreter:
         if not code_sandbox_runtime:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")

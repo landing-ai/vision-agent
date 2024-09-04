@@ -30,7 +30,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, florence2_fine_tuning, use_florence2_fine_tuning",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -76,10 +76,15 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
 def run_code_action(
     code: str, code_interpreter: CodeInterpreter, artifact_remote_path: str
-) -> Execution:
-    return code_interpreter.exec_isolation(
+) -> Tuple[Execution, str]:
+    result = code_interpreter.exec_isolation(
         BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
     )
+
+    obs = str(result.logs)
+    if result.error:
+        obs += f"\n{result.error}"
+    return result, obs
 
 
 def parse_execution(response: str) -> Optional[str]:
@@ -192,7 +197,7 @@ class VisionAgent(Agent):
             artifacts = Artifacts(WORKSPACE / "artifacts.pkl")
 
         with CodeInterpreterFactory.new_instance(
-            code_sandbox_runtime=self.code_sandbox_runtime
+            code_sandbox_runtime=self.code_sandbox_runtime,
         ) as code_interpreter:
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
@@ -260,10 +265,9 @@ class VisionAgent(Agent):
                 code_action = parse_execution(response["response"])
 
                 if code_action is not None:
-                    result = run_code_action(
+                    result, obs = run_code_action(
                         code_action, code_interpreter, str(remote_artifacts_path)
                     )
-                    obs = str(result.logs)
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)

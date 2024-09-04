@@ -28,10 +28,8 @@ from vision_agent.tools.tool_utils import (
     filter_bboxes_by_threshold,
 )
 from vision_agent.tools.tools_types import (
-    BboxInput,
-    BboxInputBase64,
     FineTuning,
-    Florencev2FtRequest,
+    Florence2FtRequest,
     JobStatus,
     PromptTask,
     ODResponseData,
@@ -867,7 +865,9 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
-def florence2_phrase_grounding(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+def florence2_phrase_grounding(
+    prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """'florence2_phrase_grounding' is a tool that can detect multiple
     objects given a text prompt which can be object names or caption. You
     can optionally separate the object names in the text with commas. It returns a list
@@ -877,6 +877,8 @@ def florence2_phrase_grounding(prompt: str, image: np.ndarray) -> List[Dict[str,
     Parameters:
         prompt (str): The prompt to ground to the image.
         image (np.ndarray): The image to used to detect objects
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -895,14 +897,33 @@ def florence2_phrase_grounding(prompt: str, image: np.ndarray) -> List[Dict[str,
     """
     image_size = image.shape[:2]
     image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "task": "<CAPTION_TO_PHRASE_GROUNDING>",
-        "prompt": prompt,
-        "function_name": "florence2_phrase_grounding",
-    }
 
-    detections = send_inference_request(data, "florence2", v2=True)
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        data_obj = Florence2FtRequest(
+            image=image_b64,
+            task=PromptTask.PHRASE_GROUNDING,
+            tool="florencev2_fine_tuning",
+            prompt=prompt,
+            fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
+        )
+        data = data_obj.model_dump(by_alias=True)
+        detections = send_inference_request(data, "tools", v2=False)
+    else:
+        data = {
+            "image": image_b64,
+            "task": "<CAPTION_TO_PHRASE_GROUNDING>",
+            "prompt": prompt,
+            "function_name": "florence2_phrase_grounding",
+        }
+        detections = send_inference_request(data, "florence2", v2=True)
+
     detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
     return_data = []
     for i in range(len(detections["bboxes"])):
@@ -1730,119 +1751,6 @@ def overlay_counting_results(
         )
 
     return np.array(pil_image)
-
-
-# TODO: add this function to the imports so that is picked in the agent
-def florencev2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> UUID:
-    """'florencev2_fine_tuning' is a tool that fine-tune florencev2 to be able
-    to detect objects in an image based on a given dataset. It returns the fine
-    tuning job id.
-
-    Parameters:
-        bboxes (List[BboxInput]): A list of BboxInput containing the
-            image path, labels and bounding boxes.
-        task (PromptTask): The florencev2 fine-tuning task. The options are
-            CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
-
-    Returns:
-        UUID: The fine tuning job id, this id will used to retrieve the fine
-            tuned model.
-
-    Example
-    -------
-        >>> fine_tuning_job_id = florencev2_fine_tuning(
-            [{'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[370, 30, 560, 290]]},
-             {'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[120, 0, 300, 170]]}],
-             "OBJECT_DETECTION"
-        )
-    """
-    bboxes_input = [BboxInput.model_validate(bbox) for bbox in bboxes]
-    task_input = PromptTask[task]
-    fine_tuning_request = [
-        BboxInputBase64(
-            image=convert_to_b64(bbox_input.image_path),
-            filename=bbox_input.image_path.split("/")[-1],
-            labels=bbox_input.labels,
-            bboxes=bbox_input.bboxes,
-        )
-        for bbox_input in bboxes_input
-    ]
-    landing_api = LandingPublicAPI()
-    return landing_api.launch_fine_tuning_job(
-        "florencev2", task_input, fine_tuning_request
-    )
-
-
-# TODO: add this function to the imports so that is picked in the agent
-def florencev2_fine_tuned_object_detection(
-    image: np.ndarray, prompt: str, model_id: UUID, task: str
-) -> List[Dict[str, Any]]:
-    """'florencev2_fine_tuned_object_detection' is a tool that uses a fine tuned model
-    to detect objects given a text prompt such as a phrase or class names separated by
-    commas. It returns a list of detected objects as labels and their location as
-    bounding boxes with score of 1.0.
-
-    Parameters:
-        image (np.ndarray): The image to used to detect objects.
-        prompt (str): The prompt to help find objects in the image.
-        model_id (UUID): The fine-tuned model id.
-        task (PromptTask): The florencev2 fine-tuning task. The options are
-            CAPTION, CAPTION_TO_PHRASE_GROUNDING and OBJECT_DETECTION.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
-            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-            top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box. The scores are always 1.0 and cannot be thresholded
-
-    Example
-    -------
-        >>> florencev2_fine_tuned_object_detection(
-            image,
-            'person looking at a coyote',
-            UUID("381cd5f9-5dc4-472d-9260-f3bb89d31f83")
-        )
-        [
-            {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
-        ]
-    """
-    # check if job succeeded first
-    landing_api = LandingPublicAPI()
-    status = landing_api.check_fine_tuning_job(model_id)
-    if status is not JobStatus.SUCCEEDED:
-        raise FineTuneModelIsNotReady()
-
-    task = PromptTask[task]
-    if task is PromptTask.OBJECT_DETECTION:
-        prompt = ""
-
-    data_obj = Florencev2FtRequest(
-        image=convert_to_b64(image),
-        task=task,
-        tool="florencev2_fine_tuning",
-        prompt=prompt,
-        fine_tuning=FineTuning(job_id=model_id),
-    )
-    data = data_obj.model_dump(by_alias=True)
-    metadata_payload = {"function_name": "florencev2_fine_tuned_object_detection"}
-    detections = send_inference_request(
-        data, "tools", v2=False, metadata_payload=metadata_payload
-    )
-
-    detections = detections[task.value]
-    return_data = []
-    image_size = image.shape[:2]
-    for i in range(len(detections["bboxes"])):
-        return_data.append(
-            {
-                "score": 1.0,
-                "label": detections["labels"][i],
-                "bbox": normalize_bbox(detections["bboxes"][i], image_size),
-            }
-        )
-    return return_data
 
 
 FUNCTION_TOOLS = [

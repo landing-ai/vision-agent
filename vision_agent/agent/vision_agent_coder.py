@@ -1,5 +1,4 @@
 import copy
-import difflib
 import logging
 import os
 import sys
@@ -29,6 +28,7 @@ from vision_agent.agent.vision_agent_coder_prompts import (
     USER_REQ,
 )
 from vision_agent.lmm import LMM, AzureOpenAILMM, Message, OllamaLMM, OpenAILMM
+from vision_agent.tools.meta_tools import get_diff
 from vision_agent.utils import CodeInterpreterFactory, Execution
 from vision_agent.utils.execute import CodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
@@ -61,14 +61,6 @@ class DefaultImports:
         NOTE: be sure to run this method after the custom tools have been registered.
         """
         return DefaultImports.to_code_string() + "\n\n" + code
-
-
-def get_diff(before: str, after: str) -> str:
-    return "".join(
-        difflib.unified_diff(
-            before.splitlines(keepends=True), after.splitlines(keepends=True)
-        )
-    )
 
 
 def format_memory(memory: List[Dict[str, str]]) -> str:
