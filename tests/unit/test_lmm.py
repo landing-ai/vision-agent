@@ -1,8 +1,6 @@
 import json
 import tempfile
-from unittest.mock import patch
 
-import numpy as np
 import pytest
 from PIL import Image
 
