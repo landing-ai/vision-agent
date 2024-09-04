@@ -181,7 +181,7 @@ def denormalize_bbox(
         raise ValueError("Bounding box must be of length 4.")
 
     arr = np.array(bbox)
-    if np.all((arr >= 0) & (arr <= 1)):
+    if np.all((arr[:2] >= 0) & (arr[:2] <= 1)):
         x1, y1, x2, y2 = bbox
         x1 = round(x1 * image_size[1])
         y1 = round(y1 * image_size[0])

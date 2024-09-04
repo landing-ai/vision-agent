@@ -1,9 +1,13 @@
 name: CI
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+env:
+  LANDINGAI_DEV_API_KEY: ${{ secrets.LANDINGAI_DEV_API_KEY }}
 
 jobs:
   unit_test:
@@ -79,6 +83,9 @@ jobs:
     - name: Test with pytest
       run: |
         poetry run pytest -v tests/integ
+    - name: Test with pytest, dev env
+      run: |
+        LANDINGAI_API_KEY=$LANDINGAI_DEV_API_KEY LANDINGAI_URL=https://api.dev.landing.ai poetry run pytest -v tests/integration_dev
 
   release:
     name: Release
