@@ -13,6 +13,8 @@ from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as ImageType
 
+from vision_agent.utils import extract_frames_from_video
+
 COLORS = [
     (158, 218, 229),
     (219, 219, 141),
@@ -170,6 +172,51 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
         raise ValueError(
             f"Invalid input image: {data}. Input image must be a PIL Image or a numpy array."
         )
+
+
+def encode_image_bytes(image: bytes) -> str:
+    image = Image.open(io.BytesIO(image)).convert("RGB")  # type: ignore
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")  # type: ignore
+    encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return encoded_image
+
+
+def encode_media(media: Union[str, Path]) -> str:
+    if isinstance(media, str) and media.startswith(("http", "https")):
+        # for mp4 video url, we assume there is a same url but ends with png
+        # vision-agent-ui will upload this png when uploading the video
+        if media.endswith((".mp4", "mov")) and media.find("vision-agent-dev.s3") != -1:
+            return media[:-4] + ".png"
+        return media
+
+    # if media is already a base64 encoded image return
+    if isinstance(media, str) and media.startswith("data:image/"):
+        return media
+
+    extension = "png"
+    extension = Path(media).suffix
+    if extension.lower() not in {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".bmp",
+        ".mp4",
+        ".mov",
+    }:
+        raise ValueError(f"Unsupported image extension: {extension}")
+
+    image_bytes = b""
+    if extension.lower() in {".mp4", ".mov"}:
+        frames = extract_frames_from_video(str(media), fps=1)
+        image = frames[len(frames) // 2]
+        buffer = io.BytesIO()
+        Image.fromarray(image[0]).convert("RGB").save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+    else:
+        image_bytes = open(media, "rb").read()
+    return encode_image_bytes(image_bytes)
 
 
 def denormalize_bbox(
