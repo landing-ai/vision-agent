@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import List, Optional, Tuple
 from uuid import UUID
+from typing import List, Tuple, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, SerializationInfo, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, SerializationInfo
 
 
 class BboxInput(BaseModel):
@@ -82,3 +82,16 @@ class JobStatus(str, Enum):
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
     STOPPED = "STOPPED"
+
+
+class ODResponseData(BaseModel):
+    label: str
+    score: float
+    bbox: Union[list[int], list[float]] = Field(alias="bounding_box")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+
+
+BoundingBoxes = list[ODResponseData]
