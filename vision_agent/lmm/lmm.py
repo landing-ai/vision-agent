@@ -3,7 +3,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union, cast, Sequence
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Union, cast
 
 import anthropic
 import requests
@@ -20,7 +20,10 @@ _LOGGER = logging.getLogger(__name__)
 class LMM(ABC):
     @abstractmethod
     def generate(
-        self, prompt: str, media: Optional[Sequence[Union[str, Path]]] = None, **kwargs: Any
+        self,
+        prompt: str,
+        media: Optional[Sequence[Union[str, Path]]] = None,
+        **kwargs: Any,
     ) -> Union[str, Iterator[Optional[str]]]:
         pass
 
