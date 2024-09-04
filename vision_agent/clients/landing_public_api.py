@@ -12,7 +12,7 @@ from vision_agent.utils.type_defs import LandingaiAPIKey
 
 class LandingPublicAPI(BaseHTTP):
     def __init__(self) -> None:
-        landing_url = os.environ.get("LANDINGAI_URL", "https://api.dev.landing.ai")
+        landing_url = os.environ.get("LANDINGAI_URL", "https://api.landing.ai")
         landing_api_key = os.environ.get("LANDINGAI_API_KEY", LandingaiAPIKey().api_key)
         headers = {"Content-Type": "application/json", "apikey": landing_api_key}
         super().__init__(base_endpoint=landing_url, headers=headers)
