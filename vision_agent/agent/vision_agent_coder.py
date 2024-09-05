@@ -693,6 +693,8 @@ class VisionAgentCoder(Agent):
                 show the image(s) created by visualization code (if there is any).
             customized_tool_names (List[str]): A list of customized tools for agent to pick and use.
                 If not provided, default to full tool set from vision_agent.tools.
+            envs (Dict[str, str]): A dict of envs that would be passed to the CodeInterpreter.
+                Mainly for passing local envs to E2B. Local interpreter can pick up envs naturally.
 
         Returns:
             Dict[str, Any]: A dictionary containing the code, test, test result, plan,
