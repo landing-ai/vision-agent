@@ -2,7 +2,7 @@ import base64
 import logging
 import tempfile
 from functools import lru_cache
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -41,6 +41,39 @@ def play_video(video_base64: str) -> None:
                 break
         cap.release()
         cv2.destroyAllWindows()
+
+
+def video_writer(
+    frames: List[np.ndarray], fps: float = 1.0, filename: Optional[str] = None
+) -> str:
+    if filename is None:
+        filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    height, width = frames[0].shape[:2]
+    writer = cv2.VideoWriter(filename, fourcc, fps, (width, height))
+    for frame in frames:
+        writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+    writer.release()
+    return filename
+
+
+def frames_to_bytes(
+    frames: List[np.ndarray], fps: float = 10, file_ext: str = ".mp4"
+) -> bytes:
+    r"""Convert a list of frames to a video file encoded into a byte string.
+
+    Parameters:
+        frames: the list of frames
+        fps: the frames per second of the video
+        file_ext: the file extension of the video file
+    """
+    with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
+        video_writer(frames, fps, temp_file.name)
+
+        with open(temp_file.name, "rb") as f:
+            buffer_bytes = f.read()
+    return buffer_bytes
 
 
 @lru_cache(maxsize=8)

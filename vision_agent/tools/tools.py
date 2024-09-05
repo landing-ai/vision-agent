@@ -12,7 +12,6 @@ from uuid import UUID
 import cv2
 import numpy as np
 import requests
-from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
@@ -35,7 +34,6 @@ from vision_agent.tools.tools_types import (
     ODResponseData,
     PromptTask,
 )
-from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -44,12 +42,16 @@ from vision_agent.utils.image_utils import (
     convert_to_b64,
     denormalize_bbox,
     encode_image_bytes,
-    frames_to_bytes,
     get_image_size,
     normalize_bbox,
     numpy_to_bytes,
     rle_decode,
     rle_decode_array,
+)
+from vision_agent.utils.video import (
+    extract_frames_from_video,
+    frames_to_bytes,
+    video_writer,
 )
 
 register_heif_opener()
@@ -1513,17 +1515,14 @@ def save_video(
         "/tmp/tmpvideo123.mp4"
     """
     if fps <= 0:
-        _LOGGER.warning(f"Invalid fps value: {fps}. Setting fps to 4 (default value).")
-        fps = 4
-    with ImageSequenceClip(frames, fps=fps) as video:
-        if output_video_path:
-            f = open(output_video_path, "wb")
-        else:
-            f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)  # type: ignore
-        video.write_videofile(f.name, codec="libx264")
-        f.close()
-        _save_video_to_result(f.name)
-    return f.name
+        raise ValueError(f"fps must be greater than 0 got {fps}")
+
+    if output_video_path is None:
+        output_video_path = tempfile.NamedTemporaryFile(delete=False).name
+
+    output_video_path = video_writer(frames, fps, output_video_path)
+    _save_video_to_result(output_video_path)
+    return output_video_path
 
 
 def _save_video_to_result(video_uri: str) -> None:
