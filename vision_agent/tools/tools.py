@@ -13,26 +13,27 @@ import cv2
 import numpy as np
 import requests
 from moviepy.editor import ImageSequenceClip
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
+from vision_agent.lmm.lmm import OpenAILMM
 from vision_agent.tools.tool_utils import (
+    filter_bboxes_by_threshold,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
     get_tools_info,
     send_inference_request,
     send_task_inference_request,
-    filter_bboxes_by_threshold,
 )
 from vision_agent.tools.tools_types import (
     FineTuning,
     Florence2FtRequest,
     JobStatus,
-    PromptTask,
     ODResponseData,
+    PromptTask,
 )
 from vision_agent.utils import extract_frames_from_video
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
@@ -42,6 +43,7 @@ from vision_agent.utils.image_utils import (
     convert_quad_box_to_bbox,
     convert_to_b64,
     denormalize_bbox,
+    encode_image_bytes,
     frames_to_bytes,
     get_image_size,
     normalize_bbox,
@@ -689,6 +691,69 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         payload, "internlm-xcomposer2", files=files, v2=True
     )
     return cast(str, data["answer"])
+
+
+def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
+    """'gpt4o_image_vqa' is a tool that can answer any questions about arbitrary images
+    including regular images or images of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the image
+        image (np.ndarray): The reference image used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> gpt4o_image_vqa('What is the cat doing?', image)
+        'drinking milk'
+    """
+
+    lmm = OpenAILMM()
+    buffer = io.BytesIO()
+    Image.fromarray(image).save(buffer, format="PNG")
+    image_bytes = buffer.getvalue()
+    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+    resp = lmm.generate(prompt, [image_b64])
+    return cast(str, resp)
+
+
+def gpt4o_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
+    """'gpt4o_video_vqa' is a tool that can answer any questions about arbitrary videos
+    including regular videos or videos of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> gpt4o_video_vqa('Which football player made the goal?', frames)
+        'Lionel Messi'
+    """
+
+    lmm = OpenAILMM()
+
+    if len(frames) > 10:
+        step = len(frames) / 10
+        frames = [frames[int(i * step)] for i in range(10)]
+
+    frames_b64 = []
+    for frame in frames:
+        buffer = io.BytesIO()
+        Image.fromarray(frame).save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+        image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+        frames_b64.append(image_b64)
+
+    resp = lmm.generate(prompt, frames_b64)
+    return cast(str, resp)
 
 
 def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
