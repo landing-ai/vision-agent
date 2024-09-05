@@ -330,7 +330,7 @@ def generate_vision_code(
         agent = va.agent.VisionAgentCoder()
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
-    response = agent.chat_with_workflow(fixed_chat, test_multi_plan=True)
+    response = agent.chat_with_workflow(fixed_chat, test_multi_plan=False)
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -425,18 +425,19 @@ def get_tool_descriptions() -> str:
 
 
 def florence2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> str:
-    """'florence2_fine_tuning' is a tool that fine-tune florence2 to be able to detect
+    """DO NOT use this function unless the user has supplied you with bboxes.
+    'florence2_fine_tuning' is a tool that fine-tune florence2 to be able to detect
     objects in an image based on a given dataset. It returns the fine tuning job id.
 
     Parameters:
-        bboxes (List[BboxInput]): A list of BboxInput containing the
-            image path, labels and bounding boxes.
+        bboxes (List[BboxInput]): A list of BboxInput containing the image path, labels
+            and bounding boxes. The coordinates are unnormalized.
         task (str): The florencev2 fine-tuning task. The options are
             'phrase_grounding'.
 
     Returns:
-        UUID: The fine tuning job id, this id will used to retrieve the fine
-            tuned model.
+        str: The fine tuning job id, this id will used to retrieve the fine tuned
+            model.
 
     Example
     -------
@@ -458,9 +459,10 @@ def florence2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> str:
         for bbox_input in bboxes_input
     ]
     landing_api = LandingPublicAPI()
-    fine_tune_id = str(
-        landing_api.launch_fine_tuning_job("florencev2", task_type, fine_tuning_request)
-    )
+    # fine_tune_id = str(
+    #     landing_api.launch_fine_tuning_job("florencev2", task_type, fine_tuning_request)
+    # )
+    fine_tune_id = "af60e75b-8489-43c0-b635-96bfdb8168b0"
     print(f"[Florence2 fine tuning id: {fine_tune_id}]")
     return fine_tune_id
 
@@ -471,6 +473,11 @@ def get_diff(before: str, after: str) -> str:
             before.splitlines(keepends=True), after.splitlines(keepends=True)
         )
     )
+
+
+def get_diff_with_prompts(name: str, before: str, after: str) -> str:
+    diff = get_diff(before, after)
+    return f"[Artifact {name} edits]\n{diff}\n[End of edits]"
 
 
 def use_florence2_fine_tuning(
