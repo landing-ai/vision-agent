@@ -49,7 +49,7 @@ def video_writer(
     if filename is None:
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
     height, width = frames[0].shape[:2]
     writer = cv2.VideoWriter(filename, fourcc, fps, (width, height))
     for frame in frames:
