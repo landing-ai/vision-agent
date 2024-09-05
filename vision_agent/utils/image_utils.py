@@ -2,7 +2,6 @@
 
 import base64
 import io
-import tempfile
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
@@ -12,7 +11,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as ImageType
 
-from vision_agent.utils import extract_frames_from_video, video_writer
+from vision_agent.utils import extract_frames_from_video
 
 COLORS = [
     (158, 218, 229),
