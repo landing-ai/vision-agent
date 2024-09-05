@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
-from decord import VideoReader
+from decord import VideoReader  # type: ignore
 
 _LOGGER = logging.getLogger(__name__)
 # The maximum length of the clip to extract frames from, in seconds
