@@ -682,12 +682,13 @@ class CodeInterpreterFactory:
     def new_instance(
         code_sandbox_runtime: Optional[str] = None,
         remote_path: Optional[Union[str, Path]] = None,
+        envs: Optional[Dict[str, str]] = None,
     ) -> CodeInterpreter:
         if not code_sandbox_runtime:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
         if code_sandbox_runtime == "e2b":
             instance: CodeInterpreter = E2BCodeInterpreter(
-                timeout=_SESSION_TIMEOUT, remote_path=remote_path
+                timeout=_SESSION_TIMEOUT, remote_path=remote_path, envs=envs
             )
         elif code_sandbox_runtime == "local":
             instance = LocalCodeInterpreter(
