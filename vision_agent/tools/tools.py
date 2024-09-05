@@ -1820,7 +1820,6 @@ def overlay_counting_results(
 
 FUNCTION_TOOLS = [
     owl_v2,
-    extract_frames,
     ocr,
     clip,
     vit_image_classification,
@@ -1841,6 +1840,7 @@ FUNCTION_TOOLS = [
 ]
 
 UTIL_TOOLS = [
+    extract_frames,
     save_json,
     load_image,
     save_image,
@@ -1856,7 +1856,7 @@ TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
 TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
-TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
+TOOLS_INFO = get_tools_info(FUNCTION_TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(
     [
         save_json,
