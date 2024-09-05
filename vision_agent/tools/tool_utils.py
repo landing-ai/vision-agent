@@ -1,6 +1,6 @@
-import os
 import inspect
 import logging
+import os
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
 import pandas as pd
@@ -10,10 +10,10 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from vision_agent.tools.tools_types import BoundingBoxes
 from vision_agent.utils.exceptions import RemoteToolCallFailed
 from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.type_defs import LandingaiAPIKey
-from vision_agent.tools.tools_types import BoundingBoxes
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = os.environ.get("LANDINGAI_API_KEY", LandingaiAPIKey().api_key)

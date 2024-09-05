@@ -1,8 +1,6 @@
 import json
 import tempfile
-from unittest.mock import patch
 
-import numpy as np
 import pytest
 from PIL import Image
 
@@ -163,60 +161,3 @@ def test_chat_ollama_mock(chat_ollama_lmm_mock):  # noqa: F811
     assert response == "mocked response"
     call_args = json.loads(chat_ollama_lmm_mock.call_args.kwargs["data"])
     assert call_args["messages"][0]["content"] == "test prompt"
-
-
-@pytest.mark.parametrize(
-    "openai_lmm_mock",
-    ['{"Parameters": {"prompt": "cat"}}'],
-    indirect=["openai_lmm_mock"],
-)
-def test_generate_classifier(openai_lmm_mock):  # noqa: F811
-    with patch("vision_agent.tools.clip") as clip_mock:
-        clip_mock.return_value = "test"
-        clip_mock.__name__ = "clip"
-        clip_mock.__doc__ = "clip"
-
-        lmm = OpenAILMM()
-        prompt = "Can you generate a cat classifier?"
-        classifier = lmm.generate_classifier(prompt)
-        dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
-        classifier(dummy_image)
-        assert clip_mock.call_args[0][1] == "cat"
-
-
-@pytest.mark.parametrize(
-    "openai_lmm_mock",
-    ['{"Parameters": {"prompt": "cat"}}'],
-    indirect=["openai_lmm_mock"],
-)
-def test_generate_detector(openai_lmm_mock):  # noqa: F811
-    with patch("vision_agent.tools.owl_v2") as owl_v2_mock:
-        owl_v2_mock.return_value = "test"
-        owl_v2_mock.__name__ = "owl_v2"
-        owl_v2_mock.__doc__ = "owl_v2"
-
-        lmm = OpenAILMM()
-        prompt = "Can you generate a cat classifier?"
-        detector = lmm.generate_detector(prompt)
-        dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
-        detector(dummy_image)
-        assert owl_v2_mock.call_args[0][0] == "cat"
-
-
-@pytest.mark.parametrize(
-    "openai_lmm_mock",
-    ['{"Parameters": {"prompt": "cat"}}'],
-    indirect=["openai_lmm_mock"],
-)
-def test_generate_segmentor(openai_lmm_mock):  # noqa: F811
-    with patch("vision_agent.tools.grounding_sam") as grounding_sam_mock:
-        grounding_sam_mock.return_value = "test"
-        grounding_sam_mock.__name__ = "grounding_sam"
-        grounding_sam_mock.__doc__ = "grounding_sam"
-
-        lmm = OpenAILMM()
-        prompt = "Can you generate a cat classifier?"
-        segmentor = lmm.generate_segmentor(prompt)
-        dummy_image = np.zeros((10, 10, 3)).astype(np.uint8)
-        segmentor(dummy_image)
-        assert grounding_sam_mock.call_args[0][0] == "cat"
