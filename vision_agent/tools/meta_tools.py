@@ -528,7 +528,7 @@ def use_florence2_fine_tuning(
 
     artifacts[name] = new_code
 
-    diff = get_diff(code, new_code)
+    diff = get_diff_with_prompts(name, code, new_code)
     print(diff)
     return diff
 
