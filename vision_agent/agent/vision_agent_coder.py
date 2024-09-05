@@ -675,6 +675,7 @@ class VisionAgentCoder(Agent):
         test_multi_plan: bool = True,
         display_visualization: bool = False,
         customized_tool_names: Optional[List[str]] = None,
+        envs: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """Chat with VisionAgentCoder and return intermediate information regarding the
         task.
@@ -703,7 +704,7 @@ class VisionAgentCoder(Agent):
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         with CodeInterpreterFactory.new_instance(
-            code_sandbox_runtime=self.code_sandbox_runtime
+            code_sandbox_runtime=self.code_sandbox_runtime, envs=envs
         ) as code_interpreter:
             chat = copy.deepcopy(chat)
             media_list = []
@@ -859,7 +860,9 @@ class VisionAgentCoder(Agent):
         plans = write_plans(
             int_chat,
             T.get_tool_descriptions_by_names(
-                customized_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
+                customized_tool_names,
+                T.FUNCTION_TOOLS,
+                T.UTIL_TOOLS,  # type: ignore
             ),
             format_memory(working_memory),
             planner,
