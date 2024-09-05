@@ -84,7 +84,6 @@ OBSERVATION:
 [{'score': 0.99, 'label': 'dog', 'box': [0.1, 0.2, 0.3, 0.4]}]
 
 AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to detect one dog and shown you the output, do the results look good to you?", "let_user_respond": true}
-
 """
 
 
@@ -147,6 +146,7 @@ OBSERVATION:
 AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_florence2_fine_tuning(artifacts, "code.py", "phrase_grounding", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
+[Artifact code.py edits]
 --- 
 +++ 
 @@ -1,7 +1,7 @@
@@ -158,6 +158,7 @@ OBSERVATION:
      workers = [d for d in detections if d['label'] == 'worker']
      helmets = [d for d in detections if d['label'] == 'helmet']
      count = 0
+[End of edits]
 
 
 AGENT: {"thoughts": "I have updated the code to use the fine tuned model, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png')</execute_python>", "let_user_respond": false}
