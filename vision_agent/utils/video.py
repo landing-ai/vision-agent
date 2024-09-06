@@ -58,7 +58,7 @@ def video_writer(
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     container = av.open(filename, mode="w")
     stream = container.add_stream("h264", rate=fps)
-    height, width = frames[0].shape[:1]
+    height, width = frames[0].shape[:2]
     stream.height = height - (height % 2)
     stream.width = width - (width % 2)
     stream.pix_fmt = "yuv420p"
