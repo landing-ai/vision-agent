@@ -1518,7 +1518,7 @@ def save_video(
         raise ValueError(f"fps must be greater than 0 got {fps}")
 
     if output_video_path is None:
-        output_video_path = tempfile.NamedTemporaryFile(delete=False).name
+        output_video_path = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
 
     output_video_path = video_writer(frames, fps, output_video_path)
     _save_video_to_result(output_video_path)
