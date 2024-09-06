@@ -1,3 +1,4 @@
+from base64 import b64encode
 import inspect
 import logging
 import os
@@ -27,6 +28,7 @@ class ToolCallTrace(BaseModel):
     request: MutableMapping[str, Any]
     response: MutableMapping[str, Any]
     error: Optional[Error]
+    files: Optional[List[Dict[str, str]]]
 
 
 def send_inference_request(
@@ -202,12 +204,21 @@ def _call_post(
     files: Optional[List[Tuple[Any, ...]]] = None,
     function_name: str = "unknown",
 ) -> Any:
+    files_in_b64 = None
+    if files:
+        files_in_b64 = [
+            {"video": b64encode(file[1]).decode("utf-8")}
+            if file[0] == "video"
+            else {"image": b64encode(file[0]).decode("utf-8")}
+            for file in files
+        ]
     try:
         tool_call_trace = ToolCallTrace(
             endpoint_url=url,
             request=payload,
             response={},
             error=None,
+            files=files_in_b64,
         )
 
         if files is not None:
