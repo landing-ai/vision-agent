@@ -185,6 +185,7 @@ def owl_v2_image(
         "function_name": "owl_v2",
     }
     data: Dict[str, Any] = send_inference_request(request_data, "owlv2", v2=True)
+    print(data)
     return_data = []
     if data is not None:
         for elt in data:
@@ -246,21 +247,23 @@ def owl_v2_video(
     data: Dict[str, Any] = send_inference_request(
         payload, "text-to-object-detection", files=files, v2=True
     )
-    return_data = []
+    print(data)
+    bboxes_formatted = []
     if data is not None:
         for frame_data in data:
-            return_data_frame = []
+            bboxes_formated_frame = []
             for elt in frame_data:
-                return_data_frame.append(
+                bboxes_formated_frame.append(
                     ODResponseData(
-                        label=elt["label"],
-                        bbox=normalize_bbox(elt["bbox"], image_size),
-                        score=round(elt["score"], 2),
+                        label=elt["label"], # type: ignore
+                        bbox=normalize_bbox(elt["bounding_box"], image_size), # type: ignore
+                        score=round(elt["score"], 2), # type: ignore
                     )
                 )
-            return_data.append(return_data_frame)
+            bboxes_formatted.append(bboxes_formated_frame)
 
-    return return_data
+    filtered_bboxes = [filter_bboxes_by_threshold(elt, box_threshold) for elt in bboxes_formatted]
+    return [[bbox.model_dump() for bbox in frame] for frame in filtered_bboxes]
 
 
 def grounding_sam(
