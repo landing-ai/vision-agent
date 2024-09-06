@@ -145,15 +145,15 @@ def grounding_dino(
     return return_data
 
 
-def owl_v2(
+def owl_v2_image(
     prompt: str,
     image: np.ndarray,
-    box_threshold: float = 0.10,
+    box_threshold: float = 0.30,
 ) -> List[Dict[str, Any]]:
-    """'owl_v2' is a tool that can detect and count multiple objects given a text
-    prompt such as category names or referring expressions. The categories in text
-    prompt are separated by commas. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated probability scores.
+    """'owl_v2_image' is a tool that can detect and count multiple objects given a text
+    prompt such as category names or referring expressions on images. The categories in
+    text prompt are separated by commas. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -170,7 +170,7 @@ def owl_v2(
 
     Example
     -------
-        >>> owl_v2("car, dinosaur", image)
+        >>> owl_v2_image("car, dinosaur", image)
         [
             {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -195,6 +195,72 @@ def owl_v2(
                     "score": round(elt["score"], 2),  # type: ignore
                 }
             )
+    return return_data
+
+
+def owl_v2_video(
+    prompt: str,
+    frames: List[np.ndarray],
+    box_threshold: float = 0.30,
+) -> List[List[Dict[str, Any]]]:
+    """'owl_v2_video' is a tool that can detect and count multiple objects given a text
+    prompt such as category names or referring expressions on videos. The categories in
+    text prompt are separated by commas. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated probability scores per frame.
+
+    Parameters:
+        prompt (str): The prompt to ground to the video.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for the box detection. Defaults
+            to 0.30.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of dictionaries per frame containing the
+            score, label, and bounding box of the detected objects with normalized
+            coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the
+            coordinates of the top-left and xmax and ymax are the coordinates of the
+            bottom-right of the bounding box.
+
+    Example
+    -------
+        >>> owl_v2_video("car, dinosaur", frames)
+        [
+            [
+                {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+                {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            ],
+            ...
+        ]
+    """
+    if len(frames) == 0:
+        raise ValueError("No frames provided")
+
+    image_size = frames[0].shape[:2]
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "model": "owlv2",
+        "function_name": "owl_v2_video",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "text-to-object-detection", files=files, v2=True
+    )
+    return_data = []
+    if data is not None:
+        for frame_data in data:
+            return_data_frame = []
+            for elt in frame_data:
+                if elt["score"] >= box_threshold:
+                    return_data_frame.append(
+                        {
+                            "bbox": normalize_bbox(elt["bbox"], image_size),  # type: ignore
+                            "label": elt["label"],  # type: ignore
+                            "score": round(elt["score"], 2),  # type: ignore
+                        }
+                    )
+            return_data.append(return_data_frame)
+
     return return_data
 
 
@@ -351,13 +417,14 @@ def florence2_sam2_video(
                         [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
                 },
             ],
+            ...
         ]
     """
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     payload = {
-        "prompts": prompt.split(","),
+        "prompts": [s.strip() for s in prompt.split(",")],
         "function_name": "florence2_sam2_video",
     }
     data: Dict[str, Any] = send_inference_request(
@@ -1820,7 +1887,8 @@ def overlay_counting_results(
 
 
 FUNCTION_TOOLS = [
-    owl_v2,
+    owl_v2_image,
+    owl_v2_video,
     ocr,
     clip,
     vit_image_classification,
