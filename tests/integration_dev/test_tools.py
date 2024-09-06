@@ -1,9 +1,6 @@
 import skimage as ski
 
-from vision_agent.tools import (
-    countgd_counting,
-    countgd_example_based_counting,
-)
+from vision_agent.tools import countgd_counting, countgd_example_based_counting
 
 
 def test_countgd_counting() -> None:

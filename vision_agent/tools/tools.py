@@ -145,15 +145,15 @@ def grounding_dino(
     return return_data
 
 
-def owl_v2(
+def owl_v2_image(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.10,
 ) -> List[Dict[str, Any]]:
-    """'owl_v2' is a tool that can detect and count multiple objects given a text
-    prompt such as category names or referring expressions. The categories in text
-    prompt are separated by commas. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated probability scores.
+    """'owl_v2_image' is a tool that can detect and count multiple objects given a text
+    prompt such as category names or referring expressions on images. The categories in
+    text prompt are separated by commas. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -170,32 +170,103 @@ def owl_v2(
 
     Example
     -------
-        >>> owl_v2("car, dinosaur", image)
+        >>> owl_v2_image("car, dinosaur", image)
         [
             {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
         ]
     """
     image_size = image.shape[:2]
-    image_b64 = convert_to_b64(image)
-    request_data = {
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
         "prompts": [s.strip() for s in prompt.split(",")],
-        "image": image_b64,
-        "confidence": box_threshold,
-        "function_name": "owl_v2",
+        "model": "owlv2",
+        "function_name": "owl_v2_image",
     }
-    data: Dict[str, Any] = send_inference_request(request_data, "owlv2", v2=True)
-    return_data = []
+    resp_data = send_inference_request(
+        payload, "text-to-object-detection", files=files, v2=True
+    )
+    bboxes = resp_data[0]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),
+            score=round(bbox["score"], 2),
+        )
+        for bbox in bboxes
+    ]
+    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
+    return [bbox.model_dump() for bbox in filtered_bboxes]
+
+
+def owl_v2_video(
+    prompt: str,
+    frames: List[np.ndarray],
+    box_threshold: float = 0.10,
+) -> List[List[Dict[str, Any]]]:
+    """'owl_v2_video' will run owl_v2 on each frame of a video. It can detect multiple
+    objects per frame given a text prompt sucha s a category name or referring
+    expression. The categories in text prompt are separated by commas. It returns a list
+    of lists where each inner list contains the score, label, and bounding box of the
+    detections for that frame.
+
+    Parameters:
+        prompt (str): The prompt to ground to the video.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for the box detection. Defaults
+            to 0.30.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of lists of dictionaries containing the
+            score, label, and bounding box of the detected objects with normalized
+            coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the
+            coordinates of the top-left and xmax and ymax are the coordinates of the
+            bottom-right of the bounding box.
+
+    Example
+    -------
+        >>> owl_v2_video("car, dinosaur", frames)
+        [
+            [
+                {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+                {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            ],
+            ...
+        ]
+    """
+    if len(frames) == 0:
+        raise ValueError("No frames provided")
+
+    image_size = frames[0].shape[:2]
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "model": "owlv2",
+        "function_name": "owl_v2_video",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "text-to-object-detection", files=files, v2=True
+    )
+    bboxes_formatted = []
     if data is not None:
-        for elt in data:
-            return_data.append(
-                {
-                    "bbox": normalize_bbox(elt["bbox"], image_size),  # type: ignore
-                    "label": elt["label"],  # type: ignore
-                    "score": round(elt["score"], 2),  # type: ignore
-                }
-            )
-    return return_data
+        for frame_data in data:
+            bboxes_formated_frame = []
+            for elt in frame_data:
+                bboxes_formated_frame.append(
+                    ODResponseData(
+                        label=elt["label"],  # type: ignore
+                        bbox=normalize_bbox(elt["bounding_box"], image_size),  # type: ignore
+                        score=round(elt["score"], 2),  # type: ignore
+                    )
+                )
+            bboxes_formatted.append(bboxes_formated_frame)
+
+    filtered_bboxes = [
+        filter_bboxes_by_threshold(elt, box_threshold) for elt in bboxes_formatted
+    ]
+    return [[bbox.model_dump() for bbox in frame] for frame in filtered_bboxes]
 
 
 def grounding_sam(
@@ -317,14 +388,14 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
     return return_data
 
 
-def florence2_sam2_video(
+def florence2_sam2_video_tracking(
     prompt: str, frames: List[np.ndarray]
 ) -> List[List[Dict[str, Any]]]:
-    """'florence2_sam2_video' is a tool that can segment and track multiple entities
-    in a video given a text prompt such as category names or referring expressions. You
-    can optionally separate the categories in the text with commas. It only tracks
-    entities present in the first frame and only returns segmentation masks. It is
-    useful for tracking and counting without duplicating counts.
+    """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
+    entities in a video given a text prompt such as category names or referring
+    expressions. You can optionally separate the categories in the text with commas. It
+    only tracks entities present in the first frame and only returns segmentation
+    masks. It is useful for tracking and counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the video.
@@ -351,14 +422,15 @@ def florence2_sam2_video(
                         [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
                 },
             ],
+            ...
         ]
     """
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     payload = {
-        "prompts": prompt.split(","),
-        "function_name": "florence2_sam2_video",
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "function_name": "florence2_sam2_video_tracking",
     }
     data: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
@@ -549,7 +621,14 @@ def countgd_counting(
         payload, "text-to-object-detection", files=files, metadata=metadata
     )
     bboxes_per_frame = resp_data[0]
-    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],
+            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            score=round(bbox["score"], 2),
+        )
+        for bbox in bboxes_per_frame
+    ]
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
@@ -601,7 +680,14 @@ def countgd_example_based_counting(
         payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
     )
     bboxes_per_frame = resp_data[0]
-    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],
+            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            score=round(bbox["score"], 2),
+        )
+        for bbox in bboxes_per_frame
+    ]
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
@@ -1374,12 +1460,12 @@ def closest_box_distance(
 def extract_frames(
     video_uri: Union[str, Path], fps: float = 1
 ) -> List[Tuple[np.ndarray, float]]:
-    """'extract_frames' extracts frames from a video which can be a file path or youtube
-    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
-    time in seconds where the frame was captured. The frame is a numpy array.
+    """'extract_frames' extracts frames from a video which can be a file path, url or
+    youtube link, returns a list of tuples (frame, timestamp), where timestamp is the
+    relative time in seconds where the frame was captured. The frame is a numpy array.
 
     Parameters:
-        video_uri (Union[str, Path]): The path to the video file or youtube link
+        video_uri (Union[str, Path]): The path to the video file, url or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
             to 10.
 
@@ -1820,7 +1906,8 @@ def overlay_counting_results(
 
 
 FUNCTION_TOOLS = [
-    owl_v2,
+    owl_v2_image,
+    owl_v2_video,
     ocr,
     clip,
     vit_image_classification,
@@ -1829,7 +1916,7 @@ FUNCTION_TOOLS = [
     florence2_image_caption,
     florence2_ocr,
     florence2_sam2_image,
-    florence2_sam2_video,
+    florence2_sam2_video_tracking,
     florence2_phrase_grounding,
     ixc25_image_vqa,
     ixc25_video_vqa,

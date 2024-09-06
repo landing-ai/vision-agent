@@ -4,8 +4,8 @@ import tempfile
 from functools import lru_cache
 from typing import List, Optional, Tuple
 
-import cv2
 import av  # type: ignore
+import cv2
 import numpy as np
 from decord import VideoReader  # type: ignore
 
