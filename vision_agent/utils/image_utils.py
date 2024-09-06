@@ -2,14 +2,12 @@
 
 import base64
 import io
-import tempfile
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-from moviepy.editor import ImageSequenceClip
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as ImageType
 
@@ -88,24 +86,6 @@ def rle_decode_array(rle: Dict[str, List[int]]) -> np.ndarray:
 
     binary_mask = flattened_mask.reshape(size, order="F")
     return binary_mask
-
-
-def frames_to_bytes(
-    frames: List[np.ndarray], fps: float = 10, file_ext: str = "mp4"
-) -> bytes:
-    r"""Convert a list of frames to a video file encoded into a byte string.
-
-    Parameters:
-        frames: the list of frames
-        fps: the frames per second of the video
-        file_ext: the file extension of the video file
-    """
-    with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-        clip = ImageSequenceClip(frames, fps=fps)
-        clip.write_videofile(temp_file.name + f".{file_ext}", fps=fps, codec="libx264")
-        with open(temp_file.name + f".{file_ext}", "rb") as f:
-            buffer_bytes = f.read()
-    return buffer_bytes
 
 
 def b64_to_pil(b64_str: str) -> ImageType:

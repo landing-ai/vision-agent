@@ -173,7 +173,7 @@ def pick_plan(
 
     if verbosity == 2:
         _print_code("Initial code and tests:", code)
-        _LOGGER.info(f"Initial code execution result:\n{tool_output.text()}")
+        _LOGGER.info(f"Initial code execution result:\n{tool_output_str}")
 
     log_progress(
         {
