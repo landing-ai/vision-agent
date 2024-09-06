@@ -148,7 +148,7 @@ def grounding_dino(
 def owl_v2_image(
     prompt: str,
     image: np.ndarray,
-    box_threshold: float = 0.30,
+    box_threshold: float = 0.10,
 ) -> List[Dict[str, Any]]:
     """'owl_v2_image' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions on images. The categories in
@@ -203,7 +203,7 @@ def owl_v2_image(
 def owl_v2_video(
     prompt: str,
     frames: List[np.ndarray],
-    box_threshold: float = 0.30,
+    box_threshold: float = 0.10,
 ) -> List[List[Dict[str, Any]]]:
     """'owl_v2_video' will run owl_v2 on each frame of a video. It can detect multiple
     objects per frame given a text prompt sucha s a category name or referring
