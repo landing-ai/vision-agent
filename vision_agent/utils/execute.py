@@ -7,6 +7,7 @@ import re
 import sys
 import traceback
 import warnings
+import json
 from enum import Enum
 from pathlib import Path
 from time import sleep
@@ -243,8 +244,8 @@ class Logs(BaseModel):
             f"----- stdout -----\n{stdout_str}\n----- stderr -----\n{stderr_str}"
         )
 
-    def to_json(self) -> str:
-        return str(self)
+    def to_json(self) -> bytes:
+        return {"stdout": self.stdout, "stderr": self.stderr}
 
 
 class Error(BaseModel):
