@@ -44,6 +44,13 @@ def play_video(video_base64: str) -> None:
         cv2.destroyAllWindows()
 
 
+def _resize_frame(frame):
+    height, width = frame.shape[:2]
+    new_width = width - (width % 2)
+    new_height = height - (height % 2)
+    return cv2.resize(frame, (new_width, new_height))
+
+
 def video_writer(
     frames: List[np.ndarray], fps: float = 1.0, filename: Optional[str] = None
 ) -> str:
@@ -55,7 +62,7 @@ def video_writer(
     stream.height = frames[0].shape[0]
     stream.pix_fmt = "yuv420p"
     for frame in frames:
-        frame_rgb = frame[:, :, :3]
+        frame_rgb = _resize_frame(frame[:, :, :3])
         av_frame = av.VideoFrame.from_ndarray(frame_rgb, format="rgb24")
         for packet in stream.encode(av_frame):
             container.mux(packet)
