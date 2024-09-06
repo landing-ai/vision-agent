@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import List, Optional, Tuple
 
 import cv2
+import av
 import numpy as np
 from decord import VideoReader  # type: ignore
 
@@ -48,13 +49,20 @@ def video_writer(
 ) -> str:
     if filename is None:
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
-    height, width = frames[0].shape[:2]
-    writer = cv2.VideoWriter(filename, fourcc, fps, (width, height))
+    container = av.open(filename, mode="w")
+    stream = container.add_stream("h264", rate=fps)
+    stream.width = frames[0].shape[1]
+    stream.height = frames[0].shape[0]
+    stream.pix_fmt = "yuv420p"
     for frame in frames:
-        writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-    writer.release()
+        frame_rgb = frame[:, :, :3]
+        av_frame = av.VideoFrame.from_ndarray(frame_rgb, format="rgb24")
+        for packet in stream.encode(av_frame):
+            container.mux(packet)
+
+    for packet in stream.encode():
+        container.mux(packet)
+    container.close()
     return filename
 
 
