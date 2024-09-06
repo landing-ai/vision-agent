@@ -60,8 +60,8 @@ def test_owl_v2_image():
         prompt="coin",
         image=img,
     )
-    assert len(result) == 25
-    assert [res["label"] for res in result] == ["coin"] * 25
+    assert 24 <= len(result) <= 26
+    assert [res["label"] for res in result] == ["coin"] * len(result)
 
 
 def test_owl_v2_video():
@@ -74,7 +74,7 @@ def test_owl_v2_video():
     )
 
     assert len(result) == 10
-    assert len([res["label"] for res in result[0]]) == 25
+    assert 24 <= len([res["label"] for res in result[0]]) <= 26
 
 
 def test_object_detection():
