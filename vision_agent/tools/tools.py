@@ -190,9 +190,9 @@ def owl_v2_image(
     bboxes = resp_data[0]
     bboxes_formatted = [
         ODResponseData(
-            label=bbox["label"],  # type: ignore
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),  # type: ignore
-            score=round(bbox["score"], 2),  # type: ignore
+            label=bbox["label"],
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),
+            score=round(bbox["score"], 2),
         )
         for bbox in bboxes
     ]
@@ -623,9 +623,9 @@ def countgd_counting(
     bboxes_per_frame = resp_data[0]
     bboxes_formatted = [
         ODResponseData(
-            label=bbox["label"],  # type: ignore
-            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),  # type: ignore
-            score=round(bbox["score"], 2),  # type: ignore
+            label=bbox["label"],
+            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            score=round(bbox["score"], 2),
         )
         for bbox in bboxes_per_frame
     ]
@@ -682,9 +682,9 @@ def countgd_example_based_counting(
     bboxes_per_frame = resp_data[0]
     bboxes_formatted = [
         ODResponseData(
-            label=bbox["label"],  # type: ignore
-            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),  # type: ignore
-            score=round(bbox["score"], 2),  # type: ignore
+            label=bbox["label"],
+            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            score=round(bbox["score"], 2),
         )
         for bbox in bboxes_per_frame
     ]
