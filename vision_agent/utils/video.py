@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import List, Optional, Tuple
 
 import cv2
-import av
+import av  # type: ignore
 import numpy as np
 from decord import VideoReader  # type: ignore
 
@@ -58,8 +58,9 @@ def video_writer(
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     container = av.open(filename, mode="w")
     stream = container.add_stream("h264", rate=fps)
-    stream.width = frames[0].shape[1]
-    stream.height = frames[0].shape[0]
+    height, width = frames[0].shape[:1]
+    stream.height = height - (height % 2)
+    stream.width = width - (width % 2)
     stream.pix_fmt = "yuv420p"
     for frame in frames:
         # Remove the alpha channel (convert RGBA to RGB)
