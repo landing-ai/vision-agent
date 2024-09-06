@@ -243,6 +243,9 @@ class Logs(BaseModel):
             f"----- stdout -----\n{stdout_str}\n----- stderr -----\n{stderr_str}"
         )
 
+    def to_json(self) -> str:
+        return str(self)
+
 
 class Error(BaseModel):
     """Represents an error that occurred during the execution of a cell. The error
