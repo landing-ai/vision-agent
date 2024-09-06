@@ -251,14 +251,13 @@ def owl_v2_video(
         for frame_data in data:
             return_data_frame = []
             for elt in frame_data:
-                if elt["score"] >= box_threshold:
-                    return_data_frame.append(
-                        {
-                            "bbox": normalize_bbox(elt["bbox"], image_size),  # type: ignore
-                            "label": elt["label"],  # type: ignore
-                            "score": round(elt["score"], 2),  # type: ignore
-                        }
+                return_data_frame.append(
+                    ODResponseData(
+                        label=elt["label"],
+                        bbox=normalize_bbox(elt["bbox"], image_size),
+                        score=round(elt["score"], 2),
                     )
+                )
             return_data.append(return_data_frame)
 
     return return_data
@@ -616,7 +615,14 @@ def countgd_counting(
         payload, "text-to-object-detection", files=files, metadata=metadata
     )
     bboxes_per_frame = resp_data[0]
-    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],  # type: ignore
+            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),  # type: ignore
+            score=round(bbox["score"], 2),  # type: ignore
+        )
+        for bbox in bboxes_per_frame
+    ]
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
@@ -668,7 +674,14 @@ def countgd_example_based_counting(
         payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
     )
     bboxes_per_frame = resp_data[0]
-    bboxes_formatted = [ODResponseData(**bbox) for bbox in bboxes_per_frame]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],  # type: ignore
+            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),  # type: ignore
+            score=round(bbox["score"], 2),  # type: ignore
+        )
+        for bbox in bboxes_per_frame
+    ]
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
