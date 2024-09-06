@@ -44,7 +44,7 @@ def play_video(video_base64: str) -> None:
         cv2.destroyAllWindows()
 
 
-def _resize_frame(frame):
+def _resize_frame(frame: np.ndarray) -> np.ndarray:
     height, width = frame.shape[:2]
     new_width = width - (width % 2)
     new_height = height - (height % 2)
@@ -62,7 +62,10 @@ def video_writer(
     stream.height = frames[0].shape[0]
     stream.pix_fmt = "yuv420p"
     for frame in frames:
-        frame_rgb = _resize_frame(frame[:, :, :3])
+        # Remove the alpha channel (convert RGBA to RGB)
+        frame_rgb = frame[:, :, :3]
+        # Resize the frame to make dimensions divisible by 2
+        frame_rgb = _resize_frame(frame_rgb)
         av_frame = av.VideoFrame.from_ndarray(frame_rgb, format="rgb24")
         for packet in stream.encode(av_frame):
             container.mux(packet)
