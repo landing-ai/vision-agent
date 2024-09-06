@@ -147,8 +147,8 @@ AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the 
 
 OBSERVATION:
 [Artifact code.py edits]
---- 
-+++ 
+---
++++
 @@ -1,7 +1,7 @@
  from vision_agent.tools import load_image, florence2_phrase_grounding, closest_box_distance, overlay_bounding_boxes, save_image
  def count_workers_with_helmets(image_path: str, output_path: str):
