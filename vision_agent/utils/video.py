@@ -5,6 +5,7 @@ from functools import lru_cache
 from typing import List, Optional, Tuple
 
 import cv2
+import av  # type: ignore
 import numpy as np
 from decord import VideoReader  # type: ignore
 
@@ -43,18 +44,36 @@ def play_video(video_base64: str) -> None:
         cv2.destroyAllWindows()
 
 
+def _resize_frame(frame: np.ndarray) -> np.ndarray:
+    height, width = frame.shape[:2]
+    new_width = width - (width % 2)
+    new_height = height - (height % 2)
+    return cv2.resize(frame, (new_width, new_height))
+
+
 def video_writer(
     frames: List[np.ndarray], fps: float = 1.0, filename: Optional[str] = None
 ) -> str:
     if filename is None:
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
+    container = av.open(filename, mode="w")
+    stream = container.add_stream("h264", rate=fps)
     height, width = frames[0].shape[:2]
-    writer = cv2.VideoWriter(filename, fourcc, fps, (width, height))
+    stream.height = height - (height % 2)
+    stream.width = width - (width % 2)
+    stream.pix_fmt = "yuv420p"
     for frame in frames:
-        writer.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-    writer.release()
+        # Remove the alpha channel (convert RGBA to RGB)
+        frame_rgb = frame[:, :, :3]
+        # Resize the frame to make dimensions divisible by 2
+        frame_rgb = _resize_frame(frame_rgb)
+        av_frame = av.VideoFrame.from_ndarray(frame_rgb, format="rgb24")
+        for packet in stream.encode(av_frame):
+            container.mux(packet)
+
+    for packet in stream.encode():
+        container.mux(packet)
+    container.close()
     return filename
 
 
