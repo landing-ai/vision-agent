@@ -7,7 +7,6 @@ import re
 import sys
 import traceback
 import warnings
-import json
 from enum import Enum
 from pathlib import Path
 from time import sleep
