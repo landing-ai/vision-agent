@@ -185,7 +185,6 @@ def owl_v2_image(
         "function_name": "owl_v2",
     }
     data: Dict[str, Any] = send_inference_request(request_data, "owlv2", v2=True)
-    print(data)
     return_data = []
     if data is not None:
         for elt in data:
@@ -197,6 +196,35 @@ def owl_v2_image(
                 }
             )
     return return_data
+
+
+def owl_v2_image2(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.30,
+) -> List[Dict[str, Any]]:
+    image_size = image.shape[:2]
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "model": "owlv2",
+        "function_name": "owl_v2_image",
+    }
+    resp_data = send_inference_request(
+        payload, "text-to-object-detection", files=files, v2=True
+    )
+    bboxes = resp_data[0]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],  # type: ignore
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),  # type: ignore
+            score=round(bbox["score"], 2),  # type: ignore
+        )
+        for bbox in bboxes
+    ]
+    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
+    return [bbox.model_dump() for bbox in filtered_bboxes]
 
 
 def owl_v2_video(
@@ -247,7 +275,6 @@ def owl_v2_video(
     data: Dict[str, Any] = send_inference_request(
         payload, "text-to-object-detection", files=files, v2=True
     )
-    print(data)
     bboxes_formatted = []
     if data is not None:
         for frame_data in data:
@@ -255,14 +282,16 @@ def owl_v2_video(
             for elt in frame_data:
                 bboxes_formated_frame.append(
                     ODResponseData(
-                        label=elt["label"], # type: ignore
-                        bbox=normalize_bbox(elt["bounding_box"], image_size), # type: ignore
-                        score=round(elt["score"], 2), # type: ignore
+                        label=elt["label"],  # type: ignore
+                        bbox=normalize_bbox(elt["bounding_box"], image_size),  # type: ignore
+                        score=round(elt["score"], 2),  # type: ignore
                     )
                 )
             bboxes_formatted.append(bboxes_formated_frame)
 
-    filtered_bboxes = [filter_bboxes_by_threshold(elt, box_threshold) for elt in bboxes_formatted]
+    filtered_bboxes = [
+        filter_bboxes_by_threshold(elt, box_threshold) for elt in bboxes_formatted
+    ]
     return [[bbox.model_dump() for bbox in frame] for frame in filtered_bboxes]
 
 

@@ -47,6 +47,7 @@ from .tools import (
     overlay_heat_map,
     overlay_segmentation_masks,
     owl_v2_image,
+    owl_v2_image2,
     owl_v2_video,
     save_image,
     save_json,
