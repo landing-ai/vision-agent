@@ -1441,12 +1441,12 @@ def closest_box_distance(
 def extract_frames(
     video_uri: Union[str, Path], fps: float = 1
 ) -> List[Tuple[np.ndarray, float]]:
-    """'extract_frames' extracts frames from a video which can be a file path or youtube
-    link, returns a list of tuples (frame, timestamp), where timestamp is the relative
-    time in seconds where the frame was captured. The frame is a numpy array.
+    """'extract_frames' extracts frames from a video which can be a file path, url or
+    youtube link, returns a list of tuples (frame, timestamp), where timestamp is the
+    relative time in seconds where the frame was captured. The frame is a numpy array.
 
     Parameters:
-        video_uri (Union[str, Path]): The path to the video file or youtube link
+        video_uri (Union[str, Path]): The path to the video file, url or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
             to 10.
 
@@ -1888,7 +1888,7 @@ def overlay_counting_results(
 
 FUNCTION_TOOLS = [
     owl_v2_image,
-    owl_v2_video,
+    # owl_v2_video,
     ocr,
     clip,
     vit_image_classification,
