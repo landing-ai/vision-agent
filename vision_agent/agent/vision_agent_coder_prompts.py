@@ -70,30 +70,64 @@ This is the documentation for the functions you have access to. You may call any
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
 4. Print this final dictionary.
+5. For video input, sample at 1 FPS and use the first 10 frames only to reduce processing time.
 
 **Example**:
+--- EXAMPLE1 ---
 plan1:
 - Load the image from the provided file path 'image.jpg'.
-- Use the 'owl_v2' tool with the prompt 'person' to detect and count the number of people in the image.
+- Use the 'owl_v2_image' tool with the prompt 'person' to detect and count the number of people in the image.
 plan2:
 - Load the image from the provided file path 'image.jpg'.
-- Use the 'grounding_sam' tool with the prompt 'person' to detect and count the number of people in the image.
+- Use the 'florence2_sam2_image' tool with the prompt 'person' to detect and count the number of people in the image.
 - Count the number of detected objects labeled as 'person'.
 plan3:
 - Load the image from the provided file path 'image.jpg'.
 - Use the 'countgd_counting' tool to count the dominant foreground object, which in this case is people.
 
 ```python
-from vision_agent.tools import load_image, owl_v2, grounding_sam, countgd_counting
+from vision_agent.tools import load_image, owl_v2_image, florence2_sam2_image, countgd_counting
 image = load_image("image.jpg")
-owl_v2_out = owl_v2("person", image)
+owl_v2_out = owl_v2_image("person", image)
 
-gsam_out = grounding_sam("person", image)
-gsam_out = [{{k: v for k, v in o.items() if k != "mask"}} for o in gsam_out]
+f2s2_out = florence2_sam2_image("person", image)
+# strip out the masks from the output becuase they don't provide useful information when printed
+f2s2_out = [{{k: v for k, v in o.items() if k != "mask"}} for o in f2s2_out]
 
 cgd_out = countgd_counting(image)
 
-final_out = {{"owl_v2": owl_v2_out, "florencev2_object_detection": florencev2_out, "countgd_counting": cgd_out}}
+final_out = {{"owl_v2_image": owl_v2_out, "florence2_sam2_image": f2s2, "countgd_counting": cgd_out}}
+print(final_out)
+
+--- EXAMPLE2 ---
+plan1:
+- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
+- Use the 'owl_v2_image' tool with the prompt 'person' to detect where the people are in the video.
+plan2:
+- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
+- Use the 'florence2_phrase_grounding' tool with the prompt 'person' to detect where the people are in the video.
+plan3:
+- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
+- Use the 'countgd_counting' tool with the prompt 'person' to detect where the people are in the video.
+
+
+```python
+from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, countgd_counting
+
+# sample at 1 FPS and use the first 10 frames to reduce processing time
+frames = extract_frames("video.mp4", 1)
+frames = [f[0] for f in frames][:10]
+
+# plan1
+owl_v2_out = [owl_v2_image("person", f) for f in frames]
+
+# plan2
+florence2_out = [florence2_phrase_grounding("person", f) for f in frames]
+
+# plan3
+countgd_out = [countgd_counting(f) for f in frames]
+
+final_out = {{"owl_v2_image": owl_v2_out, "florencev2_object_detection": florencev2_out, "countgd_counting": cgd_out}}
 print(final_out)
 ```
 """
