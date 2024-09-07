@@ -243,7 +243,7 @@ class Logs(BaseModel):
             f"----- stdout -----\n{stdout_str}\n----- stderr -----\n{stderr_str}"
         )
 
-    def to_json(self) -> bytes:
+    def to_json(self) -> dict[str, list[str]]:
         return {"stdout": self.stdout, "stderr": self.stderr}
 
 
