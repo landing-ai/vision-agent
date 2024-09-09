@@ -658,9 +658,7 @@ class VisionAgentCoder(Agent):
         )
         self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
         self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
-        self.debugger = (
-            OpenAILMM(temperature=0.0, json_mode=True) if debugger is None else debugger
-        )
+        self.debugger = OpenAILMM(temperature=0.0) if debugger is None else debugger
         self.verbosity = verbosity
         if self.verbosity > 0:
             _LOGGER.setLevel(logging.INFO)
