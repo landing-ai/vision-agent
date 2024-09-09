@@ -43,7 +43,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
     json_str = json_str.replace("\n", " ").strip()
 
     try:
-        return json.loads(json_str)
+        return json.loads(json_str)  # type: ignore
     except json.JSONDecodeError:
         json_orig = json_str
         json_str = _strip_markdown_code(json_str)
@@ -55,7 +55,7 @@ def extract_json(json_str: str) -> Dict[str, Any]:
             _LOGGER.exception(error_msg)
             raise ValueError(error_msg)
 
-        return json_dict  # type: ignore
+        return json_dict
 
 
 def extract_code(code: str) -> str:

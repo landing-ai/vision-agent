@@ -459,7 +459,7 @@ def debug_code(
         try:
             # LLMs write worse code when it's in JSON, so we have it write JSON
             # followed by code each wrapped in markdown blocks.
-            fixed_code_and_test_str = debugger(  # type: ignore
+            fixed_code_and_test_str = debugger(
                 FIX_BUG.format(
                     code=code,
                     tests=test,
