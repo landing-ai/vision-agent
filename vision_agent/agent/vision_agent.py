@@ -14,7 +14,7 @@ from vision_agent.agent.vision_agent_prompts import (
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
-from vision_agent.tools.meta_tools import Artifacts
+from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
@@ -87,11 +87,18 @@ def run_code_action(
     return result, obs
 
 
-def parse_execution(response: str) -> Optional[str]:
+def parse_execution(
+    response: str,
+    test_multi_plan: bool = True,
+    customed_tool_names: Optional[List[str]] = None,
+) -> Optional[str]:
     code = None
     if "<execute_python>" in response:
         code = response[response.find("<execute_python>") + len("<execute_python>") :]
         code = code[: code.find("</execute_python>")]
+
+    if code is not None:
+        code = use_extra_vision_agent_args(code, test_multi_plan, customed_tool_names)
     return code
 
 
@@ -174,6 +181,8 @@ class VisionAgent(Agent):
         self,
         chat: List[Message],
         artifacts: Optional[Artifacts] = None,
+        test_multi_plan: bool = True,
+        customized_tool_names: Optional[List[str]] = None,
     ) -> Tuple[List[Message], Artifacts]:
         """Chat with VisionAgent, it will use code to execute actions to accomplish
         its tasks.
@@ -184,6 +193,12 @@ class VisionAgent(Agent):
                 or if it contains media files, it should be in the format of:
                 [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
             artifacts (Optional[Artifacts]): The artifacts to use in the task.
+            test_multi_plan (bool): If True, it will test tools for multiple plans and
+                pick the best one based off of the tool results. If False, it will go
+                with the first plan.
+            customized_tool_names (List[str]): A list of customized tools for agent to
+                pick and use. If not provided, default to full tool set from
+                vision_agent.tools.
 
         Returns:
             List[Message]: The conversation response.
@@ -262,7 +277,9 @@ class VisionAgent(Agent):
                 if response["let_user_respond"]:
                     break
 
-                code_action = parse_execution(response["response"])
+                code_action = parse_execution(
+                    response["response"], test_multi_plan, customized_tool_names
+                )
 
                 if code_action is not None:
                     result, obs = run_code_action(
