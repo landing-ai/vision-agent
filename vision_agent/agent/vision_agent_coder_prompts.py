@@ -121,12 +121,11 @@ frames = [f[0] for f in frames][:10]
 
 def remove_arrays(o):
     if isinstance(o, list):
-        return [remove_arrays(i) for i in o]
+        return [remove_arrays(e) for e in o]
     elif isinstance(o, dict):
-        for k, v in o.items():
-            o[k] = remove_arrays(v)
+        return {{k: remove_arrays(v) for k, v in o.items()}}
     elif isinstance(o, np.ndarray):
-        return str(o.shape)
+        return "array: " + str(o.shape)
     else:
         return o
 
@@ -323,6 +322,11 @@ This is the documentation for the functions you have access to. You may call any
 
 FIX_BUG = """
 **Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so you can run !pip install to install missing packages.
+
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
+
+{docstring}
 
 **Instructions**:
 Please re-complete the code to fix the error message. Here is the previous version:
