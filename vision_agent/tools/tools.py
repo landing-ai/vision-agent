@@ -1945,5 +1945,4 @@ TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
 TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
 TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
 TOOLS_INFO = get_tools_info(FUNCTION_TOOLS)  # type: ignore
-TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
 UTILITIES_DOCSTRING = get_tool_documentation(UTIL_TOOLS)  # type: ignore
