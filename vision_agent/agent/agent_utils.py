@@ -14,6 +14,10 @@ def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
     if match:
         json_str = match.group()
         try:
+            # remove trailing comma
+            trailing_bracket_pattern = r",\s+\}"
+            json_str = re.sub(trailing_bracket_pattern, "}", json_str, flags=re.DOTALL)
+
             json_dict = json.loads(json_str)
             return json_dict  # type: ignore
         except json.JSONDecodeError:
@@ -21,29 +25,37 @@ def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def extract_json(json_str: str) -> Dict[str, Any]:
-    try:
-        json_str = json_str.replace("\n", " ")
-        json_dict = json.loads(json_str)
-    except json.JSONDecodeError:
-        if "```json" in json_str:
-            json_str = json_str[json_str.find("```json") + len("```json") :]
-            json_str = json_str[: json_str.find("```")]
-        elif "```" in json_str:
-            json_str = json_str[json_str.find("```") + len("```") :]
-            # get the last ``` not one from an intermediate string
-            json_str = json_str[: json_str.find("}```")]
-        try:
-            json_dict = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            json_dict = _extract_sub_json(json_str)
-            if json_dict is not None:
-                return json_dict  # type: ignore
-            error_msg = f"Could not extract JSON from the given str: {json_str}"
-            _LOGGER.exception(error_msg)
-            raise ValueError(error_msg) from e
+def _find_markdown_json(json_str: str) -> str:
+    pattern = r"```json(.*?)```"
+    match = re.search(pattern, json_str, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return json_str
 
-    return json_dict  # type: ignore
+
+def _strip_markdown_code(inp_str: str) -> str:
+    pattern = r"```python.*?```"
+    cleaned_str = re.sub(pattern, "", inp_str, flags=re.DOTALL)
+    return cleaned_str
+
+
+def extract_json(json_str: str) -> Dict[str, Any]:
+    json_str = json_str.replace("\n", " ").strip()
+
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        json_orig = json_str
+        json_str = _strip_markdown_code(json_str)
+        json_str = _find_markdown_json(json_str)
+        json_dict = _extract_sub_json(json_str)
+
+        if json_dict is None:
+            error_msg = f"Could not extract JSON from the given str: {json_orig}"
+            _LOGGER.exception(error_msg)
+            raise ValueError(error_msg)
+
+        return json_dict  # type: ignore
 
 
 def extract_code(code: str) -> str:
