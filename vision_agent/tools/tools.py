@@ -1467,7 +1467,7 @@ def extract_frames(
     Parameters:
         video_uri (Union[str, Path]): The path to the video file, url or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
-            to 10.
+            to 1.
 
     Returns:
         List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
