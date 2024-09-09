@@ -982,7 +982,7 @@ class OllamaVisionAgentCoder(VisionAgentCoder):
                 else tester
             ),
             debugger=(
-                OllamaLMM(model_name="llama3.1", temperature=0.0, json_mode=True)
+                OllamaLMM(model_name="llama3.1", temperature=0.0)
                 if debugger is None
                 else debugger
             ),
@@ -1045,9 +1045,7 @@ class AzureVisionAgentCoder(VisionAgentCoder):
             coder=AzureOpenAILMM(temperature=0.0) if coder is None else coder,
             tester=AzureOpenAILMM(temperature=0.0) if tester is None else tester,
             debugger=(
-                AzureOpenAILMM(temperature=0.0, json_mode=True)
-                if debugger is None
-                else debugger
+                AzureOpenAILMM(temperature=0.0) if debugger is None else debugger
             ),
             tool_recommender=(
                 AzureSim(T.TOOLS_DF, sim_key="desc")
