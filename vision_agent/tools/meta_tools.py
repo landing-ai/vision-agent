@@ -297,7 +297,12 @@ def edit_code_artifact(
 
 
 def generate_vision_code(
-    artifacts: Artifacts, name: str, chat: str, media: List[str]
+    artifacts: Artifacts,
+    name: str,
+    chat: str,
+    media: List[str],
+    test_multi_plan: bool = True,
+    customized_tool_names: Optional[List[str]] = None,
 ) -> str:
     """Generates python code to solve vision based tasks.
 
@@ -306,6 +311,8 @@ def generate_vision_code(
         name (str): The name of the artifact to save the code to.
         chat (str): The chat message from the user.
         media (List[str]): The media files to use.
+        test_multi_plan (bool): Do not change this parameter.
+        customized_tool_names (Optional[List[str]]): Do not change this parameter.
 
     Returns:
         str: The generated code.
@@ -330,7 +337,11 @@ def generate_vision_code(
         agent = va.agent.VisionAgentCoder()
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
-    response = agent.chat_with_workflow(fixed_chat, test_multi_plan=True)
+    response = agent.chat_with_workflow(
+        fixed_chat,
+        test_multi_plan=test_multi_plan,
+        customized_tool_names=customized_tool_names,
+    )
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -342,7 +353,11 @@ def generate_vision_code(
 
 
 def edit_vision_code(
-    artifacts: Artifacts, name: str, chat_history: List[str], media: List[str]
+    artifacts: Artifacts,
+    name: str,
+    chat_history: List[str],
+    media: List[str],
+    customized_tool_names: Optional[List[str]] = None,
 ) -> str:
     """Edits python code to solve a vision based task.
 
@@ -350,6 +365,7 @@ def edit_vision_code(
         artifacts (Artifacts): The artifacts object to save the code to.
         name (str): The file path to the code.
         chat_history (List[str]): The chat history to used to generate the code.
+        customized_tool_names (Optional[List[str]]): Do not change this parameter.
 
     Returns:
         str: The edited code.
@@ -386,7 +402,11 @@ def edit_vision_code(
             fixed_chat_history.append({"role": "assistant", "content": code})
             fixed_chat_history.append({"role": "user", "content": chat})
 
-    response = agent.chat_with_workflow(fixed_chat_history, test_multi_plan=False)
+    response = agent.chat_with_workflow(
+        fixed_chat_history,
+        test_multi_plan=False,
+        customized_tool_names=customized_tool_names,
+    )
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -425,18 +445,19 @@ def get_tool_descriptions() -> str:
 
 
 def florence2_fine_tuning(bboxes: List[Dict[str, Any]], task: str) -> str:
-    """'florence2_fine_tuning' is a tool that fine-tune florence2 to be able to detect
+    """DO NOT use this function unless the user has supplied you with bboxes.
+    'florence2_fine_tuning' is a tool that fine-tune florence2 to be able to detect
     objects in an image based on a given dataset. It returns the fine tuning job id.
 
     Parameters:
-        bboxes (List[BboxInput]): A list of BboxInput containing the
-            image path, labels and bounding boxes.
+        bboxes (List[BboxInput]): A list of BboxInput containing the image path, labels
+            and bounding boxes. The coordinates are unnormalized.
         task (str): The florencev2 fine-tuning task. The options are
             'phrase_grounding'.
 
     Returns:
-        UUID: The fine tuning job id, this id will used to retrieve the fine
-            tuned model.
+        str: The fine tuning job id, this id will used to retrieve the fine tuned
+            model.
 
     Example
     -------
@@ -471,6 +492,54 @@ def get_diff(before: str, after: str) -> str:
             before.splitlines(keepends=True), after.splitlines(keepends=True)
         )
     )
+
+
+def get_diff_with_prompts(name: str, before: str, after: str) -> str:
+    diff = get_diff(before, after)
+    return f"[Artifact {name} edits]\n{diff}\n[End of edits]"
+
+
+def use_extra_vision_agent_args(
+    code: str,
+    test_multi_plan: bool = True,
+    customized_tool_names: Optional[List[str]] = None,
+) -> str:
+    """This is for forcing arguments passed by the user to VisionAgent into the
+    VisionAgentCoder call.
+
+    Parameters:
+        code (str): The code to edit.
+        test_multi_plan (bool): Do not change this parameter.
+        customized_tool_names (Optional[List[str]]): Do not change this parameter.
+
+    Returns:
+        str: The edited code.
+    """
+    generate_pattern = r"generate_vision_code\(\s*([^\)]+)\)"
+
+    def generate_replacer(match: re.Match) -> str:
+        arg = match.group(1)
+        out_str = f"generate_vision_code({arg}, test_multi_plan={test_multi_plan}"
+        if customized_tool_names is not None:
+            out_str += f", customized_tool_names={customized_tool_names})"
+        else:
+            out_str += ")"
+        return out_str
+
+    edit_pattern = r"edit_vision_code\(\s*([^\)]+)\)"
+
+    def edit_replacer(match: re.Match) -> str:
+        arg = match.group(1)
+        out_str = f"edit_vision_code({arg}"
+        if customized_tool_names is not None:
+            out_str += f", customized_tool_names={customized_tool_names})"
+        else:
+            out_str += ")"
+        return out_str
+
+    new_code = re.sub(generate_pattern, generate_replacer, code)
+    new_code = re.sub(edit_pattern, edit_replacer, new_code)
+    return new_code
 
 
 def use_florence2_fine_tuning(
@@ -521,7 +590,7 @@ def use_florence2_fine_tuning(
 
     artifacts[name] = new_code
 
-    diff = get_diff(code, new_code)
+    diff = get_diff_with_prompts(name, code, new_code)
     print(diff)
     return diff
 
