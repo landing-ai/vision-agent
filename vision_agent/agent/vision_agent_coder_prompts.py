@@ -108,15 +108,27 @@ plan2:
 - Use the 'florence2_phrase_grounding' tool with the prompt 'person' to detect where the people are in the video.
 plan3:
 - Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
-- Use the 'countgd_counting' tool with the prompt 'person' to detect where the people are in the video.
+- Use the 'florence2_sam2_video_tracking' tool with the prompt 'person' to detect where the people are in the video.
 
 
 ```python
-from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, countgd_counting
+import numpy as np
+from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames("video.mp4", 1)
 frames = [f[0] for f in frames][:10]
+
+def remove_arrays(o):
+    if isinstance(o, list):
+        return [remove_arrays(i) for i in o]
+    elif isinstance(o, dict):
+        for k, v in o.items():
+            o[k] = remove_arrays(v)
+    elif isinstance(o, np.ndarray):
+        return str(o.shape)
+    else:
+        return o
 
 # plan1
 owl_v2_out = [owl_v2_image("person", f) for f in frames]
@@ -125,9 +137,10 @@ owl_v2_out = [owl_v2_image("person", f) for f in frames]
 florence2_out = [florence2_phrase_grounding("person", f) for f in frames]
 
 # plan3
-countgd_out = [countgd_counting(f) for f in frames]
+f2s2_tracking_out = florence2_sam2_video_tracking("person", frames)
+remove_arrays(f2s2_tracking_out)
 
-final_out = {{"owl_v2_image": owl_v2_out, "florencev2_object_detection": florencev2_out, "countgd_counting": cgd_out}}
+final_out = {{"owl_v2_image": owl_v2_out, "florence2_phrase_grounding": florence2_out, "florence2_sam2_video_tracking": f2s2_tracking_out}}
 print(final_out)
 ```
 """
@@ -328,12 +341,17 @@ It raises this error:
 This is previous feedback provided on the code:
 {feedback}
 
-Please fix the bug by follow the error information and return a JSON object with the following format:
+Please fix the bug by correcting the error. Return the following data:
+```json
 {{
     "reflections": str # any thoughts you have about the bug and how you fixed it
-    "code": str # the fixed code if any, else an empty string
-    "test": str # the fixed test code if any, else an empty string
+    "which_code": str # which code you fixed, can either be 'code' or 'test'
 }}
+```
+
+```python
+# Your fixed code here
+```
 """
 
 
