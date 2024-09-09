@@ -174,9 +174,10 @@ def pick_plan(
         }
     )
     tool_output = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
-    tool_output_str = ""
-    if len(tool_output.text().strip()) > 0:
-        tool_output_str = tool_output.text().strip()
+    # Because of the way we trace function calls the trace information ends up in the
+    # results. We don't want to show this info to the LLM so we don't include it in the
+    # tool_output_str.
+    tool_output_str = tool_output.text(include_results=False).strip()
 
     if verbosity == 2:
         _print_code("Initial code and tests:", code)
@@ -203,7 +204,7 @@ def pick_plan(
             docstring=tool_info,
             plans=plan_str,
             previous_attempts=PREVIOUS_FAILED.format(
-                code=code, error=tool_output.text()
+                code=code, error="\n".join(tool_output_str.splitlines()[-50:])
             ),
             media=media,
         )
@@ -232,7 +233,7 @@ def pick_plan(
                 "status": "completed" if tool_output.success else "failed",
             }
         )
-        tool_output_str = tool_output.text().strip()
+        tool_output_str = tool_output.text(include_results=False).strip()
 
         if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
@@ -412,6 +413,7 @@ def write_and_test_code(
             working_memory,
             debugger,
             code_interpreter,
+            tool_info,
             code,
             test,
             result,
@@ -437,6 +439,7 @@ def debug_code(
     working_memory: List[Dict[str, str]],
     debugger: LMM,
     code_interpreter: CodeInterpreter,
+    tool_info: str,
     code: str,
     test: str,
     result: Execution,
@@ -461,9 +464,15 @@ def debug_code(
             # followed by code each wrapped in markdown blocks.
             fixed_code_and_test_str = debugger(
                 FIX_BUG.format(
+                    docstring=tool_info,
                     code=code,
                     tests=test,
-                    result="\n".join(result.text().splitlines()[-50:]),
+                    # Because of the way we trace function calls the trace information
+                    # ends up in the results. We don't want to show this info to the
+                    # LLM so we don't include it in the tool_output_str.
+                    result="\n".join(
+                        result.text(include_results=False).splitlines()[-50:]
+                    ),
                     feedback=format_memory(working_memory + new_working_memory),
                 ),
                 stream=False,
