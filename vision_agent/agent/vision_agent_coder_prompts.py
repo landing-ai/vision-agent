@@ -63,6 +63,7 @@ This is the documentation for the functions you have access to. You may call any
 **Plans**:
 {plans}
 
+**Previous Attempts**:
 {previous_attempts}
 
 **Instructions**:
