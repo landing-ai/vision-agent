@@ -174,7 +174,7 @@ PICK_PLAN = """
 
 **Instructions**:
 1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
-2. Sovle the problem yourself given the image and pick the plan that matches your solution the best.
+2. Solve the problem yourself given the image and pick the plan that matches your solution the best.
 3. Output a JSON object with the following format:
 {{
     "predicted_answer": str # the answer you would expect from the best plan
