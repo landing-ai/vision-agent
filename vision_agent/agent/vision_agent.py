@@ -1,5 +1,4 @@
 import copy
-import json
 import logging
 import os
 import tempfile
@@ -225,6 +224,7 @@ class VisionAgent(Agent):
                 if "media" in chat_i:
                     for media in chat_i["media"]:
                         if type(media) is str and media.startswith(("http", "https")):
+                            # TODO: Ideally we should not call VA.tools here, we should come to revisit how to better support remote image later
                             file_path = Path(media).name
                             ndarray = load_image(media)
                             save_image(ndarray, file_path)
