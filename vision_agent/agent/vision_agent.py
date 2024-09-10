@@ -272,7 +272,7 @@ class VisionAgent(Agent):
             artifacts_loaded = artifacts.show()
             int_chat.append({"role": "observation", "content": artifacts_loaded})
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
-            self.callback_message({"role": "observation", "content": artifacts_loaded})
+            self.streaming_message({"role": "observation", "content": artifacts_loaded})
 
             while not finished and iterations < self.max_iterations:
                 response = run_conversation(self.agent, int_chat)
@@ -285,7 +285,7 @@ class VisionAgent(Agent):
                 if last_response == response:
                     response["let_user_respond"] = True
 
-                self.callback_message({"role": "assistant", "content": response})
+                self.streaming_message({"role": "assistant", "content": response})
 
                 if response["let_user_respond"]:
                     break
@@ -306,7 +306,7 @@ class VisionAgent(Agent):
                     orig_chat.append(
                         {"role": "observation", "content": obs, "execution": result}
                     )
-                    self.callback_message(
+                    self.streaming_message(
                         {
                             "role": "observation",
                             "content": obs,
