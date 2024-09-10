@@ -121,6 +121,11 @@ def extract_frames_from_video(
         fps = orig_fps
 
     s = orig_fps / fps
-    samples = [(int(i * s), int(i * s) / orig_fps) for i in range(int(len(vr) / s))]
+    # decord incorrectly reads more frames than the video has, this gets a more
+    # accurate count of frames
+    true_len = round(orig_fps * vr.get_frame_timestamp(-1).mean())
+    samples = [
+        (round(i * s), round(i * s) / orig_fps) for i in range(int(true_len / s))
+    ]
     frames = vr.get_batch([s[0] for s in samples]).asnumpy()
     return [(frames[i, :, :, :], samples[i][1]) for i in range(len(samples))]
