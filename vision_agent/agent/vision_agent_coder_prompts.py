@@ -353,7 +353,7 @@ Please fix the bug by correcting the error. Return the following JSON object fol
 ```json
 {{
     "reflections": str # any thoughts you have about the bug and how you fixed it
-    "which_code": str # which code you fixed, can either be 'code' or 'test'
+    "which_code": str # the code that was fixed, can only be 'code' or 'test'
 }}
 ```
 
