@@ -174,9 +174,10 @@ PICK_PLAN = """
 
 **Instructions**:
 1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
-2. Try solving the problem yourself given the image and pick the plan that matches your solution the best.
+2. Sovle the problem yourself given the image and pick the plan that matches your solution the best.
 3. Output a JSON object with the following format:
 {{
+    "predicted_answer": str # the answer you would expect from the best plan
     "thoughts": str # your thought process for choosing the best plan
     "best_plan": str # the best plan you have chosen
 }}
@@ -341,12 +342,14 @@ When we run this test code:
 ```
 
 It raises this error:
+```
 {result}
+```
 
 This is previous feedback provided on the code:
 {feedback}
 
-Please fix the bug by correcting the error. Return the following data:
+Please fix the bug by correcting the error. Return the following JSON object followed by the fixed code in the below format:
 ```json
 {{
     "reflections": str # any thoughts you have about the bug and how you fixed it
