@@ -3,7 +3,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import extract_json
@@ -12,7 +12,7 @@ from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE2,
     VA_CODE,
 )
-from vision_agent.lmm import LMM, Message, OpenAILMM
+from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
 from vision_agent.utils import CodeInterpreterFactory
@@ -139,7 +139,7 @@ class VisionAgent(Agent):
         self.agent = (
             OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
         )
-        self.max_iterations = 100
+        self.max_iterations = 12
         self.verbosity = verbosity
         self.code_sandbox_runtime = code_sandbox_runtime
         self.callback_message = callback_message
@@ -353,3 +353,63 @@ class VisionAgent(Agent):
 
     def log_progress(self, data: Dict[str, Any]) -> None:
         pass
+
+
+class OpenAIVisionAgent(VisionAgent):
+    def __init__(
+        self,
+        agent: Optional[LMM] = None,
+        verbosity: int = 0,
+        local_artifacts_path: Optional[Union[str, Path]] = None,
+        code_sandbox_runtime: Optional[str] = None,
+        callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
+        """Initialize the VisionAgent using OpenAI LMMs.
+
+        Parameters:
+            agent (Optional[LMM]): The agent to use for conversation and orchestration
+                of other agents.
+            verbosity (int): The verbosity level of the agent.
+            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+        """
+
+        agent = OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
+        super().__init__(
+            agent,
+            verbosity,
+            local_artifacts_path,
+            code_sandbox_runtime,
+            callback_message,
+        )
+
+
+class AnthropicVisionAgent(VisionAgent):
+    def __init__(
+        self,
+        agent: Optional[LMM] = None,
+        verbosity: int = 0,
+        local_artifacts_path: Optional[Union[str, Path]] = None,
+        code_sandbox_runtime: Optional[str] = None,
+        callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
+        """Initialize the VisionAgent using Anthropic LMMs.
+
+        Parameters:
+            agent (Optional[LMM]): The agent to use for conversation and orchestration
+                of other agents.
+            verbosity (int): The verbosity level of the agent.
+            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+        """
+
+        agent = AnthropicLMM(temperature=0.0) if agent is None else agent
+        super().__init__(
+            agent,
+            verbosity,
+            local_artifacts_path,
+            code_sandbox_runtime,
+            callback_message,
+        )

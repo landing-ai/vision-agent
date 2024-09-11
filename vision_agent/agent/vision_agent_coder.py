@@ -30,7 +30,7 @@ from vision_agent.agent.vision_agent_coder_prompts import (
 from vision_agent.lmm import (
     LMM,
     AzureOpenAILMM,
-    ClaudeSonnetLMM,
+    AnthropicLMM,
     Message,
     OllamaLMM,
     OpenAILMM,
@@ -904,7 +904,7 @@ class VisionAgentCoder(Agent):
                 )
 
 
-class ClaudeVisionAgentCoder(VisionAgentCoder):
+class AnthropicVisionAgentCoder(VisionAgentCoder):
     def __init__(
         self,
         planner: Optional[LMM] = None,
@@ -917,12 +917,10 @@ class ClaudeVisionAgentCoder(VisionAgentCoder):
         code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         # NOTE: Claude doesn't have an official JSON mode
-        self.planner = ClaudeSonnetLMM(temperature=0.0) if planner is None else planner
-        self.coder = ClaudeSonnetLMM(temperature=0.0) if coder is None else coder
-        self.tester = ClaudeSonnetLMM(temperature=0.0) if tester is None else tester
-        self.debugger = (
-            ClaudeSonnetLMM(temperature=0.0) if debugger is None else debugger
-        )
+        self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
+        self.coder = AnthropicLMM(temperature=0.0) if coder is None else coder
+        self.tester = AnthropicLMM(temperature=0.0) if tester is None else tester
+        self.debugger = AnthropicLMM(temperature=0.0) if debugger is None else debugger
         self.verbosity = verbosity
         if self.verbosity > 0:
             _LOGGER.setLevel(logging.INFO)

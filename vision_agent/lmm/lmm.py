@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -13,8 +12,6 @@ from openai import AzureOpenAI, OpenAI
 from vision_agent.utils.image_utils import encode_media
 
 from .types import Message
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class LMM(ABC):
@@ -45,7 +42,7 @@ class LMM(ABC):
 
 
 class OpenAILMM(LMM):
-    r"""An LMM class for the OpenAI GPT-4 Vision model."""
+    r"""An LMM class for the OpenAI LMMs."""
 
     def __init__(
         self,
@@ -365,8 +362,8 @@ class OllamaLMM(LMM):
             return resp["response"]  # type: ignore
 
 
-class ClaudeSonnetLMM(LMM):
-    r"""An LMM class for Anthropic's Claude Sonnet model."""
+class AnthropicLMM(LMM):
+    r"""An LMM class for Anthropic's LMMs."""
 
     def __init__(
         self,
