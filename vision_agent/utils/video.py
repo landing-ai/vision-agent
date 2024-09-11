@@ -121,7 +121,7 @@ def extract_frames_from_video(
     targ_frame_time = 1 / fps
     frames = []
     i = 0
-    elapsed_time = 0.
+    elapsed_time = 0.0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
