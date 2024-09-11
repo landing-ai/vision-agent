@@ -467,7 +467,8 @@ def florence2_sam2_video_tracking(
     entities in a video given a text prompt such as category names or referring
     expressions. You can optionally separate the categories in the text with commas. It
     only tracks entities present in the first frame and only returns segmentation
-    masks. It is useful for tracking and counting without duplicating counts.
+    masks. It is useful for tracking and counting without duplicating counts if they
+    appear in the first frame, always outputs scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the video.
