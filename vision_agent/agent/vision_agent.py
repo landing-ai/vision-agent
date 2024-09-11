@@ -13,9 +13,8 @@ from vision_agent.agent.vision_agent_prompts import (
     VA_CODE,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
-from vision_agent.tools import META_TOOL_DOCSTRING, save_image
+from vision_agent.tools import META_TOOL_DOCSTRING, save_image, load_image
 from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
-from vision_agent.tools.tools import load_image
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
@@ -184,7 +183,7 @@ class VisionAgent(Agent):
         self,
         chat: List[Message],
         artifacts: Optional[Artifacts] = None,
-        test_multi_plan: bool = False,
+        test_multi_plan: bool = True,
         customized_tool_names: Optional[List[str]] = None,
     ) -> Tuple[List[Message], Artifacts]:
         """Chat with VisionAgent, it will use code to execute actions to accomplish
