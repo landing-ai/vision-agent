@@ -781,6 +781,44 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     return cast(str, data["answer"])
 
 
+def ixc25_temporal_localization(prompt: str, frames: List[np.ndarray]) -> List[bool]:
+    """'ixc25_temporal_localization' uses ixc25_video_vqa to temporally segment a video
+    given a prompt that can be other an object or a phrase. It returns a list of
+    boolean values indicating whether the object or phrase is present in the
+    corresponding frame.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        List[bool]: A list of boolean values indicating whether the object or phrase is
+            present in the corresponding frame.
+
+    Example
+    -------
+        >>> output = ixc25_temporal_localization('soccer goal', frames)
+        >>> print(output)
+        [False, False, False, True, True, True, False, False, False, False]
+        >>> save_video([f for i, f in enumerate(frames) if output[i]], 'output.mp4')
+    """
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "chunk_length": 2,
+        "function_name": "ixc25_temporal_localization",
+    }
+    data: List[int] = send_inference_request(
+        payload, "video-temporal-localization", files=files, v2=True
+    )
+    chunk_size = round(len(frames) / len(data))
+    data_explode = [[elt] * chunk_size for elt in data]
+    data_bool = [bool(elt) for sublist in data_explode for elt in sublist]
+    return data_bool[: len(frames)]
+
+
 def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
     """'gpt4o_image_vqa' is a tool that can answer any questions about arbitrary images
     including regular images or images of documents or presentations. It returns text
