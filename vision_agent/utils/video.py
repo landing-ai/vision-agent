@@ -119,7 +119,7 @@ def extract_frames_from_video(
     orig_fps = cap.get(cv2.CAP_PROP_FPS)
     orig_frame_time = 1 / orig_fps
     targ_frame_time = 1 / fps
-    frames = []
+    frames: List[Tuple[np.ndarray, float]] = []
     i = 0
     elapsed_time = 0.0
     while cap.isOpened():
