@@ -29,8 +29,8 @@ from vision_agent.agent.vision_agent_coder_prompts import (
 )
 from vision_agent.lmm import (
     LMM,
-    AzureOpenAILMM,
     AnthropicLMM,
+    AzureOpenAILMM,
     Message,
     OllamaLMM,
     OpenAILMM,
@@ -653,12 +653,10 @@ class VisionAgentCoder(Agent):
                  also None, the local python runtime environment will be used.
         """
 
-        self.planner = (
-            OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
-        )
-        self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
-        self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
-        self.debugger = OpenAILMM(temperature=0.0) if debugger is None else debugger
+        self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
+        self.coder = AnthropicLMM(temperature=0.0) if coder is None else coder
+        self.tester = AnthropicLMM(temperature=0.0) if tester is None else tester
+        self.debugger = AnthropicLMM(temperature=0.0) if debugger is None else debugger
         self.verbosity = verbosity
         if self.verbosity > 0:
             _LOGGER.setLevel(logging.INFO)
@@ -904,7 +902,42 @@ class VisionAgentCoder(Agent):
                 )
 
 
+class OpenAIVisionAgentCoder(VisionAgentCoder):
+    """Initializes Vision Agent Coder using OpenAI models for planning, coding, testing."""
+
+    def __init__(
+        self,
+        planner: Optional[LMM] = None,
+        coder: Optional[LMM] = None,
+        tester: Optional[LMM] = None,
+        debugger: Optional[LMM] = None,
+        tool_recommender: Optional[Sim] = None,
+        verbosity: int = 0,
+        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_sandbox_runtime: Optional[str] = None,
+    ) -> None:
+        self.planner = (
+            OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
+        )
+        self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
+        self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
+        self.debugger = OpenAILMM(temperature=0.0) if debugger is None else debugger
+        self.verbosity = verbosity
+        if self.verbosity > 0:
+            _LOGGER.setLevel(logging.INFO)
+
+        self.tool_recommender = (
+            Sim(T.TOOLS_DF, sim_key="desc")
+            if tool_recommender is None
+            else tool_recommender
+        )
+        self.report_progress_callback = report_progress_callback
+        self.code_sandbox_runtime = code_sandbox_runtime
+
+
 class AnthropicVisionAgentCoder(VisionAgentCoder):
+    """Initializes Vision Agent Coder using Anthropic models for planning, coding, testing."""
+
     def __init__(
         self,
         planner: Optional[LMM] = None,

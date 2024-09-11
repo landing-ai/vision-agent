@@ -5,7 +5,7 @@ import io
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont

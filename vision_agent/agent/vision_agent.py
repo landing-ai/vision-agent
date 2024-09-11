@@ -136,9 +136,7 @@ class VisionAgent(Agent):
             code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
         """
 
-        self.agent = (
-            OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
-        )
+        self.agent = AnthropicLMM(temperature=0.0) if agent is None else agent
         self.max_iterations = 12
         self.verbosity = verbosity
         self.code_sandbox_runtime = code_sandbox_runtime
