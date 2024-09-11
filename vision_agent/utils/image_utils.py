@@ -157,7 +157,8 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
 def encode_image_bytes(image: bytes, resize: Optional[int] = None) -> str:
     if resize is not None:
         image_pil = Image.open(io.BytesIO(image)).convert("RGB")
-        image_pil.thumbnail((resize, resize))
+        if image_pil.size[0] > resize or image_pil.size[1] > resize:
+            image_pil.thumbnail((resize, resize))
     else:
         image_pil = Image.open(io.BytesIO(image)).convert("RGB")
     buffer = io.BytesIO()
@@ -198,7 +199,8 @@ def encode_media(media: Union[str, Path], resize: Optional[int] = None) -> str:
         buffer = io.BytesIO()
         if resize is not None:
             image_pil = Image.fromarray(image[0]).convert("RGB")
-            image_pil.thumbnail((resize, resize))
+            if image_pil.size[0] > resize or image_pil.size[1] > resize:
+                image_pil.thumbnail((resize, resize))
         else:
             image_pil = Image.fromarray(image[0]).convert("RGB")
         image_pil.save(buffer, format="PNG")
