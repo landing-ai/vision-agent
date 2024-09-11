@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple
 import av  # type: ignore
 import cv2
 import numpy as np
-from decord import VideoReader  # type: ignore
 
 _LOGGER = logging.getLogger(__name__)
 # The maximum length of the clip to extract frames from, in seconds
@@ -122,7 +121,7 @@ def extract_frames_from_video(
     targ_frame_time = 1 / fps
     frames = []
     i = 0
-    elapsed_time = 0
+    elapsed_time = 0.
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
