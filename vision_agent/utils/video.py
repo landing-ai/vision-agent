@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple
 import av  # type: ignore
 import cv2
 import numpy as np
-from decord import VideoReader  # type: ignore
 
 _LOGGER = logging.getLogger(__name__)
 # The maximum length of the clip to extract frames from, in seconds
@@ -103,7 +102,7 @@ def frames_to_bytes(
 def extract_frames_from_video(
     video_uri: str, fps: float = 1.0
 ) -> List[Tuple[np.ndarray, float]]:
-    """Extract frames from a video
+    """Extract frames from a video along with the timestamp in seconds.
 
     Parameters:
         video_uri (str): the path to the video file or a video file url
@@ -115,12 +114,24 @@ def extract_frames_from_video(
             from the start of the video. E.g. 12.125 means 12.125 seconds from the start of
             the video. The frames are sorted by the timestamp in ascending order.
     """
-    vr = VideoReader(video_uri)
-    orig_fps = vr.get_avg_fps()
-    if fps > orig_fps:
-        fps = orig_fps
 
-    s = orig_fps / fps
-    samples = [(int(i * s), int(i * s) / orig_fps) for i in range(int(len(vr) / s))]
-    frames = vr.get_batch([s[0] for s in samples]).asnumpy()
-    return [(frames[i, :, :, :], samples[i][1]) for i in range(len(samples))]
+    cap = cv2.VideoCapture(video_uri)
+    orig_fps = cap.get(cv2.CAP_PROP_FPS)
+    orig_frame_time = 1 / orig_fps
+    targ_frame_time = 1 / fps
+    frames: List[Tuple[np.ndarray, float]] = []
+    i = 0
+    elapsed_time = 0.0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        elapsed_time += orig_frame_time
+        if elapsed_time >= targ_frame_time:
+            frames.append((cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), i / orig_fps))
+            elapsed_time -= targ_frame_time
+
+        i += 1
+    cap.release()
+    return frames
