@@ -402,7 +402,7 @@ class ClaudeSonnetLMM(LMM):
             ]
             if "media" in msg:
                 for media_path in msg["media"]:
-                    encoded_media = encode_media(media_path)
+                    encoded_media = encode_media(media_path, resize=768)
                     content.append(
                         ImageBlockParam(
                             type="image",
@@ -449,7 +449,7 @@ class ClaudeSonnetLMM(LMM):
         ]
         if media:
             for m in media:
-                encoded_media = encode_media(m)
+                encoded_media = encode_media(m, resize=768)
                 content.append(
                     ImageBlockParam(
                         type="image",
