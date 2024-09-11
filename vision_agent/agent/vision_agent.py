@@ -10,11 +10,16 @@ from vision_agent.agent.agent_utils import extract_json
 from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE1,
     EXAMPLES_CODE2,
+    EXAMPLES_CODE3,
     VA_CODE,
 )
 from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
-from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
+from vision_agent.tools.meta_tools import (
+    Artifacts,
+    check_and_load_image,
+    use_extra_vision_agent_args,
+)
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
@@ -30,7 +35,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, florence2_fine_tuning, use_florence2_fine_tuning",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, view_media_artifact, florence2_fine_tuning, use_florence2_fine_tuning",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -68,10 +73,17 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
     prompt = VA_CODE.format(
         documentation=META_TOOL_DOCSTRING,
-        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}",
+        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}\n{EXAMPLES_CODE3}",
         conversation=conversation,
     )
-    return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
+    message: Message = {"role": "user", "content": prompt}
+    if (
+        chat[-1]["role"] == "observation"
+        and "media" in chat[-1]
+        and len(chat[-1]["media"]) > 0  # type: ignore
+    ):
+        message["media"] = chat[-1]["media"]
+    return extract_json(orch([message], stream=False))  # type: ignore
 
 
 def run_code_action(
@@ -319,13 +331,22 @@ class VisionAgent(Agent):
                         code_action, code_interpreter, str(remote_artifacts_path)
                     )
 
+                    media_obs = check_and_load_image(code_action)
+
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
+
+                    chat_elt: Message = {"role": "observation", "content": obs}
+                    if media_obs and result.success:
+                        chat_elt["media"] = [
+                            Path(code_interpreter.remote_path) / media_ob
+                            for media_ob in media_obs
+                        ]
+
                     # don't add execution results to internal chat
-                    int_chat.append({"role": "observation", "content": obs})
-                    orig_chat.append(
-                        {"role": "observation", "content": obs, "execution": result}
-                    )
+                    int_chat.append(chat_elt)
+                    chat_elt["execution"] = result
+                    orig_chat.append(chat_elt)
                     self.streaming_message(
                         {
                             "role": "observation",

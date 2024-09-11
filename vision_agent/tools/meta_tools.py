@@ -486,6 +486,33 @@ def list_artifacts(artifacts: Artifacts) -> str:
     return output_str
 
 
+def check_and_load_image(code: str) -> List[str]:
+    if not code.strip():
+        return []
+
+    pattern = r"show_media_artifact\(\s*([^\)]+),\s*['\"]([^\)]+)['\"]\s*\)"
+    match = re.search(pattern, code)
+    if match:
+        name = match.group(2)
+        return [name]
+    return []
+
+
+def view_media_artifact(artifacts: Artifacts, name: str) -> str:
+    """Views the image artifact with the given name.
+
+    Parameters:
+        artifacts (Artifacts): The artifacts object to show the image from.
+        name (str): The name of the image artifact to show.
+    """
+    if name not in artifacts:
+        output_str = f"[Artifact {name} does not exist]"
+    else:
+        output_str = f"[Image {name} displayed]"
+    print(output_str)
+    return output_str
+
+
 def get_tool_descriptions() -> str:
     """Returns a description of all the tools that `generate_vision_code` has access to.
     Helpful for answering questions about what types of vision tasks you can do with
@@ -564,7 +591,7 @@ def use_extra_vision_agent_args(
     Returns:
         str: The edited code.
     """
-    generate_pattern = r"generate_vision_code\(\s*([^\)]+)\)"
+    generate_pattern = r"generate_vision_code\(\s*([^\)]+)\s*\)"
 
     def generate_replacer(match: re.Match) -> str:
         arg = match.group(1)
@@ -575,7 +602,7 @@ def use_extra_vision_agent_args(
             out_str += ")"
         return out_str
 
-    edit_pattern = r"edit_vision_code\(\s*([^\)]+)\)"
+    edit_pattern = r"edit_vision_code\(\s*([^\)]+)\s*\)"
 
     def edit_replacer(match: re.Match) -> str:
         arg = match.group(1)
@@ -662,6 +689,7 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         generate_vision_code,
         edit_vision_code,
         write_media_artifact,
+        view_media_artifact,
         florence2_fine_tuning,
         use_florence2_fine_tuning,
         list_artifacts,
