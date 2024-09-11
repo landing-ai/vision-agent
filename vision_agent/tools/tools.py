@@ -416,7 +416,7 @@ def florence2_sam2_image(
                 f"Fine-tuned model {fine_tune_id} is not ready yet"
             )
 
-        data_obj = Florence2FtRequest(
+        req_data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
             tool="florencev2_fine_tuning",
@@ -426,17 +426,17 @@ def florence2_sam2_image(
                 postprocessing="sam2",
             ),
         )
-        data = data_obj.model_dump(by_alias=True)
-        detections = send_inference_request(data, "tools", v2=False)
-        detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
+        req_data = req_data_obj.model_dump(by_alias=True)
+        detections_ft = send_inference_request(req_data, "tools", v2=False)
+        detections_ft = detections_ft["<CAPTION_TO_PHRASE_GROUNDING>"]
         return_data = []
-        all_masks = np.array(detections["masks"])
-        for i in range(len(detections["bboxes"])):
+        all_masks = np.array(detections_ft["masks"])
+        for i in range(len(detections_ft["bboxes"])):
             return_data.append(
                 {
                     "score": 1.0,
-                    "label": detections["labels"][i],
-                    "bbox": detections["bboxes"][i],
+                    "label": detections_ft["labels"][i],
+                    "bbox": detections_ft["bboxes"][i],
                     "mask": all_masks[i, :, :].astype(np.uint8),
                 }
             )
@@ -448,11 +448,11 @@ def florence2_sam2_image(
         "prompts": [s.strip() for s in prompt.split(",")],
         "function_name": "florence2_sam2_image",
     }
-    data: Dict[str, Any] = send_inference_request(
+    detections: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
     )
     return_data = []
-    for _, data_i in data["0"].items():
+    for _, data_i in detections["0"].items():
         mask = rle_decode_array(data_i["mask"])
         label = data_i["label"]
         bbox = normalize_bbox(data_i["bounding_box"], data_i["mask"]["size"])
