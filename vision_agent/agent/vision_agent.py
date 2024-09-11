@@ -123,7 +123,7 @@ class VisionAgent(Agent):
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
         code_sandbox_runtime: Optional[str] = None,
-        callback_message: Optional[Callable[[Message], None]] = None,
+        callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         """Initialize the VisionAgent.
 
@@ -324,7 +324,7 @@ class VisionAgent(Agent):
             artifacts.save()
         return orig_chat, artifacts
 
-    def streaming_message(self, message: Message) -> None:
+    def streaming_message(self, message: Dict[str, Any]) -> None:
         if self.callback_message:
             self.callback_message(message)
 
