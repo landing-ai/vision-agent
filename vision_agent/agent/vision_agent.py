@@ -77,6 +77,7 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         conversation=conversation,
     )
     message: Message = {"role": "user", "content": prompt}
+    # only add recent media so we don't overload the model with old images
     if (
         chat[-1]["role"] == "observation"
         and "media" in chat[-1]
