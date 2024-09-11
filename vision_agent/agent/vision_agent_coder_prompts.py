@@ -63,6 +63,7 @@ This is the documentation for the functions you have access to. You may call any
 **Plans**:
 {plans}
 
+**Previous Attempts**:
 {previous_attempts}
 
 **Instructions**:
@@ -108,15 +109,26 @@ plan2:
 - Use the 'florence2_phrase_grounding' tool with the prompt 'person' to detect where the people are in the video.
 plan3:
 - Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
-- Use the 'countgd_counting' tool with the prompt 'person' to detect where the people are in the video.
+- Use the 'florence2_sam2_video_tracking' tool with the prompt 'person' to detect where the people are in the video.
 
 
 ```python
-from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, countgd_counting
+import numpy as np
+from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames("video.mp4", 1)
 frames = [f[0] for f in frames][:10]
+
+def remove_arrays(o):
+    if isinstance(o, list):
+        return [remove_arrays(e) for e in o]
+    elif isinstance(o, dict):
+        return {{k: remove_arrays(v) for k, v in o.items()}}
+    elif isinstance(o, np.ndarray):
+        return "array: " + str(o.shape)
+    else:
+        return o
 
 # plan1
 owl_v2_out = [owl_v2_image("person", f) for f in frames]
@@ -125,9 +137,10 @@ owl_v2_out = [owl_v2_image("person", f) for f in frames]
 florence2_out = [florence2_phrase_grounding("person", f) for f in frames]
 
 # plan3
-countgd_out = [countgd_counting(f) for f in frames]
+f2s2_tracking_out = florence2_sam2_video_tracking("person", frames)
+remove_arrays(f2s2_tracking_out)
 
-final_out = {{"owl_v2_image": owl_v2_out, "florencev2_object_detection": florencev2_out, "countgd_counting": cgd_out}}
+final_out = {{"owl_v2_image": owl_v2_out, "florence2_phrase_grounding": florence2_out, "florence2_sam2_video_tracking": f2s2_tracking_out}}
 print(final_out)
 ```
 """
@@ -161,9 +174,10 @@ PICK_PLAN = """
 
 **Instructions**:
 1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
-2. Try solving the problem yourself given the image and pick the plan that matches your solution the best.
+2. Solve the problem yourself given the image and pick the plan that matches your solution the best.
 3. Output a JSON object with the following format:
 {{
+    "predicted_answer": str # the answer you would expect from the best plan
     "thoughts": str # your thought process for choosing the best plan
     "best_plan": str # the best plan you have chosen
 }}
@@ -311,6 +325,11 @@ This is the documentation for the functions you have access to. You may call any
 FIX_BUG = """
 **Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so you can run !pip install to install missing packages.
 
+**Documentation**:
+This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
+
+{docstring}
+
 **Instructions**:
 Please re-complete the code to fix the error message. Here is the previous version:
 ```python
@@ -323,17 +342,24 @@ When we run this test code:
 ```
 
 It raises this error:
+```
 {result}
+```
 
 This is previous feedback provided on the code:
 {feedback}
 
-Please fix the bug by follow the error information and return a JSON object with the following format:
+Please fix the bug by correcting the error. Return the following JSON object followed by the fixed code in the below format:
+```json
 {{
     "reflections": str # any thoughts you have about the bug and how you fixed it
-    "code": str # the fixed code if any, else an empty string
-    "test": str # the fixed test code if any, else an empty string
+    "which_code": str # the code that was fixed, can only be 'code' or 'test'
 }}
+```
+
+```python
+# Your fixed code here
+```
 """
 
 

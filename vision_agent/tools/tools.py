@@ -468,7 +468,7 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     pil_image = Image.fromarray(image).convert("RGB")
     image_size = pil_image.size[::-1]
-    if image_size[0] < 1 and image_size[1] < 1:
+    if image_size[0] < 1 or image_size[1] < 1:
         return []
     image_buffer = io.BytesIO()
     pil_image.save(image_buffer, format="PNG")
@@ -779,6 +779,44 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         payload, "internlm-xcomposer2", files=files, v2=True
     )
     return cast(str, data["answer"])
+
+
+def ixc25_temporal_localization(prompt: str, frames: List[np.ndarray]) -> List[bool]:
+    """'ixc25_temporal_localization' uses ixc25_video_vqa to temporally segment a video
+    given a prompt that can be other an object or a phrase. It returns a list of
+    boolean values indicating whether the object or phrase is present in the
+    corresponding frame.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        List[bool]: A list of boolean values indicating whether the object or phrase is
+            present in the corresponding frame.
+
+    Example
+    -------
+        >>> output = ixc25_temporal_localization('soccer goal', frames)
+        >>> print(output)
+        [False, False, False, True, True, True, False, False, False, False]
+        >>> save_video([f for i, f in enumerate(frames) if output[i]], 'output.mp4')
+    """
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "chunk_length": 2,
+        "function_name": "ixc25_temporal_localization",
+    }
+    data: List[int] = send_inference_request(
+        payload, "video-temporal-localization", files=files, v2=True
+    )
+    chunk_size = round(len(frames) / len(data))
+    data_explode = [[elt] * chunk_size for elt in data]
+    data_bool = [bool(elt) for sublist in data_explode for elt in sublist]
+    return data_bool[: len(frames)]
 
 
 def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
@@ -1112,6 +1150,8 @@ def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     """
 
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
@@ -1467,7 +1507,7 @@ def extract_frames(
     Parameters:
         video_uri (Union[str, Path]): The path to the video file, url or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
-            to 10.
+            to 1.
 
     Returns:
         List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame

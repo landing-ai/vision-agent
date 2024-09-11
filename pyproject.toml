@@ -41,7 +41,6 @@ pillow-heif = "^0.16.0"
 pytube = "15.0.0"
 anthropic = "^0.31.0"
 pydantic = "2.7.4"
-eva-decord = "^0.6.1"
 av = "^11.0.0"
 
 [tool.poetry.group.dev.dependencies]

@@ -292,7 +292,7 @@ class Execution(BaseModel):
     error: Optional[Error] = None
     "Error object if an error occurred, None otherwise."
 
-    def text(self, include_logs: bool = True) -> str:
+    def text(self, include_logs: bool = True, include_results: bool = True) -> str:
         """Returns the text representation of this object, i.e. including the main
         result or the error traceback, optionally along with the logs (stdout, stderr).
         """
@@ -300,15 +300,17 @@ class Execution(BaseModel):
         if self.error:
             return prefix + "\n----- Error -----\n" + self.error.traceback
 
-        result_str = [
-            (
-                f"----- Final output -----\n{res.text}"
-                if res.is_main_result
-                else f"----- Intermediate output-----\n{res.text}"
-            )
-            for res in self.results
-        ]
-        return prefix + "\n" + "\n".join(result_str)
+        if include_results:
+            result_str = [
+                (
+                    f"----- Final output -----\n{res.text}"
+                    if res.is_main_result
+                    else f"----- Intermediate output-----\n{res.text}"
+                )
+                for res in self.results
+            ]
+            return prefix + "\n" + "\n".join(result_str)
+        return prefix
 
     @property
     def success(self) -> bool:

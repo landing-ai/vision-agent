@@ -371,7 +371,7 @@ class ClaudeSonnetLMM(LMM):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_name: str = "claude-3-sonnet-20240229",
+        model_name: str = "claude-3-5-sonnet-20240620",
         max_tokens: int = 4096,
         **kwargs: Any,
     ):
