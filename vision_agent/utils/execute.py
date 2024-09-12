@@ -691,8 +691,9 @@ class CodeInterpreterFactory:
         if not code_sandbox_runtime:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
         if code_sandbox_runtime == "e2b":
+            envs = _get_e2b_env()
             instance: CodeInterpreter = E2BCodeInterpreter(
-                timeout=_SESSION_TIMEOUT, remote_path=remote_path
+                timeout=_SESSION_TIMEOUT, remote_path=remote_path, envs=envs
             )
         elif code_sandbox_runtime == "local":
             instance = LocalCodeInterpreter(
@@ -703,6 +704,20 @@ class CodeInterpreterFactory:
                 f"Unsupported code sandbox runtime: {code_sandbox_runtime}. Supported runtimes: e2b, local"
             )
         return instance
+
+
+def _get_e2b_env() -> Union[Dict[str, str], None]:
+    openai_api_key = os.getenv("OPENAI_API_KEY", "")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if openai_api_key or anthropic_api_key:
+        envs = {}
+        if openai_api_key:
+            envs["OPENAI_API_KEY"] = openai_api_key
+        if anthropic_api_key:
+            envs["ANTHROPIC_API_KEY"] = anthropic_api_key
+    else:
+        envs = None
+    return envs
 
 
 def _parse_local_code_interpreter_outputs(outputs: List[Dict[str, Any]]) -> Execution:
