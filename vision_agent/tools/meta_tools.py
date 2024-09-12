@@ -558,7 +558,7 @@ def object_detection_fine_tuning(bboxes: List[Dict[str, Any]]) -> str:
     fine_tune_id = str(
         landing_api.launch_fine_tuning_job("florencev2", task_type, fine_tuning_request)
     )
-    print(f"[Florence2 fine tuning id: {fine_tune_id}]")
+    print(f"[Fine tuning id: {fine_tune_id}]")
     return fine_tune_id
 
 

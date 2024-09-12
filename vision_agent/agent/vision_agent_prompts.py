@@ -159,13 +159,13 @@ AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to 
 
 USER: The detections are slightly off. Can you fine tune florence2 using these labels? "[{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}]"
 
-AGENT: {"thoughts": "Because the user has supplied me with labels I can call florence2_fine_tuning on their behalf to fine tune the model", "response": "I will fine tune florence2 with the labels you provided <execute_python>florence2_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}], "phrase_grounding")</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "Because the user has supplied me with labels I can call object_detection_fine_tuning on their behalf to fine tune the model", "response": "I will fine tune florence2 with the labels you provided <execute_python>object_detection_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
-[Florence2 fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
+[Fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
 
 
-AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_florence2_fine_tuning(artifacts, "code.py", "phrase_grounding", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 [Artifact code.py edits]
