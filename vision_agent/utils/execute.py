@@ -690,9 +690,11 @@ class CodeInterpreterFactory:
     ) -> CodeInterpreter:
         if not code_sandbox_runtime:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
+        openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        envs = {"OPENAI_API_KEY": openai_api_key} if openai_api_key else None
         if code_sandbox_runtime == "e2b":
             instance: CodeInterpreter = E2BCodeInterpreter(
-                timeout=_SESSION_TIMEOUT, remote_path=remote_path
+                timeout=_SESSION_TIMEOUT, remote_path=remote_path, envs=envs
             )
         elif code_sandbox_runtime == "local":
             instance = LocalCodeInterpreter(
