@@ -706,7 +706,7 @@ class CodeInterpreterFactory:
         return instance
 
 
-def _get_e2b_env() -> Dict[str, str] | None:
+def _get_e2b_env() -> Union[Dict[str, str], None]:
     openai_api_key = os.getenv("OPENAI_API_KEY", "")
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if openai_api_key or anthropic_api_key:
