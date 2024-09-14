@@ -56,6 +56,7 @@ class MimeType(str, Enum):
     TEXT_LATEX = "text/latex"
     APPLICATION_JSON = "application/json"
     APPLICATION_JAVASCRIPT = "application/javascript"
+    TEXT_ARTIFACT_NAME = "text/artifact/name"
 
 
 class FileSerializer:
@@ -103,6 +104,7 @@ class Result:
     latex: Optional[str] = None
     json: Optional[Dict[str, Any]] = None
     javascript: Optional[str] = None
+    artifact_name: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
     "Extra data that can be included. Not part of the standard types."
 
@@ -127,6 +129,7 @@ class Result:
         self.latex = data.pop(MimeType.TEXT_LATEX, None)
         self.json = data.pop(MimeType.APPLICATION_JSON, None)
         self.javascript = data.pop(MimeType.APPLICATION_JAVASCRIPT, None)
+        self.artifact_name = data.pop(MimeType.TEXT_ARTIFACT_NAME, None)
         self.extra = data
         # Only keeping the PNG representation if both PNG and JPEG are present
         if self.png and self.jpeg:
@@ -204,6 +207,8 @@ class Result:
             formats.append("javascript")
         if self.mp4:
             formats.append("mp4")
+        if self.artifact_name:
+            formats.append("artifact_name")
         if self.extra:
             formats.extend(iter(self.extra))
         return formats

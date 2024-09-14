@@ -15,6 +15,7 @@ from vision_agent.agent.vision_agent_prompts import (
 from vision_agent.lmm import LMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING, save_image, load_image
 from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
+from vision_agent.tools.tools import extract_frames, save_video
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
@@ -224,9 +225,20 @@ class VisionAgent(Agent):
                     for media in chat_i["media"]:
                         if type(media) is str and media.startswith(("http", "https")):
                             # TODO: Ideally we should not call VA.tools here, we should come to revisit how to better support remote image later
-                            file_path = Path(media).name
-                            ndarray = load_image(media)
-                            save_image(ndarray, file_path)
+                            file_path = str(
+                                Path(self.local_artifacts_path).parent
+                                / Path(media).name
+                            )
+                            if file_path.lower().endswith(
+                                ".mp4"
+                            ) or file_path.lower().endswith(".mov"):
+                                video_frames = extract_frames(media)
+                                save_video(
+                                    [frame for frame, _ in video_frames], file_path
+                                )
+                            else:
+                                ndarray = load_image(media)
+                                save_image(ndarray, file_path)
                             media = file_path
                         else:
                             media = cast(str, media)

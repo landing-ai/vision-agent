@@ -53,25 +53,27 @@ def redisplay_results(execution: Execution) -> None:
     """
     for result in execution.results:
         if result.text is not None:
-            display({MimeType.TEXT_PLAIN: result.text})
+            display({MimeType.TEXT_PLAIN: result.text}, raw=True)
         if result.html is not None:
-            display({MimeType.TEXT_HTML: result.html})
+            display({MimeType.TEXT_HTML: result.html}, raw=True)
         if result.markdown is not None:
-            display({MimeType.TEXT_MARKDOWN: result.markdown})
+            display({MimeType.TEXT_MARKDOWN: result.markdown}, raw=True)
         if result.svg is not None:
-            display({MimeType.IMAGE_SVG: result.svg})
+            display({MimeType.IMAGE_SVG: result.svg}, raw=True)
         if result.png is not None:
-            display({MimeType.IMAGE_PNG: result.png})
+            display({MimeType.IMAGE_PNG: result.png}, raw=True)
         if result.jpeg is not None:
-            display({MimeType.IMAGE_JPEG: result.jpeg})
+            display({MimeType.IMAGE_JPEG: result.jpeg}, raw=True)
         if result.mp4 is not None:
-            display({MimeType.VIDEO_MP4_B64: result.mp4})
+            display({MimeType.VIDEO_MP4_B64: result.mp4}, raw=True)
         if result.latex is not None:
-            display({MimeType.TEXT_LATEX: result.latex})
+            display({MimeType.TEXT_LATEX: result.latex}, raw=True)
         if result.json is not None:
-            display({MimeType.APPLICATION_JSON: result.json})
+            display({MimeType.APPLICATION_JSON: result.json}, raw=True)
+        if result.artifact_name is not None:
+            display({MimeType.TEXT_ARTIFACT_NAME: result.artifact_name}, raw=True)
         if result.extra is not None:
-            display(result.extra)
+            display(result.extra, raw=True)
 
 
 class Artifacts:
@@ -208,7 +210,7 @@ def create_code_artifact(artifacts: Artifacts, name: str) -> str:
         return_str = f"[Artifact {name} created]"
     print(return_str)
 
-    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
+    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
     return return_str
 
 
@@ -292,7 +294,7 @@ def edit_code_artifact(
 
     artifacts[name] = "".join(edited_lines)
 
-    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
+    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
     return open_code_artifact(artifacts, name, cur_line)
 
 
@@ -348,7 +350,7 @@ def generate_vision_code(
     code_lines = code.splitlines(keepends=True)
     total_lines = len(code_lines)
 
-    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
+    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
@@ -413,7 +415,7 @@ def edit_vision_code(
     code_lines = code.splitlines(keepends=True)
     total_lines = len(code_lines)
 
-    display({MimeType.APPLICATION_JSON: {"last_artifact": name}})
+    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
@@ -427,6 +429,7 @@ def write_media_artifact(artifacts: Artifacts, local_path: str) -> str:
     with open(local_path, "rb") as f:
         media = f.read()
     artifacts[Path(local_path).name] = media
+    display({MimeType.TEXT_ARTIFACT_NAME: Path(local_path).name}, raw=True)
     return f"[Media {Path(local_path).name} saved]"
 
 
@@ -592,6 +595,8 @@ def use_florence2_fine_tuning(
 
     diff = get_diff_with_prompts(name, code, new_code)
     print(diff)
+
+    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
     return diff
 
 
