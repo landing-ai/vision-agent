@@ -232,8 +232,10 @@ class VisionAgent(Agent):
                             if file_path.lower().endswith(
                                 ".mp4"
                             ) or file_path.lower().endswith(".mov"):
-                                ndarray = extract_frames(media)
-                                save_video([frame for frame, _ in ndarray], file_path)
+                                video_frames = extract_frames(media)
+                                save_video(
+                                    [frame for frame, _ in video_frames], file_path
+                                )
                             else:
                                 ndarray = load_image(media)
                                 save_image(ndarray, file_path)
