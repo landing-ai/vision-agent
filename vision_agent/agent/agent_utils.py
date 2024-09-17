@@ -41,6 +41,8 @@ def _strip_markdown_code(inp_str: str) -> str:
 
 def extract_json(json_str: str) -> Dict[str, Any]:
     json_str = json_str.replace("\n", " ").strip()
+    json_str = json_str.replace("'", '"')
+    json_str = json_str.replace(": True", ": true").replace(": False", ": false")
 
     try:
         return json.loads(json_str)  # type: ignore
