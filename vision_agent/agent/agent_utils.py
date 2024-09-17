@@ -40,14 +40,18 @@ def _strip_markdown_code(inp_str: str) -> str:
 
 
 def extract_json(json_str: str) -> Dict[str, Any]:
-    json_str = json_str.replace("\n", " ").strip()
-    json_str = json_str.replace("'", '"')
-    json_str = json_str.replace(": True", ": true").replace(": False", ": false")
+    json_str_mod = json_str.replace("\n", " ").strip()
+    json_str_mod = json_str_mod.replace("'", '"')
+    json_str_mod = json_str_mod.replace(": True", ": true").replace(
+        ": False", ": false"
+    )
 
     try:
-        return json.loads(json_str)  # type: ignore
+        return json.loads(json_str_mod)  # type: ignore
     except json.JSONDecodeError:
         json_orig = json_str
+        # don't replace quotes here or booleans since it can also introduce errors
+        json_str = json_str.replace("\n", " ").strip()
         json_str = _strip_markdown_code(json_str)
         json_str = _find_markdown_json(json_str)
         json_dict = _extract_sub_json(json_str)
