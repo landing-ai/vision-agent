@@ -223,25 +223,7 @@ class VisionAgent(Agent):
             for chat_i in int_chat:
                 if "media" in chat_i:
                     for media in chat_i["media"]:
-                        if type(media) is str and media.startswith(("http", "https")):
-                            # TODO: Ideally we should not call VA.tools here, we should come to revisit how to better support remote image later
-                            file_path = str(
-                                Path(self.local_artifacts_path).parent
-                                / Path(media).name
-                            )
-                            if file_path.lower().endswith(
-                                ".mp4"
-                            ) or file_path.lower().endswith(".mov"):
-                                video_frames = extract_frames(media)
-                                save_video(
-                                    [frame for frame, _ in video_frames], file_path
-                                )
-                            else:
-                                ndarray = load_image(media)
-                                save_image(ndarray, file_path)
-                            media = file_path
-                        else:
-                            media = cast(str, media)
+                        media = cast(str, media)
                         artifacts.artifacts[Path(media).name] = open(media, "rb").read()
 
                         media_remote_path = (
