@@ -13,9 +13,7 @@ from vision_agent.agent.vision_agent_prompts import (
     VA_CODE,
 )
 from vision_agent.lmm import LMM, Message, OpenAILMM
-from vision_agent.tools import META_TOOL_DOCSTRING, save_image, load_image
 from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
-from vision_agent.tools.tools import extract_frames, save_video
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
