@@ -1,4 +1,5 @@
 import difflib
+import json
 import os
 import pickle as pkl
 import re
@@ -70,8 +71,8 @@ def redisplay_results(execution: Execution) -> None:
             display({MimeType.TEXT_LATEX: result.latex}, raw=True)
         if result.json is not None:
             display({MimeType.APPLICATION_JSON: result.json}, raw=True)
-        if result.artifact_name is not None:
-            display({MimeType.TEXT_ARTIFACT_NAME: result.artifact_name}, raw=True)
+        if result.artifact is not None:
+            display({MimeType.APPLICATION_ARTIFACT: result.artifact}, raw=True)
         if result.extra is not None:
             display(result.extra, raw=True)
 
@@ -210,7 +211,14 @@ def create_code_artifact(artifacts: Artifacts, name: str) -> str:
         return_str = f"[Artifact {name} created]"
     print(return_str)
 
-    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
+    display(
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {"name": name, "content": artifacts[name]}
+            )
+        },
+        raw=True,
+    )
     return return_str
 
 
@@ -294,7 +302,14 @@ def edit_code_artifact(
 
     artifacts[name] = "".join(edited_lines)
 
-    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
+    display(
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {"name": name, "content": artifacts[name]}
+            )
+        },
+        raw=True,
+    )
     return open_code_artifact(artifacts, name, cur_line)
 
 
@@ -350,7 +365,10 @@ def generate_vision_code(
     code_lines = code.splitlines(keepends=True)
     total_lines = len(code_lines)
 
-    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
+    display(
+        {MimeType.APPLICATION_ARTIFACT: json.dumps({"name": name, "content": code})},
+        raw=True,
+    )
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
@@ -415,7 +433,10 @@ def edit_vision_code(
     code_lines = code.splitlines(keepends=True)
     total_lines = len(code_lines)
 
-    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
+    display(
+        {MimeType.APPLICATION_ARTIFACT: json.dumps({"name": name, "content": code})},
+        raw=True,
+    )
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
@@ -429,7 +450,6 @@ def write_media_artifact(artifacts: Artifacts, local_path: str) -> str:
     with open(local_path, "rb") as f:
         media = f.read()
     artifacts[Path(local_path).name] = media
-    display({MimeType.TEXT_ARTIFACT_NAME: Path(local_path).name}, raw=True)
     return f"[Media {Path(local_path).name} saved]"
 
 
@@ -596,7 +616,14 @@ def use_florence2_fine_tuning(
     diff = get_diff_with_prompts(name, code, new_code)
     print(diff)
 
-    display({MimeType.TEXT_ARTIFACT_NAME: name}, raw=True)
+    display(
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {"name": name, "content": new_code}
+            )
+        },
+        raw=True,
+    )
     return diff
 
 
