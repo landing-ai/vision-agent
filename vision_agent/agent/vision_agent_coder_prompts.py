@@ -114,13 +114,14 @@ plan3:
 
 
 ```python
-import numpy as np
 from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames("video.mp4", 1)
 frames = [f[0] for f in frames][:10]
 
+# import numpy for remove_array auxiliary function
+import numpy as np
 def remove_arrays(o):
     if isinstance(o, list):
         return [remove_arrays(e) for e in o]
@@ -179,7 +180,7 @@ PICK_PLAN = """
 3. Output a JSON object with the following format:
 {{
     "predicted_answer": str # the answer you would expect from the best plan
-    "thoughts": str # your thought process for choosing the best plan
+    "thoughts": str # your thought process for choosing the best plan, any adjustments you would make to the plan
     "best_plan": str # the best plan you have chosen
 }}
 """
@@ -202,15 +203,19 @@ This is the documentation for the functions you have access to. You may call any
 **User Instructions**:
 {question}
 
-**Tool Output**:
+**Tool Outputs**:
 {tool_output}
+
+
+**Tool Output Thoughts**:
+{plan_thoughts}
 
 **Previous Feedback**:
 {feedback}
 
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
-2. **Algorithm/Method Selection**: Decide on the most efficient method, use the tool output to guide your decision.
+2. **Algorithm/Method Selection**: Decide on the most efficient method, use the tool outputs to guide your decision.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
 """

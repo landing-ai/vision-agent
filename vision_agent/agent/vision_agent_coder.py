@@ -123,7 +123,7 @@ def pick_plan(
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
-) -> Tuple[str, str]:
+) -> Tuple[Dict[str, str], str]:
     log_progress(
         {
             "type": "log",
@@ -233,10 +233,10 @@ def pick_plan(
     chat[-1]["content"] = prompt
 
     count = 0
-    best_plan = None
-    while best_plan is None and count < max_retries:
+    plan_thoughts = None
+    while plan_thoughts is None and count < max_retries:
         try:
-            best_plan = extract_json(model(chat, stream=False))  # type: ignore
+            plan_thoughts = extract_json(model(chat, stream=False))  # type: ignore
         except JSONDecodeError as e:
             _LOGGER.exception(
                 f"Error while extracting JSON during picking best plan {str(e)}"
@@ -245,23 +245,23 @@ def pick_plan(
         count += 1
 
     if (
-        best_plan is None
-        or "best_plan" not in best_plan
-        or ("best_plan" in best_plan and best_plan["best_plan"] not in plans)
+        plan_thoughts is None
+        or "best_plan" not in plan_thoughts
+        or ("best_plan" in plan_thoughts and plan_thoughts["best_plan"] not in plans)
     ):
-        best_plan = {"best_plan": list(plans.keys())[0]}
+        plan_thoughts = {"best_plan": list(plans.keys())[0]}
 
     if verbosity >= 1:
-        _LOGGER.info(f"Best plan:\n{best_plan}")
+        _LOGGER.info(f"Best plan:\n{plan_thoughts}")
     log_progress(
         {
             "type": "log",
             "log_content": "Picked best plan",
             "status": "completed",
-            "payload": plans[best_plan["best_plan"]],
+            "payload": plans[plan_thoughts["best_plan"]],
         }
     )
-    return best_plan["best_plan"], tool_output_str
+    return plan_thoughts, tool_output_str
 
 
 def write_code(
@@ -269,6 +269,7 @@ def write_code(
     chat: List[Message],
     plan: str,
     tool_info: str,
+    plan_thoughts: str,
     tool_output: str,
     feedback: str,
 ) -> str:
@@ -281,6 +282,7 @@ def write_code(
         docstring=tool_info,
         question=FULL_TASK.format(user_request=user_request, subtasks=plan),
         tool_output=tool_output,
+        plan_thoughts=plan_thoughts,
         feedback=feedback,
     )
     chat[-1]["content"] = prompt
@@ -316,6 +318,7 @@ def write_and_test_code(
     plan: str,
     tool_info: str,
     tool_output: str,
+    plan_thoughts: str,
     tool_utils: str,
     working_memory: List[Dict[str, str]],
     coder: LMM,
@@ -340,6 +343,7 @@ def write_and_test_code(
         plan,
         tool_info,
         tool_output,
+        plan_thoughts,
         format_memory(working_memory),
     )
     test = write_test(
@@ -760,7 +764,7 @@ class VisionAgentCoder(Agent):
             )
 
             if test_multi_plan:
-                best_plan, tool_output_str = pick_plan(
+                plan_thoughts, tool_output_str = pick_plan(
                     int_chat,
                     plans,
                     tool_infos["all"],
@@ -770,9 +774,12 @@ class VisionAgentCoder(Agent):
                     self.log_progress,
                     verbosity=self.verbosity,
                 )
+                best_plan = plan_thoughts["best_plan"]
+                plan_thoughts = plan_thoughts["thoughts"]
             else:
                 best_plan = list(plans.keys())[0]
                 tool_output_str = ""
+                plan_thoughts = ""
 
             if best_plan in plans and best_plan in tool_infos:
                 plan_i = plans[best_plan]
@@ -807,6 +814,7 @@ class VisionAgentCoder(Agent):
                 + "\n-".join([e for e in plan_i["instructions"]]),
                 tool_info=tool_info,
                 tool_output=tool_output_str,
+                plan_thoughts=plan_thoughts,
                 tool_utils=T.UTILITIES_DOCSTRING,
                 working_memory=working_memory,
                 coder=self.coder,
