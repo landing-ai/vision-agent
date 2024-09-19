@@ -104,7 +104,7 @@ class Result:
     latex: Optional[str] = None
     json: Optional[Dict[str, Any]] = None
     javascript: Optional[str] = None
-    artifact_name: Optional[str] = None
+    artifact: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
     "Extra data that can be included. Not part of the standard types."
 
