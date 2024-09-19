@@ -211,6 +211,18 @@ def create_code_artifact(artifacts: Artifacts, name: str) -> str:
         return_str = f"[Artifact {name} created]"
     print(return_str)
 
+    display(
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {
+                    "name": name,
+                    "content": artifacts[name],
+                    "action": "create",
+                }
+            )
+        },
+        raw=True,
+    )
     return return_str
 
 
