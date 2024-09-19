@@ -211,14 +211,6 @@ def create_code_artifact(artifacts: Artifacts, name: str) -> str:
         return_str = f"[Artifact {name} created]"
     print(return_str)
 
-    display(
-        {
-            MimeType.APPLICATION_ARTIFACT: json.dumps(
-                {"name": name, "content": artifacts[name]}
-            )
-        },
-        raw=True,
-    )
     return return_str
 
 
@@ -305,7 +297,12 @@ def edit_code_artifact(
     display(
         {
             MimeType.APPLICATION_ARTIFACT: json.dumps(
-                {"name": name, "content": artifacts[name]}
+                {
+                    "name": name,
+                    "content": artifacts[name],
+                    "contentType": "vision_code",
+                    "action": "edit",
+                }
             )
         },
         raw=True,
@@ -366,7 +363,16 @@ def generate_vision_code(
     total_lines = len(code_lines)
 
     display(
-        {MimeType.APPLICATION_ARTIFACT: json.dumps({"name": name, "content": code})},
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {
+                    "name": name,
+                    "content": code,
+                    "contentType": "vision_code",
+                    "action": "create",
+                }
+            )
+        },
         raw=True,
     )
     return view_lines(code_lines, 0, total_lines, name, total_lines)
@@ -434,7 +440,16 @@ def edit_vision_code(
     total_lines = len(code_lines)
 
     display(
-        {MimeType.APPLICATION_ARTIFACT: json.dumps({"name": name, "content": code})},
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {
+                    "name": name,
+                    "content": code,
+                    "contentType": "vision_code",
+                    "action": "edit",
+                }
+            )
+        },
         raw=True,
     )
     return view_lines(code_lines, 0, total_lines, name, total_lines)
