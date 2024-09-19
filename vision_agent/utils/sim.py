@@ -125,7 +125,7 @@ class AzureSim(Sim):
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
-            self.df["embs"] = self.df[sim_key].apply(lambda x: get_embedding(client, x))
+            self.df["embs"] = self.df[sim_key].apply(lambda x: get_embedding(self.emb_call, x))
 
 
 class OllamaSim(Sim):
