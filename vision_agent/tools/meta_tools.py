@@ -300,7 +300,6 @@ def edit_code_artifact(
                 {
                     "name": name,
                     "content": artifacts[name],
-                    "contentType": "vision_code",
                     "action": "edit",
                 }
             )
@@ -445,7 +444,6 @@ def edit_vision_code(
                 {
                     "name": name,
                     "content": code,
-                    "contentType": "vision_code",
                     "action": "edit",
                 }
             )
