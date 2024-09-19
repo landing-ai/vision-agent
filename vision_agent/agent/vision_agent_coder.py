@@ -2,12 +2,10 @@ import copy
 import logging
 import os
 import sys
-import tempfile
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
 
-from PIL import Image
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
@@ -776,11 +774,11 @@ class VisionAgentCoder(Agent):
                     verbosity=self.verbosity,
                 )
                 best_plan = plan_thoughts["best_plan"]
-                plan_thoughts = plan_thoughts["thoughts"]
+                plan_thoughts_str = plan_thoughts["thoughts"]
             else:
                 best_plan = list(plans.keys())[0]
                 tool_output_str = ""
-                plan_thoughts = ""
+                plan_thoughts_str = ""
 
             if best_plan in plans and best_plan in tool_infos:
                 plan_i = plans[best_plan]
@@ -815,7 +813,7 @@ class VisionAgentCoder(Agent):
                 + "\n-".join([e for e in plan_i["instructions"]]),
                 tool_info=tool_info,
                 tool_output=tool_output_str,
-                plan_thoughts=plan_thoughts,
+                plan_thoughts=plan_thoughts_str,
                 tool_utils=T.UTILITIES_DOCSTRING,
                 working_memory=working_memory,
                 coder=self.coder,
