@@ -276,8 +276,11 @@ class VisionAgent(Agent):
                 # sometimes it gets stuck in a loop, so we force it to exit
                 if last_response == response:
                     response["let_user_respond"] = True
-
-                self.streaming_message({"role": "assistant", "content": response})
+                    self.streaming_message(
+                        {"role": "assistant", "error": "Stuck in loop"}
+                    )
+                else:
+                    self.streaming_message({"role": "assistant", "content": response})
 
                 if response["let_user_respond"]:
                     break
