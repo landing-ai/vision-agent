@@ -615,23 +615,24 @@ class VisionAgentCoder(Agent):
         """Initialize the Vision Agent Coder.
 
         Parameters:
-            planner (Optional[LMM]): The planner model to use. Defaults to OpenAILMM.
-            coder (Optional[LMM]): The coder model to use. Defaults to OpenAILMM.
-            tester (Optional[LMM]): The tester model to use. Defaults to OpenAILMM.
-            debugger (Optional[LMM]): The debugger model to
+            planner (Optional[LMM]): The planner model to use. Defaults to AnthropicLMM.
+            coder (Optional[LMM]): The coder model to use. Defaults to AnthropicLMM.
+            tester (Optional[LMM]): The tester model to use. Defaults to AnthropicLMM.
+            debugger (Optional[LMM]): The debugger model to use. Defaults to AnthropicLMM.
             tool_recommender (Optional[Sim]): The tool recommender model to use.
             verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
                 highest verbosity level which will output all intermediate debugging
                 code.
-            report_progress_callback: a callback to report the progress of the agent.
-                This is useful for streaming logs in a web application where multiple
-                VisionAgentCoder instances are running in parallel. This callback
-                ensures that the progress are not mixed up.
-            code_sandbox_runtime: the code sandbox runtime to use. A code sandbox is
-                 used to run the generated code. It can be one of the following
-                 values: None, "local" or "e2b". If None, VisionAgentCoder will read
-                 the value from the environment variable CODE_SANDBOX_RUNTIME. If it's
-                 also None, the local python runtime environment will be used.
+            report_progress_callback (Optional[Callable[Dict[str, Any]]]): a callback
+                to report the progress of the agent. This is useful for streaming logs
+                in a web application where multiple VisionAgentCoder instances are
+                running in parallel. This callback ensures that the progress are not
+                mixed up.
+            code_sandbox_runtime (Optional[str]): the code sandbox runtime to use. A
+                code sandbox is used to run the generated code. It can be one of the
+                following values: None, "local" or "e2b". If None, VisionAgentCoder
+                will read the value from the environment variable CODE_SANDBOX_RUNTIME.
+                If it's also None, the local python runtime environment will be used.
         """
 
         self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
