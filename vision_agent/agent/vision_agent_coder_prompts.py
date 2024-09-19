@@ -30,9 +30,10 @@ PLAN = """
 
 **Instructions**:
 1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
-2. Output three different plans each utilize a different strategy or set of tools.
+2. Call out specific tools for each subtask and explain why you chose them, even basic tools for loading and saving media.
+3. Output three different plans each utilize a different strategy or set of tools.
 
-Output a list of jsons in the following format
+Output a list of jsons in the following format:
 
 ```json
 {{
@@ -209,7 +210,7 @@ This is the documentation for the functions you have access to. You may call any
 
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
-2. **Algorithm/Method Selection**: Decide on the most efficient way.
+2. **Algorithm/Method Selection**: Decide on the most efficient method, use the tool output to guide your decision.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
 """
