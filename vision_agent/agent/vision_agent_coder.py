@@ -92,29 +92,6 @@ def format_plans(plans: Dict[str, Any]) -> str:
     return plan_str
 
 
-def extract_image(
-    media: Optional[Sequence[Union[str, Path]]],
-) -> Optional[Sequence[Union[str, Path]]]:
-    if media is None:
-        return None
-
-    new_media = []
-    for m in media:
-        m = Path(m)
-        extension = m.suffix
-        if extension in [".jpg", ".jpeg", ".png", ".bmp"]:
-            new_media.append(m)
-        elif extension in [".mp4", ".mov"]:
-            frames = T.extract_frames(m)
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                if len(frames) > 0:
-                    Image.fromarray(frames[0][0]).save(tmp.name)
-                    new_media.append(Path(tmp.name))
-    if len(new_media) == 0:
-        return None
-    return new_media
-
-
 def write_plans(
     chat: List[Message],
     tool_desc: str,
