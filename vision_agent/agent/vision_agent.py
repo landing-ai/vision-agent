@@ -275,6 +275,14 @@ class VisionAgent(Agent):
                     )
                     if self.verbosity >= 1:
                         _LOGGER.info(user_obs)
+                    int_chat.append({"role": "observation", "content": user_obs})
+                    orig_chat.append(
+                        {
+                            "role": "observation",
+                            "content": user_obs,
+                            "execution": user_result,
+                        }
+                    )
                     self.streaming_message(
                         {
                             "role": "observation",
