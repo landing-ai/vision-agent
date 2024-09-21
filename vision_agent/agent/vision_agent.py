@@ -267,7 +267,11 @@ class VisionAgent(Agent):
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
 
-            user_code_action = parse_execution(last_user_message.get("content"), False)
+            user_code_action = None
+            if isinstance(last_user_message.get("content"), str):
+                user_code_action = parse_execution(
+                    last_user_message.get("content"), False
+                )
 
             if user_code_action is not None:
                 user_result, user_obs = run_code_action(
