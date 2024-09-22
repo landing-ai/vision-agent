@@ -507,7 +507,7 @@ def florence2_sam2_video_tracking(
         "function_name": "florence2_sam2_video_tracking",
     }
     if chunk_length is not None:
-        payload["chunk_length"] = chunk_length
+        payload["chunk_length"] = chunk_length  # type: ignore
     data: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
     )
