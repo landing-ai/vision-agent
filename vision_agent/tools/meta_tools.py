@@ -250,6 +250,7 @@ def edit_code_artifact(
 
     total_lines = len(artifacts[name].splitlines())
     if start < 0 or end < 0 or start > end or end > total_lines:
+        print("[Invalid line range]")
         return "[Invalid line range]"
     if start == end:
         end += 1

@@ -218,6 +218,7 @@ class VisionAgent(Agent):
         ) as code_interpreter:
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
+            last_user_message_content = chat[-1].get("content")
             media_list = []
             for chat_i in int_chat:
                 if "media" in chat_i:
@@ -265,6 +266,32 @@ class VisionAgent(Agent):
             int_chat.append({"role": "observation", "content": artifacts_loaded})
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
+
+            if isinstance(last_user_message_content, str):
+                user_code_action = parse_execution(last_user_message_content, False)
+                if user_code_action is not None:
+                    user_result, user_obs = run_code_action(
+                        user_code_action, code_interpreter, str(remote_artifacts_path)
+                    )
+                    if self.verbosity >= 1:
+                        _LOGGER.info(user_obs)
+                    int_chat.append({"role": "observation", "content": user_obs})
+                    orig_chat.append(
+                        {
+                            "role": "observation",
+                            "content": user_obs,
+                            "execution": user_result,
+                        }
+                    )
+                    self.streaming_message(
+                        {
+                            "role": "observation",
+                            "content": user_obs,
+                            "execution": user_result,
+                            "finished": True,
+                        }
+                    )
+                    finished = True
 
             while not finished and iterations < self.max_iterations:
                 response = run_conversation(self.agent, int_chat)
