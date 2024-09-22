@@ -4,5 +4,6 @@ from .vision_agent_coder import (
     AnthropicVisionAgentCoder,
     AzureVisionAgentCoder,
     OllamaVisionAgentCoder,
+    OpenAIVisionAgentCoder,
     VisionAgentCoder,
 )
