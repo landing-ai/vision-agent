@@ -61,6 +61,7 @@ def video_writer(
     stream.height = height - (height % 2)
     stream.width = width - (width % 2)
     stream.pix_fmt = "yuv420p"
+    stream.options = {"crf": "10"}
     for frame in frames:
         # Remove the alpha channel (convert RGBA to RGB)
         frame_rgb = frame[:, :, :3]
@@ -77,7 +78,7 @@ def video_writer(
 
 
 def frames_to_bytes(
-    frames: List[np.ndarray], fps: float = 10, file_ext: str = ".mp4"
+    frames: List[np.ndarray], fps: float = 1.0, file_ext: str = ".mp4"
 ) -> bytes:
     r"""Convert a list of frames to a video file encoded into a byte string.
 
