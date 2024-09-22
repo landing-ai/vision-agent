@@ -51,6 +51,9 @@ class DefaultImports:
     """Container for default imports used in the code execution."""
 
     common_imports = [
+        "import os",
+        "import numpy as np",
+        "from vision_agent.tools import *",
         "from typing import *",
         "from pillow_heif import register_heif_opener",
         "register_heif_opener()",
@@ -174,7 +177,10 @@ def pick_plan(
 
     # retry if the tool output is empty or code fails
     count = 0
-    while (not tool_output.success or tool_output_str == "") and count < max_retries:
+    while (
+        not tool_output.success
+        or (len(tool_output.logs.stdout) == 0 and len(tool_output.logs.stderr) == 0)
+    ) and count < max_retries:
         prompt = TEST_PLANS.format(
             docstring=tool_info,
             plans=plan_str,
@@ -213,6 +219,7 @@ def pick_plan(
         if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
             _LOGGER.info(f"Code execution result after attempt {count + 1}")
+            _LOGGER.info(f"{tool_output_str}")
 
         count += 1
 
@@ -247,7 +254,11 @@ def pick_plan(
         or "best_plan" not in plan_thoughts
         or ("best_plan" in plan_thoughts and plan_thoughts["best_plan"] not in plans)
     ):
+        _LOGGER.info(f"Failed to pick best plan. Using the first plan. {plan_thoughts}")
         plan_thoughts = {"best_plan": list(plans.keys())[0]}
+
+    if "thoughts" not in plan_thoughts:
+        plan_thoughts["thoughts"] = ""
 
     if verbosity >= 1:
         _LOGGER.info(f"Best plan:\n{plan_thoughts}")
@@ -259,7 +270,7 @@ def pick_plan(
             "payload": plans[plan_thoughts["best_plan"]],
         }
     )
-    return plan_thoughts, tool_output_str
+    return plan_thoughts, "```python\n" + code + "\n```\n" + tool_output_str
 
 
 def write_code(
@@ -844,7 +855,8 @@ class VisionAgentCoder(Agent):
                 "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
-                "plan": plan,
+                "plans": plans,
+                "plan_thoughts": plan_thoughts_str,
                 "working_memory": working_memory,
             }
 
