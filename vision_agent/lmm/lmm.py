@@ -46,7 +46,7 @@ class OpenAILMM(LMM):
 
     def __init__(
         self,
-        model_name: str = "gpt-4o",
+        model_name: str = "gpt-4o-2024-05-13",
         api_key: Optional[str] = None,
         max_tokens: int = 4096,
         json_mode: bool = False,
