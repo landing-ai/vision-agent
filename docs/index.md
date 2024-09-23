@@ -30,10 +30,11 @@ To get started, you can install the library using pip:
 pip install vision-agent
 ```
 
-Ensure you have an OpenAI API key and set it as an environment variable (if you are
-using Azure OpenAI please see the Azure setup section):
+Ensure you have an Anthropic key and an OpenAI API key and set in your environment
+variables (if you are using Azure OpenAI please see the Azure setup section):
 
 ```bash
+export ANTHROPIC_API_KEY="your-api-key"
 export OPENAI_API_KEY="your-api-key"
 ```
 
@@ -67,6 +68,9 @@ You can find more details about the streamlit app [here](examples/chat/).
 >>> resp.append({"role": "user", "content": "Can you count the number of people in this image?", "media": ["people.jpg"]})
 >>> resp = agent(resp)
 ```
+
+`VisionAgent` currently utilizes Claude-3.5 as it's default LMM and uses OpenAI for
+embeddings for tool searching.
 
 ### Vision Agent Coder
 #### Basic Usage
@@ -129,7 +133,8 @@ of the input is a list of dictionaries with the keys `role`, `content`, and `med
     "code": "from vision_agent.tools import ..."
     "test": "calculate_filled_percentage('jar.jpg')",
     "test_result": "...",
-    "plan": [{"code": "...", "test": "...", "plan": "..."}, ...],
+    "plans": {"plan1": {"thoughts": "..."}, ...},
+    "plan_thoughts": "...",
     "working_memory": ...,
 }
 ```
@@ -166,20 +171,25 @@ result = agent.chat_with_workflow(conv)
 ### Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
 while others are hosted for you. You can easily access them yourself, for example if
-you want to run `owl_v2` and visualize the output you can run:
+you want to run `owl_v2_image` and visualize the output you can run:
 
 ```python
 import vision_agent.tools as T
 import matplotlib.pyplot as plt
 
 image = T.load_image("dogs.jpg")
-dets = T.owl_v2("dogs", image)
+dets = T.owl_v2_image("dogs", image)
 viz = T.overlay_bounding_boxes(image, dets)
 plt.imshow(viz)
 plt.show()
 ```
 
-You can also add custom tools to the agent:
+You can find all available tools in `vision_agent/tools/tools.py`, however,
+`VisionAgentCoder` only utilizes a subset of tools that have been tested and provide
+the best performance. Those can be found in the same file under the `TOOLS` variable.
+
+If you can't find the tool you are looking for you can also add custom tools to the
+agent:
 
 ```python
 import vision_agent as va
@@ -214,9 +224,48 @@ Can't find the tool you need and want add it to `VisionAgent`? Check out our
 we add the source code for all the tools used in `VisionAgent`.
 
 ## Additional Backends
+### Anthropic
+`AnthropicVisionAgentCoder` uses Anthropic. To get started you just need to get an
+Anthropic API key and set it in your environment variables:
+
+```bash
+export ANTHROPIC_API_KEY="your-api-key"
+```
+
+Because Anthropic does not support embedding models, the default embedding model used
+is the OpenAI model so you will also need to set your OpenAI API key:
+
+```bash
+export OPEN_AI_API_KEY="your-api-key"
+```
+
+Usage is the same as `VisionAgentCoder`:
+
+```python
+>>> import vision_agent as va
+>>> agent = va.agent.AnthropicVisionAgentCoder()
+>>> agent("Count the apples in the image", media="apples.jpg")
+```
+
+### OpenAI
+`OpenAIVisionAgentCoder` uses OpenAI. To get started you just need to get an OpenAI API
+key and set it in your environment variables:
+
+```bash
+export OPEN_AI_API_KEY="your-api-key"
+```
+
+Usage is the same as `VisionAgentCoder`:
+
+```python
+>>> import vision_agent as va
+>>> agent = va.agent.OpenAIVisionAgentCoder()
+>>> agent("Count the apples in the image", media="apples.jpg")
+```
+
+
 ### Ollama
-We also provide a `VisionAgentCoder` that uses Ollama. To get started you must download
-a few models:
+`OllamaVisionAgentCoder` uses Ollama. To get started you must download a few models:
 
 ```bash
 ollama pull llama3.1
@@ -237,9 +286,8 @@ tools. You can use it just like you would use `VisionAgentCoder`:
 > WARNING: VisionAgent doesn't work well unless the underlying LMM is sufficiently powerful. Do not expect good results or even working code with smaller models like Llama 3.1 8B.
 
 ### Azure OpenAI
-We also provide a `AzureVisionAgentCoder` that uses Azure OpenAI models. To get started
-follow the Azure Setup section below. You can use it just like you would use=
-`VisionAgentCoder`:
+`AzureVisionAgentCoder` uses Azure OpenAI models. To get started follow the Azure Setup
+section below. You can use it just like you would use `VisionAgentCoder`:
 
 ```python
 >>> import vision_agent as va
