@@ -149,6 +149,7 @@ def owl_v2_image(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.10,
+    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'owl_v2_image' is a tool that can detect and count multiple objects given a text
     prompt such as category names or referring expressions on images. The categories in
@@ -160,6 +161,8 @@ def owl_v2_image(
         image (np.ndarray): The image to ground the prompt to.
         box_threshold (float, optional): The threshold for the box detection. Defaults
             to 0.10.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -176,7 +179,38 @@ def owl_v2_image(
             {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
         ]
     """
+
     image_size = image.shape[:2]
+
+    if fine_tune_id is not None:
+        image_b64 = convert_to_b64(image)
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        data_obj = Florence2FtRequest(
+            image=image_b64,
+            task=PromptTask.PHRASE_GROUNDING,
+            tool="florencev2_fine_tuning",
+            prompt=prompt,
+            fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
+        )
+        data = data_obj.model_dump(by_alias=True)
+        detections = send_inference_request(data, "tools", v2=False)
+        detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
+        bboxes_formatted = [
+            ODResponseData(
+                label=detections["labels"][i],
+                bbox=normalize_bbox(detections["bboxes"][i], image_size),
+                score=1.0,
+            )
+            for i in range(len(detections["bboxes"]))
+        ]
+        return [bbox.model_dump() for bbox in bboxes_formatted]
+
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     payload = {
@@ -206,10 +240,10 @@ def owl_v2_video(
     box_threshold: float = 0.10,
 ) -> List[List[Dict[str, Any]]]:
     """'owl_v2_video' will run owl_v2 on each frame of a video. It can detect multiple
-    objects per frame given a text prompt sucha s a category name or referring
-    expression. The categories in text prompt are separated by commas. It returns a list
-    of lists where each inner list contains the score, label, and bounding box of the
-    detections for that frame.
+    objects indepdently per frame given a text prompt such as a category name or
+    referring expression but does not track objects across frames. The categories in
+    text prompt are separated by commas. It returns a list of lists where each inner
+    list contains the score, label, and bounding box of the detections for that frame.
 
     Parameters:
         prompt (str): The prompt to ground to the video.
@@ -335,7 +369,9 @@ def grounding_sam(
     return return_data
 
 
-def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]:
+def florence2_sam2_image(
+    prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """'florence2_sam2_image' is a tool that can segment multiple objects given a text
     prompt such as category names or referring expressions. The categories in the text
     prompt are separated by commas. It returns a list of bounding boxes, label names,
@@ -344,6 +380,8 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
     Parameters:
         prompt (str): The prompt to ground to the image.
         image (np.ndarray): The image to ground the prompt to.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
@@ -369,18 +407,52 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
             },
         ]
     """
-    buffer_bytes = numpy_to_bytes(image)
+    if fine_tune_id is not None:
+        image_b64 = convert_to_b64(image)
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
 
+        req_data_obj = Florence2FtRequest(
+            image=image_b64,
+            task=PromptTask.PHRASE_GROUNDING,
+            tool="florencev2_fine_tuning",
+            prompt=prompt,
+            fine_tuning=FineTuning(
+                job_id=UUID(fine_tune_id),
+                postprocessing="sam2",
+            ),
+        )
+        req_data = req_data_obj.model_dump(by_alias=True)
+        detections_ft = send_inference_request(req_data, "tools", v2=False)
+        detections_ft = detections_ft["<CAPTION_TO_PHRASE_GROUNDING>"]
+        return_data = []
+        all_masks = np.array(detections_ft["masks"])
+        for i in range(len(detections_ft["bboxes"])):
+            return_data.append(
+                {
+                    "score": 1.0,
+                    "label": detections_ft["labels"][i],
+                    "bbox": detections_ft["bboxes"][i],
+                    "mask": all_masks[i, :, :].astype(np.uint8),
+                }
+            )
+        return return_data
+
+    buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     payload = {
         "prompts": [s.strip() for s in prompt.split(",")],
         "function_name": "florence2_sam2_image",
     }
-    data: Dict[str, Any] = send_inference_request(
+    detections: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
     )
     return_data = []
-    for _, data_i in data["0"].items():
+    for _, data_i in detections["0"].items():
         mask = rle_decode_array(data_i["mask"])
         label = data_i["label"]
         bbox = normalize_bbox(data_i["bounding_box"], data_i["mask"]["size"])
@@ -389,17 +461,19 @@ def florence2_sam2_image(prompt: str, image: np.ndarray) -> List[Dict[str, Any]]
 
 
 def florence2_sam2_video_tracking(
-    prompt: str, frames: List[np.ndarray]
+    prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = None
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
     entities in a video given a text prompt such as category names or referring
     expressions. You can optionally separate the categories in the text with commas. It
-    only tracks entities present in the first frame and only returns segmentation
-    masks. It is useful for tracking and counting without duplicating counts.
+    can find new objects every 'chunk_length' frames and is useful for tracking and
+    counting without duplicating counts and always outputs scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the video.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+            new objects.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
@@ -432,6 +506,8 @@ def florence2_sam2_video_tracking(
         "prompts": [s.strip() for s in prompt.split(",")],
         "function_name": "florence2_sam2_video_tracking",
     }
+    if chunk_length is not None:
+        payload["chunk_length"] = chunk_length  # type: ignore
     data: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
     )
@@ -1119,13 +1195,13 @@ def florence2_phrase_grounding(
     return_data = []
     for i in range(len(detections["bboxes"])):
         return_data.append(
-            {
-                "score": 1.0,
-                "label": detections["labels"][i],
-                "bbox": normalize_bbox(detections["bboxes"][i], image_size),
-            }
+            ODResponseData(
+                label=detections["labels"][i],
+                bbox=normalize_bbox(detections["bboxes"][i], image_size),
+                score=1.0,
+            )
         )
-    return return_data
+    return [bbox.model_dump() for bbox in return_data]
 
 
 def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -1497,12 +1573,14 @@ def closest_box_distance(
 # Utility and visualization functions
 
 
-def extract_frames(
+def extract_frames_and_timestamps(
     video_uri: Union[str, Path], fps: float = 1
-) -> List[Tuple[np.ndarray, float]]:
-    """'extract_frames' extracts frames from a video which can be a file path, url or
-    youtube link, returns a list of tuples (frame, timestamp), where timestamp is the
-    relative time in seconds where the frame was captured. The frame is a numpy array.
+) -> List[Dict[str, Union[np.ndarray, float]]]:
+    """'extract_frames_and_timestamps' extracts frames and timestamps from a video
+    which can be a file path, url or youtube link, returns a list of dictionaries
+    with keys "frame" and "timestamp" where "frame" is a numpy array and "timestamp" is
+    the relative time in seconds where the frame was captured. The frame is a numpy
+    array.
 
     Parameters:
         video_uri (Union[str, Path]): The path to the video file, url or youtube link
@@ -1510,14 +1588,22 @@ def extract_frames(
             to 1.
 
     Returns:
-        List[Tuple[np.ndarray, float]]: A list of tuples containing the extracted frame
-            as a numpy array and the timestamp in seconds.
+        List[Dict[str, Union[np.ndarray, float]]]: A list of dictionaries containing the
+            extracted frame as a numpy array and the timestamp in seconds.
 
     Example
     -------
         >>> extract_frames("path/to/video.mp4")
-        [(frame1, 0.0), (frame2, 0.5), ...]
+        [{"frame": np.ndarray, "timestamp": 0.0}, ...]
     """
+
+    def reformat(
+        frames_and_timestamps: List[Tuple[np.ndarray, float]]
+    ) -> List[Dict[str, Union[np.ndarray, float]]]:
+        return [
+            {"frame": frame, "timestamp": timestamp}
+            for frame, timestamp in frames_and_timestamps
+        ]
 
     if str(video_uri).startswith(
         (
@@ -1540,16 +1626,16 @@ def extract_frames(
                 raise Exception("No suitable video stream found")
             video_file_path = video.download(output_path=temp_dir)
 
-            return extract_frames_from_video(video_file_path, fps)
+            return reformat(extract_frames_from_video(video_file_path, fps))
     elif str(video_uri).startswith(("http", "https")):
         _, image_suffix = os.path.splitext(video_uri)
         with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
             # Download the video and save it to the temporary file
             with urllib.request.urlopen(str(video_uri)) as response:
                 tmp_file.write(response.read())
-            return extract_frames_from_video(tmp_file.name, fps)
+            return reformat(extract_frames_from_video(tmp_file.name, fps))
 
-    return extract_frames_from_video(str(video_uri), fps)
+    return reformat(extract_frames_from_video(str(video_uri), fps))
 
 
 def save_json(data: Any, file_path: str) -> None:
@@ -1953,7 +2039,6 @@ FUNCTION_TOOLS = [
     vit_image_classification,
     vit_nsfw_classification,
     countgd_counting,
-    florence2_image_caption,
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video_tracking,
@@ -1968,7 +2053,7 @@ FUNCTION_TOOLS = [
 ]
 
 UTIL_TOOLS = [
-    extract_frames,
+    extract_frames_and_timestamps,
     save_json,
     load_image,
     save_image,

@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -13,8 +12,6 @@ from openai import AzureOpenAI, OpenAI
 from vision_agent.utils.image_utils import encode_media
 
 from .types import Message
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class LMM(ABC):
@@ -45,11 +42,11 @@ class LMM(ABC):
 
 
 class OpenAILMM(LMM):
-    r"""An LMM class for the OpenAI GPT-4 Vision model."""
+    r"""An LMM class for the OpenAI LMMs."""
 
     def __init__(
         self,
-        model_name: str = "gpt-4o",
+        model_name: str = "gpt-4o-2024-05-13",
         api_key: Optional[str] = None,
         max_tokens: int = 4096,
         json_mode: bool = False,
@@ -365,8 +362,8 @@ class OllamaLMM(LMM):
             return resp["response"]  # type: ignore
 
 
-class ClaudeSonnetLMM(LMM):
-    r"""An LMM class for Anthropic's Claude Sonnet model."""
+class AnthropicLMM(LMM):
+    r"""An LMM class for Anthropic's LMMs."""
 
     def __init__(
         self,
@@ -402,7 +399,7 @@ class ClaudeSonnetLMM(LMM):
             ]
             if "media" in msg:
                 for media_path in msg["media"]:
-                    encoded_media = encode_media(media_path)
+                    encoded_media = encode_media(media_path, resize=768)
                     content.append(
                         ImageBlockParam(
                             type="image",
@@ -449,7 +446,7 @@ class ClaudeSonnetLMM(LMM):
         ]
         if media:
             for m in media:
-                encoded_media = encode_media(m)
+                encoded_media = encode_media(m, resize=768)
                 content.append(
                     ImageBlockParam(
                         type="image",

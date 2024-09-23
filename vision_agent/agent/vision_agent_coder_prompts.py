@@ -30,9 +30,10 @@ PLAN = """
 
 **Instructions**:
 1. Based on the context and tools you have available, create a plan of subtasks to achieve the user request.
-2. Output three different plans each utilize a different strategy or set of tools.
+2. For each subtask, be sure to include the tool(s) you want to use to accomplish that subtask.
+3. Output three different plans each utilize a different strategy or set of tools ordering them from most likely to least likely to succeed.
 
-Output a list of jsons in the following format
+Output a list of jsons in the following format:
 
 ```json
 {{
@@ -67,7 +68,7 @@ This is the documentation for the functions you have access to. You may call any
 {previous_attempts}
 
 **Instructions**:
-1. Write a program to load the media and call each tool and save it's output.
+1. Write a program to load the media and call each tool and print it's output along with other relevant information.
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
 4. Print this final dictionary.
@@ -102,24 +103,25 @@ print(final_out)
 
 --- EXAMPLE2 ---
 plan1:
-- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
-- Use the 'owl_v2_image' tool with the prompt 'person' to detect where the people are in the video.
+- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames_and_timestamps' tool.
+- Use the 'owl_v2_video' tool with the prompt 'person' to detect where the people are in the video.
 plan2:
-- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
+- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames_and_timestamps' tool.
 - Use the 'florence2_phrase_grounding' tool with the prompt 'person' to detect where the people are in the video.
 plan3:
-- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames' tool.
+- Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames_and_timestamps' tool.
 - Use the 'florence2_sam2_video_tracking' tool with the prompt 'person' to detect where the people are in the video.
 
 
 ```python
 import numpy as np
-from vision_agent.tools import extract_frames, owl_v2_image, florence2_phrase_grounding, florence2_sam2_video_tracking
+from vision_agent.tools import extract_frames_and_timestamps, owl_v2_video, florence2_phrase_grounding, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
-frames = extract_frames("video.mp4", 1)
-frames = [f[0] for f in frames][:10]
+frames = extract_frames_and_timestamps("video.mp4", 1)
+frames = [f["frame"] for f in frames][:10]
 
+# strip arrays from the output to make it easier to read
 def remove_arrays(o):
     if isinstance(o, list):
         return [remove_arrays(e) for e in o]
@@ -130,18 +132,46 @@ def remove_arrays(o):
     else:
         return o
 
+# return the counts of each label per frame to help determine the stability of the model results
+def get_counts(preds):
+    counts = {{}}
+    for i, pred_frame in enumerate(preds):
+        counts_i = {{}}
+        for pred in pred_frame:
+            label = pred["label"].split(":")[1] if ":" in pred["label"] else pred["label"]
+            counts_i[label] = counts_i.get(label, 0) + 1
+        counts[f"frame_{{i}}"] = counts_i
+    return counts
+
+
 # plan1
-owl_v2_out = [owl_v2_image("person", f) for f in frames]
+owl_v2_out = owl_v2_video("person", frames)
+owl_v2_counts = get_counts(owl_v2_out)
 
 # plan2
 florence2_out = [florence2_phrase_grounding("person", f) for f in frames]
+florence2_counts = get_counts(florence2_out)
 
 # plan3
 f2s2_tracking_out = florence2_sam2_video_tracking("person", frames)
 remove_arrays(f2s2_tracking_out)
+f2s2_counts = get_counts(f2s2_tracking_out)
 
-final_out = {{"owl_v2_image": owl_v2_out, "florence2_phrase_grounding": florence2_out, "florence2_sam2_video_tracking": f2s2_tracking_out}}
+final_out = {{
+    "owl_v2_video": owl_v2_out,
+    "florence2_phrase_grounding": florence2_out,
+    "florence2_sam2_video_tracking": f2s2_out,
+}}
+
+counts = {{
+    "owl_v2_video": owl_v2_counts,
+    "florence2_phrase_grounding": florence2_counts,
+    "florence2_sam2_video_tracking": f2s2_counts,
+}}
+
 print(final_out)
+print(labels_and_scores)
+print(counts)
 ```
 """
 
@@ -159,7 +189,7 @@ But got the following error or no stdout:
 
 
 PICK_PLAN = """
-**Role**: You are a software programmer.
+**Role**: You are an advanced AI model that can understand the user request and construct plans to accomplish it.
 
 **Task**: Your responsibility is to pick the best plan from the three plans provided.
 
@@ -173,13 +203,14 @@ PICK_PLAN = """
 {tool_output}
 
 **Instructions**:
-1. Given the plans, image, and tool outputs, decide which plan is the best to achieve the user request.
-2. Solve the problem yourself given the image and pick the plan that matches your solution the best.
+1. Re-read the user request, plans, tool outputs and examine the image.
+2. Solve the problem yourself given the image and pick the most accurate plan that matches your solution the best.
+3. Add modifications to improve the plan including: changing a tool, adding thresholds, string matching.
 3. Output a JSON object with the following format:
 {{
     "predicted_answer": str # the answer you would expect from the best plan
-    "thoughts": str # your thought process for choosing the best plan
-    "best_plan": str # the best plan you have chosen
+    "thoughts": str # your thought process for choosing the best plan over other plans and any modifications you made
+    "best_plan": str # the best plan you have chosen, must be `plan1`, `plan2`, or `plan3`
 }}
 """
 
@@ -201,15 +232,18 @@ This is the documentation for the functions you have access to. You may call any
 **User Instructions**:
 {question}
 
-**Tool Output**:
+**Tool Tests and Outputs**:
 {tool_output}
+
+**Tool Output Thoughts**:
+{plan_thoughts}
 
 **Previous Feedback**:
 {feedback}
 
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
-2. **Algorithm/Method Selection**: Decide on the most efficient way.
+2. **Algorithm/Method Selection**: Decide on the most efficient method, use the tool outputs and tool thoughts to guide you.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
 """

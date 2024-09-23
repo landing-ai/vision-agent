@@ -5,7 +5,7 @@ import io
 from importlib import resources
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -154,15 +154,20 @@ def convert_to_b64(data: Union[str, Path, np.ndarray, ImageType]) -> str:
         )
 
 
-def encode_image_bytes(image: bytes) -> str:
-    image = Image.open(io.BytesIO(image)).convert("RGB")  # type: ignore
+def encode_image_bytes(image: bytes, resize: Optional[int] = None) -> str:
+    if resize is not None:
+        image_pil = Image.open(io.BytesIO(image)).convert("RGB")
+        if image_pil.size[0] > resize or image_pil.size[1] > resize:
+            image_pil.thumbnail((resize, resize))
+    else:
+        image_pil = Image.open(io.BytesIO(image)).convert("RGB")
     buffer = io.BytesIO()
-    image.save(buffer, format="PNG")  # type: ignore
+    image_pil.save(buffer, format="PNG")
     encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return encoded_image
 
 
-def encode_media(media: Union[str, Path]) -> str:
+def encode_media(media: Union[str, Path], resize: Optional[int] = None) -> str:
     if isinstance(media, str) and media.startswith(("http", "https")):
         # for mp4 video url, we assume there is a same url but ends with png
         # vision-agent-ui will upload this png when uploading the video
@@ -192,11 +197,17 @@ def encode_media(media: Union[str, Path]) -> str:
         frames = extract_frames_from_video(str(media), fps=1)
         image = frames[len(frames) // 2]
         buffer = io.BytesIO()
-        Image.fromarray(image[0]).convert("RGB").save(buffer, format="PNG")
+        if resize is not None:
+            image_pil = Image.fromarray(image[0]).convert("RGB")
+            if image_pil.size[0] > resize or image_pil.size[1] > resize:
+                image_pil.thumbnail((resize, resize))
+        else:
+            image_pil = Image.fromarray(image[0]).convert("RGB")
+        image_pil.save(buffer, format="PNG")
         image_bytes = buffer.getvalue()
     else:
         image_bytes = open(media, "rb").read()
-    return encode_image_bytes(image_bytes)
+    return encode_image_bytes(image_bytes, resize=resize)
 
 
 def denormalize_bbox(
