@@ -2,12 +2,10 @@ import copy
 import logging
 import os
 import sys
-import tempfile
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, cast
 
-from PIL import Image
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
@@ -29,8 +27,8 @@ from vision_agent.agent.vision_agent_coder_prompts import (
 )
 from vision_agent.lmm import (
     LMM,
+    AnthropicLMM,
     AzureOpenAILMM,
-    ClaudeSonnetLMM,
     Message,
     OllamaLMM,
     OpenAILMM,
@@ -53,6 +51,9 @@ class DefaultImports:
     """Container for default imports used in the code execution."""
 
     common_imports = [
+        "import os",
+        "import numpy as np",
+        "from vision_agent.tools import *",
         "from typing import *",
         "from pillow_heif import register_heif_opener",
         "register_heif_opener()",
@@ -92,29 +93,6 @@ def format_plans(plans: Dict[str, Any]) -> str:
     return plan_str
 
 
-def extract_image(
-    media: Optional[Sequence[Union[str, Path]]],
-) -> Optional[Sequence[Union[str, Path]]]:
-    if media is None:
-        return None
-
-    new_media = []
-    for m in media:
-        m = Path(m)
-        extension = m.suffix
-        if extension in [".jpg", ".jpeg", ".png", ".bmp"]:
-            new_media.append(m)
-        elif extension in [".mp4", ".mov"]:
-            frames = T.extract_frames(m)
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                if len(frames) > 0:
-                    Image.fromarray(frames[0][0]).save(tmp.name)
-                    new_media.append(Path(tmp.name))
-    if len(new_media) == 0:
-        return None
-    return new_media
-
-
 def write_plans(
     chat: List[Message],
     tool_desc: str,
@@ -146,7 +124,7 @@ def pick_plan(
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
-) -> Tuple[str, str]:
+) -> Tuple[Dict[str, str], str]:
     log_progress(
         {
             "type": "log",
@@ -199,7 +177,10 @@ def pick_plan(
 
     # retry if the tool output is empty or code fails
     count = 0
-    while (not tool_output.success or tool_output_str == "") and count < max_retries:
+    while (
+        not tool_output.success
+        or (len(tool_output.logs.stdout) == 0 and len(tool_output.logs.stderr) == 0)
+    ) and count < max_retries:
         prompt = TEST_PLANS.format(
             docstring=tool_info,
             plans=plan_str,
@@ -238,6 +219,7 @@ def pick_plan(
         if verbosity == 2:
             _print_code("Code and test after attempted fix:", code)
             _LOGGER.info(f"Code execution result after attempt {count + 1}")
+            _LOGGER.info(f"{tool_output_str}")
 
         count += 1
 
@@ -256,10 +238,10 @@ def pick_plan(
     chat[-1]["content"] = prompt
 
     count = 0
-    best_plan = None
-    while best_plan is None and count < max_retries:
+    plan_thoughts = None
+    while plan_thoughts is None and count < max_retries:
         try:
-            best_plan = extract_json(model(chat, stream=False))  # type: ignore
+            plan_thoughts = extract_json(model(chat, stream=False))  # type: ignore
         except JSONDecodeError as e:
             _LOGGER.exception(
                 f"Error while extracting JSON during picking best plan {str(e)}"
@@ -268,23 +250,27 @@ def pick_plan(
         count += 1
 
     if (
-        best_plan is None
-        or "best_plan" not in best_plan
-        or ("best_plan" in best_plan and best_plan["best_plan"] not in plans)
+        plan_thoughts is None
+        or "best_plan" not in plan_thoughts
+        or ("best_plan" in plan_thoughts and plan_thoughts["best_plan"] not in plans)
     ):
-        best_plan = {"best_plan": list(plans.keys())[0]}
+        _LOGGER.info(f"Failed to pick best plan. Using the first plan. {plan_thoughts}")
+        plan_thoughts = {"best_plan": list(plans.keys())[0]}
+
+    if "thoughts" not in plan_thoughts:
+        plan_thoughts["thoughts"] = ""
 
     if verbosity >= 1:
-        _LOGGER.info(f"Best plan:\n{best_plan}")
+        _LOGGER.info(f"Best plan:\n{plan_thoughts}")
     log_progress(
         {
             "type": "log",
             "log_content": "Picked best plan",
             "status": "completed",
-            "payload": plans[best_plan["best_plan"]],
+            "payload": plans[plan_thoughts["best_plan"]],
         }
     )
-    return best_plan["best_plan"], tool_output_str
+    return plan_thoughts, "```python\n" + code + "\n```\n" + tool_output_str
 
 
 def write_code(
@@ -292,6 +278,7 @@ def write_code(
     chat: List[Message],
     plan: str,
     tool_info: str,
+    plan_thoughts: str,
     tool_output: str,
     feedback: str,
 ) -> str:
@@ -304,6 +291,7 @@ def write_code(
         docstring=tool_info,
         question=FULL_TASK.format(user_request=user_request, subtasks=plan),
         tool_output=tool_output,
+        plan_thoughts=plan_thoughts,
         feedback=feedback,
     )
     chat[-1]["content"] = prompt
@@ -339,6 +327,7 @@ def write_and_test_code(
     plan: str,
     tool_info: str,
     tool_output: str,
+    plan_thoughts: str,
     tool_utils: str,
     working_memory: List[Dict[str, str]],
     coder: LMM,
@@ -363,6 +352,7 @@ def write_and_test_code(
         plan,
         tool_info,
         tool_output,
+        plan_thoughts,
         format_memory(working_memory),
     )
     test = write_test(
@@ -634,31 +624,30 @@ class VisionAgentCoder(Agent):
         """Initialize the Vision Agent Coder.
 
         Parameters:
-            planner (Optional[LMM]): The planner model to use. Defaults to OpenAILMM.
-            coder (Optional[LMM]): The coder model to use. Defaults to OpenAILMM.
-            tester (Optional[LMM]): The tester model to use. Defaults to OpenAILMM.
-            debugger (Optional[LMM]): The debugger model to
+            planner (Optional[LMM]): The planner model to use. Defaults to AnthropicLMM.
+            coder (Optional[LMM]): The coder model to use. Defaults to AnthropicLMM.
+            tester (Optional[LMM]): The tester model to use. Defaults to AnthropicLMM.
+            debugger (Optional[LMM]): The debugger model to use. Defaults to AnthropicLMM.
             tool_recommender (Optional[Sim]): The tool recommender model to use.
             verbosity (int): The verbosity level of the agent. Defaults to 0. 2 is the
                 highest verbosity level which will output all intermediate debugging
                 code.
-            report_progress_callback: a callback to report the progress of the agent.
-                This is useful for streaming logs in a web application where multiple
-                VisionAgentCoder instances are running in parallel. This callback
-                ensures that the progress are not mixed up.
-            code_sandbox_runtime: the code sandbox runtime to use. A code sandbox is
-                 used to run the generated code. It can be one of the following
-                 values: None, "local" or "e2b". If None, VisionAgentCoder will read
-                 the value from the environment variable CODE_SANDBOX_RUNTIME. If it's
-                 also None, the local python runtime environment will be used.
+            report_progress_callback (Optional[Callable[Dict[str, Any]]]): a callback
+                to report the progress of the agent. This is useful for streaming logs
+                in a web application where multiple VisionAgentCoder instances are
+                running in parallel. This callback ensures that the progress are not
+                mixed up.
+            code_sandbox_runtime (Optional[str]): the code sandbox runtime to use. A
+                code sandbox is used to run the generated code. It can be one of the
+                following values: None, "local" or "e2b". If None, VisionAgentCoder
+                will read the value from the environment variable CODE_SANDBOX_RUNTIME.
+                If it's also None, the local python runtime environment will be used.
         """
 
-        self.planner = (
-            OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
-        )
-        self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
-        self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
-        self.debugger = OpenAILMM(temperature=0.0) if debugger is None else debugger
+        self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
+        self.coder = AnthropicLMM(temperature=0.0) if coder is None else coder
+        self.tester = AnthropicLMM(temperature=0.0) if tester is None else tester
+        self.debugger = AnthropicLMM(temperature=0.0) if debugger is None else debugger
         self.verbosity = verbosity
         if self.verbosity > 0:
             _LOGGER.setLevel(logging.INFO)
@@ -785,7 +774,7 @@ class VisionAgentCoder(Agent):
             )
 
             if test_multi_plan:
-                best_plan, tool_output_str = pick_plan(
+                plan_thoughts, tool_output_str = pick_plan(
                     int_chat,
                     plans,
                     tool_infos["all"],
@@ -795,9 +784,12 @@ class VisionAgentCoder(Agent):
                     self.log_progress,
                     verbosity=self.verbosity,
                 )
+                best_plan = plan_thoughts["best_plan"]
+                plan_thoughts_str = plan_thoughts["thoughts"]
             else:
                 best_plan = list(plans.keys())[0]
                 tool_output_str = ""
+                plan_thoughts_str = ""
 
             if best_plan in plans and best_plan in tool_infos:
                 plan_i = plans[best_plan]
@@ -832,6 +824,7 @@ class VisionAgentCoder(Agent):
                 + "\n-".join([e for e in plan_i["instructions"]]),
                 tool_info=tool_info,
                 tool_output=tool_output_str,
+                plan_thoughts=plan_thoughts_str,
                 tool_utils=T.UTILITIES_DOCSTRING,
                 working_memory=working_memory,
                 coder=self.coder,
@@ -862,7 +855,8 @@ class VisionAgentCoder(Agent):
                 "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
-                "plan": plan,
+                "plans": plans,
+                "plan_thoughts": plan_thoughts_str,
                 "working_memory": working_memory,
             }
 
@@ -904,7 +898,42 @@ class VisionAgentCoder(Agent):
                 )
 
 
-class ClaudeVisionAgentCoder(VisionAgentCoder):
+class OpenAIVisionAgentCoder(VisionAgentCoder):
+    """Initializes Vision Agent Coder using OpenAI models for planning, coding, testing."""
+
+    def __init__(
+        self,
+        planner: Optional[LMM] = None,
+        coder: Optional[LMM] = None,
+        tester: Optional[LMM] = None,
+        debugger: Optional[LMM] = None,
+        tool_recommender: Optional[Sim] = None,
+        verbosity: int = 0,
+        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_sandbox_runtime: Optional[str] = None,
+    ) -> None:
+        self.planner = (
+            OpenAILMM(temperature=0.0, json_mode=True) if planner is None else planner
+        )
+        self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
+        self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
+        self.debugger = OpenAILMM(temperature=0.0) if debugger is None else debugger
+        self.verbosity = verbosity
+        if self.verbosity > 0:
+            _LOGGER.setLevel(logging.INFO)
+
+        self.tool_recommender = (
+            Sim(T.TOOLS_DF, sim_key="desc")
+            if tool_recommender is None
+            else tool_recommender
+        )
+        self.report_progress_callback = report_progress_callback
+        self.code_sandbox_runtime = code_sandbox_runtime
+
+
+class AnthropicVisionAgentCoder(VisionAgentCoder):
+    """Initializes Vision Agent Coder using Anthropic models for planning, coding, testing."""
+
     def __init__(
         self,
         planner: Optional[LMM] = None,
@@ -917,12 +946,10 @@ class ClaudeVisionAgentCoder(VisionAgentCoder):
         code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         # NOTE: Claude doesn't have an official JSON mode
-        self.planner = ClaudeSonnetLMM(temperature=0.0) if planner is None else planner
-        self.coder = ClaudeSonnetLMM(temperature=0.0) if coder is None else coder
-        self.tester = ClaudeSonnetLMM(temperature=0.0) if tester is None else tester
-        self.debugger = (
-            ClaudeSonnetLMM(temperature=0.0) if debugger is None else debugger
-        )
+        self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
+        self.coder = AnthropicLMM(temperature=0.0) if coder is None else coder
+        self.tester = AnthropicLMM(temperature=0.0) if tester is None else tester
+        self.debugger = AnthropicLMM(temperature=0.0) if debugger is None else debugger
         self.verbosity = verbosity
         if self.verbosity > 0:
             _LOGGER.setLevel(logging.INFO)

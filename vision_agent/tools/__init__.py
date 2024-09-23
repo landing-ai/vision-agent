@@ -21,7 +21,7 @@ from .tools import (
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
-    extract_frames,
+    extract_frames_and_timestamps,
     florence2_image_caption,
     florence2_ocr,
     florence2_phrase_grounding,

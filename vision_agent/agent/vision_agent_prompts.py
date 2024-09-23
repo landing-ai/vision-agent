@@ -18,19 +18,24 @@ Here is an example of how you can interact with a user and Actions to complete a
 {examples}
 --- END EXAMPLES ---
 
-**Instructions**:
-1. **Understand and Clarify**: Make sure you understand the task, ask clarifying questions if the task is not clear.
-2. **Output in JSON**: Respond in JSON format, {{"thoughts": <your thoughts>, "response": <your response to the user>, "let_user_respond": <a boolean whether or not to let the user respond>}}.
-
 **Conversation**:
 Here is the current conversation so far:
 --- START CONVERSATION ---
 {conversation}
+--- END CONVERSATION ---
+
+**Instructions**:
+1. **Understand and Clarify**: Make sure you understand the task, ask clarifying questions if the task is not clear.
+2. **Output in JSON**: Respond in the following format in JSON:
+
+```json
+{{"thoughts": <your thoughts>, "response": <your response to the user>, "let_user_respond": <a boolean whether or not to let the user respond>}}.
+```
 """
 
 
 EXAMPLES_CODE1 = """
-USER: Can you detect the dogs in this image? Media name dog.jpg
+USER: Can you write code to detect the dogs in this image? Media name dog.jpg
 
 OBSERVATION:
 [Artifacts loaded]
@@ -61,6 +66,7 @@ AGENT: {"thoughts": "Two dogs are detected, I will show this to the user and ask
 EXAMPLES_CODE1_EXTRA = """
 USER: The the image only has one dog, can you fix this?
 
+OBSERVATION:
 [Artifacts loaded]
 Artifact dog.jpg loaded to /path/to/images/dog.jpg
 Artifact dog_detector.py loaded to /path/to/code/dog_detector.py
@@ -86,8 +92,24 @@ OBSERVATION:
 AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to detect one dog and shown you the output, do the results look good to you?", "let_user_respond": true}
 """
 
-
 EXAMPLES_CODE2 = """
+USER: Can you describe this image?
+
+OBSERVATION:
+[Artifacts loaded]
+Artifact image.jpg loaded to /path/to/images/image.jpg
+[End of artifacts]
+
+AGENT: {"thoughts": "The user hasn't asked me to write any code and the task is very simple so I will view the image and answer myself to respond to the user quickly.", "response": "<execute_python>view_media_artifacts('image.jpg')</execute_python>", "let_user_respond": false}
+
+OBSERVATION:
+[Image image.jpg displayed]
+
+AGENT: {"thoughts": "The image shows a cat and a dog sitting on the couch, I will tell the user and ask them if they need any other assistance.", "response": "The image contains a dog and a cat sitting on a couch. Can I help you with any other tasks?", "let_user_respond": true}
+"""
+
+
+EXAMPLES_CODE3 = """
 USER: Can you create a function to count workers with helmets, return the count and save a visaulization of the bounding boxes?
 
 OBSERVATION:
@@ -137,13 +159,13 @@ AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to 
 
 USER: The detections are slightly off. Can you fine tune florence2 using these labels? "[{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}]"
 
-AGENT: {"thoughts": "Because the user has supplied me with labels I can call florence2_fine_tuning on their behalf to fine tune the model", "response": "I will fine tune florence2 with the labels you provided <execute_python>florence2_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}], "phrase_grounding")</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "Because the user has supplied me with labels I can call object_detection_fine_tuning on their behalf to fine tune the model", "response": "I will fine tune florence2 with the labels you provided <execute_python>object_detection_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
-[Florence2 fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
+[Fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
 
 
-AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_florence2_fine_tuning(artifacts, "code.py", "phrase_grounding", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 [Artifact code.py edits]

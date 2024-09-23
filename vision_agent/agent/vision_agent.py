@@ -3,18 +3,23 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import extract_json
 from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE1,
     EXAMPLES_CODE2,
+    EXAMPLES_CODE3,
     VA_CODE,
 )
-from vision_agent.lmm import LMM, Message, OpenAILMM
+from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
 from vision_agent.tools import META_TOOL_DOCSTRING
-from vision_agent.tools.meta_tools import Artifacts, use_extra_vision_agent_args
+from vision_agent.tools.meta_tools import (
+    Artifacts,
+    check_and_load_image,
+    use_extra_vision_agent_args,
+)
 from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
@@ -30,7 +35,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, florence2_fine_tuning, use_florence2_fine_tuning",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -68,10 +73,18 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
     prompt = VA_CODE.format(
         documentation=META_TOOL_DOCSTRING,
-        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}",
+        examples=f"{EXAMPLES_CODE1}\n{EXAMPLES_CODE2}\n{EXAMPLES_CODE3}",
         conversation=conversation,
     )
-    return extract_json(orch([{"role": "user", "content": prompt}], stream=False))  # type: ignore
+    message: Message = {"role": "user", "content": prompt}
+    # only add recent media so we don't overload the model with old images
+    if (
+        chat[-1]["role"] == "observation"
+        and "media" in chat[-1]
+        and len(chat[-1]["media"]) > 0  # type: ignore
+    ):
+        message["media"] = chat[-1]["media"]
+    return extract_json(orch([message], stream=False))  # type: ignore
 
 
 def run_code_action(
@@ -136,10 +149,8 @@ class VisionAgent(Agent):
             code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
         """
 
-        self.agent = (
-            OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
-        )
-        self.max_iterations = 100
+        self.agent = AnthropicLMM(temperature=0.0) if agent is None else agent
+        self.max_iterations = 12
         self.verbosity = verbosity
         self.code_sandbox_runtime = code_sandbox_runtime
         self.callback_message = callback_message
@@ -267,7 +278,8 @@ class VisionAgent(Agent):
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
 
-            if isinstance(last_user_message_content, str):
+            if int_chat[-1]["role"] == "user":
+                last_user_message_content = cast(str, int_chat[-1].get("content", ""))
                 user_code_action = parse_execution(last_user_message_content, False)
                 if user_code_action is not None:
                     user_result, user_obs = run_code_action(
@@ -309,8 +321,7 @@ class VisionAgent(Agent):
                 else:
                     self.streaming_message({"role": "assistant", "content": response})
 
-                if response["let_user_respond"]:
-                    break
+                finished = response["let_user_respond"]
 
                 code_action = parse_execution(
                     response["response"], test_multi_plan, customized_tool_names
@@ -321,13 +332,22 @@ class VisionAgent(Agent):
                         code_action, code_interpreter, str(remote_artifacts_path)
                     )
 
+                    media_obs = check_and_load_image(code_action)
+
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
+
+                    chat_elt: Message = {"role": "observation", "content": obs}
+                    if media_obs and result.success:
+                        chat_elt["media"] = [
+                            Path(code_interpreter.remote_path) / media_ob
+                            for media_ob in media_obs
+                        ]
+
                     # don't add execution results to internal chat
-                    int_chat.append({"role": "observation", "content": obs})
-                    orig_chat.append(
-                        {"role": "observation", "content": obs, "execution": result}
-                    )
+                    int_chat.append(chat_elt)
+                    chat_elt["execution"] = result
+                    orig_chat.append(chat_elt)
                     self.streaming_message(
                         {
                             "role": "observation",
@@ -353,3 +373,63 @@ class VisionAgent(Agent):
 
     def log_progress(self, data: Dict[str, Any]) -> None:
         pass
+
+
+class OpenAIVisionAgent(VisionAgent):
+    def __init__(
+        self,
+        agent: Optional[LMM] = None,
+        verbosity: int = 0,
+        local_artifacts_path: Optional[Union[str, Path]] = None,
+        code_sandbox_runtime: Optional[str] = None,
+        callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
+        """Initialize the VisionAgent using OpenAI LMMs.
+
+        Parameters:
+            agent (Optional[LMM]): The agent to use for conversation and orchestration
+                of other agents.
+            verbosity (int): The verbosity level of the agent.
+            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+        """
+
+        agent = OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
+        super().__init__(
+            agent,
+            verbosity,
+            local_artifacts_path,
+            code_sandbox_runtime,
+            callback_message,
+        )
+
+
+class AnthropicVisionAgent(VisionAgent):
+    def __init__(
+        self,
+        agent: Optional[LMM] = None,
+        verbosity: int = 0,
+        local_artifacts_path: Optional[Union[str, Path]] = None,
+        code_sandbox_runtime: Optional[str] = None,
+        callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
+        """Initialize the VisionAgent using Anthropic LMMs.
+
+        Parameters:
+            agent (Optional[LMM]): The agent to use for conversation and orchestration
+                of other agents.
+            verbosity (int): The verbosity level of the agent.
+            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+        """
+
+        agent = AnthropicLMM(temperature=0.0) if agent is None else agent
+        super().__init__(
+            agent,
+            verbosity,
+            local_artifacts_path,
+            code_sandbox_runtime,
+            callback_message,
+        )
