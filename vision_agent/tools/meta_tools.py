@@ -676,7 +676,7 @@ def use_object_detection_fine_tuning(
     display(
         {
             MimeType.APPLICATION_ARTIFACT: json.dumps(
-                {"name": name, "content": new_code}
+                {"name": name, "content": new_code, "action": "edit"}
             )
         },
         raw=True,
