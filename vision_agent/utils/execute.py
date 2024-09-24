@@ -464,9 +464,7 @@ print(f"Vision Agent version: {va_version}")"""
         _LOGGER.info(
             f"E2BCodeInterpreter (sandbox id: {self.interpreter.sandbox_id}) initialized:\n{sys_versions}"
         )
-        self.remote_path = Path(
-            remote_path if remote_path is not None else "/home/user"
-        )
+        self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
 
     def close(self, *args: Any, **kwargs: Any) -> None:
         try:
