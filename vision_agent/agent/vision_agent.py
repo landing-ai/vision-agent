@@ -314,15 +314,32 @@ class VisionAgent(Agent):
 
                 # sometimes it gets stuck in a loop, so we force it to exit
                 if last_response == response:
-                    response["let_user_respond"] = True
                     self.streaming_message(
-                        {"role": "assistant", "error": "Stuck in loop"}
+                        {
+                            "role": "assistant",
+                            "finished": True,
+                            "content": "{}",
+                            "error": {
+                                "name": "Error when running conversation agent",
+                                "value": "Agent is stuck in conversation loop, exited",
+                                "traceback_raw": [],
+                            },
+                        }
                     )
+                    break
+                elif response["let_user_respond"]:
+                    self.streaming_message(
+                        {"role": "assistant", "content": response, "finished": True}
+                    )
+                    break
                 else:
                     self.streaming_message({"role": "assistant", "content": response})
 
+<<<<<<< Updated upstream
                 finished = response["let_user_respond"]
 
+=======
+>>>>>>> Stashed changes
                 code_action = parse_execution(
                     response["response"], test_multi_plan, customized_tool_names
                 )
