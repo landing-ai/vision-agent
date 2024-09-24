@@ -30,6 +30,12 @@ WORKSPACE.mkdir(parents=True, exist_ok=True)
 if str(WORKSPACE) != "":
     os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
+STUCK_IN_LOOP_ERROR_MESSAGE = {
+    "name": "Error when running conversation agent",
+    "value": "Agent is stuck in conversation loop, exited",
+    "traceback_raw": [],
+}
+
 
 class BoilerplateCode:
     pre_code = [
@@ -229,7 +235,7 @@ class VisionAgent(Agent):
         ) as code_interpreter:
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
-            last_user_message_content = chat[-1].get("content")
+            last_user_message = chat[-1]
             media_list = []
             for chat_i in int_chat:
                 if "media" in chat_i:
@@ -278,32 +284,9 @@ class VisionAgent(Agent):
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
 
-            if int_chat[-1]["role"] == "user":
-                last_user_message_content = cast(str, int_chat[-1].get("content", ""))
-                user_code_action = parse_execution(last_user_message_content, False)
-                if user_code_action is not None:
-                    user_result, user_obs = run_code_action(
-                        user_code_action, code_interpreter, str(remote_artifacts_path)
-                    )
-                    if self.verbosity >= 1:
-                        _LOGGER.info(user_obs)
-                    int_chat.append({"role": "observation", "content": user_obs})
-                    orig_chat.append(
-                        {
-                            "role": "observation",
-                            "content": user_obs,
-                            "execution": user_result,
-                        }
-                    )
-                    self.streaming_message(
-                        {
-                            "role": "observation",
-                            "content": user_obs,
-                            "execution": user_result,
-                            "finished": True,
-                        }
-                    )
-                    finished = True
+            finished = self.execute_user_code_action(
+                last_user_message, code_interpreter, remote_artifacts_path
+            )
 
             while not finished and iterations < self.max_iterations:
                 response = run_conversation(self.agent, int_chat)
@@ -316,16 +299,36 @@ class VisionAgent(Agent):
                 if last_response == response:
                     response["let_user_respond"] = True
                     self.streaming_message(
-                        {"role": "assistant", "error": "Stuck in loop"}
+                        {
+                            "role": "assistant",
+                            "content": "{}",
+                            "error": STUCK_IN_LOOP_ERROR_MESSAGE,
+                        }
                     )
-                else:
-                    self.streaming_message({"role": "assistant", "content": response})
 
                 finished = response["let_user_respond"]
 
                 code_action = parse_execution(
                     response["response"], test_multi_plan, customized_tool_names
                 )
+
+                if last_response == response:
+                    self.streaming_message(
+                        {
+                            "role": "assistant",
+                            "content": "{}",
+                            "error": STUCK_IN_LOOP_ERROR_MESSAGE,
+                            "finished": finished and code_action is None,
+                        }
+                    )
+                else:
+                    self.streaming_message(
+                        {
+                            "role": "assistant",
+                            "content": response,
+                            "finished": finished and code_action is None,
+                        }
+                    )
 
                 if code_action is not None:
                     result, obs = run_code_action(
@@ -353,6 +356,7 @@ class VisionAgent(Agent):
                             "role": "observation",
                             "content": obs,
                             "execution": result,
+                            "finished": finished,
                         }
                     )
 
@@ -366,6 +370,34 @@ class VisionAgent(Agent):
             artifacts.load(self.local_artifacts_path)
             artifacts.save()
         return orig_chat, artifacts
+
+    def execute_user_code_action(
+        self,
+        last_user_message: Message,
+        code_interpreter: CodeInterpreter,
+        remote_artifacts_path: Path,
+    ) -> bool:
+        if last_user_message["role"] != "user":
+            return False
+        user_code_action = parse_execution(
+            cast(str, last_user_message.get("content", "")), False
+        )
+        if user_code_action is not None:
+            user_result, user_obs = run_code_action(
+                user_code_action, code_interpreter, str(remote_artifacts_path)
+            )
+            if self.verbosity >= 1:
+                _LOGGER.info(user_obs)
+            self.streaming_message(
+                {
+                    "role": "observation",
+                    "content": user_obs,
+                    "execution": user_result,
+                    "finished": True,
+                }
+            )
+            return True
+        return False
 
     def streaming_message(self, message: Dict[str, Any]) -> None:
         if self.callback_message:
