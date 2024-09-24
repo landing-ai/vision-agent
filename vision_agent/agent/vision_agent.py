@@ -30,12 +30,6 @@ WORKSPACE.mkdir(parents=True, exist_ok=True)
 if str(WORKSPACE) != "":
     os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
-STUCK_IN_LOOP_ERROR_MESSAGE = {
-    "name": "Error when running conversation agent",
-    "value": "Agent is stuck in conversation loop, exited",
-    "traceback_raw": [],
-}
-
 
 class BoilerplateCode:
     pre_code = [
@@ -298,13 +292,6 @@ class VisionAgent(Agent):
                 # sometimes it gets stuck in a loop, so we force it to exit
                 if last_response == response:
                     response["let_user_respond"] = True
-                    self.streaming_message(
-                        {
-                            "role": "assistant",
-                            "content": "{}",
-                            "error": STUCK_IN_LOOP_ERROR_MESSAGE,
-                        }
-                    )
 
                 finished = response["let_user_respond"]
 
@@ -317,7 +304,11 @@ class VisionAgent(Agent):
                         {
                             "role": "assistant",
                             "content": "{}",
-                            "error": STUCK_IN_LOOP_ERROR_MESSAGE,
+                            "error": {
+                                "name": "Error when running conversation agent",
+                                "value": "Agent is stuck in conversation loop, exited",
+                                "traceback_raw": [],
+                            },
                             "finished": finished and code_action is None,
                         }
                     )
