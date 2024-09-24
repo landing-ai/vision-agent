@@ -1761,7 +1761,7 @@ def _save_video_to_result(video_uri: str) -> None:
 def overlay_bounding_boxes(
     medias: Union[np.ndarray, List[np.ndarray]],
     bboxes: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]],
-) -> np.ndarray:
+) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_bounding_boxes' is a utility function that displays bounding boxes on
     an image.
 
