@@ -335,11 +335,8 @@ class VisionAgent(Agent):
                 else:
                     self.streaming_message({"role": "assistant", "content": response})
 
-<<<<<<< Updated upstream
                 finished = response["let_user_respond"]
 
-=======
->>>>>>> Stashed changes
                 code_action = parse_execution(
                     response["response"], test_multi_plan, customized_tool_names
                 )
