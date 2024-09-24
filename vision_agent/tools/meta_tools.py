@@ -425,6 +425,7 @@ def edit_vision_code(
 
     agent = va.agent.VisionAgentCoder()
     if name not in artifacts:
+        print(f"[Artifact {name} does not exist]")
         return f"[Artifact {name} does not exist]"
 
     code = artifacts[name]
