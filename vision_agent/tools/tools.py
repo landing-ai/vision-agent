@@ -1181,7 +1181,12 @@ def florence2_phrase_grounding(
             fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
         )
         data = data_obj.model_dump(by_alias=True)
-        detections = send_inference_request(data, "tools", v2=False)
+        detections = send_inference_request(
+            data,
+            "tools",
+            v2=False,
+            metadata_payload={"function_name": "florence2_phrase_grounding"},
+        )
     else:
         data = {
             "image": image_b64,
