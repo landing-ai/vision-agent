@@ -4,4 +4,4 @@
 
 ::: vision_agent.lmm.OllamaLMM
 
-::: vision_agent.lmm.ClaudeSonnetLMM
+::: vision_agent.lmm.AnthropicLMM
