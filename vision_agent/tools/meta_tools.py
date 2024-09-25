@@ -491,7 +491,7 @@ def check_and_load_image(code: str) -> List[str]:
     if not code.strip():
         return []
 
-    pattern = r"show_media_artifact\(\s*([^\)]+),\s*['\"]([^\)]+)['\"]\s*\)"
+    pattern = r"view_media_artifact\(\s*([^\)]+),\s*['\"]([^\)]+)['\"]\s*\)"
     match = re.search(pattern, code)
     if match:
         name = match.group(2)
