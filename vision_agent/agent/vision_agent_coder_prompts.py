@@ -270,42 +270,42 @@ Plan 1 - owl_v2_image:
 
 **Input Code Snippet**:
 ```python
-from vision_agent.tools import load_image, owl_v2_image 
+from vision_agent.tools import load_image, owl_v2_image
 
 def check_helmets(image_path):
     image = load_image(image_path)
     # Detect people and helmets, filter out the lowest confidence helmet score of 0.15
     detections = owl_v2_image("person, helmet", image, box_threshold=0.15)
     height, width = image.shape[:2]
-    
+
     # Separate people and helmets
     people = [d for d in detections if d['label'] == 'person']
     helmets = [d for d in detections if d['label'] == 'helmet']
-    
+
     people_with_helmets = 0
     people_without_helmets = 0
-    
+
     for person in people:
         person_x = (person['bbox'][0] + person['bbox'][2]) / 2
         person_y = person['bbox'][1]  # Top of the bounding box
-        
+
         helmet_found = False
         for helmet in helmets:
             helmet_x = (helmet['bbox'][0] + helmet['bbox'][2]) / 2
             helmet_y = (helmet['bbox'][1] + helmet['bbox'][3]) / 2
-            
+
             # Check if the helmet is within 20 pixels of the person's head. Unnormalize
             # the coordinates so we can better compare them.
             if (abs((helmet_x - person_x) * width) < 20 and
                 -5 < ((helmet_y - person_y) * height) < 20):
                 helmet_found = True
                 break
-        
+
         if helmet_found:
             people_with_helmets += 1
         else:
             people_without_helmets += 1
-    
+
     return {{
         "people_with_helmets": people_with_helmets,
         "people_without_helmets": people_without_helmets
@@ -319,7 +319,7 @@ def check_helmets(image_path):
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code.
     4.1. Take in the media path as an argument and load with either `load_image` or `extract_frames_and_timestamps`.
-    4.2. Coordinates are always returned normalized from `vision_agent.tools`. 
+    4.2. Coordinates are always returned normalized from `vision_agent.tools`.
     4.3. Do not create dummy input or functions, the code must be usable if the user provides new media.
     4.4. Use unnormalized coordinates when comparing bounding boxes.
 """
