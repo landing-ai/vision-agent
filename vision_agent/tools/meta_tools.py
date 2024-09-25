@@ -643,7 +643,23 @@ def use_object_detection_fine_tuning(
         return output_str
 
     code = artifacts[name]
-    patterns = [
+
+    patterns_with_fine_tune_id = [
+        (
+            r'florence2_phrase_grounding\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            lambda match: f'florence2_phrase_grounding("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
+        ),
+        (
+            r'owl_v2_image\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            lambda match: f'owl_v2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
+        ),
+        (
+            r'florence2_sam2_image\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            lambda match: f'florence2_sam2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
+        ),
+    ]
+
+    patterns_without_fine_tune_id = [
         (
             r"florence2_phrase_grounding\(\s*([^\)]+)\s*\)",
             lambda match: f'florence2_phrase_grounding({match.group(1)}, "{fine_tune_id}")',
@@ -659,8 +675,13 @@ def use_object_detection_fine_tuning(
     ]
 
     new_code = code
-    for pattern, replacer in patterns:
-        new_code = re.sub(pattern, replacer, new_code)
+
+    for index, (pattern_with_fine_tune_id, replacer_with_fine_tune_id) in enumerate(patterns_with_fine_tune_id):
+        if re.search(pattern_with_fine_tune_id, new_code):
+            new_code = re.sub(pattern_with_fine_tune_id, replacer_with_fine_tune_id, new_code)
+        else:
+            (pattern_without_fine_tune_id, replacer_without_fine_tune_id) = patterns_without_fine_tune_id[index]
+            new_code = re.sub(pattern_without_fine_tune_id, replacer_without_fine_tune_id, new_code)
 
     if new_code == code:
         output_str = (
