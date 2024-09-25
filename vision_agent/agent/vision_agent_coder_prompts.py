@@ -67,14 +67,7 @@ This is the documentation for the functions you have access to. You may call any
 **Previous Attempts**:
 {previous_attempts}
 
-**Instructions**:
-1. Write a program to load the media and call each tool and print it's output along with other relevant information.
-2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
-3. Your test case MUST run only on the given images which are {media}
-4. Print this final dictionary.
-5. For video input, sample at 1 FPS and use the first 10 frames only to reduce processing time.
-
-**Example**:
+**Examples**:
 --- EXAMPLE1 ---
 plan1:
 - Load the image from the provided file path 'image.jpg'.
@@ -100,6 +93,7 @@ cgd_out = countgd_counting(image)
 
 final_out = {{"owl_v2_image": owl_v2_out, "florence2_sam2_image": f2s2, "countgd_counting": cgd_out}}
 print(final_out)
+--- END EXAMPLE1 ---
 
 --- EXAMPLE2 ---
 plan1:
@@ -173,6 +167,14 @@ print(final_out)
 print(labels_and_scores)
 print(counts)
 ```
+--- END EXAMPLE2 ---
+
+**Instructions**:
+1. Write a program to load the media and call each tool and print it's output along with other relevant information.
+2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
+3. Your test case MUST run only on the given images which are {media}
+4. Print this final dictionary.
+5. For video input, sample at 1 FPS and use the first 10 frames only to reduce processing time.
 """
 
 
@@ -224,11 +226,6 @@ This is the documentation for the functions you have access to. You may call any
 
 {docstring}
 
-**Input Code Snippet**:
-```python
-# Your code here
-```
-
 **User Instructions**:
 {question}
 
@@ -241,11 +238,90 @@ This is the documentation for the functions you have access to. You may call any
 **Previous Feedback**:
 {feedback}
 
+**Examples**:
+--- EXAMPLE1 ---
+**User Instructions**:
+
+## User Request
+Can you write a program to check if each person is wearing a helmet? First detect all the people in the image, then detect the helmets, check whether or not a person is wearing a helmet if the helmet is on the worker. Return a dictionary with the count of people with helments and people without helmets. Media name worker_helmets.webp
+
+## Subtasks
+
+This plan uses the owl_v2_image tool to detect both people and helmets in a single pass, which should be efficient and accurate. We can then compare the detections to determine if each person is wearing a helmet.
+-Use owl_v2_image with prompt 'person, helmet' to detect both people and helmets in the image
+-Process the detections to match helmets with people based on bounding box proximity
+-Count people with and without helmets based on the matching results
+-Return a dictionary with the counts
+
+
+**Tool Tests and Outputs**:
+After examining the image, I can see 4 workers in total, with 3 wearing yellow safety helmets and 1 not wearing a helmet. Plan 1 using owl_v2_image seems to be the most accurate in detecting both people and helmets. However, it needs some modifications to improve accuracy. We should increase the confidence threshold to 0.15 to filter out the lowest confidence box, and implement logic to associate helmets with people based on their bounding box positions. Plan 2 and Plan 3 seem less reliable given the tool outputs, as they either failed to distinguish between people with and without helmets or misclassified all workers as not wearing helmets.
+
+**Tool Output Thoughts**:
+```python
+...
+```
+----- stdout -----
+Plan 1 - owl_v2_image:
+
+[{{'label': 'helmet', 'score': 0.15, 'bbox': [0.85, 0.41, 0.87, 0.45]}}, {{'label': 'helmet', 'score': 0.3, 'bbox': [0.8, 0.43, 0.81, 0.46]}}, {{'label': 'helmet', 'score': 0.31, 'bbox': [0.85, 0.45, 0.86, 0.46]}}, {{'label': 'person', 'score': 0.31, 'bbox': [0.84, 0.45, 0.88, 0.58]}}, {{'label': 'person', 'score': 0.31, 'bbox': [0.78, 0.43, 0.82, 0.57]}}, {{'label': 'helmet', 'score': 0.33, 'bbox': [0.3, 0.65, 0.32, 0.67]}}, {{'label': 'person', 'score': 0.29, 'bbox': [0.28, 0.65, 0.36, 0.84]}}, {{'label': 'helmet', 'score': 0.29, 'bbox': [0.13, 0.82, 0.15, 0.85]}}, {{'label': 'person', 'score': 0.3, 'bbox': [0.1, 0.82, 0.24, 1.0]}}]
+
+...
+
+**Input Code Snippet**:
+```python
+from vision_agent.tools import load_image, owl_v2_image 
+
+def check_helmets(image_path):
+    image = load_image(image_path)
+    # Detect people and helmets, filter out the lowest confidence helmet score of 0.15
+    detections = owl_v2_image("person, helmet", image, box_threshold=0.15)
+    height, width = image.shape[:2]
+    
+    # Separate people and helmets
+    people = [d for d in detections if d['label'] == 'person']
+    helmets = [d for d in detections if d['label'] == 'helmet']
+    
+    people_with_helmets = 0
+    people_without_helmets = 0
+    
+    for person in people:
+        person_x = (person['bbox'][0] + person['bbox'][2]) / 2
+        person_y = person['bbox'][1]  # Top of the bounding box
+        
+        helmet_found = False
+        for helmet in helmets:
+            helmet_x = (helmet['bbox'][0] + helmet['bbox'][2]) / 2
+            helmet_y = (helmet['bbox'][1] + helmet['bbox'][3]) / 2
+            
+            # Check if the helmet is within 20 pixels of the person's head. Unnormalize
+            # the coordinates so we can better compare them.
+            if (abs((helmet_x - person_x) * width) < 20 and
+                -5 < ((helmet_y - person_y) * height) < 20):
+                helmet_found = True
+                break
+        
+        if helmet_found:
+            people_with_helmets += 1
+        else:
+            people_without_helmets += 1
+    
+    return {{
+        "people_with_helmets": people_with_helmets,
+        "people_without_helmets": people_without_helmets
+    }}
+```
+--- END EXAMPLE1 ---
+
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task.
 2. **Algorithm/Method Selection**: Decide on the most efficient method, use the tool outputs and tool thoughts to guide you.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
-4. **Code Generation**: Translate your pseudocode into executable Python code. Ensure you use correct arguments, remember coordinates are always returned normalized from `vision_agent.tools`. All images from `vision_agent.tools` are in RGB format, red is (255, 0, 0) and blue is (0, 0, 255).
+4. **Code Generation**: Translate your pseudocode into executable Python code.
+    4.1. Take in the media path as an argument and load with either `load_image` or `extract_frames_and_timestamps`.
+    4.2. Coordinates are always returned normalized from `vision_agent.tools`. 
+    4.3. Do not create dummy input or functions, the code must be usable if the user provides new media.
+    4.4. Use unnormalized coordinates when comparing bounding boxes.
 """
 
 TEST = """
