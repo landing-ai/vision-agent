@@ -676,12 +676,20 @@ def use_object_detection_fine_tuning(
 
     new_code = code
 
-    for index, (pattern_with_fine_tune_id, replacer_with_fine_tune_id) in enumerate(patterns_with_fine_tune_id):
+    for index, (pattern_with_fine_tune_id, replacer_with_fine_tune_id) in enumerate(
+        patterns_with_fine_tune_id
+    ):
         if re.search(pattern_with_fine_tune_id, new_code):
-            new_code = re.sub(pattern_with_fine_tune_id, replacer_with_fine_tune_id, new_code)
+            new_code = re.sub(
+                pattern_with_fine_tune_id, replacer_with_fine_tune_id, new_code
+            )
         else:
-            (pattern_without_fine_tune_id, replacer_without_fine_tune_id) = patterns_without_fine_tune_id[index]
-            new_code = re.sub(pattern_without_fine_tune_id, replacer_without_fine_tune_id, new_code)
+            (pattern_without_fine_tune_id, replacer_without_fine_tune_id) = (
+                patterns_without_fine_tune_id[index]
+            )
+            new_code = re.sub(
+                pattern_without_fine_tune_id, replacer_without_fine_tune_id, new_code
+            )
 
     if new_code == code:
         output_str = (
