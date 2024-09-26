@@ -3,7 +3,7 @@ from vision_agent.agent.vision_agent import parse_execution
 
 def test_parse_execution_zero():
     code = "print('Hello, World!')"
-    assert parse_execution(code) == None
+    assert parse_execution(code) is None
 
 
 def test_parse_execution_one():
