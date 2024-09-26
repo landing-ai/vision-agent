@@ -106,9 +106,20 @@ def parse_execution(
     customed_tool_names: Optional[List[str]] = None,
 ) -> Optional[str]:
     code = None
-    if "<execute_python>" in response:
-        code = response[response.find("<execute_python>") + len("<execute_python>") :]
-        code = code[: code.find("</execute_python>")]
+    remaining = response
+    all_code = []
+    while "<execute_python>" in remaining:
+        code_i = remaining[
+            remaining.find("<execute_python>") + len("<execute_python>") :
+        ]
+        code_i = code_i[: code_i.find("</execute_python>")]
+        remaining = remaining[
+            remaining.find("</execute_python>") + len("</execute_python>") :
+        ]
+        all_code.append(code_i)
+
+    if len(all_code) > 0:
+        code = "\n".join(all_code)
 
     if code is not None:
         code = use_extra_vision_agent_args(code, test_multi_plan, customed_tool_names)
@@ -306,6 +317,7 @@ class VisionAgent(Agent):
             )
             finished = user_result is not None and user_obs is not None
             if user_result is not None and user_obs is not None:
+                # be sure to update the chat with user execution results
                 chat_elt: Message = {"role": "observation", "content": user_obs}
                 int_chat.append(chat_elt)
                 chat_elt["execution"] = user_result

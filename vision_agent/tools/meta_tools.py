@@ -330,7 +330,7 @@ def generate_vision_code(
     chat: str,
     media: List[str],
     test_multi_plan: bool = True,
-    customized_tool_names: Optional[List[str]] = None,
+    custom_tool_names: Optional[List[str]] = None,
 ) -> str:
     """Generates python code to solve vision based tasks.
 
@@ -340,7 +340,7 @@ def generate_vision_code(
         chat (str): The chat message from the user.
         media (List[str]): The media files to use.
         test_multi_plan (bool): Do not change this parameter.
-        customized_tool_names (Optional[List[str]]): Do not change this parameter.
+        custom_tool_names (Optional[List[str]]): Do not change this parameter.
 
     Returns:
         str: The generated code.
@@ -368,7 +368,7 @@ def generate_vision_code(
     response = agent.chat_with_workflow(
         fixed_chat,
         test_multi_plan=test_multi_plan,
-        customized_tool_names=customized_tool_names,
+        custom_tool_names=custom_tool_names,
     )
     redisplay_results(response["test_result"])
     code = response["code"]
@@ -448,7 +448,7 @@ def edit_vision_code(
     response = agent.chat_with_workflow(
         fixed_chat_history,
         test_multi_plan=False,
-        customized_tool_names=customized_tool_names,
+        custom_tool_names=customized_tool_names,
     )
     redisplay_results(response["test_result"])
     code = response["code"]
@@ -513,11 +513,8 @@ def check_and_load_image(code: str) -> List[str]:
         return []
 
     pattern = r"view_media_artifact\(\s*([^\)]+),\s*['\"]([^\)]+)['\"]\s*\)"
-    match = re.search(pattern, code)
-    if match:
-        name = match.group(2)
-        return [name]
-    return []
+    matches = re.findall(pattern, code)
+    return [match[1] for match in matches]
 
 
 def view_media_artifact(artifacts: Artifacts, name: str) -> str:
@@ -620,7 +617,7 @@ def use_extra_vision_agent_args(
         arg = match.group(1)
         out_str = f"generate_vision_code({arg}, test_multi_plan={test_multi_plan}"
         if customized_tool_names is not None:
-            out_str += f", customized_tool_names={customized_tool_names})"
+            out_str += f", custom_tool_names={customized_tool_names})"
         else:
             out_str += ")"
         return out_str
@@ -631,7 +628,7 @@ def use_extra_vision_agent_args(
         arg = match.group(1)
         out_str = f"edit_vision_code({arg}"
         if customized_tool_names is not None:
-            out_str += f", customized_tool_names={customized_tool_names})"
+            out_str += f", custom_tool_names={customized_tool_names})"
         else:
             out_str += ")"
         return out_str
@@ -668,50 +665,27 @@ def use_object_detection_fine_tuning(
 
     patterns_with_fine_tune_id = [
         (
-            r'florence2_phrase_grounding\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            r'florence2_phrase_grounding\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
             lambda match: f'florence2_phrase_grounding("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
         ),
         (
-            r'owl_v2_image\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            r'owl_v2_image\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
             lambda match: f'owl_v2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
         ),
         (
-            r'florence2_sam2_image\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            r'florence2_sam2_image\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
             lambda match: f'florence2_sam2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
         ),
     ]
 
-    patterns_without_fine_tune_id = [
-        (
-            r"florence2_phrase_grounding\(\s*([^\)]+)\s*\)",
-            lambda match: f'florence2_phrase_grounding({match.group(1)}, "{fine_tune_id}")',
-        ),
-        (
-            r"owl_v2_image\(\s*([^\)]+)\s*\)",
-            lambda match: f'owl_v2_image({match.group(1)}, "{fine_tune_id}")',
-        ),
-        (
-            r"florence2_sam2_image\(\s*([^\)]+)\s*\)",
-            lambda match: f'florence2_sam2_image({match.group(1)}, "{fine_tune_id}")',
-        ),
-    ]
-
     new_code = code
-
-    for index, (pattern_with_fine_tune_id, replacer_with_fine_tune_id) in enumerate(
-        patterns_with_fine_tune_id
-    ):
+    for (
+        pattern_with_fine_tune_id,
+        replacer_with_fine_tune_id,
+    ) in patterns_with_fine_tune_id:
         if re.search(pattern_with_fine_tune_id, new_code):
             new_code = re.sub(
                 pattern_with_fine_tune_id, replacer_with_fine_tune_id, new_code
-            )
-        else:
-            (
-                pattern_without_fine_tune_id,
-                replacer_without_fine_tune_id,
-            ) = patterns_without_fine_tune_id[index]
-            new_code = re.sub(
-                pattern_without_fine_tune_id, replacer_without_fine_tune_id, new_code
             )
 
     if new_code == code:
