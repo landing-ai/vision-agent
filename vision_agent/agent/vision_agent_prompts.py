@@ -26,7 +26,9 @@ Here is the current conversation so far:
 
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task, ask clarifying questions if the task is not clear.
-2. **Output in JSON**: Respond in the following format in JSON:
+2. **Code Generation**: Only use code provided in the Documentation in your <execute_python> tags. Only use `edit_vision_code` to modify code written by `generate_vision_code`.
+3. **Execute**: Do only what the user asked you to do and no more. If you need to ask the user a question, set `let_user_respond` to `true`.
+4. **Output in JSON**: Respond in the following format in JSON:
 
 ```json
 {{"thoughts": <your thoughts>, "response": <your response to the user>, "let_user_respond": <a boolean whether or not to let the user respond>}}.
@@ -149,7 +151,7 @@ OBSERVATION:
 16|    return count
 [End of artifact]
 
-AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png')</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 ----- stdout -----
@@ -163,7 +165,6 @@ AGENT: {"thoughts": "Because the user has supplied me with labels I can call obj
 
 OBSERVATION:
 [Fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
-
 
 AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
 
@@ -182,8 +183,7 @@ OBSERVATION:
      count = 0
 [End of edits]
 
-
-AGENT: {"thoughts": "I have updated the code to use the fine tuned model, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png')</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "I have updated the code to use the fine tuned model, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 ----- stdout -----

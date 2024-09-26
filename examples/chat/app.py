@@ -51,13 +51,12 @@ if "input_text" not in st.session_state:
 
 
 def update_messages(messages, lock):
-    if Path("artifacts.pkl").exists():
-        artifacts.load("artifacts.pkl")
-    new_chat, _ = agent.chat_with_code(messages, artifacts=artifacts)
     with lock:
-        for new_message in new_chat:
-            if new_message not in messages:
-                messages.append(new_message)
+        if Path("artifacts.pkl").exists():
+            artifacts.load("artifacts.pkl")
+        new_chat, _ = agent.chat_with_code(messages, artifacts=artifacts)
+        for new_message in new_chat[len(messages) :]:
+            messages.append(new_message)
 
 
 def get_updates(updates, lock):
@@ -106,15 +105,21 @@ def main():
             prompt = st.session_state.input_text
 
             if prompt:
-                st.session_state.messages.append({"role": "user", "content": prompt})
-                messages.chat_message("user").write(prompt)
-                message_thread = threading.Thread(
-                    target=update_messages,
-                    args=(st.session_state.messages, message_lock),
-                )
-                message_thread.daemon = True
-                message_thread.start()
-                st.session_state.input_text = ""
+                if (
+                    len(st.session_state.messages) == 0
+                    or prompt != st.session_state.messages[-1]["content"]
+                ):
+                    st.session_state.messages.append(
+                        {"role": "user", "content": prompt}
+                    )
+                    messages.chat_message("user").write(prompt)
+                    message_thread = threading.Thread(
+                        target=update_messages,
+                        args=(st.session_state.messages, message_lock),
+                    )
+                    message_thread.daemon = True
+                    message_thread.start()
+                    st.session_state.input_text = ""
 
         with tabs[1]:
             updates = st.container(height=400)

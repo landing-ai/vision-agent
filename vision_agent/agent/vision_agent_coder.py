@@ -691,7 +691,7 @@ class VisionAgentCoder(Agent):
         chat: List[Message],
         test_multi_plan: bool = True,
         display_visualization: bool = False,
-        customized_tool_names: Optional[List[str]] = None,
+        custom_tool_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Chat with VisionAgentCoder and return intermediate information regarding the
         task.
@@ -707,8 +707,8 @@ class VisionAgentCoder(Agent):
                 with the first plan.
             display_visualization (bool): If True, it opens a new window locally to
                 show the image(s) created by visualization code (if there is any).
-            customized_tool_names (List[str]): A list of customized tools for agent to pick and use.
-                If not provided, default to full tool set from vision_agent.tools.
+            custom_tool_names (List[str]): A list of custom tools for the agent to pick
+                and use. If not provided, default to full tool set from vision_agent.tools.
 
         Returns:
             Dict[str, Any]: A dictionary containing the code, test, test result, plan,
@@ -760,7 +760,7 @@ class VisionAgentCoder(Agent):
             success = False
 
             plans = self._create_plans(
-                int_chat, customized_tool_names, working_memory, self.planner
+                int_chat, custom_tool_names, working_memory, self.planner
             )
 
             if test_multi_plan:
