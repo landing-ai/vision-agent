@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
 from IPython.display import display
 
 import vision_agent as va
@@ -17,7 +18,8 @@ from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
 from vision_agent.tools.tools_types import BboxInput, BboxInputBase64, PromptTask
 from vision_agent.utils.execute import Execution, MimeType
-from vision_agent.utils.image_utils import convert_to_b64
+from vision_agent.utils.image_utils import convert_to_b64, numpy_to_bytes
+from vision_agent.utils.video import frames_to_bytes
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
@@ -328,7 +330,7 @@ def generate_vision_code(
     chat: str,
     media: List[str],
     test_multi_plan: bool = True,
-    customized_tool_names: Optional[List[str]] = None,
+    custom_tool_names: Optional[List[str]] = None,
 ) -> str:
     """Generates python code to solve vision based tasks.
 
@@ -338,7 +340,7 @@ def generate_vision_code(
         chat (str): The chat message from the user.
         media (List[str]): The media files to use.
         test_multi_plan (bool): Do not change this parameter.
-        customized_tool_names (Optional[List[str]]): Do not change this parameter.
+        custom_tool_names (Optional[List[str]]): Do not change this parameter.
 
     Returns:
         str: The generated code.
@@ -366,7 +368,7 @@ def generate_vision_code(
     response = agent.chat_with_workflow(
         fixed_chat,
         test_multi_plan=test_multi_plan,
-        customized_tool_names=customized_tool_names,
+        custom_tool_names=custom_tool_names,
     )
     redisplay_results(response["test_result"])
     code = response["code"]
@@ -432,19 +434,21 @@ def edit_vision_code(
 
     # Append latest code to second to last message from assistant
     fixed_chat_history: List[Message] = []
+    user_message = "Previous user requests:"
     for i, chat in enumerate(chat_history):
-        if i == 0:
-            fixed_chat_history.append({"role": "user", "content": chat, "media": media})
-        elif i > 0 and i < len(chat_history) - 1:
-            fixed_chat_history.append({"role": "user", "content": chat})
-        elif i == len(chat_history) - 1:
+        if i < len(chat_history) - 1:
+            user_message += " " + chat
+        else:
+            fixed_chat_history.append(
+                {"role": "user", "content": user_message, "media": media}
+            )
             fixed_chat_history.append({"role": "assistant", "content": code})
             fixed_chat_history.append({"role": "user", "content": chat})
 
     response = agent.chat_with_workflow(
         fixed_chat_history,
         test_multi_plan=False,
-        customized_tool_names=customized_tool_names,
+        custom_tool_names=customized_tool_names,
     )
     redisplay_results(response["test_result"])
     code = response["code"]
@@ -467,17 +471,34 @@ def edit_vision_code(
     return view_lines(code_lines, 0, total_lines, name, total_lines)
 
 
-def write_media_artifact(artifacts: Artifacts, local_path: str) -> str:
+def write_media_artifact(
+    artifacts: Artifacts,
+    name: str,
+    media: Union[str, np.ndarray, List[np.ndarray]],
+    fps: Optional[float] = None,
+) -> str:
     """Writes a media file to the artifacts object.
 
     Parameters:
         artifacts (Artifacts): The artifacts object to save the media to.
-        local_path (str): The local path to the media file.
+        name (str): The name of the media artifact to save.
+        media (Union[str, np.ndarray, List[np.ndarray]]): The media to save, can either
+            be a file path, single image or list of frames for a video.
+        fps (Optional[float]): The frames per second if you are writing a video.
     """
-    with open(local_path, "rb") as f:
-        media = f.read()
-    artifacts[Path(local_path).name] = media
-    return f"[Media {Path(local_path).name} saved]"
+    if isinstance(media, str):
+        with open(media, "rb") as f:
+            media_bytes = f.read()
+    elif isinstance(media, list):
+        media_bytes = frames_to_bytes(media, fps=fps if fps is not None else 1.0)
+    elif isinstance(media, np.ndarray):
+        media_bytes = numpy_to_bytes(media)
+    else:
+        print(f"[Invalid media type {type(media)}]")
+        return f"[Invalid media type {type(media)}]"
+    artifacts[name] = media_bytes
+    print(f"[Media {name} saved]")
+    return f"[Media {name} saved]"
 
 
 def list_artifacts(artifacts: Artifacts) -> str:
@@ -491,16 +512,14 @@ def check_and_load_image(code: str) -> List[str]:
     if not code.strip():
         return []
 
-    pattern = r"show_media_artifact\(\s*([^\)]+),\s*['\"]([^\)]+)['\"]\s*\)"
-    match = re.search(pattern, code)
-    if match:
-        name = match.group(2)
-        return [name]
-    return []
+    pattern = r"view_media_artifact\(\s*([^\)]+),\s*['\"]([^\)]+)['\"]\s*\)"
+    matches = re.findall(pattern, code)
+    return [match[1] for match in matches]
 
 
 def view_media_artifact(artifacts: Artifacts, name: str) -> str:
-    """Views the image artifact with the given name.
+    """Allows you to view the media artifact with the given name. This does not show
+    the media to the user, the user can already see all media saved in the artifacts.
 
     Parameters:
         artifacts (Artifacts): The artifacts object to show the image from.
@@ -598,7 +617,7 @@ def use_extra_vision_agent_args(
         arg = match.group(1)
         out_str = f"generate_vision_code({arg}, test_multi_plan={test_multi_plan}"
         if customized_tool_names is not None:
-            out_str += f", customized_tool_names={customized_tool_names})"
+            out_str += f", custom_tool_names={customized_tool_names})"
         else:
             out_str += ")"
         return out_str
@@ -609,7 +628,7 @@ def use_extra_vision_agent_args(
         arg = match.group(1)
         out_str = f"edit_vision_code({arg}"
         if customized_tool_names is not None:
-            out_str += f", customized_tool_names={customized_tool_names})"
+            out_str += f", custom_tool_names={customized_tool_names})"
         else:
             out_str += ")"
         return out_str
@@ -646,49 +665,27 @@ def use_object_detection_fine_tuning(
 
     patterns_with_fine_tune_id = [
         (
-            r'florence2_phrase_grounding\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            r'florence2_phrase_grounding\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
             lambda match: f'florence2_phrase_grounding("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
         ),
         (
-            r'owl_v2_image\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            r'owl_v2_image\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
             lambda match: f'owl_v2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
         ),
         (
-            r'florence2_sam2_image\(\s*"([^"]+)"\s*,\s*([^,]+)(?:,\s*"[^"]+")?\s*\)',
+            r'florence2_sam2_image\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
             lambda match: f'florence2_sam2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
         ),
     ]
 
-    patterns_without_fine_tune_id = [
-        (
-            r"florence2_phrase_grounding\(\s*([^\)]+)\s*\)",
-            lambda match: f'florence2_phrase_grounding({match.group(1)}, "{fine_tune_id}")',
-        ),
-        (
-            r"owl_v2_image\(\s*([^\)]+)\s*\)",
-            lambda match: f'owl_v2_image({match.group(1)}, "{fine_tune_id}")',
-        ),
-        (
-            r"florence2_sam2_image\(\s*([^\)]+)\s*\)",
-            lambda match: f'florence2_sam2_image({match.group(1)}, "{fine_tune_id}")',
-        ),
-    ]
-
     new_code = code
-
-    for index, (pattern_with_fine_tune_id, replacer_with_fine_tune_id) in enumerate(
-        patterns_with_fine_tune_id
-    ):
+    for (
+        pattern_with_fine_tune_id,
+        replacer_with_fine_tune_id,
+    ) in patterns_with_fine_tune_id:
         if re.search(pattern_with_fine_tune_id, new_code):
             new_code = re.sub(
                 pattern_with_fine_tune_id, replacer_with_fine_tune_id, new_code
-            )
-        else:
-            (pattern_without_fine_tune_id, replacer_without_fine_tune_id) = (
-                patterns_without_fine_tune_id[index]
-            )
-            new_code = re.sub(
-                pattern_without_fine_tune_id, replacer_without_fine_tune_id, new_code
             )
 
     if new_code == code:
