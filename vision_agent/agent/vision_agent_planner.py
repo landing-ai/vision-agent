@@ -36,6 +36,7 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
+from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
 from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
 
 _LOGGER = logging.getLogger(__name__)
@@ -307,7 +308,6 @@ def pick_plan(
             "payload": plans[plan_thoughts["best_plan"]],
         }
     )
-    # return plan_thoughts, "```python\n" + code + "\n```\n" + tool_output_str
     return plan_thoughts, code, tool_output
 
 
