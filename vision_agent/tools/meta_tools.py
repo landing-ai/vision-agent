@@ -379,7 +379,7 @@ def generate_vision_code(
         agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
-    response = agent.chat_with_workflow(
+    response = agent.generate_code(
         fixed_chat,
         test_multi_plan=test_multi_plan,
         custom_tool_names=custom_tool_names,
@@ -459,7 +459,7 @@ def edit_vision_code(
             fixed_chat_history.append({"role": "assistant", "content": code})
             fixed_chat_history.append({"role": "user", "content": chat})
 
-    response = agent.chat_with_workflow(
+    response = agent.generate_code(
         fixed_chat_history,
         test_multi_plan=False,
         custom_tool_names=customized_tool_names,
