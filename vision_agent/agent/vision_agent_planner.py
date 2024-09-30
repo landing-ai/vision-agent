@@ -4,6 +4,8 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
+from pydantic import BaseModel
+
 import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
@@ -33,6 +35,14 @@ from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
 from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class PlanContext(BaseModel):
+    plans: Dict[str, Dict[str, Union[str, List[str]]]]
+    best_plan: str
+    plan_thoughts: str
+    tool_output: str
+    tool_doc: str
 
 
 def retrieve_tools(
@@ -325,7 +335,7 @@ class VisionAgentPlanner(Agent):
             if media is not None:
                 input[0]["media"] = [media]
         planning_context = self.generate_plan(input)
-        return str(planning_context["plans"][planning_context["best_plan"]])
+        return str(planning_context.plans[planning_context.best_plan])
 
     def generate_plan(
         self,
@@ -333,7 +343,7 @@ class VisionAgentPlanner(Agent):
         test_multi_plan: bool = True,
         custom_tool_names: Optional[List[str]] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> Dict[str, Any]:
+    ) -> PlanContext:
         if not chat:
             raise ValueError("Chat cannot be empty")
 
@@ -420,13 +430,13 @@ class VisionAgentPlanner(Agent):
                 best_plan = k
                 tool_doc = tool_docs[k]
 
-        return {
-            "plans": plans,
-            "best_plan": best_plan,
-            "thoughts": plan_thoughts_str,
-            "tool_output": tool_output_str,
-            "tool_doc": tool_doc,
-        }
+        return PlanContext(
+            plans=plans,
+            best_plan=best_plan,
+            plan_thoughts=plan_thoughts_str,
+            tool_output=tool_output_str,
+            tool_doc=tool_doc,
+        )
 
     def log_progress(self, log: Dict[str, Any]) -> None:
         if self.report_progress_callback is not None:

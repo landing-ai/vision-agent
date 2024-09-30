@@ -28,6 +28,7 @@ from vision_agent.agent.vision_agent_planner import (
     AzureVisionAgentPlanner,
     OllamaVisionAgentPlanner,
     OpenAIVisionAgentPlanner,
+    PlanContext,
 )
 from vision_agent.lmm import (
     LMM,
@@ -361,7 +362,11 @@ class VisionAgentCoder(Agent):
                 If it's also None, the local python runtime environment will be used.
         """
 
-        self.planner = AnthropicVisionAgentPlanner() if planner is None else planner
+        self.planner = (
+            AnthropicVisionAgentPlanner(verbosity=verbosity)
+            if planner is None
+            else planner
+        )
         self.coder = AnthropicLMM(temperature=0.0) if coder is None else coder
         self.tester = AnthropicLMM(temperature=0.0) if tester is None else tester
         self.debugger = AnthropicLMM(temperature=0.0) if debugger is None else debugger
@@ -399,7 +404,7 @@ class VisionAgentCoder(Agent):
     def generate_code_from_plan(
         self,
         chat: List[Message],
-        plan_context: Dict[str, Any],
+        plan_context: PlanContext,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> Dict[str, Any]:
         """Generates code and other intermediate outputs from a chat input and a plan.
@@ -414,6 +419,8 @@ class VisionAgentCoder(Agent):
         Parameters:
             chat (List[Message]): A conversation in the format of
                 [{"role": "user", "content": "describe your task here..."}].
+            plan_context (PlanContext): The context of the plan, including the plans,
+                best_plan, plan_thoughts, tool_doc, and tool_output.
             test_multi_plan (bool): Whether to test multiple plans or just the best plan.
             custom_tool_names (Optional[List[str]]): A list of custom tool names to use
                 for the planner.
@@ -474,10 +481,10 @@ class VisionAgentCoder(Agent):
             code = ""
             test = ""
             working_memory: List[Dict[str, str]] = []
-            plan = plan_context["plans"][plan_context["best_plan"]]
-            tool_doc = plan_context["tool_doc"]
-            tool_output_str = plan_context["tool_output"]
-            plan_thoughts_str = str(plan_context["plan_thoughts"])
+            plan = plan_context.plans[plan_context.best_plan]
+            tool_doc = plan_context.tool_doc
+            tool_output_str = plan_context.tool_output
+            plan_thoughts_str = str(plan_context.plan_thoughts)
 
             if self.verbosity >= 1:
                 plan_fixed = [{"instructions": e} for e in plan["instructions"]]
@@ -514,7 +521,7 @@ class VisionAgentCoder(Agent):
                 "code": DefaultImports.prepend_imports(code),
                 "test": test,
                 "test_result": execution_result,
-                "plans": plan_context["plans"],
+                "plans": plan_context.plans,
                 "plan_thoughts": plan_thoughts_str,
                 "working_memory": working_memory,
             }
@@ -590,7 +597,11 @@ class OpenAIVisionAgentCoder(VisionAgentCoder):
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_sandbox_runtime: Optional[str] = None,
     ) -> None:
-        self.planner = OpenAIVisionAgentPlanner() if planner is None else planner
+        self.planner = (
+            OpenAIVisionAgentPlanner(verbosity=verbosity)
+            if planner is None
+            else planner
+        )
         self.coder = OpenAILMM(temperature=0.0) if coder is None else coder
         self.tester = OpenAILMM(temperature=0.0) if tester is None else tester
         self.debugger = OpenAILMM(temperature=0.0) if debugger is None else debugger
@@ -616,7 +627,11 @@ class AnthropicVisionAgentCoder(VisionAgentCoder):
         code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         # NOTE: Claude doesn't have an official JSON mode
-        self.planner = AnthropicVisionAgentPlanner() if planner is None else planner
+        self.planner = (
+            AnthropicVisionAgentPlanner(verbosity=verbosity)
+            if planner is None
+            else planner
+        )
         self.coder = AnthropicLMM(temperature=0.0) if coder is None else coder
         self.tester = AnthropicLMM(temperature=0.0) if tester is None else tester
         self.debugger = AnthropicLMM(temperature=0.0) if debugger is None else debugger
@@ -655,7 +670,11 @@ class OllamaVisionAgentCoder(VisionAgentCoder):
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         super().__init__(
-            planner=(OllamaVisionAgentPlanner() if planner is None else planner),
+            planner=(
+                OllamaVisionAgentPlanner(verbosity=verbosity)
+                if planner is None
+                else planner
+            ),
             coder=(
                 OllamaLMM(model_name="llama3.1", temperature=0.0)
                 if coder is None
@@ -716,7 +735,11 @@ class AzureVisionAgentCoder(VisionAgentCoder):
                 ensures that the progress are not mixed up.
         """
         super().__init__(
-            planner=(AzureVisionAgentPlanner() if planner is None else planner),
+            planner=(
+                AzureVisionAgentPlanner(verbosity=verbosity)
+                if planner is None
+                else planner
+            ),
             coder=AzureOpenAILMM(temperature=0.0) if coder is None else coder,
             tester=AzureOpenAILMM(temperature=0.0) if tester is None else tester,
             debugger=(
