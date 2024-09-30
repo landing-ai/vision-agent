@@ -14,12 +14,12 @@ from vision_agent.agent.agent_utils import (
     format_plans,
     print_code,
 )
-from vision_agent.agent.vision_agent_coder_prompts import USER_REQ
 from vision_agent.agent.vision_agent_planner_prompts import (
     PICK_PLAN,
     PLAN,
     PREVIOUS_FAILED,
     TEST_PLANS,
+    USER_REQ,
 )
 from vision_agent.lmm import (
     LMM,
