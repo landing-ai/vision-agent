@@ -8,13 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 from tabulate import tabulate
 
 import vision_agent.tools as T
-from vision_agent.agent import (
-    Agent,
-    AnthropicVisionAgentPlanner,
-    AzureVisionAgentPlanner,
-    OllamaVisionAgentPlanner,
-    OpenAIVisionAgentPlanner,
-)
+from vision_agent.agent.agent import Agent
 from vision_agent.agent.agent_utils import (
     DefaultImports,
     extract_code,
@@ -28,6 +22,12 @@ from vision_agent.agent.vision_agent_coder_prompts import (
     FIX_BUG,
     FULL_TASK,
     SIMPLE_TEST,
+)
+from vision_agent.agent.vision_agent_planner import (
+    AnthropicVisionAgentPlanner,
+    AzureVisionAgentPlanner,
+    OllamaVisionAgentPlanner,
+    OpenAIVisionAgentPlanner,
 )
 from vision_agent.lmm import (
     LMM,

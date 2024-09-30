@@ -1,3 +1,8 @@
+USER_REQ = """
+## User Request
+{user_request}
+"""
+
 PLAN = """
 **Context**:
 {context}
