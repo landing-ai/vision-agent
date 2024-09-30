@@ -422,9 +422,9 @@ def florence2_sam2_image(
             task=PromptTask.PHRASE_GROUNDING,
             tool="florencev2_fine_tuning",
             prompt=prompt,
+            postprocessing="sam2",
             fine_tuning=FineTuning(
                 job_id=UUID(fine_tune_id),
-                postprocessing="sam2",
             ),
         )
         req_data = req_data_obj.model_dump(by_alias=True)

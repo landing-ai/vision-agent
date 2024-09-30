@@ -28,7 +28,6 @@ class FineTuning(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     job_id: UUID = Field(alias="jobId")
-    postprocessing: Optional[str] = None
 
     @field_serializer("job_id")
     def serialize_job_id(self, job_id: UUID, _info: SerializationInfo) -> str:
@@ -42,6 +41,7 @@ class Florence2FtRequest(BaseModel):
     task: PromptTask
     tool: str
     prompt: Optional[str] = ""
+    postprocessing: Optional[str] = None
     fine_tuning: Optional[FineTuning] = Field(None, alias="fineTuning")
 
 
