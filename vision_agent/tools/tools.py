@@ -200,7 +200,7 @@ def owl_v2_image(
         )
         data = data_obj.model_dump(by_alias=True)
         detections = send_inference_request(data, "tools", v2=False)
-        # get the first frame detections
+        # get the first frame
         detection = detections[0]
         bboxes_formatted = [
             ODResponseData(
@@ -429,17 +429,18 @@ def florence2_sam2_image(
         )
         req_data = req_data_obj.model_dump(by_alias=True)
         detections_ft = send_inference_request(req_data, "tools", v2=False)
-        # get the first frame detections
+        # get the first frame
         detection = detections_ft[0]
         return_data = []
-        all_masks = np.array(detection["masks"])
         for i in range(len(detection["bboxes"])):
             return_data.append(
                 {
                     "score": 1.0,
                     "label": detection["labels"][i],
-                    "bbox": detection["bboxes"][i],
-                    "mask": all_masks[i, :, :].astype(np.uint8),
+                    "bbox": normalize_bbox(
+                        detection["bboxes"][i], detection["masks"][i]["size"]
+                    ),
+                    "mask": rle_decode_array(detection["masks"][i]),
                 }
             )
         return return_data
@@ -453,6 +454,7 @@ def florence2_sam2_image(
     detections: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
     )
+
     return_data = []
     for _, data_i in detections["0"].items():
         mask = rle_decode_array(data_i["mask"])
@@ -1189,7 +1191,7 @@ def florence2_phrase_grounding(
             v2=False,
             metadata_payload={"function_name": "florence2_phrase_grounding"},
         )
-        # get the first frame detections
+        # get the first frame
         detection = detections[0]
     else:
         data = {
@@ -1607,7 +1609,7 @@ def extract_frames_and_timestamps(
     """
 
     def reformat(
-        frames_and_timestamps: List[Tuple[np.ndarray, float]]
+        frames_and_timestamps: List[Tuple[np.ndarray, float]],
     ) -> List[Dict[str, Union[np.ndarray, float]]]:
         return [
             {"frame": frame, "timestamp": timestamp}
