@@ -200,14 +200,15 @@ def owl_v2_image(
         )
         data = data_obj.model_dump(by_alias=True)
         detections = send_inference_request(data, "tools", v2=False)
-        detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
+        # get the first frame detections
+        detection = detections[0]
         bboxes_formatted = [
             ODResponseData(
-                label=detections["labels"][i],
-                bbox=normalize_bbox(detections["bboxes"][i], image_size),
+                label=detection["labels"][i],
+                bbox=normalize_bbox(detection["bboxes"][i], image_size),
                 score=1.0,
             )
-            for i in range(len(detections["bboxes"]))
+            for i in range(len(detection["bboxes"]))
         ]
         return [bbox.model_dump() for bbox in bboxes_formatted]
 
@@ -428,15 +429,16 @@ def florence2_sam2_image(
         )
         req_data = req_data_obj.model_dump(by_alias=True)
         detections_ft = send_inference_request(req_data, "tools", v2=False)
-        detections_ft = detections_ft["<CAPTION_TO_PHRASE_GROUNDING>"]
+        # get the first frame detections
+        detection = detections_ft[0]
         return_data = []
-        all_masks = np.array(detections_ft["masks"])
-        for i in range(len(detections_ft["bboxes"])):
+        all_masks = np.array(detection["masks"])
+        for i in range(len(detection["bboxes"])):
             return_data.append(
                 {
                     "score": 1.0,
-                    "label": detections_ft["labels"][i],
-                    "bbox": detections_ft["bboxes"][i],
+                    "label": detection["labels"][i],
+                    "bbox": detection["bboxes"][i],
                     "mask": all_masks[i, :, :].astype(np.uint8),
                 }
             )
@@ -1187,6 +1189,8 @@ def florence2_phrase_grounding(
             v2=False,
             metadata_payload={"function_name": "florence2_phrase_grounding"},
         )
+        # get the first frame detections
+        detection = detections[0]
     else:
         data = {
             "image": image_b64,
@@ -1195,14 +1199,14 @@ def florence2_phrase_grounding(
             "function_name": "florence2_phrase_grounding",
         }
         detections = send_inference_request(data, "florence2", v2=True)
+        detection = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
 
-    detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
     return_data = []
-    for i in range(len(detections["bboxes"])):
+    for i in range(len(detection["bboxes"])):
         return_data.append(
             ODResponseData(
-                label=detections["labels"][i],
-                bbox=normalize_bbox(detections["bboxes"][i], image_size),
+                label=detection["labels"][i],
+                bbox=normalize_bbox(detection["bboxes"][i], image_size),
                 score=1.0,
             )
         )
