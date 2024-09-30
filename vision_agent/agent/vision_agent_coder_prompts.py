@@ -1,8 +1,3 @@
-USER_REQ = """
-## User Request
-{user_request}
-"""
-
 FULL_TASK = """
 ## User Request
 {user_request}
