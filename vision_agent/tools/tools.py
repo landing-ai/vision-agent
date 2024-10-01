@@ -1141,16 +1141,13 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
-# TODO: add video
-
-
-def florence2_phrase_grounding(
+def florence2_phrase_grounding_image(
     prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """'florence2_phrase_grounding' is a tool that can detect multiple
-    objects given a text prompt which can be object names or caption. You
-    can optionally separate the object names in the text with commas. It returns a list
-    of bounding boxes with normalized coordinates, label names and associated
+    """'florence2_phrase_grounding_image' will run florence2 on a image. It can
+    detect multiple objects given a text prompt which can be object names or caption.
+    You can optionally separate the object names in the text with commas. It returns
+    a list of bounding boxes with normalized coordinates, label names and associated
     probability scores of 1.0.
 
     Parameters:
@@ -1168,7 +1165,7 @@ def florence2_phrase_grounding(
 
     Example
     -------
-        >>> florence2_phrase_grounding('person looking at a coyote', image)
+        >>> florence2_phrase_grounding_image('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -1196,7 +1193,7 @@ def florence2_phrase_grounding(
             data,
             "florence2-ft",
             v2=True,
-            metadata_payload={"function_name": "florence2_phrase_grounding"},
+            metadata_payload={"function_name": "florence2_phrase_grounding_image"},
         )
         # get the first frame
         detection = detections[0]
@@ -1205,7 +1202,7 @@ def florence2_phrase_grounding(
             "image": image_b64,
             "task": "<CAPTION_TO_PHRASE_GROUNDING>",
             "prompt": prompt,
-            "function_name": "florence2_phrase_grounding",
+            "function_name": "florence2_phrase_grounding_image",
         }
         detections = send_inference_request(data, "florence2", v2=True)
         detection = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
@@ -1222,6 +1219,90 @@ def florence2_phrase_grounding(
     return [bbox.model_dump() for bbox in return_data]
 
 
+def florence2_phrase_grounding_video(
+    prompt: str, frames: List[np.ndarray], fine_tune_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """'florence2_phrase_grounding_video' will run florence2 on each frame of a video.
+    It can detect multiple objects given a text prompt which can be object names or
+    caption. You can optionally separate the object names in the text with commas.
+    It returns a list of lists where each inner list contains bounding boxes with
+    normalized coordinates, label names and associated probability scores of 1.0.
+
+    Parameters:
+        prompt (str): The prompt to ground to the video.
+        frames (List[np.ndarray]): The list of frames to detect objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of lists of dictionaries containing the score,
+            label, and bounding box of the detected objects with normalized coordinates
+            between 0 and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates
+            of the top-left and xmax and ymax are the coordinates of the bottom-right of
+            the bounding box. The scores are always 1.0 and cannot be thresholded.
+
+    Example
+    -------
+        >>> florence2_phrase_grounding_video('person looking at a coyote', frames)
+        [
+            [
+                {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+                {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
+            ],
+            ...
+        ]
+    """
+    if len(frames) == 0:
+        raise ValueError("No frames provided")
+
+    image_size = frames[0].shape[:2]
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        data_obj = Florence2FtRequest(
+            video=buffer_bytes,
+            task=PromptTask.PHRASE_GROUNDING,
+            prompt=prompt,
+            job_id=UUID(fine_tune_id),
+        )
+        data = data_obj.model_dump(by_alias=True, exclude_none=True)
+    else:
+        data_obj = Florence2FtRequest(
+            video=buffer_bytes, task=PromptTask.PHRASE_GROUNDING, prompt=prompt
+        )
+        data = data_obj.model_dump(by_alias=True, exclude_none=True)
+
+    detections = send_inference_request(
+        data,
+        "florence2-ft",
+        v2=True,
+        files=files,
+        metadata_payload={"function_name": "florence2_phrase_grounding_video"},
+    )
+
+    bboxes_formatted = []
+    for frame_data in detections:
+        bboxes_formatted_per_frame = []
+        for idx in range(len(frame_data["bboxes"])):
+            bboxes_formatted_per_frame.append(
+                ODResponseData(
+                    label=frame_data["labels"][idx],
+                    bbox=normalize_bbox(frame_data["bboxes"][idx], image_size),
+                    score=1.0,
+                )
+            )
+        bboxes_formatted.append(bboxes_formatted_per_frame)
+    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
+
+
 def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     """'florence2_ocr' is a tool that can detect text and text regions in an image.
     Each text region contains one line of text. It returns a list of detected text,
@@ -1233,7 +1314,7 @@ def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the detected text, bbox
-            with nornmalized coordinates, and confidence score.
+            with normalized coordinates, and confidence score.
 
     Example
     -------
@@ -2077,7 +2158,8 @@ FUNCTION_TOOLS = [
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video_tracking,
-    florence2_phrase_grounding,
+    florence2_phrase_grounding_image,
+    florence2_phrase_grounding_video,
     ixc25_image_vqa,
     ixc25_video_vqa,
     detr_segmentation,
