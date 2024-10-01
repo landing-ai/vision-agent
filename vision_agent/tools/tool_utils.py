@@ -1,6 +1,6 @@
+import os
 import inspect
 import logging
-import os
 from base64 import b64encode
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
@@ -38,7 +38,7 @@ def send_inference_request(
     v2: bool = False,
     metadata_payload: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    # TODO: runtime_tag and function_name should be metadata_payload and now included
+    # TODO: runtime_tag and function_name should be metadata_payload and not included
     # in the service payload
     if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
         payload["runtime_tag"] = runtime_tag

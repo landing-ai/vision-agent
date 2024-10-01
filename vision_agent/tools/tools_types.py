@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import List, Optional, Tuple, Union
 from uuid import UUID
+from typing import List, Optional, Tuple, Union
 
 from pydantic import BaseModel, ConfigDict, Field, SerializationInfo, field_serializer
 
@@ -24,25 +24,20 @@ class PromptTask(str, Enum):
     PHRASE_GROUNDING = "<CAPTION_TO_PHRASE_GROUNDING>"
 
 
-class FineTuning(BaseModel):
+class Florence2FtRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    job_id: UUID = Field(alias="jobId")
+    image: str | None
+    video: bytes | None
+    task: PromptTask
+    prompt: Optional[str] = ""
+    chunk_length_frames: Optional[int] = None
+    postprocessing: Optional[str] = None
+    job_id: Optional[UUID] = Field(None, alias="jobId")
 
     @field_serializer("job_id")
     def serialize_job_id(self, job_id: UUID, _info: SerializationInfo) -> str:
         return str(job_id)
-
-
-class Florence2FtRequest(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    image: str
-    task: PromptTask
-    tool: str
-    prompt: Optional[str] = ""
-    postprocessing: Optional[str] = None
-    fine_tuning: Optional[FineTuning] = Field(None, alias="fineTuning")
 
 
 class JobStatus(str, Enum):

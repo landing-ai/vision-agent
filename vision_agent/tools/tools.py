@@ -1,20 +1,20 @@
+import os
 import io
 import json
 import logging
-import os
 import tempfile
 import urllib.request
-from importlib import resources
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from uuid import UUID
+from pathlib import Path
+from importlib import resources
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import cv2
-import numpy as np
 import requests
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont
-from pillow_heif import register_heif_opener  # type: ignore
+import numpy as np
 from pytube import YouTube  # type: ignore
+from pillow_heif import register_heif_opener  # type: ignore
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import OpenAILMM
@@ -28,7 +28,6 @@ from vision_agent.tools.tool_utils import (
     send_task_inference_request,
 )
 from vision_agent.tools.tools_types import (
-    FineTuning,
     Florence2FtRequest,
     JobStatus,
     ODResponseData,
@@ -194,12 +193,16 @@ def owl_v2_image(
         data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
-            tool="florencev2_fine_tuning",
             prompt=prompt,
-            fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
+            job_id=UUID(fine_tune_id),
         )
-        data = data_obj.model_dump(by_alias=True)
-        detections = send_inference_request(data, "tools", v2=False)
+        data = data_obj.model_dump(by_alias=True, exclude_none=True)
+        detections = send_inference_request(
+            data,
+            "florence2-ft",
+            v2=True,
+            metadata_payload={"function_name": "owl_v2_image"},
+        )
         # get the first frame
         detection = detections[0]
         bboxes_formatted = [
@@ -420,15 +423,17 @@ def florence2_sam2_image(
         req_data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
-            tool="florencev2_fine_tuning",
             prompt=prompt,
             postprocessing="sam2",
-            fine_tuning=FineTuning(
-                job_id=UUID(fine_tune_id),
-            ),
+            job_id=UUID(fine_tune_id),
         )
-        req_data = req_data_obj.model_dump(by_alias=True)
-        detections_ft = send_inference_request(req_data, "tools", v2=False)
+        req_data = req_data_obj.model_dump(by_alias=True, exclude_none=True)
+        detections_ft = send_inference_request(
+            req_data,
+            "florence2-ft",
+            v2=True,
+            metadata_payload={"function_name": "florence2_sam2_image"},
+        )
         # get the first frame
         detection = detections_ft[0]
         return_data = []
@@ -1136,6 +1141,9 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
+# TODO: add video
+
+
 def florence2_phrase_grounding(
     prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
@@ -1180,15 +1188,14 @@ def florence2_phrase_grounding(
         data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
-            tool="florencev2_fine_tuning",
             prompt=prompt,
-            fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
+            job_id=UUID(fine_tune_id),
         )
-        data = data_obj.model_dump(by_alias=True)
+        data = data_obj.model_dump(by_alias=True, exclude_none=True)
         detections = send_inference_request(
             data,
-            "tools",
-            v2=False,
+            "florence2-ft",
+            v2=True,
             metadata_payload={"function_name": "florence2_phrase_grounding"},
         )
         # get the first frame
