@@ -464,7 +464,9 @@ print(f"Vision Agent version: {va_version}")"""
         _LOGGER.info(
             f"E2BCodeInterpreter (sandbox id: {self.interpreter.sandbox_id}) initialized:\n{sys_versions}"
         )
-        self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
+        self.remote_path = Path(
+            remote_path if remote_path is not None else "/home/user"
+        )
 
     def close(self, *args: Any, **kwargs: Any) -> None:
         try:
@@ -713,7 +715,7 @@ def _get_e2b_env() -> Union[Dict[str, str], None]:
     openai_api_key = os.getenv("OPENAI_API_KEY", "")
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if openai_api_key or anthropic_api_key:
-        envs = {}
+        envs = {"WORKSPACE": os.getenv("WORKSPACE", "/home/user")}
         if openai_api_key:
             envs["OPENAI_API_KEY"] = openai_api_key
         if anthropic_api_key:
