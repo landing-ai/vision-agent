@@ -307,7 +307,7 @@ class VisionAgent(Agent):
             remote_artifacts_path = code_interpreter.upload_file(
                 self.local_artifacts_path
             )
-            artifacts_loaded = artifacts.show()
+            artifacts_loaded = artifacts.show(code_interpreter.remote_path)
             int_chat.append({"role": "observation", "content": artifacts_loaded})
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
