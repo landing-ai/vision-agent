@@ -107,13 +107,16 @@ class Artifacts:
                 with open(self.remote_save_path.parent / k, mode) as f:
                     f.write(v)
 
-    def show(self) -> str:
+    def show(self, uploaded_file_path: Optional[Union[str, Path]] = None) -> str:
         """Shows the artifacts that have been loaded and their remote save paths."""
+        loaded_path = (
+            Path(uploaded_file_path)
+            if uploaded_file_path is not None
+            else self.remote_save_path
+        )
         output_str = "[Artifacts loaded]\n"
         for k in self.artifacts.keys():
-            output_str += (
-                f"Artifact {k} loaded to {str(self.remote_save_path.parent / k)}\n"
-            )
+            output_str += f"Artifact {k} loaded to {str(loaded_path / k)}\n"
         output_str += "[End of artifacts]\n"
         print(output_str)
         return output_str
