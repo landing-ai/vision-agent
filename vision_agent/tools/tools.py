@@ -1221,7 +1221,7 @@ def florence2_phrase_grounding_image(
 
 def florence2_phrase_grounding_video(
     prompt: str, frames: List[np.ndarray], fine_tune_id: Optional[str] = None
-) -> List[Dict[str, Any]]:
+) -> List[List[Dict[str, Any]]]:
     """'florence2_phrase_grounding_video' will run florence2 on each frame of a video.
     It can detect multiple objects given a text prompt which can be object names or
     caption. You can optionally separate the object names in the text with commas.

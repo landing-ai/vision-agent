@@ -27,8 +27,8 @@ class PromptTask(str, Enum):
 class Florence2FtRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    image: str | None
-    video: bytes | None
+    image: Optional[str] = None
+    video: Optional[bytes] = None
     task: PromptTask
     prompt: Optional[str] = ""
     chunk_length_frames: Optional[int] = None
