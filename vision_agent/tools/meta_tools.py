@@ -464,6 +464,9 @@ def generate_vision_code(
     name: str,
     chat: str,
     media: List[str],
+    plan: Optional[Dict[str, Union[str, List[str]]]] = None,
+    plan_thoughts: Optional[str] = None,
+    plan_context_artifact: Optional[str] = None,
     test_multi_plan: bool = True,
     custom_tool_names: Optional[List[str]] = None,
 ) -> str:
@@ -474,6 +477,10 @@ def generate_vision_code(
         name (str): The name of the artifact to save the code to.
         chat (str): The chat message from the user.
         media (List[str]): The media files to use.
+        plan (Optional[Dict[str, Union[str, List[str]]]): The plan to use to generate
+            the code.
+        plan_thoughts (Optional[str]): The thoughts to use to generate the code.
+        plan_context_artifact (Optional[str]): The artifact name of the stored plan context.
         test_multi_plan (bool): Do not change this parameter.
         custom_tool_names (Optional[List[str]]): Do not change this parameter.
 

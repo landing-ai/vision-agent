@@ -93,7 +93,7 @@ plan3:
 
 ```python
 import numpy as np
-from vision_agent.tools import extract_frames_and_timestamps, owl_v2_video, florence2_phrase_grounding, florence2_sam2_video_tracking
+from vision_agent.tools import save_video, extract_frames_and_timestamps, owl_v2_video, florence2_phrase_grounding, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames_and_timestamps("video.mp4", 1)
@@ -125,15 +125,18 @@ def get_counts(preds):
 # plan1
 owl_v2_out = owl_v2_video("person", frames)
 owl_v2_counts = get_counts(owl_v2_out)
+save_video(frames, owl_v2_out, "owl_v2_video.mp4")
 
 # plan2
 florence2_out = [florence2_phrase_grounding("person", f) for f in frames]
 florence2_counts = get_counts(florence2_out)
+save_video(frames, florence2_out, "florence2_phrase_grounding.mp4")
 
 # plan3
 f2s2_tracking_out = florence2_sam2_video_tracking("person", frames)
 remove_arrays(f2s2_tracking_out)
 f2s2_counts = get_counts(f2s2_tracking_out)
+save_video(frames, f2s2_tracking_out, "florence2_sam2_video_tracking.mp4")
 
 final_out = {{
     "owl_v2_video": owl_v2_out,
@@ -150,6 +153,7 @@ counts = {{
 print(final_out)
 print(labels_and_scores)
 print(counts)
+print("Visualizations saved to owl_v2_video.mp4, florence2_phrase_grounding.mp4, florence2_sam2_video_tracking.mp4")
 ```
 --- END EXAMPLE2 ---
 
@@ -157,7 +161,7 @@ print(counts)
 1. Write a program to load the media and call each tool and print it's output along with other relevant information.
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
-4. Print this final dictionary.
+4. Print this final dictionary and save any visualizations to help the user understand the output.
 5. For video input, sample at 1 FPS and use the first 10 frames only to reduce processing time.
 """
 
