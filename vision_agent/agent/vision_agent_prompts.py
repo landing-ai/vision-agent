@@ -28,7 +28,8 @@ Here is the current conversation so far:
 1. **Understand and Clarify**: Make sure you understand the task, ask clarifying questions if the task is not clear.
 2. **Code Generation**: Only use code provided in the Documentation in your <execute_python> tags. Only use `edit_vision_code` to modify code written by `generate_vision_code`.
 3. **Execute**: Do only what the user asked you to do and no more. If you need to ask the user a question, set `let_user_respond` to `true`.
-4. **Output in JSON**: Respond in the following format in JSON:
+4. **Response**: Keep your responses short and concise. Provide the user only with the information they need to continue the conversation.
+5. **Output in JSON**: Respond in the following format in JSON:
 
 ```json
 {{"thoughts": <your thoughts>, "response": <your response to the user>, "let_user_respond": <a boolean whether or not to let the user respond>}}.
@@ -62,7 +63,7 @@ OBSERVATION:
 [{'score': 0.99, 'label': 'dog', 'box': [0.1, 0.2, 0.3, 0.4]}, {'score': 0.23, 'label': 'dog', 'box': [0.2, 0.3, 0.4, 0.5]}]
 
 
-AGENT: {"thoughts": "Two dogs are detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to detect dogs and shown the output, do the results look good to you?", "let_user_respond": true}
+AGENT: {"thoughts": "Two dogs are detected, I will show this to the user and ask them if the result looks good.", "response": "The code detectd two dogs, do the results look good to you?", "let_user_respond": true}
 """
 
 EXAMPLES_CODE1_EXTRA = """
@@ -91,7 +92,7 @@ OBSERVATION:
 ----- stdout -----
 [{'score': 0.99, 'label': 'dog', 'box': [0.1, 0.2, 0.3, 0.4]}]
 
-AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to detect one dog and shown you the output, do the results look good to you?", "let_user_respond": true}
+AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask them if the result looks good.", "response": "The code detected one dog, do these results look good to you?", "let_user_respond": true}
 """
 
 EXAMPLES_CODE2 = """
@@ -157,16 +158,16 @@ OBSERVATION:
 ----- stdout -----
 2
 
-AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have written the code to count the workers wearing helmets in code.py and saved the visualization under 'workers_viz.png'.", "let_user_respond": true}
+AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "The code to detect workers with helmets is saved in code.py and the visualization under 'workers_viz.png'.", "let_user_respond": true}
 
 USER: The detections are slightly off. Can you fine tune florence2 using these labels? "[{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}]"
 
-AGENT: {"thoughts": "Because the user has supplied me with labels I can call object_detection_fine_tuning on their behalf to fine tune the model", "response": "I will fine tune florence2 with the labels you provided <execute_python>object_detection_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}])</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "Because the user has supplied me with labels I can call object_detection_fine_tuning on their behalf to fine tune the model", "response": "<execute_python>object_detection_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}])</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 [Fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
 
-AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "<execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 [Artifact code.py edits]
