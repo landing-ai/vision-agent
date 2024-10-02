@@ -12,5 +12,6 @@ from .vision_agent_planner import (
     AzureVisionAgentPlanner,
     OllamaVisionAgentPlanner,
     OpenAIVisionAgentPlanner,
+    PlanContext,
     VisionAgentPlanner,
 )
