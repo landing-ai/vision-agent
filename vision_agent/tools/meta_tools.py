@@ -399,7 +399,7 @@ def generate_vision_plan(
 {artifacts[name]}"""
         )
     )
-    if "meida" in media_names and isinstance(media_names, dict):
+    if "media" in media_names and isinstance(media_names, dict):
         for media in media_names["media"]:
             if isinstance(media, str):
                 with open(media, "rb") as f:
