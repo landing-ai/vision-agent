@@ -31,7 +31,11 @@ from vision_agent.lmm import (
     OllamaLMM,
     OpenAILMM,
 )
-from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
+from vision_agent.utils.execute import (
+    CodeInterpreter,
+    CodeInterpreterFactory,
+    Execution,
+)
 from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,6 +47,7 @@ class PlanContext(BaseModel):
     plan_thoughts: str
     tool_output: str
     tool_doc: str
+    test_results: Optional[Execution]
 
 
 def retrieve_tools(
@@ -112,7 +117,7 @@ def write_and_exec_plan_tests(
     code_interpreter: CodeInterpreter,
     verbosity: int = 0,
     max_retries: int = 3,
-) -> Tuple[str, str]:
+) -> Tuple[str, Execution]:
 
     plan_str = format_plans(plans)
     prompt = TEST_PLANS.format(
@@ -201,7 +206,7 @@ def write_and_exec_plan_tests(
 
         count += 1
 
-    return code, tool_output_str
+    return code, tool_output
 
 
 def write_plan_thoughts(
@@ -257,7 +262,7 @@ def pick_plan(
     log_progress: Callable[[Dict[str, Any]], None],
     verbosity: int = 0,
     max_retries: int = 3,
-) -> Tuple[Dict[str, str], str]:
+) -> Tuple[Dict[str, str], str, Execution]:
     log_progress(
         {
             "type": "log",
@@ -270,7 +275,7 @@ def pick_plan(
     if chat[-1]["role"] != "user":
         raise ValueError("Last chat message must be from the user.")
 
-    code, tool_output_str = write_and_exec_plan_tests(
+    code, tool_output = write_and_exec_plan_tests(
         plans,
         tool_info,
         media,
@@ -287,7 +292,7 @@ def pick_plan(
     plan_thoughts = write_plan_thoughts(
         chat,
         plans,
-        tool_output_str,
+        tool_output.text(include_results=False).strip(),
         model,
         max_retries,
     )
@@ -302,7 +307,8 @@ def pick_plan(
             "payload": plans[plan_thoughts["best_plan"]],
         }
     )
-    return plan_thoughts, "```python\n" + code + "\n```\n" + tool_output_str
+    # return plan_thoughts, "```python\n" + code + "\n```\n" + tool_output_str
+    return plan_thoughts, code, tool_output
 
 
 class VisionAgentPlanner(Agent):
@@ -402,7 +408,7 @@ class VisionAgentPlanner(Agent):
                 self.verbosity,
             )
             if test_multi_plan:
-                plan_thoughts, tool_output_str = pick_plan(
+                plan_thoughts, code, tool_output = pick_plan(
                     int_chat,
                     plans,
                     tool_docs["all"],
@@ -414,10 +420,17 @@ class VisionAgentPlanner(Agent):
                 )
                 best_plan = plan_thoughts["best_plan"]
                 plan_thoughts_str = plan_thoughts["thoughts"]
+                tool_output_str = (
+                    "```python\n"
+                    + code
+                    + "\n```\n"
+                    + tool_output.text(include_results=False).strip()
+                )
             else:
                 best_plan = list(plans.keys())[0]
                 tool_output_str = ""
                 plan_thoughts_str = ""
+                tool_output = None
 
             if best_plan in plans and best_plan in tool_docs:
                 tool_doc = tool_docs[best_plan]
@@ -435,6 +448,7 @@ class VisionAgentPlanner(Agent):
             best_plan=best_plan,
             plan_thoughts=plan_thoughts_str,
             tool_output=tool_output_str,
+            test_results=tool_output,
             tool_doc=tool_doc,
         )
 

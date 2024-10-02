@@ -13,7 +13,9 @@ import numpy as np
 from IPython.display import display
 
 import vision_agent as va
+from vision_agent.agent.agent_utils import extract_json
 from vision_agent.clients.landing_public_api import LandingPublicAPI
+from vision_agent.lmm import AnthropicLMM
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
@@ -338,11 +340,93 @@ def edit_code_artifact(
     return open_code_artifact(artifacts, name, cur_line)
 
 
+def generate_vision_plan(
+    artifacts: Artifacts,
+    name: str,
+    chat: str,
+    media: List[str],
+    test_multi_plan: bool = True,
+    custom_tool_names: Optional[List[str]] = None,
+) -> str:
+    """Generates a plan to solve vision based tasks.
+
+    Parameters:
+        artifacts (Artifacts): The artifacts object to save the plan to.
+        name (str): The name of the artifact to save the plan context to.
+        chat (str): The chat message from the user.
+        media (List[str]): The media files to use.
+        test_multi_plan (bool): Do not change this parameter.
+        custom_tool_names (Optional[List[str]]): Do not change this parameter.
+
+    Returns:
+        str: The generated plan.
+
+    Examples
+    --------
+        >>> generate_vision_plan(artifacts, "plan.json", "Can you detect the dogs in this image?", ["image.jpg"])
+        [Start Plan Context]
+        plan1: This is a plan to detect dogs in an image
+        -load image
+        -detect dogs
+        -return detections
+        [End Plan Context]
+    """
+
+    if ZMQ_PORT is not None:
+        agent = va.agent.VisionAgentPlanner(
+            report_progress_callback=lambda inp: report_progress_callback(
+                int(ZMQ_PORT), inp
+            )
+        )
+    else:
+        agent = va.agent.VisionAgentPlanner()
+
+    fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
+    response = agent.generate_plan(
+        fixed_chat,
+        test_multi_plan=test_multi_plan,
+        custom_tool_names=custom_tool_names,
+    )
+    if response.test_results is not None:
+        redisplay_results(response.test_results)
+    response.test_results = None
+    artifacts[name] = response.model_dump_json()
+    media_names = extract_json(
+        AnthropicLMM()(  # type: ignore
+            f"""Extract any media file names from this output in the following JSON format:
+{{"media": ["image1.jpg", "image2.jpg"]}}
+
+{artifacts[name]}"""
+        )
+    )
+    if "meida" in media_names and isinstance(media_names, dict):
+        for media in media_names["media"]:
+            if isinstance(media, str):
+                with open(media, "rb") as f:
+                    artifacts[media] = f.read()
+
+    output_str = f"[Start Plan Context, saved at {name}]"
+    for plan in response.plans.keys():
+        output_str += f"\n{plan}: {response.plans[plan]['thoughts'].strip()}\n"  # type: ignore
+        output_str += "    -" + "\n    -".join(
+            e.strip() for e in response.plans[plan]["instructions"]
+        )
+
+    output_str += f"\nbest plan: {response.best_plan}\n"
+    output_str += "thoughts: " + response.plan_thoughts.strip() + "\n"
+    output_str += f"[End Plan Context]"
+    print(output_str)
+    return output_str
+
+
 def generate_vision_code(
     artifacts: Artifacts,
     name: str,
     chat: str,
     media: List[str],
+    plan: Optional[Dict[str, Union[str, List[str]]]] = None,
+    plan_thoughts: Optional[str] = None,
+    plan_context_artifact: Optional[str] = None,
     test_multi_plan: bool = True,
     custom_tool_names: Optional[List[str]] = None,
 ) -> str:
@@ -353,6 +437,10 @@ def generate_vision_code(
         name (str): The name of the artifact to save the code to.
         chat (str): The chat message from the user.
         media (List[str]): The media files to use.
+        plan (Optional[Dict[str, Union[str, List[str]]]): The plan to use to generate
+            the code.
+        plan_thoughts (Optional[str]): The thoughts to use to generate the code.
+        plan_context_artifact (Optional[str]): The artifact name of the stored plan context.
         test_multi_plan (bool): Do not change this parameter.
         custom_tool_names (Optional[List[str]]): Do not change this parameter.
 
@@ -379,11 +467,26 @@ def generate_vision_code(
         agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
-    response = agent.generate_code(
-        fixed_chat,
-        test_multi_plan=test_multi_plan,
-        custom_tool_names=custom_tool_names,
-    )
+    if plan is None or plan_thoughts is None or plan_context_artifact is None:
+        response = agent.generate_code(
+            fixed_chat,
+            test_multi_plan=test_multi_plan,
+            custom_tool_names=custom_tool_names,
+        )
+    else:
+        plan_context = json.loads(artifacts[plan_context_artifact])
+        plan_context = va.agent.PlanContext(
+            plans={"plan1": plan},
+            best_plan="plan1",
+            plan_thoughts=plan_thoughts,
+            tool_output=plan_context["tool_output"],
+            tool_doc=plan_context["tool_doc"],
+            test_results=None,
+        )
+        response = agent.generate_code_from_plan(
+            fixed_chat,
+            plan_context,
+        )
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -748,6 +851,7 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         open_code_artifact,
         create_code_artifact,
         edit_code_artifact,
+        generate_vision_plan,
         generate_vision_code,
         edit_vision_code,
         write_media_artifact,
