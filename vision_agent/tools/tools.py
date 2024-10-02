@@ -201,6 +201,7 @@ def owl_v2_image(
             data,
             "florence2-ft",
             v2=True,
+            is_form=True,
             metadata_payload={"function_name": "owl_v2_image"},
         )
         # get the first frame
@@ -432,6 +433,7 @@ def florence2_sam2_image(
             req_data,
             "florence2-ft",
             v2=True,
+            is_form=True,
             metadata_payload={"function_name": "florence2_sam2_image"},
         )
         # get the first frame
@@ -1193,6 +1195,7 @@ def florence2_phrase_grounding_image(
             data,
             "florence2-ft",
             v2=True,
+            is_form=True,
             metadata_payload={"function_name": "florence2_phrase_grounding_image"},
         )
         # get the first frame
@@ -1268,18 +1271,14 @@ def florence2_phrase_grounding_video(
             )
 
         data_obj = Florence2FtRequest(
-            video=buffer_bytes,
             task=PromptTask.PHRASE_GROUNDING,
             prompt=prompt,
             job_id=UUID(fine_tune_id),
         )
-        data = data_obj.model_dump(by_alias=True, exclude_none=True)
     else:
-        data_obj = Florence2FtRequest(
-            video=buffer_bytes, task=PromptTask.PHRASE_GROUNDING, prompt=prompt
-        )
-        data = data_obj.model_dump(by_alias=True, exclude_none=True)
+        data_obj = Florence2FtRequest(task=PromptTask.PHRASE_GROUNDING, prompt=prompt)
 
+    data = data_obj.model_dump(by_alias=True, exclude_none=True, mode="json")
     detections = send_inference_request(
         data,
         "florence2-ft",

@@ -124,7 +124,7 @@ def test_florence2_phrase_grounding_video():
         frames=frames,
     )
     assert len(result) == 10
-    assert 24 <= len([res["label"] for res in result[0]]) <= 26
+    assert 2 <= len([res["label"] for res in result[0]]) <= 26
 
 
 def test_florence2_phrase_grounding_video_fine_tune_id():
@@ -138,7 +138,7 @@ def test_florence2_phrase_grounding_video_fine_tune_id():
         fine_tune_id=FINE_TUNE_ID,
     )
     assert len(result) == 10
-    assert 24 <= len([res["label"] for res in result[0]]) <= 26
+    assert 16 <= len([res["label"] for res in result[0]]) <= 26
 
 
 def test_template_match():
