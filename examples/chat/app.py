@@ -27,7 +27,7 @@ SAVE = {
     "style": {"bottom": "calc(50% - 4.25rem", "right": "0.4rem"},
 }
 # set artifacts remote_path to WORKSPACE
-artifacts = va.tools.Artifacts(WORKSPACE / "artifacts.pkl")
+artifacts = va.tools.meta_tools.Artifacts(WORKSPACE / "artifacts.pkl")
 if Path("artifacts.pkl").exists():
     artifacts.load("artifacts.pkl")
 else:
@@ -109,16 +109,22 @@ def main():
                     len(st.session_state.messages) == 0
                     or prompt != st.session_state.messages[-1]["content"]
                 ):
-                    st.session_state.messages.append(
-                        {"role": "user", "content": prompt}
-                    )
-                    messages.chat_message("user").write(prompt)
-                    message_thread = threading.Thread(
-                        target=update_messages,
-                        args=(st.session_state.messages, message_lock),
-                    )
-                    message_thread.daemon = True
-                    message_thread.start()
+                    # occassionally resends the last user message twice 
+                    user_messages = [msg for msg in st.session_state.messages if msg["role"] == "user"]
+                    last_user_message = None
+                    if len(user_messages) > 0:
+                        last_user_message = user_messages[-1]["content"]
+                    if last_user_message is None or last_user_message != prompt:
+                        st.session_state.messages.append(
+                            {"role": "user", "content": prompt}
+                        )
+                        messages.chat_message("user").write(prompt)
+                        message_thread = threading.Thread(
+                            target=update_messages,
+                            args=(st.session_state.messages, message_lock),
+                        )
+                        message_thread.daemon = True
+                        message_thread.start()
                     st.session_state.input_text = ""
 
         with tabs[1]:
