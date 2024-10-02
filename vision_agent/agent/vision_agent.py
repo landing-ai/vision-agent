@@ -14,8 +14,8 @@ from vision_agent.agent.vision_agent_prompts import (
     VA_CODE,
 )
 from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
-from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.tools.meta_tools import (
+    META_TOOL_DOCSTRING,
     Artifacts,
     check_and_load_image,
     use_extra_vision_agent_args,
