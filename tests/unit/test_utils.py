@@ -1,4 +1,8 @@
-from vision_agent.agent.agent_utils import extract_code, extract_json
+from vision_agent.agent.agent_utils import (
+    extract_code,
+    extract_json,
+    remove_installs_from_code,
+)
 
 
 def test_basic_json_extract():
@@ -43,3 +47,19 @@ def test_basic_json_extract():
     a_code = extract_code(a)
     assert "def test_basic_json_extract():" in a_code
     assert "assert extract_json(a) == {" in a_code
+
+
+def test_remove_installs_from_code():
+    a = """import os
+imoprt sys
+
+!pip install pandas
+
+
+def test():
+    print("!pip install dummy")
+"""
+    out = remove_installs_from_code(a)
+    assert "import os" in out
+    assert "!pip install pandas" not in out
+    assert "!pip install dummy" in out
