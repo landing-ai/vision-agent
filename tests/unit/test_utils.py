@@ -63,3 +63,10 @@ def test():
     assert "import os" in out
     assert "!pip install pandas" not in out
     assert "!pip install dummy" in out
+
+
+def test_chat_agent_case():
+    a = """{"thoughts": "The user has chosen to use the plan with owl_v2 and specified a threshold of 0.4. I'll now generate the vision code based on this plan and the user's modification.", "response": "Certainly! I'll generate the code using owl_v2 with a threshold of 0.4 as you requested. Let me create that for you now.\n\n<execute_python>generate_vision_code(artifacts, 'count_workers_with_helmets.py', 'Can you write code to count the number of workers wearing helmets?', media=['/Users/dillonlaird/landing.ai/vision-agent/examples/chat/workspace/workers.png'], plan={'thoughts': 'Using owl_v2_image seems most appropriate as it can detect and count multiple objects given a text prompt. This tool is specifically designed for object detection tasks like counting workers wearing helmets.', 'instructions': ['Load the image using load_image(\'/Users/dillonlaird/landing.ai/vision-agent/examples/chat/workspace/workers.png\')', 'Use owl_v2_image with the prompt \'worker wearing helmet\' to detect and count workers with helmets', 'Count the number of detections returned by owl_v2_image to get the final count of workers wearing helmets']}, plan_thoughts='Use a threshold of 0.4 as specified by the user', plan_context_artifact='worker_helmet_plan.json')</execute_python>", "let_user_respond": false}"""
+    a_json = extract_json(a)
+    assert "thoughts" in a_json
+    assert "response" in a_json
