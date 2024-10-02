@@ -48,10 +48,15 @@ def _strip_markdown_code(inp_str: str) -> str:
 
 def extract_json(json_str: str) -> Dict[str, Any]:
     json_str_mod = json_str.replace("\n", " ").strip()
-    json_str_mod = json_str_mod.replace("'", '"')
     json_str_mod = json_str_mod.replace(": True", ": true").replace(
         ": False", ": false"
     )
+
+    # sometimes the json is in single quotes
+    try:
+        return json.loads(json_str_mod.replace("'", '"'))  # type: ignore
+    except json.JSONDecodeError:
+        pass
 
     try:
         return json.loads(json_str_mod)  # type: ignore
