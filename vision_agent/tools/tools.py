@@ -1603,7 +1603,7 @@ def extract_frames_and_timestamps(
     """
 
     def reformat(
-        frames_and_timestamps: List[Tuple[np.ndarray, float]]
+        frames_and_timestamps: List[Tuple[np.ndarray, float]],
     ) -> List[Dict[str, Union[np.ndarray, float]]]:
         return [
             {"frame": frame, "timestamp": timestamp}
@@ -2017,7 +2017,7 @@ def overlay_counting_results(
         fontsize,
     )
 
-    for i, elt in enumerate(instances):
+    for i, elt in enumerate(instances, 1):
         label = f"{i}"
         box = elt["bbox"]
 
