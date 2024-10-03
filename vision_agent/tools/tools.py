@@ -1,20 +1,21 @@
-import os
+import base64
 import io
 import json
 import logging
+import os
 import tempfile
 import urllib.request
-from uuid import UUID
-from pathlib import Path
 from importlib import resources
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from uuid import UUID
 
 import cv2
-import requests
 import numpy as np
-from pytube import YouTube  # type: ignore
-from pillow_heif import register_heif_opener  # type: ignore
+import requests
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
+from pillow_heif import register_heif_opener  # type: ignore
+from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import OpenAILMM
@@ -1275,17 +1276,24 @@ def florence2_phrase_grounding_video(
             prompt=prompt,
             job_id=UUID(fine_tune_id),
         )
-    else:
-        data_obj = Florence2FtRequest(task=PromptTask.PHRASE_GROUNDING, prompt=prompt)
 
-    data = data_obj.model_dump(by_alias=True, exclude_none=True, mode="json")
-    detections = send_inference_request(
-        data,
-        "florence2-ft",
-        v2=True,
-        files=files,
-        metadata_payload={"function_name": "florence2_phrase_grounding_video"},
-    )
+        data = data_obj.model_dump(by_alias=True, exclude_none=True, mode="json")
+        detections = send_inference_request(
+            data,
+            "florence2-ft",
+            v2=True,
+            files=files,
+            metadata_payload={"function_name": "florence2_phrase_grounding_video"},
+        )
+    else:
+        data = {
+            "prompt": prompt,
+            "task": "<CAPTION_TO_PHRASE_GROUNDING>",
+            "function_name": "florence2_phrase_grounding_video",
+            "video": base64.b64encode(buffer_bytes).decode("utf-8"),
+        }
+        detections = send_inference_request(data, "florence2", v2=True)
+        detections = [d["<CAPTION_TO_PHRASE_GROUNDING>"] for d in detections]
 
     bboxes_formatted = []
     for frame_data in detections:
