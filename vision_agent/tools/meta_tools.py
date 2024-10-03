@@ -424,9 +424,6 @@ def generate_vision_code(
     name: str,
     chat: str,
     media: List[str],
-    plan: Optional[Dict[str, Union[str, List[str]]]] = None,
-    plan_thoughts: Optional[str] = None,
-    plan_context_artifact: Optional[str] = None,
     test_multi_plan: bool = True,
     custom_tool_names: Optional[List[str]] = None,
 ) -> str:
@@ -437,10 +434,6 @@ def generate_vision_code(
         name (str): The name of the artifact to save the code to.
         chat (str): The chat message from the user.
         media (List[str]): The media files to use.
-        plan (Optional[Dict[str, Union[str, List[str]]]): The plan to use to generate
-            the code.
-        plan_thoughts (Optional[str]): The thoughts to use to generate the code.
-        plan_context_artifact (Optional[str]): The artifact name of the stored plan context.
         test_multi_plan (bool): Do not change this parameter.
         custom_tool_names (Optional[List[str]]): Do not change this parameter.
 
@@ -466,26 +459,11 @@ def generate_vision_code(
         agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
-    if plan is None or plan_thoughts is None or plan_context_artifact is None:
-        response = agent.generate_code(
-            fixed_chat,
-            test_multi_plan=test_multi_plan,
-            custom_tool_names=custom_tool_names,
-        )
-    else:
-        plan_context = json.loads(artifacts[plan_context_artifact])
-        plan_context = va.agent.PlanContext(
-            plans={"plan1": plan},
-            best_plan="plan1",
-            plan_thoughts=plan_thoughts,
-            tool_output=plan_context["tool_output"],
-            tool_doc=plan_context["tool_doc"],
-            test_results=None,
-        )
-        response = agent.generate_code_from_plan(
-            fixed_chat,
-            plan_context,
-        )
+    response = agent.generate_code(
+        fixed_chat,
+        test_multi_plan=test_multi_plan,
+        custom_tool_names=custom_tool_names,
+    )
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
