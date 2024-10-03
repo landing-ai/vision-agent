@@ -407,8 +407,6 @@ class VisionAgent(Agent):
             code_interpreter.download_file(
                 str(remote_artifacts_path.name), str(self.local_artifacts_path)
             )
-            artifacts.load(self.local_artifacts_path)
-            artifacts.save()
         return orig_chat, artifacts
 
     def streaming_message(self, message: Dict[str, Any]) -> None:
