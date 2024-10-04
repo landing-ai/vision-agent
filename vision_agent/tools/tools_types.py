@@ -1,6 +1,6 @@
 from enum import Enum
-from uuid import UUID
 from typing import List, Optional, Tuple, Union
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, SerializationInfo, field_serializer
 

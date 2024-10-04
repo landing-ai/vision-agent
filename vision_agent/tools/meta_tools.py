@@ -116,7 +116,9 @@ class Artifacts:
         )
         output_str = "[Artifacts loaded]\n"
         for k in self.artifacts.keys():
-            output_str += f"Artifact {k} loaded to {str(loaded_path / k)}\n"
+            output_str += (
+                f"Artifact name: {k}, loaded to path: {str(loaded_path / k)}\n"
+            )
         output_str += "[End of artifacts]\n"
         print(output_str)
         return output_str
