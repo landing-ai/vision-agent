@@ -899,7 +899,10 @@ def ixc25_temporal_localization(prompt: str, frames: List[np.ndarray]) -> List[b
         "function_name": "ixc25_temporal_localization",
     }
     data: List[int] = send_inference_request(
-        payload, "video-temporal-localization", files=files, v2=True
+        payload,
+        "video-temporal-localization?model=internlm-xcomposer",
+        files=files,
+        v2=True,
     )
     chunk_size = round(len(frames) / len(data))
     data_explode = [[elt] * chunk_size for elt in data]
