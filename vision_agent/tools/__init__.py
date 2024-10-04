@@ -45,7 +45,6 @@ from .tools import (
     loca_zero_shot_counting,
     ocr,
     overlay_bounding_boxes,
-    overlay_counting_results,
     overlay_heat_map,
     overlay_segmentation_masks,
     owl_v2_image,

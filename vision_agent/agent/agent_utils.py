@@ -77,3 +77,9 @@ def extract_code(code: str) -> str:
     if code.startswith("python\n"):
         code = code[len("python\n") :]
     return code
+
+
+def remove_installs_from_code(code: str) -> str:
+    pattern = r"\n!pip install.*?(\n|\Z)\n"
+    code = re.sub(pattern, "", code, flags=re.DOTALL)
+    return code

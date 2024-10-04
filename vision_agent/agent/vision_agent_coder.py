@@ -13,7 +13,11 @@ from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import extract_code, extract_json
+from vision_agent.agent.agent_utils import (
+    extract_code,
+    extract_json,
+    remove_installs_from_code,
+)
 from vision_agent.agent.vision_agent_coder_prompts import (
     CODE,
     FIX_BUG,
@@ -836,8 +840,8 @@ class VisionAgentCoder(Agent):
                 media=media_list,
             )
             success = cast(bool, results["success"])
-            code = cast(str, results["code"])
-            test = cast(str, results["test"])
+            code = remove_installs_from_code(cast(str, results["code"]))
+            test = remove_installs_from_code(cast(str, results["test"]))
             working_memory.extend(results["working_memory"])  # type: ignore
             plan.append({"code": code, "test": test, "plan": plan_i})
 
