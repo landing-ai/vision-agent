@@ -52,6 +52,7 @@ def test_save_null_video():
     except ValueError as e:
         assert str(e) == "Frames must be a list of NumPy arrays"
 
+
 def test_save_empty_list():
     frames = []
     try:
@@ -66,4 +67,3 @@ def test_save_invalid_frame():
         save_video(frames, "tmp.mp4")
     except ValueError as e:
         assert str(e) == "Frame is not a valid NumPy array with shape (H, W, C)"
-
