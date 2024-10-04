@@ -32,6 +32,8 @@ from vision_agent.tools import (
     template_match,
     vit_image_classification,
     vit_nsfw_classification,
+    countgd_counting,
+    countgd_example_based_counting,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -387,3 +389,18 @@ def test_generate_hed():
     )
 
     assert result.shape == img.shape
+
+
+def test_countgd_counting() -> None:
+    img = ski.data.coins()
+    result = countgd_counting(image=img, prompt="coin")
+    assert len(result) == 24
+
+
+def test_countgd_example_based_counting() -> None:
+    img = ski.data.coins()
+    result = countgd_example_based_counting(
+        visual_prompts=[[85, 106, 122, 145]],
+        image=img,
+    )
+    assert len(result) == 24

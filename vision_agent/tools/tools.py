@@ -700,22 +700,18 @@ def countgd_counting(
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
     """
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
+    image_b64 = convert_to_b64(image)
     prompt = prompt.replace(", ", " .")
-    payload = {"prompts": [prompt], "model": "countgd"}
+    payload = {"prompt": prompt, "image": image_b64}
     metadata = {"function_name": "countgd_counting"}
-    resp_data = send_task_inference_request(
-        payload, "text-to-object-detection", files=files, metadata=metadata
-    )
-    bboxes_per_frame = resp_data[0]
+    resp_data = send_task_inference_request(payload, "countgd", metadata=metadata)
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
-            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            bbox=list(map(lambda x: round(x, 2), bbox["bbox"])),
             score=round(bbox["score"], 2),
         )
-        for bbox in bboxes_per_frame
+        for bbox in resp_data
     ]
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
