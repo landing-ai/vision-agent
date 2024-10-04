@@ -1846,9 +1846,7 @@ def save_video(
         if not isinstance(frame, np.ndarray) or (
             frame.shape[0] == 0 and frame.shape[1] == 0
         ):
-            raise ValueError(
-                "A frame is not a valid NumPy array with shape (H, W, C)"
-            )
+            raise ValueError("A frame is not a valid NumPy array with shape (H, W, C)")
 
     if output_video_path is None:
         output_video_path = tempfile.NamedTemporaryFile(
