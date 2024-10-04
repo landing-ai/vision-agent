@@ -1143,10 +1143,10 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
-def florence2_phrase_grounding_image(
+def florence2_phrase_grounding(
     prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """'florence2_phrase_grounding_image' will run florence2 on a image. It can
+    """'florence2_phrase_grounding' will run florence2 on a image. It can
     detect multiple objects given a text prompt which can be object names or caption.
     You can optionally separate the object names in the text with commas. It returns
     a list of bounding boxes with normalized coordinates, label names and associated
@@ -1167,7 +1167,7 @@ def florence2_phrase_grounding_image(
 
     Example
     -------
-        >>> florence2_phrase_grounding_image('person looking at a coyote', image)
+        >>> florence2_phrase_grounding('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -1196,7 +1196,7 @@ def florence2_phrase_grounding_image(
             "florence2-ft",
             v2=True,
             is_form=True,
-            metadata_payload={"function_name": "florence2_phrase_grounding_image"},
+            metadata_payload={"function_name": "florence2_phrase_grounding"},
         )
         # get the first frame
         detection = detections[0]
@@ -1205,7 +1205,7 @@ def florence2_phrase_grounding_image(
             "image": image_b64,
             "task": "<CAPTION_TO_PHRASE_GROUNDING>",
             "prompt": prompt,
-            "function_name": "florence2_phrase_grounding_image",
+            "function_name": "florence2_phrase_grounding",
         }
         detections = send_inference_request(data, "florence2", v2=True)
         detection = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
@@ -2164,8 +2164,7 @@ FUNCTION_TOOLS = [
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video_tracking,
-    florence2_phrase_grounding_image,
-    florence2_phrase_grounding_video,
+    florence2_phrase_grounding,
     ixc25_image_vqa,
     ixc25_video_vqa,
     detr_segmentation,
