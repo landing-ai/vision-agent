@@ -1808,7 +1808,9 @@ def save_image(image: np.ndarray, file_path: str) -> None:
     """
     from IPython.display import display
 
-    if not isinstance(image, np.ndarray) or (image.shape[0] == 0 and image.shape[1] == 0):
+    if not isinstance(image, np.ndarray) or (
+        image.shape[0] == 0 and image.shape[1] == 0
+    ):
         raise ValueError("The image is not a valid NumPy array with shape (H, W, C)")
 
     pil_image = Image.fromarray(image.astype(np.uint8)).convert("RGB")
@@ -1844,7 +1846,9 @@ def save_video(
         if not isinstance(frame, np.ndarray) or (
             frame.shape[0] == 0 and frame.shape[1] == 0
         ):
-            raise ValueError("The frame is not a valid NumPy array with shape (H, W, C)")
+            raise ValueError(
+                "The frame is not a valid NumPy array with shape (H, W, C)"
+            )
 
     if output_video_path is None:
         output_video_path = tempfile.NamedTemporaryFile(
