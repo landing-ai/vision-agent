@@ -1146,10 +1146,10 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
 def florence2_phrase_grounding(
     prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """'florence2_phrase_grounding' will run florence2 on a image. It can
-    detect multiple objects given a text prompt which can be object names or caption.
-    You can optionally separate the object names in the text with commas. It returns
-    a list of bounding boxes with normalized coordinates, label names and associated
+    """'florence2_phrase_grounding' is a tool that can detect multiple
+    objects given a text prompt which can be object names or caption. You
+    can optionally separate the object names in the text with commas. It returns a list
+    of bounding boxes with normalized coordinates, label names and associated
     probability scores of 1.0.
 
     Parameters:
