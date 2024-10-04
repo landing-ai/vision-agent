@@ -33,16 +33,16 @@ def test_use_object_detection_fine_tuning_none():
 
 def test_use_object_detection_fine_tuning():
     artifacts = Artifacts("test")
-    code = """florence2_phrase_grounding_image('one', image1)
+    code = """florence2_phrase_grounding('one', image1)
 owl_v2_image('two', image2)
 florence2_sam2_image('three', image3)"""
-    expected_code = """florence2_phrase_grounding_image("one", image1, "123")
+    expected_code = """florence2_phrase_grounding("one", image1, "123")
 owl_v2_image("two", image2, "123")
 florence2_sam2_image("three", image3, "123")"""
     artifacts["code"] = code
 
     output = use_object_detection_fine_tuning(artifacts, "code", "123")
-    assert 'florence2_phrase_grounding_image("one", image1, "123")' in output
+    assert 'florence2_phrase_grounding("one", image1, "123")' in output
     assert 'owl_v2_image("two", image2, "123")' in output
     assert 'florence2_sam2_image("three", image3, "123")' in output
     assert artifacts["code"] == expected_code
@@ -50,24 +50,24 @@ florence2_sam2_image("three", image3, "123")"""
 
 def test_use_object_detection_fine_tuning_twice():
     artifacts = Artifacts("test")
-    code = """florence2_phrase_grounding_image('one', image1)
+    code = """florence2_phrase_grounding('one', image1)
 owl_v2_image('two', image2)
 florence2_sam2_image('three', image3)"""
-    expected_code1 = """florence2_phrase_grounding_image("one", image1, "123")
+    expected_code1 = """florence2_phrase_grounding("one", image1, "123")
 owl_v2_image("two", image2, "123")
 florence2_sam2_image("three", image3, "123")"""
-    expected_code2 = """florence2_phrase_grounding_image("one", image1, "456")
+    expected_code2 = """florence2_phrase_grounding("one", image1, "456")
 owl_v2_image("two", image2, "456")
 florence2_sam2_image("three", image3, "456")"""
     artifacts["code"] = code
     output = use_object_detection_fine_tuning(artifacts, "code", "123")
-    assert 'florence2_phrase_grounding_image("one", image1, "123")' in output
+    assert 'florence2_phrase_grounding("one", image1, "123")' in output
     assert 'owl_v2_image("two", image2, "123")' in output
     assert 'florence2_sam2_image("three", image3, "123")' in output
     assert artifacts["code"] == expected_code1
 
     output = use_object_detection_fine_tuning(artifacts, "code", "456")
-    assert 'florence2_phrase_grounding_image("one", image1, "456")' in output
+    assert 'florence2_phrase_grounding("one", image1, "456")' in output
     assert 'owl_v2_image("two", image2, "456")' in output
     assert 'florence2_sam2_image("three", image3, "456")' in output
     assert artifacts["code"] == expected_code2
