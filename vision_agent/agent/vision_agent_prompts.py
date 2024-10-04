@@ -131,10 +131,10 @@ AGENT: {"thoughts": "I will use the generate_vision_code to count the workers wi
 
 OBSERVATION:
 [Artifact code.py]
-0|from vision_agent.tools import load_image, florence2_phrase_grounding_image, closest_box_distance, overlay_bounding_boxes, save_image
+0|from vision_agent.tools import load_image, florence2_phrase_grounding, closest_box_distance, overlay_bounding_boxes, save_image
 1|def count_workers_with_helmets(image_path: str, output_path: str):
 2|    image = load_image(image_path)
-3|    detections = florence2_phrase_grounding_image("worker, helmet", image)
+3|    detections = florence2_phrase_grounding("worker, helmet", image)
 4|    workers = [d for d in detections if d['label'] == 'worker']
 5|    helmets = [d for d in detections if d['label'] == 'helmet']
 6|    count = 0
@@ -166,18 +166,18 @@ AGENT: {"thoughts": "Because the user has supplied me with labels I can call obj
 OBSERVATION:
 [Fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
 
-AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding_image call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
+AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "I will not update the code to use the fine tuned model. <execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
 
 OBSERVATION:
 [Artifact code.py edits]
 ---
 +++
 @@ -1,7 +1,7 @@
- from vision_agent.tools import load_image, florence2_phrase_grounding_image, closest_box_distance, overlay_bounding_boxes, save_image
+ from vision_agent.tools import load_image, florence2_phrase_grounding, closest_box_distance, overlay_bounding_boxes, save_image
  def count_workers_with_helmets(image_path: str, output_path: str):
      image = load_image(image_path)
--    detections = florence2_phrase_grounding_image("worker, helmet", image)
-+    detections = florence2_phrase_grounding_image("worker, helmet", image, "23b3b022-5ebf-4798-9373-20ef36429abf")
+-    detections = florence2_phrase_grounding("worker, helmet", image)
++    detections = florence2_phrase_grounding("worker, helmet", image, "23b3b022-5ebf-4798-9373-20ef36429abf")
      workers = [d for d in detections if d['label'] == 'worker']
      helmets = [d for d in detections if d['label'] == 'helmet']
      count = 0
@@ -189,5 +189,5 @@ OBSERVATION:
 ----- stdout -----
 3
 
-AGENT: {"thoughts": "Three workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have updated the code using the fine tuned florence2_phrase_grounding_image model to count the workers wearing helmets in code.py and saved the visualization under 'workers_viz.png'.", "let_user_respond": true}
+AGENT: {"thoughts": "Three workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have updated the code using the fine tuned florence2_phrase_grounding model to count the workers wearing helmets in code.py and saved the visualization under 'workers_viz.png'.", "let_user_respond": true}
 """
