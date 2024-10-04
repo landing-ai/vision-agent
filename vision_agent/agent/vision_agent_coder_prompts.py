@@ -101,7 +101,7 @@ plan1:
 - Use the 'owl_v2_video' tool with the prompt 'person' to detect where the people are in the video.
 plan2:
 - Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames_and_timestamps' tool.
-- Use the 'florence2_phrase_grounding' tool with the prompt 'person' to detect where the people are in the video.
+- Use the 'florence2_phrase_grounding_image' tool with the prompt 'person' to detect where the people are in the video.
 plan3:
 - Extract frames from 'video.mp4' at 10 FPS using the 'extract_frames_and_timestamps' tool.
 - Use the 'florence2_sam2_video_tracking' tool with the prompt 'person' to detect where the people are in the video.
@@ -109,7 +109,7 @@ plan3:
 
 ```python
 import numpy as np
-from vision_agent.tools import extract_frames_and_timestamps, owl_v2_video, florence2_phrase_grounding, florence2_sam2_video_tracking
+from vision_agent.tools import extract_frames_and_timestamps, owl_v2_video, florence2_phrase_grounding_image, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames_and_timestamps("video.mp4", 1)
@@ -143,7 +143,7 @@ owl_v2_out = owl_v2_video("person", frames)
 owl_v2_counts = get_counts(owl_v2_out)
 
 # plan2
-florence2_out = [florence2_phrase_grounding("person", f) for f in frames]
+florence2_out = [florence2_phrase_grounding_image("person", f) for f in frames]
 florence2_counts = get_counts(florence2_out)
 
 # plan3
@@ -153,13 +153,13 @@ f2s2_counts = get_counts(f2s2_tracking_out)
 
 final_out = {{
     "owl_v2_video": owl_v2_out,
-    "florence2_phrase_grounding": florence2_out,
+    "florence2_phrase_grounding_image": florence2_out,
     "florence2_sam2_video_tracking": f2s2_out,
 }}
 
 counts = {{
     "owl_v2_video": owl_v2_counts,
-    "florence2_phrase_grounding": florence2_counts,
+    "florence2_phrase_grounding_image": florence2_counts,
     "florence2_sam2_video_tracking": f2s2_counts,
 }}
 

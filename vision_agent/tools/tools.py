@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import logging
@@ -28,7 +29,6 @@ from vision_agent.tools.tool_utils import (
     send_task_inference_request,
 )
 from vision_agent.tools.tools_types import (
-    FineTuning,
     Florence2FtRequest,
     JobStatus,
     ODResponseData,
@@ -194,20 +194,26 @@ def owl_v2_image(
         data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
-            tool="florencev2_fine_tuning",
             prompt=prompt,
-            fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
+            job_id=UUID(fine_tune_id),
         )
-        data = data_obj.model_dump(by_alias=True)
-        detections = send_inference_request(data, "tools", v2=False)
-        detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
+        data = data_obj.model_dump(by_alias=True, exclude_none=True)
+        detections = send_inference_request(
+            data,
+            "florence2-ft",
+            v2=True,
+            is_form=True,
+            metadata_payload={"function_name": "owl_v2_image"},
+        )
+        # get the first frame
+        detection = detections[0]
         bboxes_formatted = [
             ODResponseData(
-                label=detections["labels"][i],
-                bbox=normalize_bbox(detections["bboxes"][i], image_size),
+                label=detection["labels"][i],
+                bbox=normalize_bbox(detection["bboxes"][i], image_size),
                 score=1.0,
             )
-            for i in range(len(detections["bboxes"]))
+            for i in range(len(detection["bboxes"]))
         ]
         return [bbox.model_dump() for bbox in bboxes_formatted]
 
@@ -419,25 +425,30 @@ def florence2_sam2_image(
         req_data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
-            tool="florencev2_fine_tuning",
             prompt=prompt,
-            fine_tuning=FineTuning(
-                job_id=UUID(fine_tune_id),
-                postprocessing="sam2",
-            ),
+            postprocessing="sam2",
+            job_id=UUID(fine_tune_id),
         )
-        req_data = req_data_obj.model_dump(by_alias=True)
-        detections_ft = send_inference_request(req_data, "tools", v2=False)
-        detections_ft = detections_ft["<CAPTION_TO_PHRASE_GROUNDING>"]
+        req_data = req_data_obj.model_dump(by_alias=True, exclude_none=True)
+        detections_ft = send_inference_request(
+            req_data,
+            "florence2-ft",
+            v2=True,
+            is_form=True,
+            metadata_payload={"function_name": "florence2_sam2_image"},
+        )
+        # get the first frame
+        detection = detections_ft[0]
         return_data = []
-        all_masks = np.array(detections_ft["masks"])
-        for i in range(len(detections_ft["bboxes"])):
+        for i in range(len(detection["bboxes"])):
             return_data.append(
                 {
                     "score": 1.0,
-                    "label": detections_ft["labels"][i],
-                    "bbox": detections_ft["bboxes"][i],
-                    "mask": all_masks[i, :, :].astype(np.uint8),
+                    "label": detection["labels"][i],
+                    "bbox": normalize_bbox(
+                        detection["bboxes"][i], detection["masks"][i]["size"]
+                    ),
+                    "mask": rle_decode_array(detection["masks"][i]),
                 }
             )
         return return_data
@@ -451,6 +462,7 @@ def florence2_sam2_image(
     detections: Dict[str, Any] = send_inference_request(
         payload, "florence2-sam2", files=files, v2=True
     )
+
     return_data = []
     for _, data_i in detections["0"].items():
         mask = rle_decode_array(data_i["mask"])
@@ -688,22 +700,18 @@ def countgd_counting(
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
     """
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
+    image_b64 = convert_to_b64(image)
     prompt = prompt.replace(", ", " .")
-    payload = {"prompts": [prompt], "model": "countgd"}
+    payload = {"prompt": prompt, "image": image_b64}
     metadata = {"function_name": "countgd_counting"}
-    resp_data = send_task_inference_request(
-        payload, "text-to-object-detection", files=files, metadata=metadata
-    )
-    bboxes_per_frame = resp_data[0]
+    resp_data = send_task_inference_request(payload, "countgd", metadata=metadata)
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
-            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            bbox=list(map(lambda x: round(x, 2), bbox["bbox"])),
             score=round(bbox["score"], 2),
         )
-        for bbox in bboxes_per_frame
+        for bbox in resp_data
     ]
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
@@ -887,7 +895,10 @@ def ixc25_temporal_localization(prompt: str, frames: List[np.ndarray]) -> List[b
         "function_name": "ixc25_temporal_localization",
     }
     data: List[int] = send_inference_request(
-        payload, "video-temporal-localization", files=files, v2=True
+        payload,
+        "video-temporal-localization?model=internlm-xcomposer",
+        files=files,
+        v2=True,
     )
     chunk_size = round(len(frames) / len(data))
     data_explode = [[elt] * chunk_size for elt in data]
@@ -1132,13 +1143,13 @@ def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> s
     return answer[task]  # type: ignore
 
 
-def florence2_phrase_grounding(
+def florence2_phrase_grounding_image(
     prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """'florence2_phrase_grounding' is a tool that can detect multiple
-    objects given a text prompt which can be object names or caption. You
-    can optionally separate the object names in the text with commas. It returns a list
-    of bounding boxes with normalized coordinates, label names and associated
+    """'florence2_phrase_grounding_image' will run florence2 on a image. It can
+    detect multiple objects given a text prompt which can be object names or caption.
+    You can optionally separate the object names in the text with commas. It returns
+    a list of bounding boxes with normalized coordinates, label names and associated
     probability scores of 1.0.
 
     Parameters:
@@ -1156,7 +1167,7 @@ def florence2_phrase_grounding(
 
     Example
     -------
-        >>> florence2_phrase_grounding('person looking at a coyote', image)
+        >>> florence2_phrase_grounding_image('person looking at a coyote', image)
         [
             {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
@@ -1176,37 +1187,126 @@ def florence2_phrase_grounding(
         data_obj = Florence2FtRequest(
             image=image_b64,
             task=PromptTask.PHRASE_GROUNDING,
-            tool="florencev2_fine_tuning",
             prompt=prompt,
-            fine_tuning=FineTuning(job_id=UUID(fine_tune_id)),
+            job_id=UUID(fine_tune_id),
         )
-        data = data_obj.model_dump(by_alias=True)
+        data = data_obj.model_dump(by_alias=True, exclude_none=True)
         detections = send_inference_request(
             data,
-            "tools",
-            v2=False,
-            metadata_payload={"function_name": "florence2_phrase_grounding"},
+            "florence2-ft",
+            v2=True,
+            is_form=True,
+            metadata_payload={"function_name": "florence2_phrase_grounding_image"},
         )
+        # get the first frame
+        detection = detections[0]
     else:
         data = {
             "image": image_b64,
             "task": "<CAPTION_TO_PHRASE_GROUNDING>",
             "prompt": prompt,
-            "function_name": "florence2_phrase_grounding",
+            "function_name": "florence2_phrase_grounding_image",
         }
         detections = send_inference_request(data, "florence2", v2=True)
+        detection = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
 
-    detections = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
     return_data = []
-    for i in range(len(detections["bboxes"])):
+    for i in range(len(detection["bboxes"])):
         return_data.append(
             ODResponseData(
-                label=detections["labels"][i],
-                bbox=normalize_bbox(detections["bboxes"][i], image_size),
+                label=detection["labels"][i],
+                bbox=normalize_bbox(detection["bboxes"][i], image_size),
                 score=1.0,
             )
         )
     return [bbox.model_dump() for bbox in return_data]
+
+
+def florence2_phrase_grounding_video(
+    prompt: str, frames: List[np.ndarray], fine_tune_id: Optional[str] = None
+) -> List[List[Dict[str, Any]]]:
+    """'florence2_phrase_grounding_video' will run florence2 on each frame of a video.
+    It can detect multiple objects given a text prompt which can be object names or
+    caption. You can optionally separate the object names in the text with commas.
+    It returns a list of lists where each inner list contains bounding boxes with
+    normalized coordinates, label names and associated probability scores of 1.0.
+
+    Parameters:
+        prompt (str): The prompt to ground to the video.
+        frames (List[np.ndarray]): The list of frames to detect objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of lists of dictionaries containing the score,
+            label, and bounding box of the detected objects with normalized coordinates
+            between 0 and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates
+            of the top-left and xmax and ymax are the coordinates of the bottom-right of
+            the bounding box. The scores are always 1.0 and cannot be thresholded.
+
+    Example
+    -------
+        >>> florence2_phrase_grounding_video('person looking at a coyote', frames)
+        [
+            [
+                {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+                {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
+            ],
+            ...
+        ]
+    """
+    if len(frames) == 0:
+        raise ValueError("No frames provided")
+
+    image_size = frames[0].shape[:2]
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        data_obj = Florence2FtRequest(
+            task=PromptTask.PHRASE_GROUNDING,
+            prompt=prompt,
+            job_id=UUID(fine_tune_id),
+        )
+
+        data = data_obj.model_dump(by_alias=True, exclude_none=True, mode="json")
+        detections = send_inference_request(
+            data,
+            "florence2-ft",
+            v2=True,
+            files=files,
+            metadata_payload={"function_name": "florence2_phrase_grounding_video"},
+        )
+    else:
+        data = {
+            "prompt": prompt,
+            "task": "<CAPTION_TO_PHRASE_GROUNDING>",
+            "function_name": "florence2_phrase_grounding_video",
+            "video": base64.b64encode(buffer_bytes).decode("utf-8"),
+        }
+        detections = send_inference_request(data, "florence2", v2=True)
+        detections = [d["<CAPTION_TO_PHRASE_GROUNDING>"] for d in detections]
+
+    bboxes_formatted = []
+    for frame_data in detections:
+        bboxes_formatted_per_frame = []
+        for idx in range(len(frame_data["bboxes"])):
+            bboxes_formatted_per_frame.append(
+                ODResponseData(
+                    label=frame_data["labels"][idx],
+                    bbox=normalize_bbox(frame_data["bboxes"][idx], image_size),
+                    score=1.0,
+                )
+            )
+        bboxes_formatted.append(bboxes_formatted_per_frame)
+    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
 
 def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -1220,7 +1320,7 @@ def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the detected text, bbox
-            with nornmalized coordinates, and confidence score.
+            with normalized coordinates, and confidence score.
 
     Example
     -------
@@ -2064,7 +2164,8 @@ FUNCTION_TOOLS = [
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video_tracking,
-    florence2_phrase_grounding,
+    florence2_phrase_grounding_image,
+    florence2_phrase_grounding_video,
     ixc25_image_vqa,
     ixc25_video_vqa,
     detr_segmentation,

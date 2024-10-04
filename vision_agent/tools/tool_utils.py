@@ -1,6 +1,6 @@
+import os
 import inspect
 import logging
-import os
 from base64 import b64encode
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
@@ -37,8 +37,9 @@ def send_inference_request(
     files: Optional[List[Tuple[Any, ...]]] = None,
     v2: bool = False,
     metadata_payload: Optional[Dict[str, Any]] = None,
+    is_form: bool = False,
 ) -> Any:
-    # TODO: runtime_tag and function_name should be metadata_payload and now included
+    # TODO: runtime_tag and function_name should be metadata_payload and not included
     # in the service payload
     if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
         payload["runtime_tag"] = runtime_tag
@@ -64,7 +65,7 @@ def send_inference_request(
     elif metadata_payload is not None and "function_name" in metadata_payload:
         function_name = metadata_payload["function_name"]
 
-    response = _call_post(url, payload, session, files, function_name)
+    response = _call_post(url, payload, session, files, function_name, is_form)
 
     # TODO: consider making the response schema the same between below two sources
     return response if "TOOL_ENDPOINT_AUTH" in os.environ else response["data"]
@@ -75,6 +76,7 @@ def send_task_inference_request(
     task_name: str,
     files: Optional[List[Tuple[Any, ...]]] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    is_form: bool = False,
 ) -> Any:
     url = f"{_LND_API_URL_v2}/{task_name}"
     headers = {"apikey": _LND_API_KEY}
@@ -87,7 +89,7 @@ def send_task_inference_request(
     function_name = "unknown"
     if metadata is not None and "function_name" in metadata:
         function_name = metadata["function_name"]
-    response = _call_post(url, payload, session, files, function_name)
+    response = _call_post(url, payload, session, files, function_name, is_form)
     return response["data"]
 
 
@@ -203,6 +205,7 @@ def _call_post(
     session: Session,
     files: Optional[List[Tuple[Any, ...]]] = None,
     function_name: str = "unknown",
+    is_form: bool = False,
 ) -> Any:
     files_in_b64 = None
     if files:
@@ -210,6 +213,8 @@ def _call_post(
     try:
         if files is not None:
             response = session.post(url, data=payload, files=files)
+        elif is_form:
+            response = session.post(url, data=payload)
         else:
             response = session.post(url, json=payload)
 
