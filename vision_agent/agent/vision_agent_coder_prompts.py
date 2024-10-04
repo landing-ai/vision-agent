@@ -314,14 +314,15 @@ def check_helmets(image_path):
 --- END EXAMPLE1 ---
 
 **Instructions**:
-1. **Understand and Clarify**: Make sure you understand the task.
+1. **Understand and Clarify**: Make sure you understand the user request.
 2. **Algorithm/Method Selection**: Decide on the most efficient method, use the tool outputs and tool thoughts to guide you.
 3. **Pseudocode Creation**: Write down the steps you will follow in pseudocode.
 4. **Code Generation**: Translate your pseudocode into executable Python code.
-    4.1. Take in the media path as an argument and load with either `load_image` or `extract_frames_and_timestamps`.
-    4.2. Coordinates are always returned normalized from `vision_agent.tools`.
-    4.3. Do not create dummy input or functions, the code must be usable if the user provides new media.
-    4.4. Use unnormalized coordinates when comparing bounding boxes.
+    4.1. Ensure your code follows the user request first and then the subtasks. 
+    4.2. Take in the media path as an argument and load with either `load_image` or `extract_frames_and_timestamps`.
+    4.3. Coordinates are always returned normalized from `vision_agent.tools`.
+    4.4. Do not create dummy input or functions, the code must be usable if the user provides new media.
+    4.5. Use unnormalized coordinates when comparing bounding boxes.
 """
 
 TEST = """
