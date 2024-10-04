@@ -1847,7 +1847,7 @@ def save_video(
             frame.shape[0] == 0 and frame.shape[1] == 0
         ):
             raise ValueError(
-                "The frame is not a valid NumPy array with shape (H, W, C)"
+                "A frame is not a valid NumPy array with shape (H, W, C)"
             )
 
     if output_video_path is None:

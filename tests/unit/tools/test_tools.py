@@ -66,4 +66,4 @@ def test_save_invalid_frame():
     try:
         save_video(frames, "tmp.mp4")
     except ValueError as e:
-        assert str(e) == "Frame is not a valid NumPy array with shape (H, W, C)"
+        assert str(e) == "A frame is not a valid NumPy array with shape (H, W, C)"
