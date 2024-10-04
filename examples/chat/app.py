@@ -109,8 +109,12 @@ def main():
                     len(st.session_state.messages) == 0
                     or prompt != st.session_state.messages[-1]["content"]
                 ):
-                    # occassionally resends the last user message twice 
-                    user_messages = [msg for msg in st.session_state.messages if msg["role"] == "user"]
+                    # occassionally resends the last user message twice
+                    user_messages = [
+                        msg
+                        for msg in st.session_state.messages
+                        if msg["role"] == "user"
+                    ]
                     last_user_message = None
                     if len(user_messages) > 0:
                         last_user_message = user_messages[-1]["content"]
