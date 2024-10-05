@@ -35,6 +35,28 @@ Output a list of jsons in the following format:
 ```
 """
 
+
+PLAN2 = """
+**Role**: You are an expert planning agent that can understand the user request and discover a plan to accomplish it.
+
+**Task**: You are given a list of tools that can be used to solve the users request. You must search through different subtasks and tools to figure out the best plan. You may also use tool evaluators to help you decide which tools to use.
+
+**Tools**:
+{tool_desc}
+
+**Tool Evaluators**:
+{tool_evaluators_desc}
+
+**Examples**:
+
+USER: Count the number of people in the image.
+
+AGENT: {"thoughts": "I need to gather some more information about the image.", "response": <execute_python>claude_35_vqa('How many people are in the image?', image)</execute_python>", "plan": []}
+
+OBSERVATION: The tool claude_35_vqa returns the number of people in the image.
+
+"""
+
 TEST_PLANS = """
 **Role**: You are a software programmer responsible for testing different tools.
 
