@@ -15,19 +15,23 @@ accomplish the task you want. Vision Agent aims to provide an in-seconds experie
 allowing users to describe their problem in text and have the agent framework generate
 code to solve the task for them. Check out our discord for updates and roadmaps!
 
+## Table of Contents
+- [🚀Quick Start](#quick-start)
+- [📚Documentation](#documentation)
+- [🔍🤖Vision Agent](#vision-agent-basic-usage)
+- [🛠️Tools](#tools)
+- [🤖LMMs](#lmms)
+- [💻🤖Vision Agent Coder](#vision-agent-coder)
+- [🏗️Additional Backends](#additional-backends)
 
-## Web Application
-
-Try Vision Agent live on (note this may not be running the most up-to-date version) [va.landing.ai](https://va.landing.ai/)
-
-## Documentation
-
-[Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
+## Quick Start
+### Web Application
+The fastest way to test out Vision Agent is to use our web application. You can find it
+[here](https://va.landing.ai/).
 
 
-## Getting Started
 ### Installation
-To get started, you can install the library using pip:
+To get started with the python library, you can install it using pip:
 
 ```bash
 pip install vision-agent
@@ -41,27 +45,8 @@ export ANTHROPIC_API_KEY="your-api-key"
 export OPENAI_API_KEY="your-api-key"
 ```
 
-### Vision Agent
-There are two agents that you can use. `VisionAgent` is a conversational agent that has
-access to tools that allow it to write an navigate python code and file systems. It can
-converse with the user in natural language. `VisionAgentCoder` is an agent specifically
-for writing code for vision tasks, such as counting people in an image. However, it
-cannot chat with you and can only respond with code. `VisionAgent` can call
-`VisionAgentCoder` to write vision code.
-
-#### Basic Usage
-To run the streamlit app locally to chat with `VisionAgent`, you can run the following
-command:
-
-```bash
-pip install -r examples/chat/requirements.txt
-export WORKSPACE=/path/to/your/workspace
-export ZMQ_PORT=5555
-streamlit run examples/chat/app.py
-```
-You can find more details about the streamlit app [here](examples/chat/).
-
-#### Basic Programmatic Usage
+### Basic Usage
+To get started you can just import the `VisionAgent` and start chatting with it:
 ```python
 >>> from vision_agent.agent import VisionAgent
 >>> agent = VisionAgent()
@@ -72,106 +57,93 @@ You can find more details about the streamlit app [here](examples/chat/).
 >>> resp = agent(resp)
 ```
 
-`VisionAgent` currently utilizes Claude-3.5 as it's default LMM and uses OpenAI for
-embeddings for tool searching.
+The chat messages are similar to `OpenAI`'s format with `role` and `content` keys but
+in addition to those you can add `medai` which is a list of media files that can either
+be images or video files.
 
-### Vision Agent Coder
-#### Basic Usage
-You can interact with the agent as you would with any LLM or LMM model:
+## Documentation
 
-```python
->>> from vision_agent.agent import VisionAgentCoder
->>> agent = VisionAgentCoder()
->>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
-```
+[Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
 
-Which produces the following code:
-```python
-from vision_agent.tools import load_image, grounding_sam
+## Vision Agent Basic Usage
+### Chatting and Message Formats
+`VisionAgent` is an agent that can chat with you and call other tools or agents to
+write vision code for you. You can interact with it like you would ChatGPT or any other
+chatbot. The agent uses Clause-3.5 for it's LMM and OpenAI for embeddings for searching
+for tools.
 
-def calculate_filled_percentage(image_path: str) -> float:
-    # Step 1: Load the image
-    image = load_image(image_path)
-
-    # Step 2: Segment the jar
-    jar_segments = grounding_sam(prompt="jar", image=image)
-
-    # Step 3: Segment the coffee beans
-    coffee_beans_segments = grounding_sam(prompt="coffee beans", image=image)
-
-    # Step 4: Calculate the area of the segmented jar
-    jar_area = 0
-    for segment in jar_segments:
-        jar_area += segment['mask'].sum()
-
-    # Step 5: Calculate the area of the segmented coffee beans
-    coffee_beans_area = 0
-    for segment in coffee_beans_segments:
-        coffee_beans_area += segment['mask'].sum()
-
-    # Step 6: Compute the percentage of the jar area that is filled with coffee beans
-    if jar_area == 0:
-        return 0.0  # To avoid division by zero
-    filled_percentage = (coffee_beans_area / jar_area) * 100
-
-    # Step 7: Return the computed percentage
-    return filled_percentage
-```
-
-To better understand how the model came up with it's answer, you can run it in debug
-mode by passing in the verbose argument:
-
-```python
->>> agent = VisionAgentCoder(verbosity=2)
-```
-
-#### Detailed Usage
-You can also have it return more information by calling `chat_with_workflow`. The format
-of the input is a list of dictionaries with the keys `role`, `content`, and `media`:
-
-```python
->>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
->>> print(results)
+The message format is:
+```json
 {
-    "code": "from vision_agent.tools import ..."
-    "test": "calculate_filled_percentage('jar.jpg')",
-    "test_result": "...",
-    "plans": {"plan1": {"thoughts": "..."}, ...},
-    "plan_thoughts": "...",
-    "working_memory": ...,
+    "role": "user",
+    "content": "Hello",
+    "media": ["image.jpg"]
+}
+```
+Where `role` can be `user`, `assistant` or `observation` if the agent has executed a 
+function and needs to observe the output. `content` is always the text message and
+`media` is a list of media files that can be images or videos that you want the agent
+to examine.
+
+When the agent responds, inside it's `context` you will find the following data structure:
+```json
+{
+    "thoughts": "The user has greeted me. I will respond with a greeting and ask how I can assist them.",
+    "response": "Hello! How can I assist you today?",
+    "let_user_respond": true
 }
 ```
 
-With this you can examine more detailed information such as the testing code, testing
-results, plan or working memory it used to complete the task.
+`thoughts` are the thoughts the agent had when processing the message, `response` is the
+response it generated which could contain a python execution, and `let_user_respond` is
+a boolean that tells the agent if it should wait for the user to respond before
+continuing, for example it may want to execute code and look at the output before
+letting the user respond.
 
-#### Multi-turn conversations
-You can have multi-turn conversations with vision-agent as well, giving it feedback on
-the code and having it update. You just need to add the code as a response from the
-assistant:
+### Chatting and Artifacts
+If you run `chat_with_code` you will also notice an `Artifact` object. `Artifact`'s
+are a way to sync files between local and remote environments. The agent will read and
+write to the artifact object, which is just a pickle object, when it wants to save or
+load files.
 
 ```python
-agent = va.agent.VisionAgentCoder(verbosity=2)
-conv = [
-    {
-        "role": "user",
-        "content": "Are these workers wearing safety gear? Output only a True or False value.",
-        "media": ["workers.png"],
-    }
-]
-result = agent.chat_with_workflow(conv)
-code = result["code"]
-conv.append({"role": "assistant", "content": code})
-conv.append(
-    {
-        "role": "user",
-        "content": "Can you also return the number of workers wearing safety gear?",
-    }
+import vision_agent as va
+from vision_agent.tools.meta_tools import Artifact
+
+artifact = Artifact("artifact.pkl")
+# you can store text files such as code or images in the artifact
+with open("code.py", "r") as f:
+    artifacts["code.py"] = f.read()
+with open("image.png", "rb") as f:
+    artifacts["image.png"] = f.read()
+
+agent = va.agent.VisionAgent()
+response, artifacts = agent.chat_with_code(
+    [
+        {
+            "role": "user",
+            "content": "Can you write code to count the number of people in image.png",
+        }
+    ],
+    artifacts=artifacts,
 )
-result = agent.chat_with_workflow(conv)
 ```
 
-### Tools
+### Running the Streamlit App
+To test out things quickly, sometimes it's easier to run the streamlit app locally to
+chat with `VisionAgent`, you can run the following command:
+
+```bash
+pip install -r examples/chat/requirements.txt
+export WORKSPACE=/path/to/your/workspace
+export ZMQ_PORT=5555
+streamlit run examples/chat/app.py
+```
+You can find more details about the streamlit app [here](examples/chat/), there are
+still some concurrency issues with the streamlit app so if you find it doing weird things
+clear your workspace and restart the app.
+
+## Tools
 There are a variety of tools for the model or the user to use. Some are executed locally
 while others are hosted for you. You can easily access them yourself, for example if
 you want to run `owl_v2_image` and visualize the output you can run:
@@ -182,15 +154,34 @@ import matplotlib.pyplot as plt
 
 image = T.load_image("dogs.jpg")
 dets = T.owl_v2_image("dogs", image)
+# visualize the owl_v2_ bounding boxes on the image
 viz = T.overlay_bounding_boxes(image, dets)
+
+# plot the image in matplotlib or save it
 plt.imshow(viz)
 plt.show()
+T.save_image(viz, "viz.png")
 ```
 
-You can find all available tools in `vision_agent/tools/tools.py`, however,
-`VisionAgentCoder` only utilizes a subset of tools that have been tested and provide
-the best performance. Those can be found in the same file under the `TOOLS` variable.
+Or if you want to run on video data, for example track sharks and people at 10 FPS:
 
+```python
+frames_and_ts = T.extract_frames_and_timestamps("sharks.mp4", fps=10)
+# extract only the frames from frames and timestamps
+frames = [f["frame"] for f in frames_and_ts]
+# track the sharks and people in the frames, returns segmentation masks
+track = T.florence2_sam2_video_tracking("shark, person", frames)
+# plot the segmentation masks on the frames
+viz = T.overlay_segmentation_masks(frames, track)
+T.save_video(viz, "viz.mp4")
+```
+
+You can find all available tools in `vision_agent/tools/tools.py`, however the
+`VisionAgent` will only utilizes a subset of tools that have been tested and provide
+the best performance. Those can be found in the same file under the `FUNCION_TOOLS`
+variable inside `tools.py`.
+
+#### Custom Tools
 If you can't find the tool you are looking for you can also add custom tools to the
 agent:
 
@@ -219,12 +210,139 @@ def custom_tool(image_path: str) -> str:
 You need to ensure you call `@va.tools.register_tool` with any imports it uses. Global
 variables will not be captured by `register_tool` so you need to include them in the
 function. Make sure the documentation is in the same format above with description,
-`Parameters:`, `Returns:`, and `Example\n-------`. You can find an example use case
-[here](examples/custom_tools/) as this is what the agent uses to pick and use the tool.
+`Parameters:`, `Returns:`, and `Example\n-------`. The `VisionAgent` will use your
+documentation when trying to determine when to use your tool. You can find an example
+use case [here](examples/custom_tools/) for adding a custom tool. Note you may need to
+play around with the prompt to ensure the model picks the tool when you want it to.
 
-Can't find the tool you need and want add it to `VisionAgent`? Check out our
+Can't find the tool you need and want us to host it? Check out our
 [vision-agent-tools](https://github.com/landing-ai/vision-agent-tools) repository where
 we add the source code for all the tools used in `VisionAgent`.
+
+## LMMs
+All of our agents are based off of LMMs or Large Multimodal Models. We provide a thin
+abstraction layer on top of the underlying provider APIs to be able to more easily
+handle media.
+
+
+```python
+from vision_agent.lmm import AnthropicLMM
+
+lmm = AnthropicLMM()
+response = lmm("Describe this image", media=["apple.jpg"])
+>>> "This is an image of an apple."
+```
+
+Or you can use the `OpenAI` chat interaface and pass it other media like videos:
+
+```python
+response = lmm(
+    [
+        {
+            "role": "user",
+            "content": "What's going on in this video?",
+            "media": ["video.mp4"]
+        }
+    ]
+)
+```
+
+## Vision Agent Coder
+Underneath the hood, `VisionAgent` uses `VisionAgentCoder` to generate code to solve
+vision tasks. You can use `VisionAgentCoder` directly to generate code if you want:
+
+```python
+>>> from vision_agent.agent import VisionAgentCoder
+>>> agent = VisionAgentCoder()
+>>> code = agent("What percentage of the area of the jar is filled with coffee beans?", media="jar.jpg")
+```
+
+Which produces the following code:
+```python
+from vision_agent.tools import load_image, florence2_sam2_image
+
+def calculate_filled_percentage(image_path: str) -> float:
+    # Step 1: Load the image
+    image = load_image(image_path)
+
+    # Step 2: Segment the jar
+    jar_segments = florence2_sam2_image("jar", image)
+
+    # Step 3: Segment the coffee beans
+    coffee_beans_segments = florence2_sam2_image("coffee beans", image)
+
+    # Step 4: Calculate the area of the segmented jar
+    jar_area = 0
+    for segment in jar_segments:
+        jar_area += segment['mask'].sum()
+
+    # Step 5: Calculate the area of the segmented coffee beans
+    coffee_beans_area = 0
+    for segment in coffee_beans_segments:
+        coffee_beans_area += segment['mask'].sum()
+
+    # Step 6: Compute the percentage of the jar area that is filled with coffee beans
+    if jar_area == 0:
+        return 0.0  # To avoid division by zero
+    filled_percentage = (coffee_beans_area / jar_area) * 100
+
+    # Step 7: Return the computed percentage
+    return filled_percentage
+```
+
+To better understand how the model came up with it's answer, you can run it in debug
+mode by passing in the verbose argument:
+
+```python
+>>> agent = VisionAgentCoder(verbosity=2)
+```
+
+### Detailed Usage
+You can also have it return more information by calling `chat_with_workflow`. The format
+of the input is a list of dictionaries with the keys `role`, `content`, and `media`:
+
+```python
+>>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
+>>> print(results)
+{
+    "code": "from vision_agent.tools import ..."
+    "test": "calculate_filled_percentage('jar.jpg')",
+    "test_result": "...",
+    "plans": {"plan1": {"thoughts": "..."}, ...},
+    "plan_thoughts": "...",
+    "working_memory": ...,
+}
+```
+
+With this you can examine more detailed information such as the testing code, testing
+results, plan or working memory it used to complete the task.
+
+### Multi-turn conversations
+You can have multi-turn conversations with vision-agent as well, giving it feedback on
+the code and having it update. You just need to add the code as a response from the
+assistant:
+
+```python
+agent = va.agent.VisionAgentCoder(verbosity=2)
+conv = [
+    {
+        "role": "user",
+        "content": "Are these workers wearing safety gear? Output only a True or False value.",
+        "media": ["workers.png"],
+    }
+]
+result = agent.chat_with_workflow(conv)
+code = result["code"]
+conv.append({"role": "assistant", "content": code})
+conv.append(
+    {
+        "role": "user",
+        "content": "Can you also return the number of workers wearing safety gear?",
+    }
+)
+result = agent.chat_with_workflow(conv)
+```
+
 
 ## Additional Backends
 ### Anthropic
@@ -329,9 +447,9 @@ agent = va.agent.AzureVisionAgentCoder()
 
 ******************************************************************************************************************************
 
-### Q&A
+## Q&A
 
-#### How to get started with OpenAI API credits
+### How to get started with OpenAI API credits
 
 1. Visit the [OpenAI API platform](https://beta.openai.com/signup/) to sign up for an API key.
 2. Follow the instructions to purchase and manage your API credits.
