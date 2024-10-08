@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import extract_json
+from vision_agent.agent.agent_utils import extract_execution, extract_json
 from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE1,
     EXAMPLES_CODE2,
@@ -29,6 +29,17 @@ WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 if str(WORKSPACE) != "":
     os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
+
+
+def extract_exeuction_use_extra_va_args(
+    response: str,
+    test_multi_plan: bool = True,
+    custom_tool_names: Optional[List[str]] = None,
+) -> Optional[str]:
+    code = extract_execution(response)
+    if code is not None:
+        code = use_extra_vision_agent_args(code, test_multi_plan, custom_tool_names)
+    return code
 
 
 class BoilerplateCode:
@@ -100,32 +111,6 @@ def execute_code_action(
     return result, obs
 
 
-def parse_execution(
-    response: str,
-    test_multi_plan: bool = True,
-    customed_tool_names: Optional[List[str]] = None,
-) -> Optional[str]:
-    code = None
-    remaining = response
-    all_code = []
-    while "<execute_python>" in remaining:
-        code_i = remaining[
-            remaining.find("<execute_python>") + len("<execute_python>") :
-        ]
-        code_i = code_i[: code_i.find("</execute_python>")]
-        remaining = remaining[
-            remaining.find("</execute_python>") + len("</execute_python>") :
-        ]
-        all_code.append(code_i)
-
-    if len(all_code) > 0:
-        code = "\n".join(all_code)
-
-    if code is not None:
-        code = use_extra_vision_agent_args(code, test_multi_plan, customed_tool_names)
-    return code
-
-
 def execute_user_code_action(
     last_user_message: Message,
     code_interpreter: CodeInterpreter,
@@ -139,7 +124,7 @@ def execute_user_code_action(
 
     last_user_content = cast(str, last_user_message.get("content", ""))
 
-    user_code_action = parse_execution(last_user_content, False)
+    user_code_action = extract_exeuction_use_extra_va_args(last_user_content, False)
     if user_code_action is not None:
         user_result, user_obs = execute_code_action(
             user_code_action, code_interpreter, artifact_remote_path
@@ -398,7 +383,7 @@ class VisionAgent(Agent):
 
                 finished = response["let_user_respond"]
 
-                code_action = parse_execution(
+                code_action = extract_exeuction_use_extra_va_args(
                     response["response"], test_multi_plan, customized_tool_names
                 )
 
