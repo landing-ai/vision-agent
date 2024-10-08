@@ -32,6 +32,17 @@ if str(WORKSPACE) != "":
     os.environ["PYTHONPATH"] = f"{WORKSPACE}:{os.getenv('PYTHONPATH', '')}"
 
 
+def extract_exeuction_use_extra_va_args(
+    response: str,
+    test_multi_plan: bool = True,
+    custom_tool_names: Optional[List[str]] = None,
+) -> Optional[str]:
+    code = extract_execution(response)
+    if code is not None:
+        code = use_extra_vision_agent_args(code, test_multi_plan, custom_tool_names)
+    return code
+
+
 class BoilerplateCode:
     pre_code = [
         "from typing import *",
