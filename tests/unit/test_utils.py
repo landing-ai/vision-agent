@@ -2,6 +2,9 @@ from vision_agent.agent.agent_utils import (
     extract_code,
     extract_json,
     remove_installs_from_code,
+    extract_execution,
+    extract_thinking,
+    extract_finalize_plan,
 )
 
 
@@ -70,3 +73,20 @@ def test_chat_agent_case():
     a_json = extract_json(a)
     assert "thoughts" in a_json
     assert "response" in a_json
+
+
+def test_extract_execution():
+    a = """<execute_python>print('hello world!')</execute_python>"""
+    a_code = extract_execution(a)
+    assert a_code == "print('hello world!')"
+
+
+def test_extract_execution_null():
+    a = """<execute_python>print('hello world!')"""
+    a_code = extract_execution(a)
+    assert a_code is None
+
+def test_extract_execution_double():
+    a = """<execute_python>print('hello world!')</execute_python><execute_python>print('hello world!')</execute_python>"""
+    a_code = extract_execution(a)
+    assert a_code == "print('hello world!')\nprint('hello world!')"
