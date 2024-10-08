@@ -15,3 +15,4 @@ from .vision_agent_planner import (
     PlanContext,
     VisionAgentPlanner,
 )
+from .vision_agent_planner_v2 import VisionAgentPlannerV2

@@ -190,7 +190,7 @@ PICK_PLAN = """
 1. Re-read the user request, plans, tool outputs and examine the image.
 2. Solve the problem yourself given the image and pick the most accurate plan that matches your solution the best.
 3. Add modifications to improve the plan including: changing a tool, adding thresholds, string matching.
-3. Output a JSON object with the following format:
+4. Output a JSON object with the following format:
 {{
     "predicted_answer": str # the answer you would expect from the best plan
     "thoughts": str # your thought process for choosing the best plan over other plans and any modifications you made
@@ -199,18 +199,32 @@ PICK_PLAN = """
 """
 
 PLAN2 = """
-**Role**: You are an expert planning agent that can understand the user request and discover a plan to accomplish it.
+**Role**: You are an expert planning agent that can understand the user request and search for a plan to accomplish it.
 
-**Task**: You are given a list of tools that can be used to solve the users request. You must search through different subtasks and tools to figure out the best plan. You may also use tool evaluators to help you decide which tools to use.
+**Task**: As a planning agent you are required to understand the user's request and search for a plan to accomplish it. Use Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Esnure your response is clear, concise, andhelpful. You can use an interactive Pyton (Jupyter Notebok) environment, executing code with <execute_python>.
 
-**Tools**:
+**Documentation**: this is the documentation for the functions you can use to accomplish the task:
 {tool_desc}
 
-**Tool Evaluators**:
-{tool_evaluators_desc}
+**Example Planning**: Here are some examples of how you can search for a plan:
+{examples}
 
-**Examples**:
+**Current Planning**:
+--- START PLANNING ---
+{planning}
+--- END PLANNING ---
 
+**Instructions**:
+1. Read the user request and the context provided.
+2. Use <thinking> tags to indicate your thought process.
+3. You can execute python code in the ipython notebook using <execute_python> tags.
+4. Use <finalize_plan> tags to summarize the plan you have found and end planning.
+5. You may only respond with <thinking>, <execute_python>, and <finalize_plan> tags and will receive an observation after each <execute_python> tag.
+"""
+
+
+EXAMPLE_PLAN1 = """
+--- EXAMPLE1 ---
 USER: Count the number of people in the image.
 
 AGENT: <thinking>I need to gather some more information about the image.</thinking>
@@ -250,15 +264,58 @@ def subdivide_image(image):
     bottom_right = image[mid_height - overlap_height:, mid_width - overlap_width:, :]
     return [top_left, top_right, bottom_left, bottom_right]
 
-counter = get_tool('Count the number of people in each region.', subdivide_image(image))
+detector = get_tool_for_task('Detect the number of people in each region.', subdivide_image(image))
 </execute_python>
 
-OBSERVATION: "countgd_counting is the best tool for this task, it detects a total of 14 people across all regions. It returns a list of bounding boxes, for example: [{'label': 'person', 'score': 0.99, 'box': [x1, y1, x2, y2]}, ...]."
+OBSERVATION: "countgd_counting is the best tool for this task, it detects a total of 14 people across all regions. It returns a list of bounding boxes in normalized coordinates: [{{'label': 'person', 'score': 0.99, 'box': [0.15, 0.09, 0.23, 0.12]}}, ...]."
 
-AGENT:
+AGENT: <thinking>I need to now merge the boxes from all regions and count the unique people.</thinking>
+<execute_python>
+def translate_ofset(bbox, offset_x, offset_y):
+    return (bbox[0] + offset_x, bbox[1] + offset_y, bbox[2] + offset_x, bbox[3] + offset_y)
+
+def bounding_boxes_overlap(bbox1, bbox2):
+    if bbox1[2] < bbox2[0] or bbox2[0] > bbox1[2]:
+        return False
+    if bbox1[3] < bbox2[1] or bbox2[3] > bbox1[3]:
+        return False
+    return True
+
+def merge_bounding_boxes(bbox1, bbox2):
+    x_min = min(bbox1[0], bbox2[0])
+    y_min = min(bbox1[1], bbox2[1])
+    x_max = max(bbox1[2], bbox2[2])
+    y_max = max(bbox1[3], bbox2[3])
+    return (x_min, y_min, x_max, y_max)
+
+def merge_bounding_box_list(bboxes):
+    merged_bboxes = []
+    while bboxes:
+        bbox = bboxes.pop()
+        overlap_found = False
+        for i, other_bbox in enumerate(merged_bboxes):
+            if bounding_boxes_overlap(bbox, other_bbox):
+                merged_bboxes[i] = merge_bounding_boxes(bbox, other_bbox)
+                overlap_found = True
+                break
+        if not overlap_found:
+            merged_bboxes.append(bbox)
+    return merged_bboxes
+
+detections = []
+for region in subdivide_image(image):
+    detections.extend(detector(region))
+detections = merge_bounding_box_list(detections)
+print(len(detections))
+</execute_python>
+
+OBSERVATION: 14
+
+AGENT: <finalize_plan>This plan successfully detected 14 people in the image by subdividing the image into smaller regions and using the countgd_counting tool on each region. The bounding boxes were then merged to count the unique people.</finalize_plan>
+--- END EXAMPLE1 ---
 """
 
-TEST_PLANS2 = """
+TEST_TOOLS2 = """
 **Role**: You are an expert software programming that specializes in tool testing.
 
 **Task**: You are responsible for testing different tools on a set of images to determine the best tool for the user request.
@@ -266,7 +323,7 @@ TEST_PLANS2 = """
 **Tools**: This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
 {tool_docs}
 
-**Previous Attempts**:
+**Previous Attempts**: You previously tried to execute this code and got the following error or no output (if empty that means you have not tried to previously execute code, if it is 'EMPTY' that means you have tried but got no output):
 {previous_attempts}
 
 **User Request**:
@@ -314,7 +371,7 @@ print(final_results)
 4. Print this final dictionary.
 """
 
-PICK_TOOL = """
+PICK_TOOL2 = """
 **Role**: You are an expert evaluator that can understand user requests and evaluate the output of different tools.
 
 **Task**: You are given the output of different tools for a user request along with the image. You must evaluate the output and determine the best tool for the user request.
@@ -328,5 +385,35 @@ PICK_TOOL = """
 **Instructions**:
 1. Re-read the user request, plans, tool outputs and examine the image.
 2. Solve the problem yourself given the image and pick the most accurate tool that matches your solution the best.
-3. Return the 
+3. Output a JSON object with the following format:
+{{
+    "predicted_answer": str # the answer you would expect from the best plan
+    "thoughts": str # your thought process for choosing the best plan over other plans and any modifications you made
+    "tool": str # the name of the tool you have chosen
+}}
+"""
+
+FINALIZE_PLAN = """
+**Role**: You are an expert AI model that can understand the user request and construct plans to accomplish it.
+
+**Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found.
+
+**User Request**:
+{user_request}
+
+**Planning**:
+{planning}
+
+**Instructions**:
+1. Read the chain of thoughts and python executions.
+2. Summarize the plan that the planning agent found.
+3. Include any relvant python code in your plan.
+4. Specifically call out the tools used and the order in which they were used.
+5. Respond in the following JSON format:
+{{
+    "plan": str # the plan you have summarized
+    "instructions": [
+        str # the instructions for each step in the plan with either specific code or a specific tool name
+    ]
+}}
 """
