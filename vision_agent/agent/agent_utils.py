@@ -115,6 +115,24 @@ def extract_tag(
     return inner_content
 
 
+def extract_execution(
+    response: str,
+) -> Optional[str]:
+    return extract_tag(response, "execute_python")
+
+
+def extract_thinking(
+    response: str,
+) -> Optional[str]:
+    return extract_tag(response, "thinking")
+
+
+def extract_finalize_plan(
+    response: str,
+) -> Optional[str]:
+    return extract_tag(response, "finalize_plan")
+
+
 def remove_installs_from_code(code: str) -> str:
     pattern = r"\n!pip install.*?(\n|\Z)\n"
     code = re.sub(pattern, "", code, flags=re.DOTALL)
