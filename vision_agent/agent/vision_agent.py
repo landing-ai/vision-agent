@@ -383,7 +383,7 @@ class VisionAgent(Agent):
                     obs_chat_elt: Message = {"role": "observation", "content": obs}
                     if media_obs and result.success:
                         obs_chat_elt["media"] = [
-                            Path(code_interpreter.remote_path) / media_ob
+                            Path(self.local_artifacts_path).parent / media_ob
                             for media_ob in media_obs
                         ]
 
@@ -407,6 +407,8 @@ class VisionAgent(Agent):
             code_interpreter.download_file(
                 str(remote_artifacts_path.name), str(self.local_artifacts_path)
             )
+            artifacts.load(self.local_artifacts_path)
+            artifacts.save()
         return orig_chat, artifacts
 
     def streaming_message(self, message: Dict[str, Any]) -> None:
