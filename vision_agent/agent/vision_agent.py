@@ -149,6 +149,32 @@ def execute_user_code_action(
     return user_result, user_obs
 
 
+def add_step_descriptions(response: Dict[str, str]) -> Dict[str, str]:
+    response = copy.deepcopy(response)
+    if "response" in response:
+        resp_str = response["response"]
+        if "<execute_python>" in resp_str:
+            # only include descriptions for these, the rest will just have executing
+            # code
+            description_map = {
+                "open_code_artifact": "Reading file.",
+                "create_code_artifact": "Creating file.",
+                "edit_code_artifact": "Editing file.",
+                "generate_vision_code": "Generating vision code.",
+                "edit_vision_code": "Editing vision code.",
+            }
+            description = ""
+            for k, v in description_map.items():
+                if k in resp_str:
+                    description += v + " "
+            if description == "":
+                description = "Executing code."
+            resp_str = resp_str[resp_str.find("<execute_python>") :]
+            resp_str = description + resp_str
+        response["response"] = resp_str
+    return response
+
+
 class VisionAgent(Agent):
     """Vision Agent is an agent that can chat with the user and call tools or other
     agents to generate code for it. Vision Agent uses python code to execute actions
@@ -335,8 +361,18 @@ class VisionAgent(Agent):
                 response = run_conversation(self.agent, int_chat)
                 if self.verbosity >= 1:
                     _LOGGER.info(response)
-                int_chat.append({"role": "assistant", "content": str(response)})
-                orig_chat.append({"role": "assistant", "content": str(response)})
+                int_chat.append(
+                    {
+                        "role": "assistant",
+                        "content": str(add_step_descriptions(response)),
+                    }
+                )
+                orig_chat.append(
+                    {
+                        "role": "assistant",
+                        "content": str(add_step_descriptions(response)),
+                    }
+                )
 
                 # sometimes it gets stuck in a loop, so we force it to exit
                 if last_response == response:
@@ -382,6 +418,16 @@ class VisionAgent(Agent):
 
                     obs_chat_elt: Message = {"role": "observation", "content": obs}
                     if media_obs and result.success:
+                        # for view_media_artifact, we need to ensure the media is loaded
+                        # locally so the conversation agent can actually see it
+                        code_interpreter.download_file(
+                            str(remote_artifacts_path.name),
+                            str(self.local_artifacts_path),
+                        )
+                        artifacts.load(
+                            self.local_artifacts_path,
+                            Path(self.local_artifacts_path).parent,
+                        )
                         obs_chat_elt["media"] = [
                             Path(self.local_artifacts_path).parent / media_ob
                             for media_ob in media_obs
@@ -407,8 +453,9 @@ class VisionAgent(Agent):
             code_interpreter.download_file(
                 str(remote_artifacts_path.name), str(self.local_artifacts_path)
             )
-            artifacts.load(self.local_artifacts_path)
-            artifacts.save()
+            artifacts.load(
+                self.local_artifacts_path, Path(self.local_artifacts_path).parent
+            )
         return orig_chat, artifacts
 
     def streaming_message(self, message: Dict[str, Any]) -> None:

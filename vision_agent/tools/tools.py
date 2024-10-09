@@ -700,6 +700,7 @@ def countgd_counting(
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
     """
+    image_size = image.shape[:2]
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     prompt = prompt.replace(", ", " .")
@@ -712,7 +713,7 @@ def countgd_counting(
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
-            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),
             score=round(bbox["score"], 2),
         )
         for bbox in bboxes_per_frame
@@ -757,6 +758,7 @@ def countgd_example_based_counting(
             {'score': 0.98, 'label': 'object', 'bounding_box': [0.44, 0.24, 0.49, 0.58},
         ]
     """
+    image_size = image.shape[:2]
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     visual_prompts = [
@@ -771,7 +773,7 @@ def countgd_example_based_counting(
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
-            bbox=list(map(lambda x: round(x, 2), bbox["bounding_box"])),
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),
             score=round(bbox["score"], 2),
         )
         for bbox in bboxes_per_frame
