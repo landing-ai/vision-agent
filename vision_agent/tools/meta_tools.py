@@ -1,3 +1,4 @@
+import base64
 import difflib
 import json
 import os
@@ -510,6 +511,19 @@ def write_media_artifact(
         return f"[Invalid media type {type(media)}]"
     artifacts[name] = media_bytes
     print(f"[Media {name} saved]")
+    display(
+        {
+            MimeType.APPLICATION_ARTIFACT: json.dumps(
+                {
+                    "name": name,
+                    "action": "create",
+                    "content": base64.b64encode(media_bytes).decode("utf-8"),
+                    "contentType": "media_output",
+                }
+            )
+        },
+        raw=True,
+    )
     return f"[Media {name} saved]"
 
 
