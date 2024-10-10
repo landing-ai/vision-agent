@@ -400,6 +400,8 @@ class AnthropicLMM(LMM):
             if "media" in msg:
                 for media_path in msg["media"]:
                     encoded_media = encode_media(media_path, resize=768)
+                    if encoded_media.startswith("data:image/png;base64,"):
+                        encoded_media = encoded_media[len("data:image/png;base64,") :]
                     content.append(
                         ImageBlockParam(
                             type="image",
@@ -447,6 +449,8 @@ class AnthropicLMM(LMM):
         if media:
             for m in media:
                 encoded_media = encode_media(m, resize=768)
+                if encoded_media.startswith("data:image/png;base64,"):
+                    encoded_media = encoded_media[len("data:image/png;base64,") :]
                 content.append(
                     ImageBlockParam(
                         type="image",
