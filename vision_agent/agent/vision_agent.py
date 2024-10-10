@@ -250,7 +250,7 @@ class VisionAgent(Agent):
             input = [{"role": "user", "content": input}]
             if media is not None:
                 input[0]["media"] = [media]
-        results, _ = self.chat_and_artifacts(input, artifacts)
+        results, _ = self.chat_with_artifacts(input, artifacts)
         return results[-1]["content"]  # type: ignore
 
     def chat(
