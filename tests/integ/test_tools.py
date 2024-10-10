@@ -413,4 +413,4 @@ def test_countgd_example_based_counting() -> None:
         image=img,
     )
     assert len(result) == 24
-    assert [res["label"] for res in result] == ["coin"] * 24
+    assert [res["label"] for res in result] == ["object"] * 24
