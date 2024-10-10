@@ -14,8 +14,8 @@ from vision_agent.agent.vision_agent_prompts import (
     VA_CODE,
 )
 from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
-from vision_agent.tools import META_TOOL_DOCSTRING
 from vision_agent.tools.meta_tools import (
+    META_TOOL_DOCSTRING,
     Artifacts,
     check_and_load_image,
     use_extra_vision_agent_args,
@@ -230,7 +230,7 @@ class VisionAgent(Agent):
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
         artifacts: Optional[Artifacts] = None,
-    ) -> List[Message]:
+    ) -> str:
         """Chat with VisionAgent and get the conversation response.
 
         Parameters:
@@ -247,10 +247,28 @@ class VisionAgent(Agent):
             input = [{"role": "user", "content": input}]
             if media is not None:
                 input[0]["media"] = [media]
-        results, _ = self.chat_with_code(input, artifacts)
-        return results
+        results, _ = self.chat_with_artifacts(input, artifacts)
+        return results[-1]["content"]  # type: ignore
 
-    def chat_with_code(
+    def chat(
+        self,
+        chat: List[Message],
+    ) -> List[Message]:
+        """Chat with VisionAgent, it will use code to execute actions to accomplish
+        its tasks.
+
+        Parameters:
+            chat (List[Message]): A conversation in the format of:
+                [{"role": "user", "content": "describe your task here..."}]
+                or if it contains media files, it should be in the format of:
+                [{"role": "user", "content": "describe your task here...", "media": ["image1.jpg", "image2.jpg"]}]
+
+        Returns:
+            List[Message]: The conversation response.
+        """
+        return self.chat_with_artifacts(chat)[0]
+
+    def chat_with_artifacts(
         self,
         chat: List[Message],
         artifacts: Optional[Artifacts] = None,

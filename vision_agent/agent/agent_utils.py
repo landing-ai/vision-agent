@@ -2,10 +2,17 @@ import json
 import logging
 import re
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+from rich.console import Console
+from rich.style import Style
+from rich.syntax import Syntax
+
+import vision_agent.tools as T
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
+_CONSOLE = Console()
 
 
 def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
@@ -41,10 +48,15 @@ def _strip_markdown_code(inp_str: str) -> str:
 
 def extract_json(json_str: str) -> Dict[str, Any]:
     json_str_mod = json_str.replace("\n", " ").strip()
-    json_str_mod = json_str_mod.replace("'", '"')
     json_str_mod = json_str_mod.replace(": True", ": true").replace(
         ": False", ": false"
     )
+
+    # sometimes the json is in single quotes
+    try:
+        return json.loads(json_str_mod.replace("'", '"'))  # type: ignore
+    except json.JSONDecodeError:
+        pass
 
     try:
         return json.loads(json_str_mod)  # type: ignore
@@ -83,3 +95,65 @@ def remove_installs_from_code(code: str) -> str:
     pattern = r"\n!pip install.*?(\n|\Z)\n"
     code = re.sub(pattern, "", code, flags=re.DOTALL)
     return code
+
+
+def format_memory(memory: List[Dict[str, str]]) -> str:
+    output_str = ""
+    for i, m in enumerate(memory):
+        output_str += f"### Feedback {i}:\n"
+        output_str += f"Code {i}:\n```python\n{m['code']}```\n\n"
+        output_str += f"Feedback {i}: {m['feedback']}\n\n"
+        if "edits" in m:
+            output_str += f"Edits {i}:\n{m['edits']}\n"
+        output_str += "\n"
+
+    return output_str
+
+
+def format_plans(plans: Dict[str, Any]) -> str:
+    plan_str = ""
+    for k, v in plans.items():
+        plan_str += "\n" + f"{k}: {v['thoughts']}\n"
+        plan_str += "    -" + "\n    -".join([e for e in v["instructions"]])
+
+    return plan_str
+
+
+class DefaultImports:
+    """Container for default imports used in the code execution."""
+
+    common_imports = [
+        "import os",
+        "import numpy as np",
+        "from vision_agent.tools import *",
+        "from typing import *",
+        "from pillow_heif import register_heif_opener",
+        "register_heif_opener()",
+    ]
+
+    @staticmethod
+    def to_code_string() -> str:
+        return "\n".join(DefaultImports.common_imports + T.__new_tools__)
+
+    @staticmethod
+    def prepend_imports(code: str) -> str:
+        """Run this method to prepend the default imports to the code.
+        NOTE: be sure to run this method after the custom tools have been registered.
+        """
+        return DefaultImports.to_code_string() + "\n\n" + code
+
+
+def print_code(title: str, code: str, test: Optional[str] = None) -> None:
+    _CONSOLE.print(title, style=Style(bgcolor="dark_orange3", bold=True))
+    _CONSOLE.print("=" * 30 + " Code " + "=" * 30)
+    _CONSOLE.print(
+        Syntax(
+            DefaultImports.prepend_imports(code),
+            "python",
+            theme="gruvbox-dark",
+            line_numbers=True,
+        )
+    )
+    if test:
+        _CONSOLE.print("=" * 30 + " Test " + "=" * 30)
+        _CONSOLE.print(Syntax(test, "python", theme="gruvbox-dark", line_numbers=True))
