@@ -38,8 +38,8 @@ from vision_agent.lmm import (
     OpenAILMM,
 )
 from vision_agent.tools.meta_tools import get_diff
-from vision_agent.utils import CodeInterpreterFactory, Execution
-from vision_agent.utils.execute import CodeInterpreter
+from vision_agent.utils import Execution
+from vision_agent.utils.execute import CodeInterpreter, LocalCodeInterpreter
 from vision_agent.utils.image_utils import b64_to_pil
 from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
 from vision_agent.utils.video import play_video
@@ -49,6 +49,7 @@ WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 _LOGGER = logging.getLogger(__name__)
 _MAX_TABULATE_COL_WIDTH = 80
 _CONSOLE = Console()
+_SESSION_TIMEOUT = 600  # 10 minutes
 
 
 class DefaultImports:
@@ -623,7 +624,7 @@ class VisionAgentCoder(Agent):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[CodeInterpreter] = None,
     ) -> None:
         """Initialize the Vision Agent Coder.
 
@@ -641,11 +642,10 @@ class VisionAgentCoder(Agent):
                 in a web application where multiple VisionAgentCoder instances are
                 running in parallel. This callback ensures that the progress are not
                 mixed up.
-            code_sandbox_runtime (Optional[str]): the code sandbox runtime to use. A
-                code sandbox is used to run the generated code. It can be one of the
-                following values: None, "local" or "e2b". If None, VisionAgentCoder
-                will read the value from the environment variable CODE_SANDBOX_RUNTIME.
-                If it's also None, the local python runtime environment will be used.
+            code_interpreter (Optional[CodeInterpreter]): the code interpreter to use. A
+                code interpreter is used to run the generated code. It can be one of the
+                following values: None, LocalCodeInterpreter or E2BCodeInterpreter.
+                If None, LocalCodeInterpreter, which is the local python runtime environment will be used.
         """
 
         self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
@@ -662,7 +662,11 @@ class VisionAgentCoder(Agent):
             else tool_recommender
         )
         self.report_progress_callback = report_progress_callback
-        self.code_sandbox_runtime = code_sandbox_runtime
+        self.code_interpreter = (
+            code_interpreter
+            if code_interpreter is not None
+            else LocalCodeInterpreter(timeout=_SESSION_TIMEOUT)
+        )
 
     def __call__(
         self,
@@ -723,9 +727,7 @@ class VisionAgentCoder(Agent):
             raise ValueError("Chat cannot be empty.")
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
-        with CodeInterpreterFactory.new_instance(
-            code_sandbox_runtime=self.code_sandbox_runtime
-        ) as code_interpreter:
+        with self.code_interpreter as code_interpreter:
             chat = copy.deepcopy(chat)
             media_list = []
             for chat_i in chat:
