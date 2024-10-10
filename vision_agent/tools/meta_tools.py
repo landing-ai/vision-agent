@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 from IPython.display import display
+from redbaron import RedBaron
 
 import vision_agent as va
 from vision_agent.agent.agent_utils import extract_json
@@ -491,7 +492,7 @@ def edit_vision_code(
     name: str,
     chat_history: List[str],
     media: List[str],
-    customized_tool_names: Optional[List[str]] = None,
+    custom_tool_names: Optional[List[str]] = None,
 ) -> str:
     """Edits python code to solve a vision based task.
 
@@ -499,7 +500,7 @@ def edit_vision_code(
         artifacts (Artifacts): The artifacts object to save the code to.
         name (str): The file path to the code.
         chat_history (List[str]): The chat history to used to generate the code.
-        customized_tool_names (Optional[List[str]]): Do not change this parameter.
+        custom_tool_names (Optional[List[str]]): Do not change this parameter.
 
     Returns:
         str: The edited code.
@@ -542,7 +543,7 @@ def edit_vision_code(
     response = agent.generate_code(
         fixed_chat_history,
         test_multi_plan=False,
-        custom_tool_names=customized_tool_names,
+        custom_tool_names=custom_tool_names,
     )
     redisplay_results(response["test_result"])
     code = response["code"]
@@ -705,7 +706,7 @@ def get_diff_with_prompts(name: str, before: str, after: str) -> str:
 def use_extra_vision_agent_args(
     code: str,
     test_multi_plan: bool = True,
-    customized_tool_names: Optional[List[str]] = None,
+    custom_tool_names: Optional[List[str]] = None,
 ) -> str:
     """This is for forcing arguments passed by the user to VisionAgent into the
     VisionAgentCoder call.
@@ -713,36 +714,24 @@ def use_extra_vision_agent_args(
     Parameters:
         code (str): The code to edit.
         test_multi_plan (bool): Do not change this parameter.
-        customized_tool_names (Optional[List[str]]): Do not change this parameter.
+        custom_tool_names (Optional[List[str]]): Do not change this parameter.
 
     Returns:
         str: The edited code.
     """
-    generate_pattern = r"generate_vision_code\(\s*([^\)]+)\s*\)"
+    red = RedBaron(code)
+    for node in red:
+        # seems to always be atomtrailers not call type
+        if node.type == "atomtrailers":
+            if (
+                node.name.value == "generate_vision_code"
+                or node.name.value == "edit_vision_code"
+            ):
+                node.value[1].value.append(f"test_multi_plan={test_multi_plan}")
 
-    def generate_replacer(match: re.Match) -> str:
-        arg = match.group(1)
-        out_str = f"generate_vision_code({arg}, test_multi_plan={test_multi_plan}"
-        if customized_tool_names is not None:
-            out_str += f", custom_tool_names={customized_tool_names})"
-        else:
-            out_str += ")"
-        return out_str
-
-    edit_pattern = r"edit_vision_code\(\s*([^\)]+)\s*\)"
-
-    def edit_replacer(match: re.Match) -> str:
-        arg = match.group(1)
-        out_str = f"edit_vision_code({arg}"
-        if customized_tool_names is not None:
-            out_str += f", custom_tool_names={customized_tool_names})"
-        else:
-            out_str += ")"
-        return out_str
-
-    new_code = re.sub(generate_pattern, generate_replacer, code)
-    new_code = re.sub(edit_pattern, edit_replacer, new_code)
-    return new_code
+                if custom_tool_names is not None:
+                    node.value[1].value.append(f"custom_tool_names={custom_tool_names}")
+    return red.dumps().strip()
 
 
 def use_object_detection_fine_tuning(

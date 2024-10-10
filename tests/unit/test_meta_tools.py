@@ -1,6 +1,7 @@
 from vision_agent.tools.meta_tools import (
     Artifacts,
     check_and_load_image,
+    use_extra_vision_agent_args,
     use_object_detection_fine_tuning,
 )
 
@@ -71,3 +72,37 @@ florence2_sam2_image("three", image3, "456")"""
     assert 'owl_v2_image("two", image2, "456")' in output
     assert 'florence2_sam2_image("three", image3, "456")' in output
     assert artifacts["code"] == expected_code2
+
+
+def test_use_object_detection_fine_tuning_real_case():
+    artifacts = Artifacts("test")
+    code = "florence2_phrase_grounding('(strange arg)', image1)"
+    expected_code = 'florence2_phrase_grounding("(strange arg)", image1, "123")'
+    artifacts["code"] = code
+    output = use_object_detection_fine_tuning(artifacts, "code", "123")
+    assert 'florence2_phrase_grounding("(strange arg)", image1, "123")' in output
+    assert artifacts["code"] == expected_code
+
+
+def test_use_extra_vision_agent_args_real_case():
+    code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
+    expected_code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True)"
+    out_code = use_extra_vision_agent_args(code)
+    assert out_code == expected_code
+
+    code = "edit_vision_code(artifacts, 'code.py', ['write code 1', 'write code 2'], ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
+    expected_code = "edit_vision_code(artifacts, 'code.py', ['write code 1', 'write code 2'], ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True)"
+    out_code = use_extra_vision_agent_args(code)
+    assert out_code == expected_code
+
+
+def test_use_extra_vision_args_with_custom_tools():
+    code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
+    expected_code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True, custom_tool_names=['tool1', 'tool2'])"
+    out_code = use_extra_vision_agent_args(code, custom_tool_names=["tool1", "tool2"])
+    assert out_code == expected_code
+
+    code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
+    expected_code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True, custom_tool_names=['tool1', 'tool2'])"
+    out_code = use_extra_vision_agent_args(code, custom_tool_names=["tool1", "tool2"])
+    assert out_code == expected_code
