@@ -13,8 +13,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import nbformat
 from dotenv import load_dotenv
-from e2b_code_interpreter import Execution as E2BExecution
-from e2b_code_interpreter import Result as E2BResult
 from nbclient import NotebookClient
 from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
@@ -200,23 +198,6 @@ class Result:
             formats.extend(iter(self.extra))
         return formats
 
-    @staticmethod
-    def from_e2b_result(result: E2BResult) -> "Result":
-        """
-        Creates a Result object from an E2BResult object.
-        """
-        data = {
-            MimeType.TEXT_PLAIN.value: result.text,
-            MimeType.IMAGE_PNG.value: result.png,
-            MimeType.APPLICATION_JSON.value: result.json,
-        }
-        for k, v in result.extra.items():
-            data[k] = v
-        return Result(
-            is_main_result=result.is_main_result,
-            data=data,
-        )
-
 
 class Logs(BaseModel):
     """Data printed to stdout and stderr during execution, usually by print statements,
@@ -355,26 +336,6 @@ class Execution(BaseModel):
                     _remove_escape_and_color_codes(line) for line in traceback_raw
                 ],
             )
-        )
-
-    @staticmethod
-    def from_e2b_execution(exec: E2BExecution) -> "Execution":
-        """Creates an Execution object from an E2BResult object."""
-        return Execution(
-            results=[Result.from_e2b_result(res) for res in exec.results],
-            logs=Logs(stdout=exec.logs.stdout, stderr=exec.logs.stderr),
-            error=(
-                Error(
-                    name=exec.error.name,
-                    value=_remove_escape_and_color_codes(exec.error.value),
-                    traceback_raw=[
-                        _remove_escape_and_color_codes(line)
-                        for line in exec.error.traceback.split("\n")
-                    ],
-                )
-                if exec.error
-                else None
-            ),
         )
 
 
