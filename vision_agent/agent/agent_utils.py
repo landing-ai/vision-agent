@@ -190,7 +190,7 @@ def print_code(title: str, code: str, test: Optional[str] = None) -> None:
     _CONSOLE.print("=" * 30 + " Code " + "=" * 30)
     _CONSOLE.print(
         Syntax(
-            DefaultImports.prepend_imports(code),
+            code,
             "python",
             theme="gruvbox-dark",
             line_numbers=True,
