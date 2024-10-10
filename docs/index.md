@@ -97,7 +97,7 @@ continuing, for example it may want to execute code and look at the output befor
 letting the user respond.
 
 ### Chatting and Artifacts
-If you run `chat_with_code` you will also notice an `Artifact` object. `Artifact`'s
+If you run `chat_with_artifacts` you will also notice an `Artifact` object. `Artifact`'s
 are a way to sync files between local and remote environments. The agent will read and
 write to the artifact object, which is just a pickle object, when it wants to save or
 load files.
@@ -114,7 +114,7 @@ with open("image.png", "rb") as f:
     artifacts["image.png"] = f.read()
 
 agent = va.agent.VisionAgent()
-response, artifacts = agent.chat_with_code(
+response, artifacts = agent.chat_with_artifacts(
     [
         {
             "role": "user",
@@ -294,11 +294,11 @@ mode by passing in the verbose argument:
 ```
 
 ### Detailed Usage
-You can also have it return more information by calling `chat_with_workflow`. The format
+You can also have it return more information by calling `generate_code`. The format
 of the input is a list of dictionaries with the keys `role`, `content`, and `media`:
 
 ```python
->>> results = agent.chat_with_workflow([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
+>>> results = agent.generate_code([{"role": "user", "content": "What percentage of the area of the jar is filled with coffee beans?", "media": ["jar.jpg"]}])
 >>> print(results)
 {
     "code": "from vision_agent.tools import ..."
@@ -327,7 +327,7 @@ conv = [
         "media": ["workers.png"],
     }
 ]
-result = agent.chat_with_workflow(conv)
+result = agent.generate_code(conv)
 code = result["code"]
 conv.append({"role": "assistant", "content": code})
 conv.append(
@@ -336,7 +336,7 @@ conv.append(
         "content": "Can you also return the number of workers wearing safety gear?",
     }
 )
-result = agent.chat_with_workflow(conv)
+result = agent.generate_code(conv)
 ```
 
 

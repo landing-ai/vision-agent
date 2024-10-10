@@ -269,9 +269,9 @@ class VisionAgent(Agent):
         Returns:
             List[Message]: The conversation response.
         """
-        return self.chat_and_artifacts(chat)[0]
+        return self.chat_with_artifacts(chat)[0]
 
-    def chat_and_artifacts(
+    def chat_with_artifacts(
         self,
         chat: List[Message],
         artifacts: Optional[Artifacts] = None,
