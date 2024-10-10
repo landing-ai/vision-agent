@@ -1,6 +1,6 @@
 import io
 import tempfile
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 from PIL import Image
@@ -18,6 +18,8 @@ from vision_agent.utils.image_utils import encode_image_bytes
 from vision_agent.utils.sim import Sim
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
+# build this here so we don't have to create it every call to `get_tool_for_task`
+TOOL_RECOMMENDER = Sim(df=T.TOOLS_DF, sim_key="desc")
 
 
 def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> str:
@@ -38,23 +40,53 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> str:
         image_bytes = buffer.getvalue()
         image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
         all_media_b64.append(image_b64)
-    return lmm.generate(prompt, media=all_media_b64)  # type: ignore
+    response = cast(str, lmm.generate(prompt, media=all_media_b64))  # type: ignore
+    image_sizes = [media.shape for media in medias]
+    response += (
+        " The original image sizes were "
+        + str(image_sizes)
+        + ", I have resized them to 768x768, if my resize is much smaller than the original image size I may have missed some details."
+    )
+    print(f'[claude35_vqa output]: "{response}"')
+    return response
+
+
+def extract_tool_info(
+    tool_choice_context: Dict[str, Any]
+) -> Tuple[Optional[Callable], str, str, str]:
+    error_message = ""
+    tool_docstring = "No tool was found."
+    tool_thoughts = ""
+    tool = None
+    if "tool" in tool_choice_context and tool_choice_context["tool"] in T.TOOLS_INFO:
+        tool_docstring = T.TOOLS_INFO[tool_choice_context["tool"]]
+        tool = TOOL_FUNCTIONS[tool_choice_context["tool"]]
+    else:
+        error_message = f"Was not able to locate the tool you suggested in the tools list.\n{str(tool_choice_context)}"
+
+    if "thoughts" in tool_choice_context:
+        tool_thoughts = tool_choice_context["thoughts"]
+    return tool, tool_thoughts, tool_docstring, error_message
 
 
 def get_tool_for_task(task: str, images: List[np.ndarray]) -> Optional[Callable]:
-    """Given a task and one or more images this function tests and finds tools to
-    accomplish that task. It will return thoughts on the tool choice and documentation
-    for the tool.
+    """Given a task and one or more images this function will find a tool to accomplish
+    the jobs. It returns the tool and prints the tool documentation and thoughts on why
+    it chose the tool. Do not use the return value of this function until it has run
+    and printed the tool documentation and thoughts.
+
+    Wait until the documentation is printed to use the function so
+    you know what the input and output signatures are.
 
     Parameters:
         task: str: The task to accomplish.
         images: List[np.ndarray]: The images to use for the task.
 
     Returns:
-        Optional[Callable]: The tool that can accomplish the task.
+        Optional[Callable]: The tool that can accomplish the task or None if it could
+            not find a tool.
     """
     lmm = AnthropicLMM()
-    tool_recommender = Sim(df=T.TOOLS_DF, sim_key="desc")
 
     with (
         tempfile.TemporaryDirectory() as tmpdirname,
@@ -66,31 +98,36 @@ def get_tool_for_task(task: str, images: List[np.ndarray]) -> Optional[Callable]
             Image.fromarray(image).save(image_path)
             image_paths.append(image_path)
 
-        tool_docs = tool_recommender.top_k(task, k=5, thresh=0.3)
+        tool_docs = TOOL_RECOMMENDER.top_k(task, k=5, thresh=0.3)
+        tool_docs_str = "\n".join([e["doc"] for e in tool_docs])
 
         prompt = TEST_TOOLS2.format(
-            tool_docs=tool_docs,
+            tool_docs=tool_docs_str,
             previous_attempts="",
             user_request=task,
             media=str(image_paths),
         )
 
-        count = 0
-        code = extract_code(lmm.generate(prompt, media=image_paths))  # type: ignore
+        response = lmm.generate(prompt, media=image_paths)
+        code = extract_code(response)  # type: ignore
         tool_output = code_interpreter.exec_isolation(
             DefaultImports.prepend_imports(code)
         )
         tool_output_str = tool_output.text(include_results=False).strip()
 
+        count = 1
         while (
             not tool_output.success
             or (len(tool_output.logs.stdout) == 0 and len(tool_output.logs.stderr) == 0)
-        ) and count < 3:
+        ) and count <= 3:
             if tool_output_str.strip() == "":
                 tool_output_str = "EMPTY"
             prompt = TEST_TOOLS2.format(
-                tool_docs=tool_docs,
-                previous_attempts=tool_output_str,
+                tool_docs=tool_docs_str,
+                previous_attempts="```python\n"
+                + code
+                + "```\nTOOL OUTPUT\n"
+                + tool_output_str,
                 user_request=task,
                 media=str(image_paths),
             )
@@ -100,22 +137,36 @@ def get_tool_for_task(task: str, images: List[np.ndarray]) -> Optional[Callable]
             )
             tool_output_str = tool_output.text(include_results=False).strip()
 
-    prompt = PICK_TOOL2.format(
-        user_request=task,
-        context="```python\n" + code + "\n```\n" + tool_output_str,
+        error_message = ""
+        prompt = PICK_TOOL2.format(
+            tool_docs=tool_docs_str,
+            user_request=task,
+            context="```python\n" + code + "\n```\n" + tool_output_str,
+            previous_attempts=error_message,
+        )
+
+        tool_choice_context = extract_json(lmm.generate(prompt, media=image_paths))  # type: ignore
+
+        tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
+            tool_choice_context
+        )
+
+        count = 1
+        while tool is None and count <= 3:
+            prompt = PICK_TOOL2.format(
+                tool_docs=tool_docs_str,
+                user_request=task,
+                context="```python\n" + code + "\n```\n" + tool_output_str,
+                previous_attempts=error_message,
+            )
+            tool_choice_context = extract_json(lmm.generate(prompt, media=image_paths))  # type: ignore
+            tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
+                tool_choice_context
+            )
+
+    print(
+        f"[get_tool_for_task output]: {tool_thoughts}\n\nTool Documentation:\n{tool_docstring}"
     )
-
-    tool_choice = extract_json(lmm.generate(prompt, media=image_paths))  # type: ignore
-    tool_thoughts = ""
-    tool_docstring = "No tool was found."
-    tool = None
-    if tool_choice in T.TOOLS_INFO:
-        tool_docstring = T.TOOLS_INFO[tool_choice]
-        tool = TOOL_FUNCTIONS[tool_choice]
-    if "thoughts" in tool_choice:
-        tool_thoughts = tool_choice["thoughts"]
-
-    print(f"{tool_thoughts}\nTool Documentation:\n{tool_docstring}")
     return tool
 
 
@@ -131,4 +182,5 @@ def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
     return finalized_plan
 
 
-PLANNER_DOCSTRING = T.get_tool_documentation([claude35_vqa, get_tool_for_task])
+PLANNER_TOOLS = [claude35_vqa, get_tool_for_task]
+PLANNER_DOCSTRING = T.get_tool_documentation(PLANNER_TOOLS)
