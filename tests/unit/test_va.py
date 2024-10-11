@@ -23,27 +23,23 @@ def test_parse_execution_no_test_multi_plan_edit():
     code = "<execute_python>edit_vision_code(artifacts, 'code.py', ['Generate code'], ['image.png'])</execute_python>"
     assert (
         parse_execution(code, False)
-        == "edit_vision_code(artifacts, 'code.py', ['Generate code'], ['image.png'])"
+        == "edit_vision_code(artifacts, 'code.py', ['Generate code'], ['image.png'], test_multi_plan=False)"
     )
 
 
 def test_parse_execution_custom_tool_names_generate():
     code = "<execute_python>generate_vision_code(artifacts, 'code.py', 'Generate code', ['image.png'])</execute_python>"
     assert (
-        parse_execution(
-            code, test_multi_plan=False, customed_tool_names=["owl_v2_image"]
-        )
+        parse_execution(code, test_multi_plan=False, custom_tool_names=["owl_v2_image"])
         == "generate_vision_code(artifacts, 'code.py', 'Generate code', ['image.png'], test_multi_plan=False, custom_tool_names=['owl_v2_image'])"
     )
 
 
-def test_prase_execution_custom_tool_names_edit():
+def test_parse_execution_custom_tool_names_edit():
     code = "<execute_python>edit_vision_code(artifacts, 'code.py', ['Generate code'], ['image.png'])</execute_python>"
     assert (
-        parse_execution(
-            code, test_multi_plan=False, customed_tool_names=["owl_v2_image"]
-        )
-        == "edit_vision_code(artifacts, 'code.py', ['Generate code'], ['image.png'], custom_tool_names=['owl_v2_image'])"
+        parse_execution(code, test_multi_plan=False, custom_tool_names=["owl_v2_image"])
+        == "edit_vision_code(artifacts, 'code.py', ['Generate code'], ['image.png'], test_multi_plan=False, custom_tool_names=['owl_v2_image'])"
     )
 
 

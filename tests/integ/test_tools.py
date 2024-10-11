@@ -6,6 +6,8 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
+    countgd_counting,
+    countgd_example_based_counting,
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
@@ -32,8 +34,6 @@ from vision_agent.tools import (
     template_match,
     vit_image_classification,
     vit_nsfw_classification,
-    countgd_counting,
-    countgd_example_based_counting,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
