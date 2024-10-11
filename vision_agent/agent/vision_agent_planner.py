@@ -318,7 +318,7 @@ class VisionAgentPlanner(Agent):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         self.planner = AnthropicLMM(temperature=0.0) if planner is None else planner
         self.verbosity = verbosity
@@ -331,7 +331,7 @@ class VisionAgentPlanner(Agent):
             else tool_recommender
         )
         self.report_progress_callback = report_progress_callback
-        self.code_sandbox_runtime = code_sandbox_runtime
+        self.code_interpreter = code_interpreter
 
     def __call__(
         self, input: Union[str, List[Message]], media: Optional[Union[str, Path]] = None
@@ -353,13 +353,17 @@ class VisionAgentPlanner(Agent):
         if not chat:
             raise ValueError("Chat cannot be empty")
 
-        with (
+        code_interpreter = (
             code_interpreter
             if code_interpreter is not None
-            else CodeInterpreterFactory.new_instance(
-                code_sandbox_runtime=self.code_sandbox_runtime
+            else (
+                self.code_interpreter
+                if not isinstance(self.code_interpreter, str)
+                else CodeInterpreterFactory.new_instance(self.code_interpreter)
             )
-        ) as code_interpreter:
+        )
+        code_interpreter = cast(CodeInterpreter, code_interpreter)
+        with code_interpreter:
             chat = copy.deepcopy(chat)
             media_list = []
             for chat_i in chat:
@@ -464,14 +468,14 @@ class AnthropicVisionAgentPlanner(VisionAgentPlanner):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
             planner=AnthropicLMM(temperature=0.0) if planner is None else planner,
             tool_recommender=tool_recommender,
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
-            code_sandbox_runtime=code_sandbox_runtime,
+            code_interpreter=code_interpreter,
         )
 
 
@@ -482,7 +486,7 @@ class OpenAIVisionAgentPlanner(VisionAgentPlanner):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
             planner=(
@@ -493,7 +497,7 @@ class OpenAIVisionAgentPlanner(VisionAgentPlanner):
             tool_recommender=tool_recommender,
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
-            code_sandbox_runtime=code_sandbox_runtime,
+            code_interpreter=code_interpreter,
         )
 
 
@@ -504,7 +508,7 @@ class OllamaVisionAgentPlanner(VisionAgentPlanner):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
             planner=(
@@ -519,7 +523,7 @@ class OllamaVisionAgentPlanner(VisionAgentPlanner):
             ),
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
-            code_sandbox_runtime=code_sandbox_runtime,
+            code_interpreter=code_interpreter,
         )
 
 
@@ -530,7 +534,7 @@ class AzureVisionAgentPlanner(VisionAgentPlanner):
         tool_recommender: Optional[Sim] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
             planner=(
@@ -545,5 +549,5 @@ class AzureVisionAgentPlanner(VisionAgentPlanner):
             ),
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
-            code_sandbox_runtime=code_sandbox_runtime,
+            code_interpreter=code_interpreter,
         )

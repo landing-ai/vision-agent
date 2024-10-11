@@ -337,7 +337,7 @@ class VisionAgentCoder(Agent):
         debugger: Optional[LMM] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the Vision Agent Coder.
 
@@ -355,11 +355,10 @@ class VisionAgentCoder(Agent):
                 in a web application where multiple VisionAgentCoder instances are
                 running in parallel. This callback ensures that the progress are not
                 mixed up.
-            code_sandbox_runtime (Optional[str]): the code sandbox runtime to use. A
-                code sandbox is used to run the generated code. It can be one of the
-                following values: None, "local" or "e2b". If None, VisionAgentCoder
-                will read the value from the environment variable CODE_SANDBOX_RUNTIME.
-                If it's also None, the local python runtime environment will be used.
+            code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
+                it can be one of: None, "local" or "e2b". If None, it will read from
+                the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
+                object is provided it will use that.
         """
 
         self.planner = (
@@ -375,7 +374,7 @@ class VisionAgentCoder(Agent):
             _LOGGER.setLevel(logging.INFO)
 
         self.report_progress_callback = report_progress_callback
-        self.code_sandbox_runtime = code_sandbox_runtime
+        self.code_interpreter = code_interpreter
 
     def __call__(
         self,
@@ -441,13 +440,15 @@ class VisionAgentCoder(Agent):
             raise ValueError("Chat cannot be empty.")
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
-        with (
-            code_interpreter
-            if code_interpreter is not None
+        code_interpreter = (
+            self.code_interpreter
+            if self.code_interpreter is not None
+            and not isinstance(self.code_interpreter, str)
             else CodeInterpreterFactory.new_instance(
-                code_sandbox_runtime=self.code_sandbox_runtime
+                code_sandbox_runtime=self.code_interpreter,
             )
-        ) as code_interpreter:
+        )
+        with code_interpreter:
             chat = copy.deepcopy(chat)
             media_list = []
             for chat_i in chat:
@@ -556,9 +557,16 @@ class VisionAgentCoder(Agent):
         if not chat:
             raise ValueError("Chat cannot be empty.")
 
-        with CodeInterpreterFactory.new_instance(
-            code_sandbox_runtime=self.code_sandbox_runtime
-        ) as code_interpreter:
+        # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
+        code_interpreter = (
+            self.code_interpreter
+            if self.code_interpreter is not None
+            and not isinstance(self.code_interpreter, str)
+            else CodeInterpreterFactory.new_instance(
+                code_sandbox_runtime=self.code_interpreter,
+            )
+        )
+        with code_interpreter:
             plan_context = self.planner.generate_plan(  # type: ignore
                 chat,
                 test_multi_plan=test_multi_plan,
@@ -595,7 +603,7 @@ class OpenAIVisionAgentCoder(VisionAgentCoder):
         debugger: Optional[LMM] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         self.planner = (
             OpenAIVisionAgentPlanner(verbosity=verbosity)
@@ -610,7 +618,7 @@ class OpenAIVisionAgentCoder(VisionAgentCoder):
             _LOGGER.setLevel(logging.INFO)
 
         self.report_progress_callback = report_progress_callback
-        self.code_sandbox_runtime = code_sandbox_runtime
+        self.code_interpreter = code_interpreter
 
 
 class AnthropicVisionAgentCoder(VisionAgentCoder):
@@ -624,7 +632,7 @@ class AnthropicVisionAgentCoder(VisionAgentCoder):
         debugger: Optional[LMM] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_sandbox_runtime: Optional[str] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         # NOTE: Claude doesn't have an official JSON mode
         self.planner = (
@@ -640,7 +648,7 @@ class AnthropicVisionAgentCoder(VisionAgentCoder):
             _LOGGER.setLevel(logging.INFO)
 
         self.report_progress_callback = report_progress_callback
-        self.code_sandbox_runtime = code_sandbox_runtime
+        self.code_interpreter = code_interpreter
 
 
 class OllamaVisionAgentCoder(VisionAgentCoder):
@@ -668,6 +676,7 @@ class OllamaVisionAgentCoder(VisionAgentCoder):
         debugger: Optional[LMM] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
             planner=(
@@ -692,6 +701,7 @@ class OllamaVisionAgentCoder(VisionAgentCoder):
             ),
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
+            code_interpreter=code_interpreter,
         )
 
 
@@ -717,6 +727,7 @@ class AzureVisionAgentCoder(VisionAgentCoder):
         debugger: Optional[LMM] = None,
         verbosity: int = 0,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the Vision Agent Coder.
 
@@ -747,4 +758,5 @@ class AzureVisionAgentCoder(VisionAgentCoder):
             ),
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
+            code_interpreter=code_interpreter,
         )

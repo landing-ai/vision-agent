@@ -195,9 +195,8 @@ class VisionAgent(Agent):
         agent: Optional[LMM] = None,
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
-        code_sandbox_runtime: Optional[str] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_interpreter: Optional[CodeInterpreter] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the VisionAgent.
 
@@ -207,14 +206,17 @@ class VisionAgent(Agent):
             verbosity (int): The verbosity level of the agent.
             local_artifacts_path (Optional[Union[str, Path]]): The path to the local
                 artifacts file.
-            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
-            code_interpreter (Optional[CodeInterpreter]): if not None, use this CodeInterpreter
+            callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
+                function to send intermediate update messages.
+            code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
+                it can be one of: None, "local" or "e2b". If None, it will read from
+                the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
+                object is provided it will use that.
         """
 
         self.agent = AnthropicLMM(temperature=0.0) if agent is None else agent
         self.max_iterations = 12
         self.verbosity = verbosity
-        self.code_sandbox_runtime = code_sandbox_runtime
         self.code_interpreter = code_interpreter
         self.callback_message = callback_message
         if self.verbosity >= 1:
@@ -305,11 +307,13 @@ class VisionAgent(Agent):
             # this is setting remote artifacts path
             artifacts = Artifacts(WORKSPACE / "artifacts.pkl")
 
+        # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         code_interpreter = (
             self.code_interpreter
             if self.code_interpreter is not None
+            and not isinstance(self.code_interpreter, str)
             else CodeInterpreterFactory.new_instance(
-                code_sandbox_runtime=self.code_sandbox_runtime,
+                code_sandbox_runtime=self.code_interpreter,
             )
         )
         with code_interpreter:
@@ -498,8 +502,8 @@ class OpenAIVisionAgent(VisionAgent):
         agent: Optional[LMM] = None,
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
-        code_sandbox_runtime: Optional[str] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the VisionAgent using OpenAI LMMs.
 
@@ -509,7 +513,12 @@ class OpenAIVisionAgent(VisionAgent):
             verbosity (int): The verbosity level of the agent.
             local_artifacts_path (Optional[Union[str, Path]]): The path to the local
                 artifacts file.
-            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+            callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
+                function to send intermediate update messages.
+            code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
+                it can be one of: None, "local" or "e2b". If None, it will read from
+                the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
+                object is provided it will use that.
         """
 
         agent = OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
@@ -517,8 +526,8 @@ class OpenAIVisionAgent(VisionAgent):
             agent,
             verbosity,
             local_artifacts_path,
-            code_sandbox_runtime,
             callback_message,
+            code_interpreter,
         )
 
 
@@ -528,8 +537,8 @@ class AnthropicVisionAgent(VisionAgent):
         agent: Optional[LMM] = None,
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
-        code_sandbox_runtime: Optional[str] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
+        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the VisionAgent using Anthropic LMMs.
 
@@ -539,7 +548,12 @@ class AnthropicVisionAgent(VisionAgent):
             verbosity (int): The verbosity level of the agent.
             local_artifacts_path (Optional[Union[str, Path]]): The path to the local
                 artifacts file.
-            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use.
+            callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
+                function to send intermediate update messages.
+            code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
+                it can be one of: None, "local" or "e2b". If None, it will read from
+                the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
+                object is provided it will use that.
         """
 
         agent = AnthropicLMM(temperature=0.0) if agent is None else agent
@@ -547,6 +561,6 @@ class AnthropicVisionAgent(VisionAgent):
             agent,
             verbosity,
             local_artifacts_path,
-            code_sandbox_runtime,
             callback_message,
+            code_interpreter,
         )
