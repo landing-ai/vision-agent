@@ -92,6 +92,27 @@ def extract_code(code: str) -> str:
     return code
 
 
+def extract_tag(
+    content: str,
+    tag: str,
+) -> Optional[str]:
+    inner_content = None
+    remaning = content
+    all_inner_content = []
+
+    while f"<{tag}>" in remaning:
+        inner_content_i = remaning[remaning.find(f"<{tag}>") + len(f"<{tag}>") :]
+        if f"</{tag}>" not in inner_content_i:
+            break
+        inner_content_i = inner_content_i[: inner_content_i.find(f"</{tag}>")]
+        remaning = remaning[remaning.find(f"</{tag}>") + len(f"</{tag}>") :]
+        all_inner_content.append(inner_content_i)
+
+    if len(all_inner_content) > 0:
+        inner_content = "\n".join(all_inner_content)
+    return inner_content
+
+
 def remove_installs_from_code(code: str) -> str:
     pattern = r"\n!pip install.*?(\n|\Z)\n"
     code = re.sub(pattern, "", code, flags=re.DOTALL)

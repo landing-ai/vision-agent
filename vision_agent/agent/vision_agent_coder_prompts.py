@@ -238,35 +238,29 @@ This is the documentation for the functions you have access to. You may call any
 {docstring}
 
 **Instructions**:
-Please re-complete the code to fix the error message. Here is the previous version:
-```python
+Please re-complete the code to fix the error message. Here is the current version of the CODE:
+<code>
 {code}
-```
+</code>
 
-When we run this test code:
-```python
+When we run the TEST code:
+<test>
 {tests}
-```
+</test>
 
 It raises this error:
-```
+<error>
 {result}
-```
+</error>
 
 This is previous feedback provided on the code:
 {feedback}
 
-Please fix the bug by correcting the error. Return the following JSON object followed by the fixed code in the below format:
-```json
-{{
-    "reflections": str # any thoughts you have about the bug and how you fixed it
-    "which_code": str # the code that was fixed, can only be 'code' or 'test'
-}}
-```
+Please fix the bug by correcting the error. Return thoughts you have about the bug and how you fixed in <thoughts> tags followed by the fixed CODE in <code> tags and the fixed TEST in <test> tags. For example:
 
-```python
-# Your fixed code here
-```
+<thoughts>Your thoughts here...</thoughts>
+<code># your fixed code here</code>
+<test># your fixed test here</test>
 """
 
 

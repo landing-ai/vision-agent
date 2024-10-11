@@ -15,6 +15,7 @@ from vision_agent.agent.agent_utils import (
     DefaultImports,
     extract_code,
     extract_json,
+    extract_tag,
     format_memory,
     print_code,
     remove_installs_from_code,
@@ -260,7 +261,9 @@ def debug_code(
         }
     )
 
-    fixed_code_and_test = {"code": "", "test": "", "reflections": ""}
+    fixed_code = None
+    fixed_test = None
+    thoughts = ""
     success = False
     count = 0
     while not success and count < 3:
@@ -283,21 +286,16 @@ def debug_code(
                 stream=False,
             )
             fixed_code_and_test_str = cast(str, fixed_code_and_test_str)
-            fixed_code_and_test = extract_json(fixed_code_and_test_str)
-            code = extract_code(fixed_code_and_test_str)
-            if (
-                "which_code" in fixed_code_and_test
-                and fixed_code_and_test["which_code"] == "test"
-            ):
-                fixed_code_and_test["code"] = ""
-                fixed_code_and_test["test"] = code
-            else:  # for everything else always assume it's updating code
-                fixed_code_and_test["code"] = strip_function_calls(code)
-                fixed_code_and_test["test"] = ""
-            if "which_code" in fixed_code_and_test:
-                del fixed_code_and_test["which_code"]
+            thoughts = extract_tag(fixed_code_and_test_str, "thoughts")
+            thoughts = thoughts if thoughts is not None else ""
+            fixed_code = extract_tag(fixed_code_and_test_str, "code")
+            fixed_test = extract_tag(fixed_code_and_test_str, "test")
 
-            success = True
+            if fixed_code is None and fixed_test is None:
+                success = False
+            else:
+                success = True
+
         except Exception as e:
             _LOGGER.exception(f"Error while extracting JSON: {e}")
 
@@ -306,15 +304,15 @@ def debug_code(
     old_code = code
     old_test = test
 
-    if fixed_code_and_test["code"].strip() != "":
-        code = fixed_code_and_test["code"]
-    if fixed_code_and_test["test"].strip() != "":
-        test = fixed_code_and_test["test"]
+    if fixed_code is not None and fixed_code.strip() != "":
+        code = fixed_code
+    if fixed_test is not None and fixed_test.strip() != "":
+        test = fixed_test
 
     new_working_memory.append(
         {
             "code": f"{code}\n{test}",
-            "feedback": fixed_code_and_test["reflections"],
+            "feedback": cast(str, thoughts),
             "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
         }
     )
@@ -350,7 +348,7 @@ def debug_code(
     if verbosity == 2:
         print_code("Code and test after attempted fix:", code, test)
         _LOGGER.info(
-            f"Reflection: {fixed_code_and_test['reflections']}\nCode execution result after attempted fix: {result.text(include_logs=True)}"
+            f"Reflection: {thoughts}\nCode execution result after attempted fix: {result.text(include_logs=True)}"
         )
 
     return code, test, result
