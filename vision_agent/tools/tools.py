@@ -1923,7 +1923,7 @@ def overlay_bounding_boxes(
         bboxes = bbox_int[i]
         bboxes = sorted(bboxes, key=lambda x: x["label"], reverse=True)
 
-        if len(bboxes) > 20:
+        if len(bboxes) > 40:
             pil_image = _plot_counting(pil_image, bboxes, color)
         else:
             width, height = pil_image.size
@@ -2117,7 +2117,7 @@ def _plot_counting(
     colors: Dict[str, Tuple[int, int, int]],
 ) -> Image.Image:
     width, height = image.size
-    fontsize = max(10, int(min(width, height) / 80))
+    fontsize = max(12, int(min(width, height) / 40))
     draw = ImageDraw.Draw(image)
     font = ImageFont.truetype(
         str(resources.files("vision_agent.fonts").joinpath("default_font_ch_en.ttf")),
