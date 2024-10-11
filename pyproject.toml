@@ -8,14 +8,14 @@ version = "0.2.160"
 description = "Toolset for Vision Agent"
 authors = ["Landing AI <dev@landing.ai>"]
 readme = "README.md"
-packages = [{ include = "vision_agent" }]
+packages = [{include = "vision_agent"}]
 
 [tool.poetry.urls]
 "Homepage" = "https://landing.ai"
 "repository" = "https://github.com/landing-ai/vision-agent"
 "documentation" = "https://github.com/landing-ai/vision-agent"
 
-[tool.poetry.dependencies] # main dependency group
+[tool.poetry.dependencies]  # main dependency group
 python = ">=3.9,<4.0"
 
 numpy = ">=1.21.0,<2.0.0"
@@ -35,6 +35,8 @@ nbformat = "^5.10.4"
 rich = "^13.7.1"
 langsmith = "^0.1.58"
 ipykernel = "^6.29.4"
+e2b = "^0.17.2a50"
+e2b-code-interpreter = "0.0.11a37"
 tenacity = "^8.3.0"
 pillow-heif = "^0.16.0"
 pytube = "15.0.0"
@@ -56,7 +58,7 @@ types-tqdm = "^4.65.0.1"
 setuptools = "^68.0.0"
 griffe = "^0.45.3"
 mkdocs = "^1.5.3"
-mkdocstrings = { extras = ["python"], version = "^0.23.0" }
+mkdocstrings = {extras = ["python"], version = "^0.23.0"}
 mkdocs-material = "^9.4.2"
 types-tabulate = "^0.9.0.20240106"
 scikit-image = "<0.23.1"
@@ -70,7 +72,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.black]
 exclude = '.vscode|.eggs|venv'
-line-length = 88               # suggested by black official site
+line-length = 88  # suggested by black official site
 
 [tool.isort]
 line_length = 88
@@ -96,4 +98,10 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
-module = ["cv2.*", "openai.*", "sentence_transformers.*"]
+module = [
+    "cv2.*",
+    "openai.*",
+    "sentence_transformers.*",
+    "e2b_code_interpreter.*",
+    "e2b.*"
+]
