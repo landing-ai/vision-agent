@@ -20,6 +20,7 @@ from vision_agent.tools.meta_tools import (
     check_and_load_image,
     use_extra_vision_agent_args,
 )
+from vision_agent.utils import CodeInterpreterFactory
 from vision_agent.utils.execute import CodeInterpreter, LocalCodeInterpreter, Execution
 
 logging.basicConfig(level=logging.INFO)
