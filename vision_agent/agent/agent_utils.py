@@ -13,6 +13,7 @@ import vision_agent.tools as T
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _CONSOLE = Console()
+_MAX_TABULATE_COL_WIDTH = 80
 
 
 def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:

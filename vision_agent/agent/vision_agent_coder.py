@@ -11,6 +11,7 @@ from tabulate import tabulate
 import vision_agent.tools as T
 from vision_agent.agent.agent import Agent
 from vision_agent.agent.agent_utils import (
+    _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
     extract_code,
     extract_json,
@@ -46,7 +47,6 @@ from vision_agent.utils.execute import CodeInterpreter
 logging.basicConfig(stream=sys.stdout)
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 _LOGGER = logging.getLogger(__name__)
-_MAX_TABULATE_COL_WIDTH = 80
 
 
 def strip_function_calls(code: str, exclusions: Optional[List[str]] = None) -> str:

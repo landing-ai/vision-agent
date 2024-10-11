@@ -5,10 +5,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from pydantic import BaseModel
+from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
+    _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
     extract_code,
     extract_json,
@@ -91,6 +93,18 @@ def retrieve_tools(
     return tool_lists_unique
 
 
+def _check_plan_format(plan: Dict[str, Any]) -> bool:
+    if not isinstance(plan, dict):
+        return False
+
+    for k in plan:
+        if "thoughts" not in plan[k] or "instructions" not in plan[k]:
+            return False
+        if not isinstance(plan[k]["instructions"], list):
+            return False
+    return True
+
+
 def write_plans(
     chat: List[Message], tool_desc: str, working_memory: str, model: LMM
 ) -> Dict[str, Any]:
@@ -106,7 +120,16 @@ def write_plans(
         feedback=working_memory,
     )
     chat[-1]["content"] = prompt
-    return extract_json(model(chat, stream=False))  # type: ignore
+    plans = extract_json(model(chat, stream=False))  # type: ignore
+
+    count = 0
+    while not _check_plan_format(plans) and count < 3:
+        _LOGGER.info(f"Invalid plan format. Retrying.")
+        plans = extract_json(model(chat, stream=False))  # type: ignore
+        count += 1
+        if count == 3:
+            raise ValueError("Failed to generate valid plans after 3 attempts.")
+    return plans
 
 
 def write_and_exec_plan_tests(
@@ -404,6 +427,14 @@ class VisionAgentPlanner(Agent):
                 format_memory(working_memory),
                 self.planner,
             )
+            if self.verbosity >= 1:
+                for plan in plans:
+                    plan_fixed = [
+                        {"instructions": e} for e in plans[plan]["instructions"]
+                    ]
+                    _LOGGER.info(
+                        f"\n{tabulate(tabular_data=plan_fixed, headers='keys', tablefmt='mixed_grid', maxcolwidths=_MAX_TABULATE_COL_WIDTH)}"
+                    )
 
             tool_docs = retrieve_tools(
                 plans,
