@@ -14,7 +14,6 @@ from vision_agent.agent.agent_utils import (
     _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
     extract_code,
-    extract_json,
     extract_tag,
     format_memory,
     print_code,
@@ -85,7 +84,7 @@ def strip_function_calls(code: str, exclusions: Optional[List[str]] = None) -> s
     for node in nodes_to_remove:
         node.parent.remove(node)
     cleaned_code = red.dumps().strip()
-    return cleaned_code
+    return cleaned_code if isinstance(cleaned_code, str) else code
 
 
 def write_code(
@@ -286,8 +285,8 @@ def debug_code(
                 stream=False,
             )
             fixed_code_and_test_str = cast(str, fixed_code_and_test_str)
-            thoughts = extract_tag(fixed_code_and_test_str, "thoughts")
-            thoughts = thoughts if thoughts is not None else ""
+            thoughts_tag = extract_tag(fixed_code_and_test_str, "thoughts")
+            thoughts = thoughts_tag if thoughts_tag is not None else ""
             fixed_code = extract_tag(fixed_code_and_test_str, "code")
             fixed_test = extract_tag(fixed_code_and_test_str, "test")
 
@@ -312,7 +311,7 @@ def debug_code(
     new_working_memory.append(
         {
             "code": f"{code}\n{test}",
-            "feedback": cast(str, thoughts),
+            "feedback": thoughts,
             "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
         }
     )

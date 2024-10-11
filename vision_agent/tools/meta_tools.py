@@ -731,7 +731,8 @@ def use_extra_vision_agent_args(
 
                 if custom_tool_names is not None:
                     node.value[1].value.append(f"custom_tool_names={custom_tool_names}")
-    return red.dumps().strip()
+    cleaned_code = red.dumps().strip()
+    return cleaned_code if isinstance(cleaned_code, str) else code
 
 
 def use_object_detection_fine_tuning(

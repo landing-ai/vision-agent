@@ -124,7 +124,7 @@ def write_plans(
 
     count = 0
     while not _check_plan_format(plans) and count < 3:
-        _LOGGER.info(f"Invalid plan format. Retrying.")
+        _LOGGER.info("Invalid plan format. Retrying.")
         plans = extract_json(model(chat, stream=False))  # type: ignore
         count += 1
         if count == 3:
