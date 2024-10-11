@@ -71,9 +71,7 @@ def check_helmets(image_path):
 
 # The function can be called with the image path
 result = check_helmets("/home/user/edQPXGK_workers.png")"""
-    expected_code = """
-Edit
-import os
+    expected_code = """import os
 import numpy as np
 from vision_agent.tools import *
 from typing import *
