@@ -5,14 +5,16 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
+from redbaron import RedBaron  # type: ignore
 from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent.agent import Agent
 from vision_agent.agent.agent_utils import (
+    _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
     extract_code,
-    extract_json,
+    extract_tag,
     format_memory,
     print_code,
     remove_installs_from_code,
@@ -45,7 +47,44 @@ from vision_agent.utils.execute import CodeInterpreter
 logging.basicConfig(stream=sys.stdout)
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 _LOGGER = logging.getLogger(__name__)
-_MAX_TABULATE_COL_WIDTH = 80
+
+
+def strip_function_calls(code: str, exclusions: Optional[List[str]] = None) -> str:
+    """This will strip out all code that calls functions except for functions included
+    in exclusions.
+    """
+    if exclusions is None:
+        exclusions = []
+
+    red = RedBaron(code)
+    nodes_to_remove = []
+    for node in red:
+        if node.type == "def":
+            continue
+        elif node.type == "import" or node.type == "from_import":
+            continue
+        elif node.type == "call":
+            if node.value and node.value[0].value in exclusions:
+                continue
+            nodes_to_remove.append(node)
+        elif node.type == "atomtrailers":
+            if node[0].value in exclusions:
+                continue
+            nodes_to_remove.append(node)
+        elif node.type == "assignment":
+            if node.value.type == "call" or node.value.type == "atomtrailers":
+                func_name = node.value[0].value
+                if func_name in exclusions:
+                    continue
+                nodes_to_remove.append(node)
+        elif node.type == "endl":
+            continue
+        else:
+            nodes_to_remove.append(node)
+    for node in nodes_to_remove:
+        node.parent.remove(node)
+    cleaned_code = red.dumps().strip()
+    return cleaned_code if isinstance(cleaned_code, str) else code
 
 
 def write_code(
@@ -130,6 +169,7 @@ def write_and_test_code(
         plan_thoughts,
         format_memory(working_memory),
     )
+    code = strip_function_calls(code)
     test = write_test(
         tester, chat, tool_utils, code, format_memory(working_memory), media
     )
@@ -220,7 +260,9 @@ def debug_code(
         }
     )
 
-    fixed_code_and_test = {"code": "", "test": "", "reflections": ""}
+    fixed_code = None
+    fixed_test = None
+    thoughts = ""
     success = False
     count = 0
     while not success and count < 3:
@@ -243,21 +285,16 @@ def debug_code(
                 stream=False,
             )
             fixed_code_and_test_str = cast(str, fixed_code_and_test_str)
-            fixed_code_and_test = extract_json(fixed_code_and_test_str)
-            code = extract_code(fixed_code_and_test_str)
-            if (
-                "which_code" in fixed_code_and_test
-                and fixed_code_and_test["which_code"] == "test"
-            ):
-                fixed_code_and_test["code"] = ""
-                fixed_code_and_test["test"] = code
-            else:  # for everything else always assume it's updating code
-                fixed_code_and_test["code"] = code
-                fixed_code_and_test["test"] = ""
-            if "which_code" in fixed_code_and_test:
-                del fixed_code_and_test["which_code"]
+            thoughts_tag = extract_tag(fixed_code_and_test_str, "thoughts")
+            thoughts = thoughts_tag if thoughts_tag is not None else ""
+            fixed_code = extract_tag(fixed_code_and_test_str, "code")
+            fixed_test = extract_tag(fixed_code_and_test_str, "test")
 
-            success = True
+            if fixed_code is None and fixed_test is None:
+                success = False
+            else:
+                success = True
+
         except Exception as e:
             _LOGGER.exception(f"Error while extracting JSON: {e}")
 
@@ -266,15 +303,15 @@ def debug_code(
     old_code = code
     old_test = test
 
-    if fixed_code_and_test["code"].strip() != "":
-        code = fixed_code_and_test["code"]
-    if fixed_code_and_test["test"].strip() != "":
-        test = fixed_code_and_test["test"]
+    if fixed_code is not None and fixed_code.strip() != "":
+        code = fixed_code
+    if fixed_test is not None and fixed_test.strip() != "":
+        test = fixed_test
 
     new_working_memory.append(
         {
             "code": f"{code}\n{test}",
-            "feedback": fixed_code_and_test["reflections"],
+            "feedback": thoughts,
             "edits": get_diff(f"{old_code}\n{old_test}", f"{code}\n{test}"),
         }
     )
@@ -310,7 +347,7 @@ def debug_code(
     if verbosity == 2:
         print_code("Code and test after attempted fix:", code, test)
         _LOGGER.info(
-            f"Reflection: {fixed_code_and_test['reflections']}\nCode execution result after attempted fix: {result.text(include_logs=True)}"
+            f"Reflection: {thoughts}\nCode execution result after attempted fix: {result.text(include_logs=True)}"
         )
 
     return code, test, result
@@ -514,7 +551,6 @@ class VisionAgentCoder(Agent):
             code = remove_installs_from_code(cast(str, results["code"]))
             test = remove_installs_from_code(cast(str, results["test"]))
             working_memory.extend(results["working_memory"])
-
             execution_result = cast(Execution, results["test_result"])
 
             return {
