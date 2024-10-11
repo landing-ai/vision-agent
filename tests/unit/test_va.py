@@ -1,4 +1,12 @@
-from vision_agent.agent.vision_agent import parse_execution
+from vision_agent.agent.agent_utils import extract_tag
+from vision_agent.tools.meta_tools import use_extra_vision_agent_args
+
+
+def parse_execution(code, test_multi_plan=True, custom_tool_names=None):
+    code = extract_tag(code, "execute_python")
+    if not code:
+        return None
+    return use_extra_vision_agent_args(code, test_multi_plan, custom_tool_names)
 
 
 def test_parse_execution_zero():

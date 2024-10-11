@@ -27,13 +27,14 @@ Here is the current conversation so far:
 **Instructions**:
 1. **Understand and Clarify**: Make sure you understand the task, ask clarifying questions if the task is not clear.
 2. **Code Generation**: Only use code provided in the Documentation in your <execute_python> tags. Only use `edit_vision_code` to modify code written by `generate_vision_code`.
-3. **Execute**: Do only what the user asked you to do and no more. If you need to ask the user a question, set `let_user_respond` to `true`.
+3. **Execute**: Do only what the user asked you to do and no more. If you need to ask the user a question or show your results to the user, set <let_user_respond> to `true`.
 4. **Response**: Keep your responses short and concise. Provide the user only with the information they need to continue the conversation.
-5. **Output in JSON**: Respond in the following format in JSON:
+5. **Output**: You can only respond with <thinking>, <response>, <execute_python>, and <let_user_respond> tags.
 
-```json
-{{"thoughts": <your thoughts>, "response": <your response to the user>, "let_user_respond": <a boolean whether or not to let the user respond>}}.
-```
+<thinking>Your thoughts here...</thinking>
+<response>Your response to the user here...</response>
+<execute_python>Your code here...</execute_python>
+<let_user_respond>true/false for whether or not to you want to let the user respond.</let_user_respond>
 """
 
 
@@ -45,7 +46,11 @@ OBSERVATION:
 Artifact dog.jpg loaded to /path/to/images/dog.jpg
 [End of artifacts]
 
-AGENT: {"thoughts": "I will use the generate_vision_code to detect the dogs in the image.", "response": "<execute_python>generate_vision_code(artifacts, 'dog_detector.py', 'Can you write code to detect dogs in this image?', media=['/path/to/images/dog.jpg'])</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I will use the generate_vision_code to detect the dogs in the image.</thinking>
+<execute_python>
+generate_vision_code(artifacts, 'dog_detector.py', 'Can you write code to detect dogs in this image?', media=['/path/to/images/dog.jpg'])
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 [Artifact dog_detector.py]
@@ -56,14 +61,21 @@ OBSERVATION:
 4|    return dogs
 [End of artifact]
 
-AGENT: {"thoughts": "I have generated the code to detect the dogs in the image, I must now run the code and print the results to get the output.", "response": "<execute_python>from dog_detector import detect_dogs\n    print(detect_dogs('/example/workspace/dog.jpg'))</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I have generated the code to detect the dogs in the image, I must now run the code and print the results to get the output.</thinking>
+<execute_python>
+from dog_detector import detect_dogs
+print(detect_dogs('/example/workspace/dog.jpg'))
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 ----- stdout -----
 [{'score': 0.99, 'label': 'dog', 'box': [0.1, 0.2, 0.3, 0.4]}, {'score': 0.23, 'label': 'dog', 'box': [0.2, 0.3, 0.4, 0.5]}]
 
 
-AGENT: {"thoughts": "Two dogs are detected, I will show this to the user and ask them if the result looks good.", "response": "The code detectd two dogs, do the results look good to you?", "let_user_respond": true}
+AGENT: <thinking>Two dogs are detected, I will show this to the user and ask them if the result looks good.</thinking>
+<response>The code detectd two dogs, do the results look good to you?</response>
+<let_user_respond>true</let_user_respond>
 """
 
 EXAMPLES_CODE1_EXTRA = """
@@ -75,7 +87,11 @@ Artifact dog.jpg loaded to /path/to/images/dog.jpg
 Artifact dog_detector.py loaded to /path/to/code/dog_detector.py
 [End of artifacts]
 
-AGENT: {"thoughts": "I will use edit_vision_code to fix the code to detect only one dog. The lower score is 0.23 so I will set the threshold above that.", "response": "<execute_python>edit_vision_code(artifacts, 'dog_detector.py', ['Can you write code to detect dogs in this image?', 'Can you increase the threshold to 0.24?'], media=['/path/to/images/dog.jpg'])</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I will use edit_vision_code to fix the code to detect only one dog. The lower score is 0.23 so I will set the threshold above that</thinking>
+<execute_python>
+edit_vision_code(artifacts, 'dog_detector.py', ['Can you write code to detect dogs in this image?', 'Can you increase the threshold to 0.24?'], media=['/path/to/images/dog.jpg'])
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 [Artifact dog_detector.py]
@@ -86,13 +102,20 @@ OBSERVATION:
 4|    return dogs
 [End of artifact]
 
-AGENT: {"thoughts": "I have edited the code to detect only one dog, I must now run the code and print the results to get the output.", "response": "<execute_python>from dog_detector import detect_dogs\n    print(detect_dogs('/path/to/images/dog.jpg'))</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I have edited the code to detect only one dog, I must now run the code and print the results to get the output.</thinking>
+<execute_python>
+from dog_detector import detect_dogs
+print(detect_dogs('/path/to/images/dog.jpg'))
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 ----- stdout -----
 [{'score': 0.99, 'label': 'dog', 'box': [0.1, 0.2, 0.3, 0.4]}]
 
-AGENT: {"thoughts": "One dog is detected, I will show this to the user and ask them if the result looks good.", "response": "The code detected one dog, do these results look good to you?", "let_user_respond": true}
+AGENT: <thinking>One dog is detected, I will show this to the user and ask them if the result looks good.</thinking>
+<response>The code detected one dog, do these results look good to you?</response>
+<let_user_respond>true</let_user_respond>
 """
 
 EXAMPLES_CODE2 = """
@@ -103,12 +126,18 @@ OBSERVATION:
 Artifact image.jpg loaded to /path/to/images/image.jpg
 [End of artifacts]
 
-AGENT: {"thoughts": "The user hasn't asked me to write any code and the task is very simple so I will view the image and answer myself to respond to the user quickly.", "response": "<execute_python>view_media_artifacts('image.jpg')</execute_python>", "let_user_respond": false}
+AGENT: <thinking>The user hasn't asked me to write any code and the task is very simple so I will view the image and answer myself to respond to the user quickly.</thinking>
+<execute_python>
+view_media_artifacts('image.jpg')
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 [Image image.jpg displayed]
 
-AGENT: {"thoughts": "The image shows a cat and a dog sitting on the couch, I will tell the user and ask them if they need any other assistance.", "response": "The image contains a dog and a cat sitting on a couch. Can I help you with any other tasks?", "let_user_respond": true}
+AGENT: <thinking>The image shows a cat and a dog sitting on the couch, I will tell the user and ask them if they need any other assistance.</thinking>
+<response>The image contains a dog and a cat sitting on a couch. Can I help you with any other tasks?</response>
+<let_user_respond>true</let_user_respond>
 """
 
 
@@ -119,7 +148,9 @@ OBSERVATION:
 [Artifacts loaded]
 [End of artifacts]
 
-AGENT: {"thoughts": "The user has asked to count workers with helmets but has not provided an image. I will ask the user for an image and then generate the code to count workers with helmets.", "response": "Can you provide an image of workers with helmets?", "let_user_respond": true}
+AGENT: <thinking>The user has asked to count workers with helmets but has not provided an image. I will ask the user for an image and then generate the code to count workers with helmets.</thinking>
+<response>Can you provide an image of workers with helmets?</response>
+<let_user_respond>true</let_user_respond>
 
 USER: Yes you can use workers.png
 
@@ -128,7 +159,11 @@ OBSERVATION:
 Artifact workers.png loaded to /path/to/images/workers.png
 [End of artifacts]
 
-AGENT: {"thoughts": "I will use the generate_vision_code to count the workers with helmets in the image.", "response": "<execute_python>generate_vision_code(artifacts, 'code.py', 'Can you create a function to count workers with helmets, return the count and save a visaulization of the bounding boxes?', media=['/paths/to/images/workers.png'])</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I will use the generate_vision_code to count the workers with helmets in the image.</thinking>
+<execute_python>
+generate_vision_code(artifacts, 'code.py', 'Can you create a function to count workers with helmets, return the count and save a visaulization of the bounding boxes?', media=['/paths/to/images/workers.png'])
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 [Artifact code.py]
@@ -152,22 +187,37 @@ OBSERVATION:
 16|    return count
 [End of artifact]
 
-AGENT: {"thoughts": "I have generated the code to count the workers with helmets in the image, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I have generated the code to count the workers with helmets in the image, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.</thinking>
+<execute_python>
+from code import count_workers_with_helmets
+print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 ----- stdout -----
 2
 
-AGENT: {"thoughts": "Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "The code to detect workers with helmets is saved in code.py and the visualization under 'workers_viz.png'.", "let_user_respond": true}
+AGENT: <thinking>Two workers with helmets are detected, I will show this to the user and ask them if the result looks good.</thinking>
+<response>The code to detect workers with helmets is saved in code.py and the visualization under 'workers_viz.png'.</response>
+<let_user_respond>true</let_user_respond>
 
 USER: The detections are slightly off. Can you fine tune florence2 using these labels? "[{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}]"
 
-AGENT: {"thoughts": "Because the user has supplied me with labels I can call object_detection_fine_tuning on their behalf to fine tune the model", "response": "<execute_python>object_detection_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}])</execute_python>", "let_user_respond": false}
+AGENT: <thinking>Because the user has supplied me with labels I can call object_detection_fine_tuning on their behalf to fine tune the model</thinking>
+<execute_python>
+object_detection_fine_tuning([{'image_path': 'image1.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}, {'image_path': 'image2.png': 'labels': ['worker', 'helmet'], 'bboxes': [[235, 118, 294, 241], [232, 118, 294, 128]]}])
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 [Fine tuning id: 23b3b022-5ebf-4798-9373-20ef36429abf]
 
-AGENT: {"thoughts": "The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.", "response": "<execute_python>use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")</execute_python>", "let_user_respond": false}
+AGENT: <thinking>The model has finished fine tuning, I will now replace the original florence2_phrase_grounding call with the fine tuning id.</thinking>
+<execute_python>
+use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 [Artifact code.py edits]
@@ -184,11 +234,19 @@ OBSERVATION:
      count = 0
 [End of edits]
 
-AGENT: {"thoughts": "I have updated the code to use the fine tuned model, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.", "response": "<execute_python>from code import count_workers_with_helmets\n    print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')</execute_python>", "let_user_respond": false}
+AGENT: <thinking>I have updated the code to use the fine tuned model, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.</thinking>
+<execute_python>
+from code import count_workers_with_helmets
+print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))
+write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')
+</execute_python>
+<let_user_respond>false</let_user_respond>
 
 OBSERVATION:
 ----- stdout -----
 3
 
-AGENT: {"thoughts": "Three workers with helmets are detected, I will show this to the user and ask them if the result looks good.", "response": "I have updated the code using the fine tuned florence2_phrase_grounding model to count the workers wearing helmets in code.py and saved the visualization under 'workers_viz.png'.", "let_user_respond": true}
+AGENT: <thinking>Three workers with helmets are detected, I will show this to the user and ask them if the result looks good.</thinking>
+<response>I have updated the code using the fine tuned florence2_phrase_grounding model to count the workers wearing helmets in code.py and saved the visualization under 'workers_viz.png'.</response>
+<let_user_respond>true</let_user_respond>
 """
