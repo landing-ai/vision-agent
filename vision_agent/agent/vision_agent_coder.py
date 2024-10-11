@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
-from redbaron import RedBaron
+from redbaron import RedBaron  # type: ignore
 from tabulate import tabulate
 
 import vision_agent.tools as T

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 from IPython.display import display
-from redbaron import RedBaron
+from redbaron import RedBaron  # type: ignore
 
 import vision_agent as va
 from vision_agent.agent.agent_utils import extract_json
@@ -24,8 +24,6 @@ from vision_agent.tools.tools_types import BboxInput, BboxInputBase64, PromptTas
 from vision_agent.utils.execute import Execution, MimeType
 from vision_agent.utils.image_utils import convert_to_b64, numpy_to_bytes
 from vision_agent.utils.video import frames_to_bytes
-
-# These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
 CURRENT_FILE = None
 CURRENT_LINE = 0
@@ -153,6 +151,9 @@ class Artifacts:
 
     def __contains__(self, name: str) -> bool:
         return name in self.artifacts
+
+
+# These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
 
 
 def format_lines(lines: List[str], start_idx: int) -> str:
