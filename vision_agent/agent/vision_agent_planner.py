@@ -38,7 +38,6 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
 from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
 
 _LOGGER = logging.getLogger(__name__)

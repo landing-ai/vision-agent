@@ -550,7 +550,7 @@ class VisionAgentCoder(Agent):
             success = cast(bool, results["success"])
             code = remove_installs_from_code(cast(str, results["code"]))
             test = remove_installs_from_code(cast(str, results["test"]))
-            working_memory.extend(results["working_memory"])  # type: ignore
+            working_memory.extend(results["working_memory"])
             execution_result = cast(Execution, results["test_result"])
 
             return {
