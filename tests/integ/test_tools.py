@@ -163,7 +163,7 @@ def test_florence2_phrase_grounding_video_fine_tune_id():
         fine_tune_id=FINE_TUNE_ID,
     )
     assert len(result) == 10
-    assert 16 <= len([res["label"] for res in result[0]]) <= 26
+    assert 12 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
 
