@@ -181,6 +181,8 @@ def owl_v2_image(
     """
 
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
 
     if fine_tune_id is not None:
         image_b64 = convert_to_b64(image)
@@ -413,6 +415,9 @@ def florence2_sam2_image(
             },
         ]
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return []
+
     if fine_tune_id is not None:
         image_b64 = convert_to_b64(image)
         landing_api = LandingPublicAPI()
@@ -701,6 +706,8 @@ def countgd_counting(
         ]
     """
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     prompt = prompt.replace(", ", " .")
@@ -759,6 +766,8 @@ def countgd_example_based_counting(
         ]
     """
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     visual_prompts = [
@@ -828,6 +837,8 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
         >>> ixc25_image_vqa('What is the cat doing?', image)
         'drinking milk'
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
 
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
@@ -1024,6 +1035,9 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
         {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
     """
 
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
+
     image_b64 = convert_to_b64(image)
     data = {
         "prompt": ",".join(classes),
@@ -1052,6 +1066,8 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
         >>> vit_image_classification(image)
         {"labels": ["leopard", "lemur, otter", "bird"], "scores": [0.68, 0.30, 0.02]},
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
 
     image_b64 = convert_to_b64(image)
     data = {
@@ -1080,6 +1096,8 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
         >>> vit_nsfw_classification(image)
         {"label": "normal", "scores": 0.68},
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
 
     image_b64 = convert_to_b64(image)
     data = {
@@ -1180,6 +1198,8 @@ def florence2_phrase_grounding(
         ]
     """
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     image_b64 = convert_to_b64(image)
 
     if fine_tune_id is not None:
@@ -1399,6 +1419,8 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
             },
         ]
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return []
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
@@ -1442,6 +1464,9 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
                 [10, 11, 15, ..., 202, 202, 205],
                 [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
+
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
