@@ -19,6 +19,7 @@ from vision_agent.tools.meta_tools import (
     META_TOOL_DOCSTRING,
     Artifacts,
     check_and_load_image,
+    extract_and_save_files_to_artifacts,
     use_extra_vision_agent_args,
 )
 from vision_agent.utils import CodeInterpreterFactory
@@ -36,7 +37,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -94,7 +95,7 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         elif chat_i["role"] == "observation":
             conversation += f"OBSERVATION:\n{chat_i['content']}\n\n"
         elif chat_i["role"] == "assistant":
-            conversation += f"AGENT: {format_agent_message(chat_i['content'])}\n\n"
+            conversation += f"AGENT: {format_agent_message(chat_i['content'])}\n\n"  # type: ignore
         else:
             raise ValueError(f"role {chat_i['role']} is not supported")
 
@@ -127,11 +128,15 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
 
 
 def execute_code_action(
-    code: str, code_interpreter: CodeInterpreter, artifact_remote_path: str
+    artifacts: Artifacts,
+    code: str,
+    code_interpreter: CodeInterpreter,
+    artifact_remote_path: str,
 ) -> Tuple[Execution, str]:
     result = code_interpreter.exec_isolation(
         BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
     )
+    extract_and_save_files_to_artifacts(artifacts, code)
 
     obs = str(result.logs)
     if result.error:
@@ -140,6 +145,7 @@ def execute_code_action(
 
 
 def execute_user_code_action(
+    artifacts: Artifacts,
     last_user_message: Message,
     code_interpreter: CodeInterpreter,
     artifact_remote_path: str,
@@ -159,7 +165,7 @@ def execute_user_code_action(
     if user_code_action is not None:
         user_code_action = use_extra_vision_agent_args(user_code_action, False)
         user_result, user_obs = execute_code_action(
-            user_code_action, code_interpreter, artifact_remote_path
+            artifacts, user_code_action, code_interpreter, artifact_remote_path
         )
         if user_result.error:
             user_obs += f"\n{user_result.error}"
@@ -385,7 +391,10 @@ class VisionAgent(Agent):
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
 
             user_result, user_obs = execute_user_code_action(
-                last_user_message, code_interpreter, str(remote_artifacts_path)
+                artifacts,
+                last_user_message,
+                code_interpreter,
+                str(remote_artifacts_path),
             )
             finished = user_result is not None and user_obs is not None
             if user_result is not None and user_obs is not None:
@@ -456,7 +465,10 @@ class VisionAgent(Agent):
 
                 if code_action is not None:
                     result, obs = execute_code_action(
-                        code_action, code_interpreter, str(remote_artifacts_path)
+                        artifacts,
+                        code_action,
+                        code_interpreter,
+                        str(remote_artifacts_path),
                     )
 
                     media_obs = check_and_load_image(code_action)

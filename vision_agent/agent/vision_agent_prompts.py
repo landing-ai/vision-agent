@@ -187,10 +187,10 @@ OBSERVATION:
 16|    return count
 [End of artifact]
 
-AGENT: <thinking>I have generated the code to count the workers with helmets in the image, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.</thinking>
+AGENT: <thinking>I have generated the code to count the workers with helmets in the image, I must now run the code and print the output.</thinking>
 <execute_python>
 from code import count_workers_with_helmets
-print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))\n    write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')
+print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))
 </execute_python>
 <let_user_respond>false</let_user_respond>
 
@@ -234,11 +234,10 @@ OBSERVATION:
      count = 0
 [End of edits]
 
-AGENT: <thinking>I have updated the code to use the fine tuned model, I must now run the code and print the output and write the visualization to the artifacts so I can see the result and the user can see the visaulization.</thinking>
+AGENT: <thinking>I have updated the code to use the fine tuned model, I must now run the code and print the output.</thinking>
 <execute_python>
 from code import count_workers_with_helmets
 print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))
-write_media_artifact(artifacts, 'workers_viz.png', 'workers_viz.png')
 </execute_python>
 <let_user_respond>false</let_user_respond>
 
