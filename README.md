@@ -345,6 +345,11 @@ result = agent.generate_code(conv)
 
 
 ## Additional Backends
+### E2B Code Execution
+If you wish to run your code on the E2B backend, make sure you have your `E2B_API_KEY`
+set and then set `CODE_SANDBOX_RUNTIME=e2b` in your environment variables. This will
+run all the agent generated code on the E2B backend.
+
 ### Anthropic
 `AnthropicVisionAgentCoder` uses Anthropic. To get started you just need to get an
 Anthropic API key and set it in your environment variables:
