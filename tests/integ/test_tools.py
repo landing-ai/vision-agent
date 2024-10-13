@@ -24,7 +24,6 @@ from vision_agent.tools import (
     grounding_dino,
     grounding_sam,
     ixc25_image_vqa,
-    ixc25_temporal_localization,
     ixc25_video_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
@@ -361,17 +360,6 @@ def test_ixc25_video_vqa():
         frames=frames,
     )
     assert "cat" in result.strip()
-
-
-def test_ixc25_temporal_localization():
-    frames = [
-        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
-    ]
-    result = ixc25_temporal_localization(
-        prompt="What animal is in this video?",
-        frames=frames,
-    )
-    assert result == [True] * 10
 
 
 def test_ocr():
