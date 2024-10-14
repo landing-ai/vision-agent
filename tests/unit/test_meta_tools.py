@@ -91,7 +91,7 @@ def test_use_extra_vision_agent_args_real_case():
     assert out_code == expected_code
 
     code = "edit_vision_code(artifacts, 'code.py', ['write code 1', 'write code 2'], ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
-    expected_code = "edit_vision_code(artifacts, 'code.py', ['write code 1', 'write code 2'], ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True)"
+    expected_code = "edit_vision_code(artifacts, 'code.py', ['write code 1', 'write code 2'], ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
     out_code = use_extra_vision_agent_args(code)
     assert out_code == expected_code
 
@@ -103,6 +103,6 @@ def test_use_extra_vision_args_with_custom_tools():
     assert out_code == expected_code
 
     code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
-    expected_code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True, custom_tool_names=['tool1', 'tool2'])"
+    expected_code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], custom_tool_names=['tool1', 'tool2'])"
     out_code = use_extra_vision_agent_args(code, custom_tool_names=["tool1", "tool2"])
     assert out_code == expected_code
