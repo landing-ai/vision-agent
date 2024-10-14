@@ -9,6 +9,7 @@ import vision_agent.tools.planner_tools as pt
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
     extract_execution,
+    extract_tag,
     extract_finalize_plan,
     extract_json,
     extract_thinking,
@@ -235,6 +236,8 @@ class VisionAgentPlannerV2(Agent):
             __import__("ipdb").set_trace()
             plan_str = cast(str, self.planner.generate(prompt))
             plan = extract_json(plan_str)
+            code_snippets = extract_tag("code", plan_str)
+            plan["code"] = code_snippets
             if self.verbosity > 0:
                 _LOGGER.info(f"Final Plan: {plan}")
 

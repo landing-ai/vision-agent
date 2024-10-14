@@ -217,10 +217,10 @@ PLAN2 = """
 **Instructions**:
 1. Read the user request and the context provided.
 2. Output <thinking> tags to indicate your thought process.
-3. You can execute python code in the ipython notebook using <execute_python> tags.
-4. Only output <finalize_plan> when you are done planning and want to end the planning process.
+3. You can execute python code in the ipython notebook using <execute_python> tags. Only output one <execute_python> tag at a time.
+4. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
 5. DO NOT output OBSERVATION, these are reserved for showing you the output of your code execution.
-6. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
+7. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag
 
 <thinking>My thought process...</thinking>
 <execute_python>code here</execute_python>
@@ -230,12 +230,12 @@ PLAN2 = """
 
 EXAMPLE_PLAN1 = """
 --- EXAMPLE1 ---
-USER: Count the number of people in the image.
+USER: Count the number of pedestrians in the image.
 
 AGENT: <thinking>I need to gather some more information about the image.</thinking>
-<execute_python>claude35_vqa('How many people are in the image?', 'drone.jpg')</execute_python>
+<execute_python>claude35_vqa('How many pedestrians are in the image?', 'drone.jpg')</execute_python>
 
-OBSERVATION: [claude35_vqa output]: "From this aerial view of a busy urban street, it's difficult to clearly see or count individual people. The image shows a bird's eye view of a city intersection with multiple lanes of traffic, parked cars, sidewalks, and some green spaces. While there may be people in cars or on the sidewalks, they are not distinctly visible from this height and perspective. The focus of the image is more on the urban infrastructure, traffic patterns, and overall city layout rather than on individuals."]
+OBSERVATION: [claude35_vqa output]: "From this aerial view of a busy urban street, it's difficult to clearly see or count individual pedestrians. The image shows a bird's eye view of a city intersection with multiple lanes of traffic, parked cars, sidewalks, and some green spaces. While there may be people in cars or on the sidewalks, they are not distinctly visible from this height and perspective. The focus of the image is more on the urban infrastructure, traffic patterns, and overall city layout rather than on individuals."]
 
 AGENT: <thinking>I will subdivide the image into smaller regions with overlap and see if that helps.</thinking>
 <execute_python>
@@ -250,10 +250,10 @@ top_right = image[:mid_height + overlap_height, mid_width - overlap_width:, :]
 bottom_left = image[mid_height - overlap_height:, :mid_width + overlap_width, :]
 bottom_right = image[mid_height - overlap_height:, mid_width - overlap_width:, :]
 regions = [top_left, top_right, bottom_left, bottom_right]
-claude35_vqa('How many people are in each of these images?', regions)
+claude35_vqa('How many pedestrians are in each of these images?', regions)
 </execute_python>
 
-OBSERVATION: [claude35_vqa output]: "I'll count the visible people in each image:\n\nImage 1: There are approximately 5-6 people visible, mostly as small figures in the distance on the plaza area.\n\nImage 2: There are no clearly visible people in this image. The focus is on the urban landscape with cars, trees, and a road.\n\nImage 3: There are about 2-3 people visible as small figures, likely pedestrians crossing the street or walking in the parking area.\n\nImage 4: There are no clearly visible people in this image. The focus is on the busy street with many cars and a parking area."
+OBSERVATION: [claude35_vqa output]: "I'll count the visible pedestrians in each image:\n\nImage 1: There are approximately 5-6 pedestrians visible, mostly as small figures in the distance on the plaza area.\n\nImage 2: There are no clearly visible pedestrians in this image. The focus is on the urban landscape with cars, trees, and a road.\n\nImage 3: There are about 2-3 pedestrians visible as small figures, likely pedestrians crossing the street or walking in the parking area.\n\nImage 4: There are no clearly visible pedestrians in this image. The focus is on the busy street with many cars and a parking area."
 
 AGENT: <thinking>Subdividing the image into smaller image shelps, I will use this approach and test different counting tools on the regions.</thinking>
 <execute_python>
@@ -269,7 +269,7 @@ def subdivide_image(image):
     bottom_right = image[mid_height - overlap_height:, mid_width - overlap_width:, :]
     return [top_left, top_right, bottom_left, bottom_right]
 
-detector = get_tool_for_task('Detect the number of people in each region.', subdivide_image(image))
+detector = get_tool_for_task('Detect the number of pedestrians in each region.', subdivide_image(image))
 </execute_python>
 
 OBSERVATION:
@@ -304,7 +304,7 @@ countgd_counting(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23)
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
 
-AGENT: <thinking>I need to now merge the boxes from all regions and count the unique people.</thinking>
+AGENT: <thinking>I need to now merge the boxes from all regions and count the unique pedestrians.</thinking>
 <execute_python>
 def translate_ofset(bbox, offset_x, offset_y):
     return (bbox[0] + offset_x, bbox[1] + offset_y, bbox[2] + offset_x, bbox[3] + offset_y)
@@ -346,7 +346,7 @@ print(len(detections))
 
 OBSERVATION: 14
 
-AGENT: <finalize_plan>This plan successfully detected 14 people in the image by subdividing the image into smaller regions and using the countgd_counting tool on each region. The bounding boxes were then merged to count the unique people.</finalize_plan>
+AGENT: <finalize_plan>This plan successfully detected 14 pedestrians in the image by subdividing the image into smaller regions and using the countgd_counting tool on each region. The bounding boxes were then merged to count the unique pedestrians.</finalize_plan>
 --- END EXAMPLE1 ---
 """
 
@@ -370,7 +370,7 @@ TEST_TOOLS2 = """
 **Examples**:
 --- EXAMPLE1 ---
 **User Request**:
-Count the number of people across all the images.
+Count the number of pedestrians across all the images.
 
 **Media**:
 ["image1.jpg", "image2.jpg", "image3.jpg", "image4.jpg"]
@@ -449,13 +449,16 @@ FINALIZE_PLAN = """
 3. Include any relevant python code in your plan.
 4. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
 5. Do not include {excluded_tools} tools in your instructions.
-6. Respond in the following JSON format:
+6. Respond in the following JSON format followed by the code:
 {{
     "plan": str # the plan you have summarized
     "instructions": [
         str # the instructions for each step in the plan with either specific code or a specific tool name
     ]
 }}
+<code>
+# Code snippets here
+</code>
 """
 
 FIX_BUG = """
