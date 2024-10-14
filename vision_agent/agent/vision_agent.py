@@ -85,6 +85,15 @@ def format_agent_message(agent_message: str) -> str:
     return output
 
 
+def _clean_response(response: str) -> str:
+    # Sometimes the LLM will hallucinate responses to an <execute_python> tag as if it
+    # had already executed the code. This function removes the hallucinated response.
+    if "<execute_python>" in response:
+        end_execute_python = response.find("</execute_python>")
+        response = response[: end_execute_python + len("</execute_python>")]
+    return response
+
+
 def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     chat = copy.deepcopy(chat)
 
@@ -113,6 +122,10 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     ):
         message["media"] = chat[-1]["media"]
     conv_resp = cast(str, orch([message], stream=False))
+
+    # clean the response first, if we are executing code, do not resond or end
+    # conversation before the code has been executed.
+    conv_resp = _clean_response(conv_resp)
 
     let_user_respond_str = extract_tag(conv_resp, "let_user_respond")
     let_user_respond = (
@@ -458,7 +471,7 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "assistant",
-                            "content": json.dumps(response),
+                            "content": json.dumps(add_step_descriptions(response)),
                             "finished": finished and code_action is None,
                         }
                     )
