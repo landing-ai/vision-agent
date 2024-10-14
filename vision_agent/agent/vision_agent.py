@@ -520,10 +520,8 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "assistant",
-                            "content": json.dumps(
-                                new_format_to_old_format(
-                                    add_step_descriptions(response)
-                                )
+                            "content": new_format_to_old_format(
+                                add_step_descriptions(response)
                             ),
                             "finished": finished and code_action is None,
                         }
