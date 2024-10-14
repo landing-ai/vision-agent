@@ -1,4 +1,3 @@
-import base64
 import difflib
 import json
 import os
@@ -9,7 +8,6 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import numpy as np
 from IPython.display import display
 from redbaron import RedBaron  # type: ignore
 
@@ -22,8 +20,7 @@ from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
 from vision_agent.tools.tools_types import BboxInput, BboxInputBase64, PromptTask
 from vision_agent.utils.execute import Execution, MimeType
-from vision_agent.utils.image_utils import convert_to_b64, numpy_to_bytes
-from vision_agent.utils.video import frames_to_bytes
+from vision_agent.utils.image_utils import convert_to_b64
 
 CURRENT_FILE = None
 CURRENT_LINE = 0
@@ -393,19 +390,6 @@ def generate_vision_plan(
         redisplay_results(response.test_results)
     response.test_results = None
     artifacts[name] = response.model_dump_json()
-    media_names = extract_json(
-        AnthropicLMM()(  # type: ignore
-            f"""Extract any media file names from this output in the following JSON format:
-{{"media": ["image1.jpg", "image2.jpg"]}}
-
-{artifacts[name]}"""
-        )
-    )
-    if "media" in media_names and isinstance(media_names, dict):
-        for media in media_names["media"]:
-            if isinstance(media, str):
-                with open(media, "rb") as f:
-                    artifacts[media] = f.read()
 
     output_str = f"[Start Plan Context, saved at {name}]"
     for plan in response.plans.keys():
@@ -466,6 +450,12 @@ def generate_vision_code(
         test_multi_plan=test_multi_plan,
         custom_tool_names=custom_tool_names,
     )
+
+    # capture and save any files that were saved in the code to the artifacts
+    extract_and_save_files_to_artifacts(
+        artifacts, response["code"] + "\n" + response["test"]
+    )
+
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -546,6 +536,11 @@ def edit_vision_code(
         test_multi_plan=False,
         custom_tool_names=custom_tool_names,
     )
+    # capture and save any files that were saved in the code to the artifacts
+    extract_and_save_files_to_artifacts(
+        artifacts, response["code"] + "\n" + response["test"]
+    )
+
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -565,49 +560,6 @@ def edit_vision_code(
         raw=True,
     )
     return view_lines(code_lines, 0, total_lines, name, total_lines)
-
-
-def write_media_artifact(
-    artifacts: Artifacts,
-    name: str,
-    media: Union[str, np.ndarray, List[np.ndarray]],
-    fps: Optional[float] = None,
-) -> str:
-    """Writes a media file to the artifacts object.
-
-    Parameters:
-        artifacts (Artifacts): The artifacts object to save the media to.
-        name (str): The name of the media artifact to save.
-        media (Union[str, np.ndarray, List[np.ndarray]]): The media to save, can either
-            be a file path, single image or list of frames for a video.
-        fps (Optional[float]): The frames per second if you are writing a video.
-    """
-    if isinstance(media, str):
-        with open(media, "rb") as f:
-            media_bytes = f.read()
-    elif isinstance(media, list):
-        media_bytes = frames_to_bytes(media, fps=fps if fps is not None else 1.0)
-    elif isinstance(media, np.ndarray):
-        media_bytes = numpy_to_bytes(media)
-    else:
-        print(f"[Invalid media type {type(media)}]")
-        return f"[Invalid media type {type(media)}]"
-    artifacts[name] = media_bytes
-    print(f"[Media {name} saved]")
-    display(
-        {
-            MimeType.APPLICATION_ARTIFACT: json.dumps(
-                {
-                    "name": name,
-                    "action": "create",
-                    "content": base64.b64encode(media_bytes).decode("utf-8"),
-                    "contentType": "media_output",
-                }
-            )
-        },
-        raw=True,
-    )
-    return f"[Media {name} saved]"
 
 
 def list_artifacts(artifacts: Artifacts) -> str:
@@ -813,6 +765,61 @@ def use_object_detection_fine_tuning(
     return diff
 
 
+def extract_and_save_files_to_artifacts(artifacts: Artifacts, code: str) -> None:
+    """Extracts and saves files used in the code to the artifacts object.
+
+    Parameters:
+        artifacts (Artifacts): The artifacts object to save the files to.
+        code (str): The code to extract the files from.
+    """
+    try:
+        response = extract_json(
+            AnthropicLMM()(  # type: ignore
+                f"""You are a helpful AI assistant. Your job is to look at a snippet of code and return the file paths that are being saved in the file. Below is the code snippet:
+
+```python
+{code}
+```
+
+Return the file paths in the following JSON format:
+{{"file_paths": ["/path/to/image1.jpg", "/other/path/to/data.json"]}}"""
+            )
+        )
+    except json.JSONDecodeError:
+        return
+
+    text_file_ext = [
+        ".txt",
+        ".md",
+        "rtf",
+        ".html",
+        ".htm",
+        "xml",
+        ".json",
+        ".csv",
+        ".tsv",
+        ".yaml",
+        ".yml",
+        ".toml",
+        ".conf",
+        ".env" ".ini",
+        ".log",
+        ".py",
+        ".java",
+        ".js",
+        ".cpp",
+        ".c" ".sql",
+        ".sh",
+    ]
+
+    if "file_paths" in response and isinstance(response["file_paths"], list):
+        for file_path in response["file_paths"]:
+            read_mode = "r" if Path(file_path).suffix in text_file_ext else "rb"
+            if Path(file_path).is_file():
+                with open(file_path, read_mode) as f:
+                    artifacts[Path(file_path).name] = f.read()
+
+
 META_TOOL_DOCSTRING = get_tool_documentation(
     [
         get_tool_descriptions,
@@ -822,7 +829,6 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         generate_vision_plan,
         generate_vision_code,
         edit_vision_code,
-        write_media_artifact,
         view_media_artifact,
         object_detection_fine_tuning,
         use_object_detection_fine_tuning,

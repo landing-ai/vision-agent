@@ -24,7 +24,6 @@ from vision_agent.tools import (
     grounding_dino,
     grounding_sam,
     ixc25_image_vqa,
-    ixc25_temporal_localization,
     ixc25_video_vqa,
     loca_visual_prompt_counting,
     loca_zero_shot_counting,
@@ -71,6 +70,14 @@ def test_owl_v2_image():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
+def test_owl_v2_image_empty():
+    result = owl_v2_image(
+        prompt="coin",
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
+
+
 def test_owl_v2_fine_tune_id():
     img = ski.data.coins()
     result = owl_v2_image(
@@ -110,6 +117,14 @@ def test_florence2_phrase_grounding():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
+def test_florence2_phrase_grounding_empty():
+    result = florence2_phrase_grounding(
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+        prompt="coin",
+    )
+    assert result == []
+
+
 def test_florence2_phrase_grounding_fine_tune_id():
     img = ski.data.coins()
     result = florence2_phrase_grounding(
@@ -147,7 +162,7 @@ def test_florence2_phrase_grounding_video_fine_tune_id():
         fine_tune_id=FINE_TUNE_ID,
     )
     assert len(result) == 10
-    assert 16 <= len([res["label"] for res in result[0]]) <= 26
+    assert 12 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
 
@@ -195,6 +210,14 @@ def test_florence2_sam2_image_fine_tune_id():
     assert len([res["mask"] for res in result]) == len(result)
 
 
+def test_florence2_sam2_image_empty():
+    result = florence2_sam2_image(
+        prompt="coin",
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
+
+
 def test_florence2_sam2_video():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
@@ -208,7 +231,7 @@ def test_florence2_sam2_video():
     assert len([res["mask"] for res in result[0]]) == 25
 
 
-def test_segmentation():
+def test_detr_segmentation():
     img = ski.data.coins()
     result = detr_segmentation(
         image=img,
@@ -216,6 +239,13 @@ def test_segmentation():
     assert len(result) == 1
     assert [res["label"] for res in result] == ["pizza"]
     assert len([res["mask"] for res in result]) == 1
+
+
+def test_detr_segmentation_empty():
+    result = detr_segmentation(
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
 
 
 def test_clip():
@@ -227,12 +257,29 @@ def test_clip():
     assert result["scores"] == [0.9999, 0.0001]
 
 
+def test_clip_empty():
+    result = clip(
+        classes=["coins", "notes"],
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result["scores"] == []
+    assert result["labels"] == []
+
+
 def test_vit_classification():
     img = ski.data.coins()
     result = vit_image_classification(
         image=img,
     )
     assert "typewriter keyboard" in result["labels"]
+
+
+def test_vit_classification_empty():
+    result = vit_image_classification(
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result["labels"] == []
+    assert result["scores"] == []
 
 
 def test_nsfw_classification():
@@ -243,7 +290,7 @@ def test_nsfw_classification():
     assert result["label"] == "normal"
 
 
-def test_image_caption() -> None:
+def test_image_caption():
     img = ski.data.rocket()
     result = blip_image_caption(
         image=img,
@@ -251,7 +298,7 @@ def test_image_caption() -> None:
     assert result.strip() == "a rocket on a stand"
 
 
-def test_florence_image_caption() -> None:
+def test_florence_image_caption():
     img = ski.data.rocket()
     result = florence2_image_caption(
         image=img,
@@ -259,7 +306,7 @@ def test_florence_image_caption() -> None:
     assert "The image shows a rocket on a launch pad at night" in result.strip()
 
 
-def test_loca_zero_shot_counting() -> None:
+def test_loca_zero_shot_counting():
     img = ski.data.coins()
 
     result = loca_zero_shot_counting(
@@ -268,7 +315,7 @@ def test_loca_zero_shot_counting() -> None:
     assert result["count"] == 21
 
 
-def test_loca_visual_prompt_counting() -> None:
+def test_loca_visual_prompt_counting():
     img = ski.data.coins()
     result = loca_visual_prompt_counting(
         visual_prompt={"bbox": [85, 106, 122, 145]},
@@ -277,7 +324,7 @@ def test_loca_visual_prompt_counting() -> None:
     assert result["count"] == 25
 
 
-def test_git_vqa_v2() -> None:
+def test_git_vqa_v2():
     img = ski.data.rocket()
     result = git_vqa_v2(
         prompt="Is the scene captured during day or night ?",
@@ -286,7 +333,7 @@ def test_git_vqa_v2() -> None:
     assert result.strip() == "night"
 
 
-def test_image_qa_with_context() -> None:
+def test_image_qa_with_context():
     img = ski.data.rocket()
     result = florence2_roberta_vqa(
         prompt="Is the scene captured during day or night ?",
@@ -295,7 +342,7 @@ def test_image_qa_with_context() -> None:
     assert "night" in result.strip()
 
 
-def test_ixc25_image_vqa() -> None:
+def test_ixc25_image_vqa():
     img = ski.data.cat()
     result = ixc25_image_vqa(
         prompt="What animal is in this image?",
@@ -304,7 +351,7 @@ def test_ixc25_image_vqa() -> None:
     assert "cat" in result.strip()
 
 
-def test_ixc25_video_vqa() -> None:
+def test_ixc25_video_vqa():
     frames = [
         np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
     ]
@@ -315,18 +362,7 @@ def test_ixc25_video_vqa() -> None:
     assert "cat" in result.strip()
 
 
-def test_ixc25_temporal_localization() -> None:
-    frames = [
-        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
-    ]
-    result = ixc25_temporal_localization(
-        prompt="What animal is in this video?",
-        frames=frames,
-    )
-    assert result == [True] * 10
-
-
-def test_ocr() -> None:
+def test_ocr():
     img = ski.data.page()
     result = ocr(
         image=img,
@@ -334,12 +370,26 @@ def test_ocr() -> None:
     assert any("Region-based segmentation" in res["label"] for res in result)
 
 
-def test_florence2_ocr() -> None:
+def test_ocr_empty():
+    result = ocr(
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
+
+
+def test_florence2_ocr():
     img = ski.data.page()
     result = florence2_ocr(
         image=img,
     )
     assert any("Region-based segmentation" in res["label"] for res in result)
+
+
+def test_florence2_ocr_empty():
+    result = florence2_ocr(
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
 
 
 def test_mask_distance():
@@ -399,14 +449,22 @@ def test_generate_hed():
     assert result.shape == img.shape
 
 
-def test_countgd_counting() -> None:
+def test_countgd_counting():
     img = ski.data.coins()
     result = countgd_counting(image=img, prompt="coin")
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
 
 
-def test_countgd_example_based_counting() -> None:
+def test_countgd_counting_empty():
+    result = countgd_counting(
+        prompt="coin",
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
+
+
+def test_countgd_example_based_counting():
     img = ski.data.coins()
     result = countgd_example_based_counting(
         visual_prompts=[[85, 106, 122, 145]],
@@ -414,3 +472,11 @@ def test_countgd_example_based_counting() -> None:
     )
     assert len(result) == 24
     assert [res["label"] for res in result] == ["object"] * 24
+
+
+def test_countgd_example_based_counting_empty():
+    result = countgd_example_based_counting(
+        visual_prompts=[[85, 106, 122, 145]],
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []

@@ -181,6 +181,8 @@ def owl_v2_image(
     """
 
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
 
     if fine_tune_id is not None:
         image_b64 = convert_to_b64(image)
@@ -413,6 +415,9 @@ def florence2_sam2_image(
             },
         ]
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return []
+
     if fine_tune_id is not None:
         image_b64 = convert_to_b64(image)
         landing_api = LandingPublicAPI()
@@ -701,6 +706,8 @@ def countgd_counting(
         ]
     """
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     prompt = prompt.replace(", ", " .")
@@ -759,6 +766,8 @@ def countgd_example_based_counting(
         ]
     """
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     visual_prompts = [
@@ -828,6 +837,8 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
         >>> ixc25_image_vqa('What is the cat doing?', image)
         'drinking milk'
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
 
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
@@ -869,47 +880,6 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         payload, "internlm-xcomposer2", files=files, v2=True
     )
     return cast(str, data["answer"])
-
-
-def ixc25_temporal_localization(prompt: str, frames: List[np.ndarray]) -> List[bool]:
-    """'ixc25_temporal_localization' uses ixc25_video_vqa to temporally segment a video
-    given a prompt that can be other an object or a phrase. It returns a list of
-    boolean values indicating whether the object or phrase is present in the
-    corresponding frame.
-
-    Parameters:
-        prompt (str): The question about the video
-        frames (List[np.ndarray]): The reference frames used for the question
-
-    Returns:
-        List[bool]: A list of boolean values indicating whether the object or phrase is
-            present in the corresponding frame.
-
-    Example
-    -------
-        >>> output = ixc25_temporal_localization('soccer goal', frames)
-        >>> print(output)
-        [False, False, False, True, True, True, False, False, False, False]
-        >>> save_video([f for i, f in enumerate(frames) if output[i]], 'output.mp4')
-    """
-
-    buffer_bytes = frames_to_bytes(frames)
-    files = [("video", buffer_bytes)]
-    payload = {
-        "prompt": prompt,
-        "chunk_length": 2,
-        "function_name": "ixc25_temporal_localization",
-    }
-    data: List[int] = send_inference_request(
-        payload,
-        "video-temporal-localization?model=internlm-xcomposer",
-        files=files,
-        v2=True,
-    )
-    chunk_size = round(len(frames) / len(data))
-    data_explode = [[elt] * chunk_size for elt in data]
-    data_bool = [bool(elt) for sublist in data_explode for elt in sublist]
-    return data_bool[: len(frames)]
 
 
 def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
@@ -1024,6 +994,9 @@ def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
         {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
     """
 
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
+
     image_b64 = convert_to_b64(image)
     data = {
         "prompt": ",".join(classes),
@@ -1052,6 +1025,8 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
         >>> vit_image_classification(image)
         {"labels": ["leopard", "lemur, otter", "bird"], "scores": [0.68, 0.30, 0.02]},
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
 
     image_b64 = convert_to_b64(image)
     data = {
@@ -1080,6 +1055,8 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
         >>> vit_nsfw_classification(image)
         {"label": "normal", "scores": 0.68},
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
 
     image_b64 = convert_to_b64(image)
     data = {
@@ -1180,6 +1157,8 @@ def florence2_phrase_grounding(
         ]
     """
     image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
     image_b64 = convert_to_b64(image)
 
     if fine_tune_id is not None:
@@ -1399,6 +1378,8 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
             },
         ]
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return []
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
@@ -1442,6 +1423,9 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
                 [10, 11, 15, ..., 202, 202, 205],
                 [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
     """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
+
     image_b64 = convert_to_b64(image)
     data = {
         "image": image_b64,
