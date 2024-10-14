@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 import os
 import tempfile
@@ -6,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import extract_json
+from vision_agent.agent.agent_utils import extract_json, extract_tag
 from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE1,
     EXAMPLES_CODE2,
@@ -18,6 +19,7 @@ from vision_agent.tools.meta_tools import (
     META_TOOL_DOCSTRING,
     Artifacts,
     check_and_load_image,
+    extract_and_save_files_to_artifacts,
     use_extra_vision_agent_args,
 )
 from vision_agent.utils import CodeInterpreterFactory
@@ -35,7 +37,7 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, write_media_artifact, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning",
         "artifacts = Artifacts('{remote_path}')",
         "artifacts.load('{remote_path}')",
     ]
@@ -57,6 +59,32 @@ class BoilerplateCode:
         )
 
 
+def format_agent_message(agent_message: str) -> str:
+    agent_message_json = extract_json(agent_message)
+    output = ""
+    if "thinking" in agent_message_json and agent_message_json["thinking"]:
+        output += "<thinking>" + agent_message_json["thinking"] + "</thinking>"
+    if "response" in agent_message_json and agent_message_json["response"]:
+        output += "<response>" + agent_message_json["response"] + "</response>"
+    if "execute_python" in agent_message_json and agent_message_json["execute_python"]:
+        output += (
+            "\n<execute_python>\n"
+            + agent_message_json["execute_python"]
+            + "\n</execute_python>\n"
+        )
+    if (
+        "let_user_respond" in agent_message_json
+        and agent_message_json["let_user_respond"]
+    ):
+        output += (
+            "<let_user_respond>"
+            + str(agent_message_json["let_user_respond"])
+            + "</let_user_respond>"
+        )
+
+    return output
+
+
 def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     chat = copy.deepcopy(chat)
 
@@ -67,7 +95,7 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         elif chat_i["role"] == "observation":
             conversation += f"OBSERVATION:\n{chat_i['content']}\n\n"
         elif chat_i["role"] == "assistant":
-            conversation += f"AGENT: {chat_i['content']}\n\n"
+            conversation += f"AGENT: {format_agent_message(chat_i['content'])}\n\n"  # type: ignore
         else:
             raise ValueError(f"role {chat_i['role']} is not supported")
 
@@ -84,15 +112,31 @@ def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
         and len(chat[-1]["media"]) > 0  # type: ignore
     ):
         message["media"] = chat[-1]["media"]
-    return extract_json(orch([message], stream=False))  # type: ignore
+    conv_resp = cast(str, orch([message], stream=False))
+
+    let_user_respond_str = extract_tag(conv_resp, "let_user_respond")
+    let_user_respond = (
+        "true" in let_user_respond_str.lower() if let_user_respond_str else False
+    )
+
+    return {
+        "thinking": extract_tag(conv_resp, "thinking"),
+        "response": extract_tag(conv_resp, "response"),
+        "execute_python": extract_tag(conv_resp, "execute_python"),
+        "let_user_respond": let_user_respond,
+    }
 
 
 def execute_code_action(
-    code: str, code_interpreter: CodeInterpreter, artifact_remote_path: str
+    artifacts: Artifacts,
+    code: str,
+    code_interpreter: CodeInterpreter,
+    artifact_remote_path: str,
 ) -> Tuple[Execution, str]:
     result = code_interpreter.exec_isolation(
         BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
     )
+    extract_and_save_files_to_artifacts(artifacts, code)
 
     obs = str(result.logs)
     if result.error:
@@ -100,33 +144,8 @@ def execute_code_action(
     return result, obs
 
 
-def parse_execution(
-    response: str,
-    test_multi_plan: bool = True,
-    custom_tool_names: Optional[List[str]] = None,
-) -> Optional[str]:
-    code = None
-    remaining = response
-    all_code = []
-    while "<execute_python>" in remaining:
-        code_i = remaining[
-            remaining.find("<execute_python>") + len("<execute_python>") :
-        ]
-        code_i = code_i[: code_i.find("</execute_python>")]
-        remaining = remaining[
-            remaining.find("</execute_python>") + len("</execute_python>") :
-        ]
-        all_code.append(code_i)
-
-    if len(all_code) > 0:
-        code = "\n".join(all_code)
-
-    if code is not None:
-        code = use_extra_vision_agent_args(code, test_multi_plan, custom_tool_names)
-    return code
-
-
 def execute_user_code_action(
+    artifacts: Artifacts,
     last_user_message: Message,
     code_interpreter: CodeInterpreter,
     artifact_remote_path: str,
@@ -138,40 +157,43 @@ def execute_user_code_action(
         return user_result, user_obs
 
     last_user_content = cast(str, last_user_message.get("content", ""))
+    try:
+        user_code_action = json.loads(last_user_content).get("execute_python", None)
+    except json.JSONDecodeError:
+        return user_result, user_obs
 
-    user_code_action = parse_execution(last_user_content, False)
     if user_code_action is not None:
+        user_code_action = use_extra_vision_agent_args(user_code_action, False)
         user_result, user_obs = execute_code_action(
-            user_code_action, code_interpreter, artifact_remote_path
+            artifacts, user_code_action, code_interpreter, artifact_remote_path
         )
         if user_result.error:
             user_obs += f"\n{user_result.error}"
     return user_result, user_obs
 
 
-def add_step_descriptions(response: Dict[str, str]) -> Dict[str, str]:
+def add_step_descriptions(response: Dict[str, Any]) -> Dict[str, Any]:
     response = copy.deepcopy(response)
-    if "response" in response:
-        resp_str = response["response"]
-        if "<execute_python>" in resp_str:
-            # only include descriptions for these, the rest will just have executing
-            # code
-            description_map = {
-                "open_code_artifact": "Reading file.",
-                "create_code_artifact": "Creating file.",
-                "edit_code_artifact": "Editing file.",
-                "generate_vision_code": "Generating vision code.",
-                "edit_vision_code": "Editing vision code.",
-            }
-            description = ""
-            for k, v in description_map.items():
-                if k in resp_str:
-                    description += v + " "
-            if description == "":
-                description = "Executing code."
-            resp_str = resp_str[resp_str.find("<execute_python>") :]
-            resp_str = description + resp_str
-        response["response"] = resp_str
+
+    if "execute_python" in response and response["execute_python"]:
+        # only include descriptions for these, the rest will just have executing
+        # code
+        description_map = {
+            "open_code_artifact": "Reading file.",
+            "create_code_artifact": "Creating file.",
+            "edit_code_artifact": "Editing file.",
+            "generate_vision_code": "Generating vision code.",
+            "edit_vision_code": "Editing vision code.",
+        }
+        description = ""
+        for k, v in description_map.items():
+            if k in response["execute_python"]:
+                description += v + " "
+        if description == "":
+            description = "Executing code."
+
+        response["response"] = description
+
     return response
 
 
@@ -369,7 +391,10 @@ class VisionAgent(Agent):
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
 
             user_result, user_obs = execute_user_code_action(
-                last_user_message, code_interpreter, str(remote_artifacts_path)
+                artifacts,
+                last_user_message,
+                code_interpreter,
+                str(remote_artifacts_path),
             )
             finished = user_result is not None and user_obs is not None
             if user_result is not None and user_obs is not None:
@@ -394,13 +419,13 @@ class VisionAgent(Agent):
                 int_chat.append(
                     {
                         "role": "assistant",
-                        "content": str(add_step_descriptions(response)),
+                        "content": json.dumps(add_step_descriptions(response)),
                     }
                 )
                 orig_chat.append(
                     {
                         "role": "assistant",
-                        "content": str(add_step_descriptions(response)),
+                        "content": json.dumps(add_step_descriptions(response)),
                     }
                 )
 
@@ -408,11 +433,13 @@ class VisionAgent(Agent):
                 if last_response == response:
                     response["let_user_respond"] = True
 
-                finished = response["let_user_respond"]
+                finished = response.get("let_user_respond", False)
 
-                code_action = parse_execution(
-                    response["response"], test_multi_plan, custom_tool_names
-                )
+                code_action = response.get("execute_python", None)
+                if code_action is not None:
+                    code_action = use_extra_vision_agent_args(
+                        code_action, test_multi_plan, custom_tool_names
+                    )
 
                 if last_response == response:
                     self.streaming_message(
@@ -431,14 +458,17 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "assistant",
-                            "content": response,
+                            "content": json.dumps(response),
                             "finished": finished and code_action is None,
                         }
                     )
 
                 if code_action is not None:
                     result, obs = execute_code_action(
-                        code_action, code_interpreter, str(remote_artifacts_path)
+                        artifacts,
+                        code_action,
+                        code_interpreter,
+                        str(remote_artifacts_path),
                     )
 
                     media_obs = check_and_load_image(code_action)
