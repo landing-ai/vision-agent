@@ -1,6 +1,5 @@
 import base64
 import logging
-import math
 import tempfile
 from functools import lru_cache
 from typing import List, Optional, Tuple
