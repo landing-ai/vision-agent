@@ -54,7 +54,7 @@ def update_messages(messages, lock):
     with lock:
         if Path("artifacts.pkl").exists():
             artifacts.load("artifacts.pkl")
-        new_chat, _ = agent.chat_with_code(messages, artifacts=artifacts)
+        new_chat, _ = agent.chat_with_artifacts(messages, artifacts=artifacts)
         for new_message in new_chat[len(messages) :]:
             messages.append(new_message)
 

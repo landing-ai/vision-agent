@@ -676,12 +676,13 @@ def use_extra_vision_agent_args(
     for node in red:
         # seems to always be atomtrailers not call type
         if node.type == "atomtrailers":
+            if node.name.value == "generate_vision_code":
+                node.value[1].value.append(f"test_multi_plan={test_multi_plan}")
+
             if (
                 node.name.value == "generate_vision_code"
                 or node.name.value == "edit_vision_code"
             ):
-                node.value[1].value.append(f"test_multi_plan={test_multi_plan}")
-
                 if custom_tool_names is not None:
                     node.value[1].value.append(f"custom_tool_names={custom_tool_names}")
     cleaned_code = red.dumps().strip()
