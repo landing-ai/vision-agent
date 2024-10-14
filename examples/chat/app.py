@@ -147,7 +147,9 @@ def main():
                     f.write(uploaded_file.getbuffer())
 
                 # make it None so it wont load and overwrite the image
-                artifacts.artifacts[uploaded_file.name] = open(WORKSPACE / uploaded_file.name, "rb").read()
+                artifacts.artifacts[uploaded_file.name] = open(
+                    WORKSPACE / uploaded_file.name, "rb"
+                ).read()
 
             for file in WORKSPACE.iterdir():
                 if "__pycache__" not in str(file) and not str(file).startswith("."):
