@@ -210,6 +210,51 @@ def add_step_descriptions(response: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def new_format_to_old_format(new_format: Dict[str, Any]) -> Dict[str, Any]:
+    thoughts = new_format["thinking"] if new_format["thinking"] is not None else ""
+    response = new_format["response"] if new_format["response"] is not None else ""
+    if new_format["execute_python"] is not None:
+        response += (
+            f"\n<execute_python>\n{new_format['execute_python']}\n</execute_python>"
+        )
+    return {
+        "thoughts": thoughts,
+        "response": response,
+        "let_user_respond": new_format["let_user_respond"],
+    }
+
+
+def old_format_to_new_format(old_format_str: str) -> str:
+    try:
+        old_format = json.loads(old_format_str)
+    except json.JSONDecodeError:
+        return old_format_str
+
+    thinking = old_format["thoughts"] if old_format["thoughts"].strip() != "" else None
+    let_user_respond = old_format["let_user_respond"]
+    if "<execute_python>" in old_format["response"]:
+        execute_python = extract_tag(old_format["response"], "execute_python")
+        response = (
+            old_format["response"]
+            .replace(execute_python, "")
+            .replace("<execute_python>", "")
+            .replace("</execute_python>", "")
+            .strip()
+        )
+    else:
+        execute_python = None
+        response = old_format["response"]
+
+    return json.dumps(
+        {
+            "thinking": thinking,
+            "response": response,
+            "execute_python": execute_python,
+            "let_user_respond": let_user_respond,
+        }
+    )
+
+
 class VisionAgent(Agent):
     """Vision Agent is an agent that can chat with the user and call tools or other
     agents to generate code for it. Vision Agent uses python code to execute actions
@@ -374,11 +419,11 @@ class VisionAgent(Agent):
                     (
                         {
                             "role": c["role"],
-                            "content": c["content"],
+                            "content": old_format_to_new_format(c["content"]),  # type: ignore
                             "media": c["media"],
                         }
                         if "media" in c
-                        else {"role": c["role"], "content": c["content"]}
+                        else {"role": c["role"], "content": old_format_to_new_format(c["content"])}  # type: ignore
                     )
                     for c in int_chat
                 ],
@@ -432,13 +477,17 @@ class VisionAgent(Agent):
                 int_chat.append(
                     {
                         "role": "assistant",
-                        "content": json.dumps(add_step_descriptions(response)),
+                        "content": json.dumps(
+                            new_format_to_old_format(add_step_descriptions(response))
+                        ),
                     }
                 )
                 orig_chat.append(
                     {
                         "role": "assistant",
-                        "content": json.dumps(add_step_descriptions(response)),
+                        "content": json.dumps(
+                            new_format_to_old_format(add_step_descriptions(response))
+                        ),
                     }
                 )
 
@@ -471,7 +520,11 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "assistant",
-                            "content": json.dumps(add_step_descriptions(response)),
+                            "content": json.dumps(
+                                new_format_to_old_format(
+                                    add_step_descriptions(response)
+                                )
+                            ),
                             "finished": finished and code_action is None,
                         }
                     )
