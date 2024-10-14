@@ -471,7 +471,7 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "assistant",
-                            "content": json.dumps(response),
+                            "content": json.dumps(add_step_descriptions(response)),
                             "finished": finished and code_action is None,
                         }
                     )
