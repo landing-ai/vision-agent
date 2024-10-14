@@ -11,6 +11,9 @@ import numpy as np
 _LOGGER = logging.getLogger(__name__)
 # The maximum length of the clip to extract frames from, in seconds
 
+_DEFAULT_VIDEO_FPS = 24
+_DEFAULT_INPUT_FPS = 1.0
+
 
 def play_video(video_base64: str) -> None:
     """Play a video file"""
@@ -51,7 +54,9 @@ def _resize_frame(frame: np.ndarray) -> np.ndarray:
 
 
 def video_writer(
-    frames: List[np.ndarray], fps: float = 1.0, filename: Optional[str] = None
+    frames: List[np.ndarray],
+    fps: float = _DEFAULT_INPUT_FPS,
+    filename: Optional[str] = None,
 ) -> str:
     if filename is None:
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
@@ -78,7 +83,7 @@ def video_writer(
 
 
 def frames_to_bytes(
-    frames: List[np.ndarray], fps: float = 1.0, file_ext: str = ".mp4"
+    frames: List[np.ndarray], fps: float = _DEFAULT_INPUT_FPS, file_ext: str = ".mp4"
 ) -> bytes:
     r"""Convert a list of frames to a video file encoded into a byte string.
 
@@ -101,7 +106,7 @@ def frames_to_bytes(
 # same file name and the time savings are very large.
 @lru_cache(maxsize=8)
 def extract_frames_from_video(
-    video_uri: str, fps: float = 1.0
+    video_uri: str, fps: float = _DEFAULT_INPUT_FPS
 ) -> List[Tuple[np.ndarray, float]]:
     """Extract frames from a video along with the timestamp in seconds.
 
@@ -118,6 +123,16 @@ def extract_frames_from_video(
 
     cap = cv2.VideoCapture(video_uri)
     orig_fps = cap.get(cv2.CAP_PROP_FPS)
+    if not orig_fps or orig_fps <= 0:
+        _LOGGER.warning(
+            f"Input video, {video_uri}, has no fps, using the default value {_DEFAULT_VIDEO_FPS}"
+        )
+        orig_fps = _DEFAULT_VIDEO_FPS
+    if not fps or fps <= 0:
+        _LOGGER.warning(
+            f"Input fps, {fps}, is illegal, using the default value: {_DEFAULT_INPUT_FPS}"
+        )
+        fps = _DEFAULT_INPUT_FPS
     orig_frame_time = 1 / orig_fps
     targ_frame_time = 1 / fps
     frames: List[Tuple[np.ndarray, float]] = []
@@ -129,10 +144,15 @@ def extract_frames_from_video(
             break
 
         elapsed_time += orig_frame_time
+        # This is to prevent float point precision loss issue, which can cause
+        # the elapsed time to be slightly less than the target frame time, which
+        # causes the last frame to be skipped
+        elapsed_time = round(elapsed_time, 8)
         if elapsed_time >= targ_frame_time:
             frames.append((cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), i / orig_fps))
             elapsed_time -= targ_frame_time
 
         i += 1
     cap.release()
+    _LOGGER.info(f"Extracted {len(frames)} frames from {video_uri}")
     return frames
