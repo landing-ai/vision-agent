@@ -231,9 +231,18 @@ def old_format_to_new_format(old_format_str: str) -> str:
     except json.JSONDecodeError:
         return old_format_str
 
-    thinking = old_format["thoughts"] if old_format["thoughts"].strip() != "" else None
-    let_user_respond = old_format["let_user_respond"]
-    if "<execute_python>" in old_format["response"]:
+    if "thoughts" in old_format:
+        thinking = (
+            old_format["thoughts"] if old_format["thoughts"].strip() != "" else None
+        )
+    else:
+        thinking = None
+
+    let_user_respond = (
+        old_format["let_user_respond"] if "let_user_respond" in old_format else True
+    )
+
+    if "response" in old_format and "<execute_python>" in old_format["response"]:
         execute_python = extract_tag(old_format["response"], "execute_python")
         response = (
             old_format["response"]
@@ -244,7 +253,7 @@ def old_format_to_new_format(old_format_str: str) -> str:
         )
     else:
         execute_python = None
-        response = old_format["response"]
+        response = old_format["response"] if "response" in old_format else None
 
     return json.dumps(
         {
