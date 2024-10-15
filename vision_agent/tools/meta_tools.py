@@ -1,3 +1,4 @@
+import base64
 import difflib
 import json
 import os
@@ -5,6 +6,7 @@ import pickle as pkl
 import re
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -570,8 +572,9 @@ def check_and_load_image(code: str) -> List[str]:
 
 
 def view_media_artifact(artifacts: Artifacts, name: str) -> str:
-    """Allows you to view the media artifact with the given name. This does not show
-    the media to the user, the user can already see all media saved in the artifacts.
+    """Allows only the agent to view the media artifact with the given name. DO NOT use
+    this to show media to the user, the user can already see all media saved in the
+    artifacts.
 
     Parameters:
         artifacts (Artifacts): The artifacts object to show the image from.
@@ -758,7 +761,7 @@ def use_object_detection_fine_tuning(
 
 
 def extract_and_save_files_to_artifacts(
-    artifacts: Artifacts, code: str, obs: str
+    artifacts: Artifacts, code: str, obs: str, result: Execution
 ) -> None:
     """Extracts and saves files used in the code to the artifacts object.
 
@@ -766,10 +769,32 @@ def extract_and_save_files_to_artifacts(
         artifacts (Artifacts): The artifacts object to save the files to.
         code (str): The code to extract the files from.
     """
+
+    # This is very hacky but there's no nice way to get the files into artifacts if the
+    # code is executed in a remote environment and we don't have access to the remove
+    # file system.
+    files = {}
+    for res in result.results:
+        if len(res.formats()) == 1 and res.formats()[0] in ["png", "jpeg", "mp4"]:
+            format = res.formats()[0]
+            if format == "png":
+                data = base64.b64decode(res.png) if res.png is not None else None
+            elif format == "jpeg":
+                data = base64.b64decode(res.jpeg) if res.jpeg is not None else None
+            elif format == "mp4":
+                data = base64.b64decode(res.mp4) if res.mp4 is not None else None
+            else:
+                data = None
+
+            if format not in files:
+                files[format] = [data]
+            else:
+                files[format].append(data)
+
     try:
         response = extract_json(
             AnthropicLMM()(  # type: ignore
-                f"""You are a helpful AI assistant. Your job is to look at a snippet of code and the output of running that code and return the file paths that are being saved in the file. Below is the code snippet:
+                f"""You are a helpful AI assistant. You are given a number of files for certain file types, your job is to look at the code and the output of running that code and assign each file a file name. Below is the code snippet:
 
 ```python
 {code}
@@ -779,43 +804,51 @@ def extract_and_save_files_to_artifacts(
 {obs}
 ```
 
+Here's the number of files that need file names:
+{json.dumps({k: len(v) for k, v in files.items()})}
+
+The name cannot conflict with any of these existing names:
+{json.dumps(list(artifacts.artifacts.keys()))}
+
 Return the file paths in the following JSON format:
-{{"file_paths": ["/path/to/image1.jpg", "/other/path/to/data.json"]}}"""
+{{"png": ["image_name1.png", "other_image_name.png"], "mp4": ["video_name.mp4"]}}"""
             )
         )
     except json.JSONDecodeError:
-        return
+        response = {}
 
-    text_file_ext = [
-        ".txt",
-        ".md",
-        "rtf",
-        ".html",
-        ".htm",
-        "xml",
-        ".json",
-        ".csv",
-        ".tsv",
-        ".yaml",
-        ".yml",
-        ".toml",
-        ".conf",
-        ".env" ".ini",
-        ".log",
-        ".py",
-        ".java",
-        ".js",
-        ".cpp",
-        ".c" ".sql",
-        ".sh",
-    ]
+    def find_name(file: Path, names: List[str]) -> str:
+        if not str(file) in names:
+            return str(file)
+        name = file.name
+        suffix = file.suffix
+        # test basic names first
+        for i in range(100):
+            new_name = f"{name}_output_{i}{suffix}"
+            if new_name not in names:
+                return new_name
+        return f"{name}_output_{str(uuid.uuid4())}{suffix}"
 
-    if "file_paths" in response and isinstance(response["file_paths"], list):
-        for file_path in response["file_paths"]:
-            read_mode = "r" if Path(file_path).suffix in text_file_ext else "rb"
-            if Path(file_path).is_file():
-                with open(file_path, read_mode) as f:
-                    artifacts[Path(file_path).name] = f.read()
+    for format in files.keys():
+        i = 0
+        if format in response:
+            for file in response[format]:
+                if i < len(files[format]) and files[format][i] is not None:
+                    new_name = find_name(
+                        Path(file).with_suffix("." + format),
+                        list(artifacts.artifacts.keys()),
+                    )
+                    artifacts[new_name] = files[format][i]
+                i += 1
+        if i < len(files[format]):
+            for j in range(i, len(files[format])):
+                name = "image" if format in ["png", "jpeg"] else "video"
+                if files[format][j] is not None:
+                    new_name = find_name(
+                        Path(f"{name}").with_suffix("." + format),
+                        list(artifacts.artifacts.keys()),
+                    )
+                    artifacts[new_name] = files[format][j]
 
 
 META_TOOL_DOCSTRING = get_tool_documentation(
