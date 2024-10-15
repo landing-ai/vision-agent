@@ -153,7 +153,7 @@ def execute_code_action(
     obs = str(result.logs)
     if result.error:
         obs += f"\n{result.error}"
-    extract_and_save_files_to_artifacts(artifacts, code, obs)
+    extract_and_save_files_to_artifacts(artifacts, code, obs, result)
     return result, obs
 
 
@@ -562,10 +562,16 @@ class VisionAgent(Agent):
                             self.local_artifacts_path,
                             Path(self.local_artifacts_path).parent,
                         )
-                        obs_chat_elt["media"] = [
-                            Path(self.local_artifacts_path).parent / media_ob
-                            for media_ob in media_obs
-                        ]
+
+                        # check if the media is actually in the artifacts
+                        media_obs_chat = []
+                        for media_ob in media_obs:
+                            if media_ob not in artifacts.artifacts:
+                                media_obs_chat.append(
+                                    Path(self.local_artifacts_path).parent / media_ob
+                                )
+                        if media_obs_chat:
+                            obs_chat_elt["media"] = media_obs_chat
 
                     # don't add execution results to internal chat
                     int_chat.append(obs_chat_elt)
