@@ -176,9 +176,9 @@ def view_lines(
         f"[Artifact: {name} ({total_lines} lines total)]\n"
         + format_lines(lines[start:end], start)
         + (
-            "[End of artifact]"
+            "\n[End of artifact]"
             if end == len(lines)
-            else f"[{len(lines) - end} more lines]"
+            else f"\n[{len(lines) - end} more lines]"
         )
     )
 
@@ -258,8 +258,10 @@ def edit_code_artifact(
     Parameters:
         artifacts (Artifacts): The artifacts object to edit the artifact from.
         name (str): The name of the artifact to edit.
-        start (int): The line number to start the edit.
-        end (int): The line number to end the edit.
+        start (int): The line number to start the edit, can be in [-1, total_lines]
+            where -1 represents the end of the file.
+        end (int): The line number to end the edit, can be in [-1, total_lines] where
+            -1 represents the end of the file.
         content (str): The content to insert.
     """
     # just make the artifact if it doesn't exist instead of forcing agent to call
@@ -268,17 +270,21 @@ def edit_code_artifact(
         artifacts[name] = ""
 
     total_lines = len(artifacts[name].splitlines())
-    if start < 0 or end < 0 or start > end or end > total_lines:
+    if start < -1 or end < -1 or start > end or end > total_lines:
         print("[Invalid line range]")
         return "[Invalid line range]"
-    if start == end:
-        end += 1
+
+    if start == -1:
+        start = total_lines
+    if end == -1:
+        end = total_lines
 
     new_content_lines = content.splitlines(keepends=True)
     new_content_lines = [
         line if line.endswith("\n") else line + "\n" for line in new_content_lines
     ]
     lines = artifacts[name].splitlines(keepends=True)
+    lines = [line if line.endswith("\n") else line + "\n" for line in lines]
     edited_lines = lines[:start] + new_content_lines + lines[end:]
 
     cur_line = start + len(content.split("\n")) // 2
@@ -760,6 +766,51 @@ def use_object_detection_fine_tuning(
     return diff
 
 
+def _find_name(file: Path, names: List[str]) -> str:
+    if not str(file) in names:
+        return str(file)
+    name = file.name
+    suffix = file.suffix
+    # test basic names first
+    for i in range(100):
+        new_name = f"{name}_output_{i}{suffix}"
+        if new_name not in names:
+            return new_name
+    return f"{name}_output_{str(uuid.uuid4())}{suffix}"
+
+
+def _extract_file_names(
+    code: str, obs: str, file_counts: Dict[str, int], existing_names: List[str]
+) -> Dict[str, List[str]]:
+    try:
+        response = extract_json(
+            AnthropicLMM()(  # type: ignore
+                f"""You are a helpful AI assistant. You are given a number of files for certain file types, your job is to look at the code and the output of running that code and assign each file a file name. Below is the code snippet:
+
+```python
+{code}
+```
+
+```output
+{obs}
+```
+
+Here's the number of files that need file names:
+{json.dumps({k: v for k, v in file_counts.items()})}
+
+The name cannot conflict with any of these existing names:
+{str(existing_names)}
+
+Return the file paths in the following JSON format:
+{{"png": ["image_name1.png", "other_image_name.png"], "mp4": ["video_name.mp4"]}}"""
+            )
+        )
+    except json.JSONDecodeError:
+        response = {}
+
+    return response
+
+
 def extract_and_save_files_to_artifacts(
     artifacts: Artifacts, code: str, obs: str, result: Execution
 ) -> None:
@@ -775,8 +826,8 @@ def extract_and_save_files_to_artifacts(
     # file system.
     files = {}
     for res in result.results:
-        if len(res.formats()) == 1 and res.formats()[0] in ["png", "jpeg", "mp4"]:
-            format = res.formats()[0]
+        if len(res.formats()) == 1 and res.formats()[0] in ["png", "jpeg", "mp4"]:  # type: ignore
+            format = res.formats()[0]  # type: ignore
             if format == "png":
                 data = base64.b64decode(res.png) if res.png is not None else None
             elif format == "jpeg":
@@ -791,50 +842,19 @@ def extract_and_save_files_to_artifacts(
             else:
                 files[format].append(data)
 
-    try:
-        response = extract_json(
-            AnthropicLMM()(  # type: ignore
-                f"""You are a helpful AI assistant. You are given a number of files for certain file types, your job is to look at the code and the output of running that code and assign each file a file name. Below is the code snippet:
-
-```python
-{code}
-```
-
-```output
-{obs}
-```
-
-Here's the number of files that need file names:
-{json.dumps({k: len(v) for k, v in files.items()})}
-
-The name cannot conflict with any of these existing names:
-{json.dumps(list(artifacts.artifacts.keys()))}
-
-Return the file paths in the following JSON format:
-{{"png": ["image_name1.png", "other_image_name.png"], "mp4": ["video_name.mp4"]}}"""
-            )
-        )
-    except json.JSONDecodeError:
-        response = {}
-
-    def find_name(file: Path, names: List[str]) -> str:
-        if not str(file) in names:
-            return str(file)
-        name = file.name
-        suffix = file.suffix
-        # test basic names first
-        for i in range(100):
-            new_name = f"{name}_output_{i}{suffix}"
-            if new_name not in names:
-                return new_name
-        return f"{name}_output_{str(uuid.uuid4())}{suffix}"
+    response = _extract_file_names(
+        code,
+        obs,
+        {k: len(v) for k, v in files.items()},
+        list(artifacts.artifacts.keys()),
+    )
 
     for format in files.keys():
         i = 0
         if format in response:
             for file in response[format]:
                 if i < len(files[format]) and files[format][i] is not None:
-                    new_name = find_name(
+                    new_name = _find_name(
                         Path(file).with_suffix("." + format),
                         list(artifacts.artifacts.keys()),
                     )
@@ -844,7 +864,7 @@ Return the file paths in the following JSON format:
             for j in range(i, len(files[format])):
                 name = "image" if format in ["png", "jpeg"] else "video"
                 if files[format][j] is not None:
-                    new_name = find_name(
+                    new_name = _find_name(
                         Path(f"{name}").with_suffix("." + format),
                         list(artifacts.artifacts.keys()),
                     )
