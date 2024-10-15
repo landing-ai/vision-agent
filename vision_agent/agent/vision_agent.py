@@ -570,7 +570,7 @@ class VisionAgent(Agent):
                                 media_obs_chat.append(
                                     Path(self.local_artifacts_path).parent / media_ob
                                 )
-                        if media_obs_chat:
+                        if len(media_obs_chat) > 0:
                             obs_chat_elt["media"] = media_obs_chat
 
                     # don't add execution results to internal chat
