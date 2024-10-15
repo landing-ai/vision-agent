@@ -8,11 +8,8 @@ import vision_agent.tools as T
 import vision_agent.tools.planner_tools as pt
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
-    extract_execution,
     extract_tag,
-    extract_finalize_plan,
     extract_json,
-    extract_thinking,
     print_code,
 )
 from vision_agent.agent.vision_agent_planner_prompts import (
@@ -204,9 +201,9 @@ class VisionAgentPlannerV2(Agent):
                 if self.verbosity > 1:
                     _LOGGER.info(f"Response: {response}")
 
-                thinking = extract_thinking(response)
-                code = extract_execution(response)
-                finalize_plan = extract_finalize_plan(response)
+                thinking = extract_tag(response, "thinking")
+                code = extract_tag(response, "execute_python")
+                finalize_plan = extract_tag(response, "finalize_plan")
 
                 if self.verbosity > 0:
                     _LOGGER.info(f"Step {step}: {thinking}")
