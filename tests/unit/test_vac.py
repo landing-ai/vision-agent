@@ -141,3 +141,16 @@ def check_helmets(image_path):
 # The function can be called with the image path"""
     code_out = strip_function_calls(code, exclusions=["register_heif_opener"])
     assert code_out == expected_code
+
+
+def test_strip_function_call_if_name_equal_main():
+    code = """import os
+def f():
+    print("Hello!")
+if __name__ == "__main__":
+    f()"""
+    expected_code = """import os
+def f():
+    print("Hello!")"""
+    code_out = strip_function_calls(code)
+    assert code_out == expected_code

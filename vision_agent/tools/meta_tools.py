@@ -451,11 +451,6 @@ def generate_vision_code(
         custom_tool_names=custom_tool_names,
     )
 
-    # capture and save any files that were saved in the code to the artifacts
-    extract_and_save_files_to_artifacts(
-        artifacts, response["code"] + "\n" + response["test"]
-    )
-
     redisplay_results(response["test_result"])
     code = response["code"]
     artifacts[name] = code
@@ -535,10 +530,6 @@ def edit_vision_code(
         fixed_chat_history,
         test_multi_plan=False,
         custom_tool_names=custom_tool_names,
-    )
-    # capture and save any files that were saved in the code to the artifacts
-    extract_and_save_files_to_artifacts(
-        artifacts, response["code"] + "\n" + response["test"]
     )
 
     redisplay_results(response["test_result"])
@@ -766,7 +757,9 @@ def use_object_detection_fine_tuning(
     return diff
 
 
-def extract_and_save_files_to_artifacts(artifacts: Artifacts, code: str) -> None:
+def extract_and_save_files_to_artifacts(
+    artifacts: Artifacts, code: str, obs: str
+) -> None:
     """Extracts and saves files used in the code to the artifacts object.
 
     Parameters:
@@ -776,10 +769,14 @@ def extract_and_save_files_to_artifacts(artifacts: Artifacts, code: str) -> None
     try:
         response = extract_json(
             AnthropicLMM()(  # type: ignore
-                f"""You are a helpful AI assistant. Your job is to look at a snippet of code and return the file paths that are being saved in the file. Below is the code snippet:
+                f"""You are a helpful AI assistant. Your job is to look at a snippet of code and the output of running that code and return the file paths that are being saved in the file. Below is the code snippet:
 
 ```python
 {code}
+```
+
+```output
+{obs}
 ```
 
 Return the file paths in the following JSON format:

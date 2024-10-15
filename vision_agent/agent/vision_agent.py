@@ -149,11 +149,11 @@ def execute_code_action(
     result = code_interpreter.exec_isolation(
         BoilerplateCode.add_boilerplate(code, remote_path=artifact_remote_path)
     )
-    extract_and_save_files_to_artifacts(artifacts, code)
 
     obs = str(result.logs)
     if result.error:
         obs += f"\n{result.error}"
+    extract_and_save_files_to_artifacts(artifacts, code, obs)
     return result, obs
 
 
@@ -182,6 +182,7 @@ def execute_user_code_action(
         )
         if user_result.error:
             user_obs += f"\n{user_result.error}"
+        extract_and_save_files_to_artifacts(artifacts, user_code_action, user_obs)
     return user_result, user_obs
 
 
