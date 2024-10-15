@@ -566,7 +566,7 @@ class VisionAgent(Agent):
                         # check if the media is actually in the artifacts
                         media_obs_chat = []
                         for media_ob in media_obs:
-                            if media_ob not in artifacts.artifacts:
+                            if media_ob in artifacts.artifacts:
                                 media_obs_chat.append(
                                     Path(self.local_artifacts_path).parent / media_ob
                                 )
