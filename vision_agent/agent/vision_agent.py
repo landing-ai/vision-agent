@@ -155,7 +155,6 @@ def execute_code_action(
     obs = str(result.logs)
     if result.error:
         obs += f"\n{result.error}"
-    __import__("ipdb").set_trace()
     extract_and_save_files_to_artifacts(artifacts, code, obs, result)
     return result, obs
 
