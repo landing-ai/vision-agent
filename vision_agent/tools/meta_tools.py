@@ -835,7 +835,7 @@ def extract_and_save_files_to_artifacts(
     files = {}
     for res in result.results:
         for format in res.formats():
-            if format in ["png", "jpeg", "mp4"]:  # type: ignore
+            if format in ["png", "jpeg", "mp4"]:
                 if format == "png":
                     data = base64.b64decode(res.png) if res.png is not None else None
                 elif format == "jpeg":

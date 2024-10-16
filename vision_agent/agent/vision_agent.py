@@ -335,6 +335,8 @@ class VisionAgent(Agent):
             verbosity (int): The verbosity level of the agent.
             local_artifacts_path (Optional[Union[str, Path]]): The path to the local
                 artifacts file.
+            remote_artifacts_path (Optional[Union[str, Path]]): The path to the remote
+                artifacts file.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
@@ -643,6 +645,7 @@ class OpenAIVisionAgent(VisionAgent):
         agent: Optional[LMM] = None,
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
+        remote_artifacts_path: Optional[Union[str, Path]] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
@@ -653,6 +656,8 @@ class OpenAIVisionAgent(VisionAgent):
                 of other agents.
             verbosity (int): The verbosity level of the agent.
             local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            remote_artifacts_path (Optional[Union[str, Path]]): The path to the remote
                 artifacts file.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
@@ -667,6 +672,7 @@ class OpenAIVisionAgent(VisionAgent):
             agent,
             verbosity,
             local_artifacts_path,
+            remote_artifacts_path,
             callback_message,
             code_interpreter,
         )
@@ -678,6 +684,7 @@ class AnthropicVisionAgent(VisionAgent):
         agent: Optional[LMM] = None,
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
+        remote_artifacts_path: Optional[Union[str, Path]] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
@@ -688,6 +695,8 @@ class AnthropicVisionAgent(VisionAgent):
                 of other agents.
             verbosity (int): The verbosity level of the agent.
             local_artifacts_path (Optional[Union[str, Path]]): The path to the local
+                artifacts file.
+            remote_artifacts_path (Optional[Union[str, Path]]): The path to the remote
                 artifacts file.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
@@ -702,6 +711,7 @@ class AnthropicVisionAgent(VisionAgent):
             agent,
             verbosity,
             local_artifacts_path,
+            remote_artifacts_path,
             callback_message,
             code_interpreter,
         )
