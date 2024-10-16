@@ -69,11 +69,9 @@ def extract_tool_info(
     return tool, tool_thoughts, tool_docstring, error_message
 
 
-def get_tool_for_task(task: str, images: List[np.ndarray]) -> Optional[Callable]:
+def get_tool_for_task(task: str, images: List[np.ndarray]) -> None:
     """Given a task and one or more images this function will find a tool to accomplish
-    the jobs. It returns the tool and prints the tool documentation and thoughts on why
-    it chose the tool. Do not use the return value of this function until it has run
-    and printed the tool documentation and thoughts.
+    the jobs. It prints the tool documentation and thoughts on why it chose the tool.
 
     Wait until the documentation is printed to use the function so
     you know what the input and output signatures are.
@@ -83,8 +81,7 @@ def get_tool_for_task(task: str, images: List[np.ndarray]) -> Optional[Callable]
         images: List[np.ndarray]: The images to use for the task.
 
     Returns:
-        Optional[Callable]: The tool that can accomplish the task or None if it could
-            not find a tool.
+        None: The tool to use for the task is printed to stdout
     """
     lmm = AnthropicLMM()
 
@@ -167,7 +164,6 @@ def get_tool_for_task(task: str, images: List[np.ndarray]) -> Optional[Callable]
     print(
         f"[get_tool_for_task output]: {tool_thoughts}\n\nTool Documentation:\n{tool_docstring}"
     )
-    return tool
 
 
 def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
