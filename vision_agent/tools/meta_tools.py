@@ -28,7 +28,6 @@ CURRENT_FILE = None
 CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100
 ZMQ_PORT = os.environ.get("ZMQ_PORT", None)
-VERBOSITY = os.environ.get("VERBOSITY", 0)
 
 
 def report_progress_callback(port: int, inp: Dict[str, Any]) -> None:
@@ -443,14 +442,16 @@ def generate_vision_code(
             dogs = owl_v2("dog", image)
             return dogs
     """
+    # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
     if ZMQ_PORT is not None:
         agent = va.agent.VisionAgentCoder(
             report_progress_callback=lambda inp: report_progress_callback(
                 int(ZMQ_PORT), inp
-            )
+            ),
+            verbosity=0,
         )
     else:
-        agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
+        agent = va.agent.VisionAgentCoder(verbosity=0)
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.generate_code(
@@ -514,7 +515,8 @@ def edit_vision_code(
             return dogs
     """
 
-    agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
+    # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
+    agent = va.agent.VisionAgentCoder(verbosity=0)
     if name not in artifacts:
         print(f"[Artifact {name} does not exist]")
         return f"[Artifact {name} does not exist]"
