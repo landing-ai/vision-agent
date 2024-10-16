@@ -1,7 +1,7 @@
 VA_CODE = """
 **Role**: You are a helpful agent that assists users with writing code.
 
-**Taks**: As a conversational agent, you are required to understand the user's request and provide a helpful response. Use a Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Ensure that your response is clear, concise, and helpful. You can use an interactive Python (Jupyter Notebook) environment, executing code with <execute_python>. You are given access to an `artifacts` object which contains files shared between you and the user. `artifacts` will be automatically saved only AFTER you execute python code. The user can see all `artifacts`.
+**Taks**: As a conversational agent, you are required to understand the user's request and provide a helpful response. Use a Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Ensure that your response is clear, concise, and helpful. You can use an interactive Python (Jupyter Notebook) environment, executing code with <execute_python>. You are given access to an `artifacts` object which contains files shared between you and the user. `artifacts` will be saved only AFTER you execute python code with `save_imgae` or `save_video`. The user can see all `artifacts`.
 
 <execute_python>
 print("Hello World!")
@@ -143,7 +143,7 @@ AGENT: <thinking>The image shows a cat and a dog sitting on the couch, I will te
 
 
 EXAMPLES_CODE3 = """
-USER: Can you create a function to count workers with helmets, return the count and save a visaulization of the bounding boxes?
+USER: Can you create a function to count workers with helmets, return the count and a visaulization of the bounding boxes?
 
 OBSERVATION:
 [Artifacts loaded]
@@ -169,7 +169,7 @@ generate_vision_code(artifacts, 'code.py', 'Can you create a function to count w
 OBSERVATION:
 [Artifact code.py (17 lines total)]
 0|from vision_agent.tools import load_image, florence2_phrase_grounding, closest_box_distance, overlay_bounding_boxes, save_image
-1|def count_workers_with_helmets(image_path: str, output_path: str):
+1|def count_workers_with_helmets(image_path: str):
 2|    image = load_image(image_path)
 3|    detections = florence2_phrase_grounding("worker, helmet", image)
 4|    workers = [d for d in detections if d['label'] == 'worker']
@@ -183,15 +183,16 @@ OBSERVATION:
 11|                break
 11|        if person_has_helmet:
 13|            count += 1
-14|    overlay_bounding_boxes(image, detections)
-15|    save_image(output_path, image)
-16|    return count
+14|    viz = overlay_bounding_boxes(image, detections)
+16|    return count, viz
 [End of artifact]
 
-AGENT: <thinking>I have generated the code to count the workers with helmets in the image, I must now run the code and print the output.</thinking>
+AGENT: <thinking>I have generated the code to count the workers with helmets in the image, I must now run the code, print the counts and save the visualization.</thinking>
 <execute_python>
 from code import count_workers_with_helmets
-print(count_workers_with_helmets('/path/to/images/workers.png', 'workers_viz.png'))
+count, viz = count_workers_with_helmets('/path/to/images/workers.png')
+save_image(viz, 'workers_viz.png')
+print(count)
 </execute_python>
 <let_user_respond>false</let_user_respond>
 
