@@ -806,7 +806,10 @@ The name cannot conflict with any of these existing names:
 {str(existing_names)}
 
 Return the file paths in the following JSON format:
-{{"png": ["image_name1.png", "other_image_name.png"], "mp4": ["video_name.mp4"]}}"""
+```json
+{{"png": ["image_name1.png", "other_image_name.png"], "mp4": ["video_name.mp4"]}}
+```
+"""
             )
         )
     except json.JSONDecodeError:
