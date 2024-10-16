@@ -833,21 +833,21 @@ def extract_and_save_files_to_artifacts(
     # file system.
     files = {}
     for res in result.results:
-        if len(res.formats()) == 1 and res.formats()[0] in ["png", "jpeg", "mp4"]:  # type: ignore
-            format = res.formats()[0]  # type: ignore
-            if format == "png":
-                data = base64.b64decode(res.png) if res.png is not None else None
-            elif format == "jpeg":
-                data = base64.b64decode(res.jpeg) if res.jpeg is not None else None
-            elif format == "mp4":
-                data = base64.b64decode(res.mp4) if res.mp4 is not None else None
-            else:
-                data = None
+        for format in res.formats():
+            if format in ["png", "jpeg", "mp4"]:  # type: ignore
+                if format == "png":
+                    data = base64.b64decode(res.png) if res.png is not None else None
+                elif format == "jpeg":
+                    data = base64.b64decode(res.jpeg) if res.jpeg is not None else None
+                elif format == "mp4":
+                    data = base64.b64decode(res.mp4) if res.mp4 is not None else None
+                else:
+                    data = None
 
-            if format not in files:
-                files[format] = [data]
-            else:
-                files[format].append(data)
+                if format not in files:
+                    files[format] = [data]
+                else:
+                    files[format].append(data)
 
     response = _extract_file_names(
         code,
