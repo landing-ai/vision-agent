@@ -155,6 +155,7 @@ def execute_code_action(
     obs = str(result.logs)
     if result.error:
         obs += f"\n{result.error}"
+    __import__("ipdb").set_trace()
     extract_and_save_files_to_artifacts(artifacts, code, obs, result)
     return result, obs
 
@@ -323,6 +324,7 @@ class VisionAgent(Agent):
         agent: Optional[LMM] = None,
         verbosity: int = 0,
         local_artifacts_path: Optional[Union[str, Path]] = None,
+        remote_artifacts_path: Optional[Union[str, Path]] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
@@ -355,6 +357,14 @@ class VisionAgent(Agent):
                 Path(local_artifacts_path)
                 if local_artifacts_path is not None
                 else Path(tempfile.NamedTemporaryFile(delete=False).name)
+            ),
+        )
+        self.remote_artifacts_path = cast(
+            str,
+            (
+                Path(remote_artifacts_path)
+                if remote_artifacts_path is not None
+                else Path(WORKSPACE / "artifacts.pkl")
             ),
         )
 
@@ -433,7 +443,7 @@ class VisionAgent(Agent):
 
         if not artifacts:
             # this is setting remote artifacts path
-            artifacts = Artifacts(WORKSPACE / "artifacts.pkl")
+            artifacts = Artifacts(self.remote_artifacts_path, self.local_artifacts_path)
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         code_interpreter = (

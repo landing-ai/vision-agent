@@ -87,8 +87,11 @@ class Artifacts:
     need to be in sync with the remote environment the VisionAgent is running in.
     """
 
-    def __init__(self, remote_save_path: Union[str, Path]) -> None:
+    def __init__(
+        self, remote_save_path: Union[str, Path], local_save_path: Union[str, Path]
+    ) -> None:
         self.remote_save_path = Path(remote_save_path)
+        self.local_save_path = Path(local_save_path)
         self.artifacts: Dict[str, Any] = {}
 
         self.code_sandbox_runtime = None
@@ -132,9 +135,7 @@ class Artifacts:
         return output_str
 
     def save(self, local_path: Optional[Union[str, Path]] = None) -> None:
-        save_path = (
-            Path(local_path) if local_path is not None else self.remote_save_path
-        )
+        save_path = Path(local_path) if local_path is not None else self.local_save_path
         with open(save_path, "wb") as f:
             pkl.dump(self.artifacts, f)
 
@@ -876,6 +877,7 @@ def extract_and_save_files_to_artifacts(
                         list(artifacts.artifacts.keys()),
                     )
                     artifacts[new_name] = files[format][j]
+    artifacts.save()
 
 
 META_TOOL_DOCSTRING = get_tool_documentation(
