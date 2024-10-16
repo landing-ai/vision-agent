@@ -146,7 +146,9 @@ def strip_function_calls(  # noqa: C901
 
         def leave_Try(self, original_node: cst.Try, updated_node: cst.Try) -> cst.Try:
             if not self.in_function_or_class:
-                return cast(cst.Try, check_and_remove_node(updated_node, self.exclusions))
+                return cast(
+                    cst.Try, check_and_remove_node(updated_node, self.exclusions)
+                )
             return updated_node
 
     tree = cst.parse_module(code)
