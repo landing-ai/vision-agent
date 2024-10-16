@@ -2,7 +2,6 @@ import copy
 import json
 import logging
 import os
-import pickle as pkl
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
@@ -21,7 +20,6 @@ from vision_agent.tools.meta_tools import (
     META_TOOL_DOCSTRING,
     Artifacts,
     check_and_load_image,
-    extract_and_save_files_to_artifacts,
     use_extra_vision_agent_args,
 )
 from vision_agent.utils import CodeInterpreterFactory
@@ -160,7 +158,6 @@ def execute_code_action(
     obs = str(result.logs)
     if result.error:
         obs += f"\n{result.error}"
-    # extract_and_save_files_to_artifacts(artifacts, code, obs, result)
     return result, obs
 
 
@@ -189,23 +186,6 @@ def execute_user_code_action(
         if user_result.error:
             user_obs += f"\n{user_result.error}"
     return user_result, user_obs
-
-
-def download_and_merge_artifacts(
-    code_interpreter: CodeInterpreter, artifacts: Artifacts
-) -> None:
-    with tempfile.TemporaryFile() as temp_file:
-        code_interpreter.download_file(
-            str(artifacts.remote_save_path),
-            str(temp_file),
-        )
-        temp_file.seek(0)
-        with open(str(temp_file), "rb") as f:
-            remote_artifacts = pkl.load(f)
-        merged_artifacts = {**artifacts.artifacts, **remote_artifacts}
-        artifacts.artifacts = merged_artifacts
-        artifacts.save()
-        artifacts.load(artifacts.local_save_path, artifacts.local_save_path.parent)
 
 
 def add_step_descriptions(response: Dict[str, Any]) -> Dict[str, Any]:
@@ -602,12 +582,13 @@ class VisionAgent(Agent):
                 last_response = response
 
                 # after each turn, download the artifacts locally
-                # download_and_merge_artifacts(code_interpreter, artifacts)
                 code_interpreter.download_file(
                     str(artifacts.remote_save_path),
                     str(artifacts.local_save_path),
                 )
-                artifacts.load(artifacts.local_save_path, artifacts.local_save_path.parent)
+                artifacts.load(
+                    artifacts.local_save_path, artifacts.local_save_path.parent
+                )
 
         return orig_chat, artifacts
 

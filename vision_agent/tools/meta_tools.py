@@ -1,4 +1,3 @@
-import base64
 import difflib
 import json
 import os
@@ -6,7 +5,6 @@ import pickle as pkl
 import re
 import subprocess
 import tempfile
-import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -14,9 +12,7 @@ from IPython.display import display
 from redbaron import RedBaron  # type: ignore
 
 import vision_agent as va
-from vision_agent.agent.agent_utils import extract_json
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm import AnthropicLMM
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
@@ -148,11 +144,12 @@ def filter_file(file_name: Union[str, Path]) -> Tuple[bool, bool]:
         file_name_p.is_file()
         and "__pycache__" not in str(file_name_p)
         and not file_name_p.name.startswith(".")
-        and file_name_p.suffix in ["png", "jpeg", "jpg", "mp4", "txt", "json", "csv"]
-    ), file_name_p.suffix in ["png", "jpeg", "jpg", "mp4"]
+        and file_name_p.suffix
+        in [".png", ".jpeg", ".jpg", ".mp4", ".txt", ".json", ".csv"]
+    ), file_name_p.suffix in [".png", ".jpeg", ".jpg", ".mp4"]
 
 
-def capture_files_into_artifacts(artifacts: Artifacts):
+def capture_files_into_artifacts(artifacts: Artifacts) -> None:
     """This function is used to capture all files in the current directory into an
     artifact object. This is useful if you want to capture all files in the current
     directory and use them in a different environment where you don't have access to
@@ -792,115 +789,6 @@ def use_object_detection_fine_tuning(
         raw=True,
     )
     return diff
-
-
-def _find_name(file: Path, names: List[str]) -> str:
-    if not str(file) in names:
-        return str(file)
-    name = file.name
-    suffix = file.suffix
-    # test basic names first
-    for i in range(100):
-        new_name = f"{name}_output_{i}{suffix}"
-        if new_name not in names:
-            return new_name
-    return f"{name}_output_{str(uuid.uuid4())[:4]}{suffix}"
-
-
-def _extract_file_names(
-    code: str, obs: str, file_counts: Dict[str, int], existing_names: List[str]
-) -> Dict[str, List[str]]:
-    try:
-        response = extract_json(
-            AnthropicLMM()(  # type: ignore
-                f"""You are a helpful AI assistant. You are given a number of files for certain file types, your job is to look at the code and the output of running that code and assign each file a file name. Below is the code snippet:
-
-```python
-{code}
-```
-
-```output
-{obs}
-```
-
-Here's the number of files that need file names:
-{json.dumps({k: v for k, v in file_counts.items()})}
-
-The name cannot conflict with any of these existing names:
-{str(existing_names)}
-
-Return the file paths in the following JSON format:
-```json
-{{"png": ["image_name1.png", "other_image_name.png"], "mp4": ["video_name.mp4"]}}
-```
-"""
-            )
-        )
-    except json.JSONDecodeError:
-        response = {}
-
-    return response
-
-
-def extract_and_save_files_to_artifacts(
-    artifacts: Artifacts, code: str, obs: str, result: Execution
-) -> None:
-    """Extracts and saves files used in the code to the artifacts object.
-
-    Parameters:
-        artifacts (Artifacts): The artifacts object to save the files to.
-        code (str): The code to extract the files from.
-    """
-
-    # This is very hacky but there's no nice way to get the files into artifacts if the
-    # code is executed in a remote environment and we don't have access to the remove
-    # file system.
-    files = {}
-    for res in result.results:
-        for format in res.formats():
-            if format in ["png", "jpeg", "mp4"]:
-                if format == "png":
-                    data = base64.b64decode(res.png) if res.png is not None else None
-                elif format == "jpeg":
-                    data = base64.b64decode(res.jpeg) if res.jpeg is not None else None
-                elif format == "mp4":
-                    data = base64.b64decode(res.mp4) if res.mp4 is not None else None
-                else:
-                    data = None
-
-                if format not in files:
-                    files[format] = [data]
-                else:
-                    files[format].append(data)
-
-    response = _extract_file_names(
-        code,
-        obs,
-        {k: len(v) for k, v in files.items()},
-        list(artifacts.artifacts.keys()),
-    )
-
-    for format in files.keys():
-        i = 0
-        if format in response:
-            for file in response[format]:
-                if i < len(files[format]) and files[format][i] is not None:
-                    new_name = _find_name(
-                        Path(file).with_suffix("." + format),
-                        list(artifacts.artifacts.keys()),
-                    )
-                    artifacts[new_name] = files[format][i]
-                i += 1
-        if i < len(files[format]):
-            for j in range(i, len(files[format])):
-                name = "image" if format in ["png", "jpeg"] else "video"
-                if files[format][j] is not None:
-                    new_name = _find_name(
-                        Path(f"{name}").with_suffix("." + format),
-                        list(artifacts.artifacts.keys()),
-                    )
-                    artifacts[new_name] = files[format][j]
-    artifacts.save()
 
 
 META_TOOL_DOCSTRING = get_tool_documentation(
