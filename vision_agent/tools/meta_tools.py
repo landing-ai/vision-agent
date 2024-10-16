@@ -662,10 +662,10 @@ def get_diff_with_prompts(name: str, before: str, after: str) -> str:
 
 
 def use_extra_vision_agent_args(
-    code: str,
+    code: Optional[str],
     test_multi_plan: bool = True,
     custom_tool_names: Optional[List[str]] = None,
-) -> str:
+) -> Optional[str]:
     """This is for forcing arguments passed by the user to VisionAgent into the
     VisionAgentCoder call.
 
@@ -677,6 +677,8 @@ def use_extra_vision_agent_args(
     Returns:
         str: The edited code.
     """
+    if code is None:
+        return None
     red = RedBaron(code)
     for node in red:
         # seems to always be atomtrailers not call type
