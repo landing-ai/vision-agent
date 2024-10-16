@@ -881,7 +881,6 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         open_code_artifact,
         create_code_artifact,
         edit_code_artifact,
-        generate_vision_plan,
         generate_vision_code,
         edit_vision_code,
         view_media_artifact,
