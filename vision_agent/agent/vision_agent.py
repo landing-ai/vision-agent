@@ -98,8 +98,9 @@ def _clean_response(response: str) -> str:
 def run_conversation(orch: LMM, chat: List[Message]) -> Dict[str, Any]:
     chat = copy.deepcopy(chat)
 
+    # only add 10 most recent messages in the chat to not go over token limit
     conversation = ""
-    for chat_i in chat:
+    for chat_i in chat[-10:]:
         if chat_i["role"] == "user":
             conversation += f"USER: {chat_i['content']}\n\n"
         elif chat_i["role"] == "observation":
