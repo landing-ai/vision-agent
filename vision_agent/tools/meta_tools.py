@@ -269,14 +269,14 @@ def edit_code_artifact(
         artifacts[name] = ""
 
     total_lines = len(artifacts[name].splitlines())
-    if start < -1 or end < -1 or start > end or end > total_lines:
-        print("[Invalid line range]")
-        return "[Invalid line range]"
-
     if start == -1:
         start = total_lines
     if end == -1:
         end = total_lines
+
+    if start < 0 or end < 0 or start > end or end > total_lines:
+        print("[Invalid line range]")
+        return "[Invalid line range]"
 
     new_content_lines = content.splitlines(keepends=True)
     new_content_lines = [
@@ -378,14 +378,16 @@ def generate_vision_plan(
         [End Plan Context]
     """
 
+    # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
     if ZMQ_PORT is not None:
         agent = va.agent.VisionAgentPlanner(
             report_progress_callback=lambda inp: report_progress_callback(
                 int(ZMQ_PORT), inp
-            )
+            ),
+            verbosity=0,
         )
     else:
-        agent = va.agent.VisionAgentPlanner()
+        agent = va.agent.VisionAgentPlanner(verbosity=0)
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.generate_plan(
@@ -778,7 +780,7 @@ def _find_name(file: Path, names: List[str]) -> str:
         new_name = f"{name}_output_{i}{suffix}"
         if new_name not in names:
             return new_name
-    return f"{name}_output_{str(uuid.uuid4())}{suffix}"
+    return f"{name}_output_{str(uuid.uuid4())[:4]}{suffix}"
 
 
 def _extract_file_names(
