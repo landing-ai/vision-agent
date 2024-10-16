@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from IPython.display import display
 from redbaron import RedBaron  # type: ignore
@@ -37,16 +37,6 @@ def report_progress_callback(port: int, inp: Dict[str, Any]) -> None:
     socket = context.socket(zmq.PUSH)
     socket.connect(f"tcp://localhost:{port}")
     socket.send_json(inp)
-
-
-def filter_file(file_name: Union[str, Path]) -> bool:
-    file_name_p = Path(file_name)
-    return (
-        file_name_p.is_file()
-        and "__pycache__" not in str(file_name_p)
-        and file_name_p.suffix in [".py", ".txt"]
-        and not file_name_p.name.startswith(".")
-    )
 
 
 def redisplay_results(execution: Execution) -> None:
@@ -150,6 +140,37 @@ class Artifacts:
 
     def __contains__(self, name: str) -> bool:
         return name in self.artifacts
+
+
+def filter_file(file_name: Union[str, Path]) -> Tuple[bool, bool]:
+    file_name_p = Path(file_name)
+    return (
+        file_name_p.is_file()
+        and "__pycache__" not in str(file_name_p)
+        and not file_name_p.name.startswith(".")
+        and file_name_p.suffix in ["png", "jpeg", "jpg", "mp4", "txt", "json", "csv"]
+    ), file_name_p.suffix in ["png", "jpeg", "jpg", "mp4"]
+
+
+def capture_files_into_artifacts(artifacts: Artifacts):
+    """This function is used to capture all files in the current directory into an
+    artifact object. This is useful if you want to capture all files in the current
+    directory and use them in a different environment where you don't have access to
+    the file system.
+
+    Parameters:
+        artifact (Artifacts): The artifact object to save the files to.
+    """
+    for file in Path(".").glob("**/*"):
+        usable_file, is_media = filter_file(file)
+        mode = "rb" if is_media else "r"
+        if usable_file:
+            file_name = file.name
+            if file_name.startswith(str(Path(artifacts.remote_save_path).parents)):
+                idx = len(Path(artifacts.remote_save_path).parents)
+                file_name = file_name[idx:]
+            with open(file, mode) as f:
+                artifacts[file_name] = f.read()
 
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
