@@ -1,17 +1,14 @@
+import base64
 import copy
 import logging
-import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import vision_agent.tools as T
 import vision_agent.tools.planner_tools as pt
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import (
-    extract_tag,
-    extract_json,
-    print_code,
-)
+from vision_agent.agent.agent_utils import extract_json, extract_tag, print_code
 from vision_agent.agent.vision_agent_planner_prompts import (
     EXAMPLE_PLAN1,
     FINALIZE_PLAN,
@@ -78,7 +75,11 @@ def run_planning(
         planning=planning,
     )
 
-    response = cast(str, model.generate(prompt))
+    message = {"role": "user", "content": prompt}
+    if chat[-1]["role"] == "observation" and "media" in chat[-1]:
+        message["media"] = chat[-1]["media"]
+
+    response = model.chat([message])
     return response
 
 
@@ -92,6 +93,49 @@ def code_safeguards(code: str) -> str:
                 break
         code = "\n".join(new_lines)
     return code
+
+
+def response_safeguards(response: str) -> str:
+    if "<execute_python>" in response:
+        response = response[
+            : response.index("</execute_python>") + len("</execute_python>")
+        ]
+    return response
+
+
+def fix_chat(
+    chat: List[Message], code_interpreter: CodeInterpreter
+) -> Tuple[List[Message], List[Message]]:
+    orig_chat = copy.deepcopy(chat)
+    int_chat = copy.deepcopy(chat)
+    media_list = []
+    for chat_i in int_chat:
+        if "media" in chat_i:
+            for media in chat_i["media"]:
+                media = (
+                    media
+                    if type(media) is str and media.startswith(("http", "https"))
+                    else code_interpreter.upload_file(cast(str, media))
+                )
+                chat_i["content"] += f" Media name {media}"  # type: ignore
+                media_list.append(str(media))
+
+    int_chat = cast(
+        List[Message],
+        [
+            (
+                {
+                    "role": c["role"],
+                    "content": c["content"],
+                    "media": c["media"],
+                }
+                if "media" in c
+                else {"role": c["role"], "content": c["content"]}
+            )
+            for c in int_chat
+        ],
+    )
+    return int_chat, orig_chat
 
 
 def execute_code_action(
@@ -120,6 +164,19 @@ def execute_code_action(
     if obs.endswith("\n----- stderr -----"):
         obs = obs[:-19]
     return execution, obs, code
+
+
+def capture_images_from_exec(execution: Execution) -> List[str]:
+    image_paths = []
+    for result in execution.results:
+        for format in result.formats():
+            if format in ["png", "jpeg"]:
+                with tempfile.NamedTemporaryFile(
+                    suffix=f".{format}", delete=False
+                ) as f:
+                    f.write(base64.b64decode(result[format]))
+                    image_paths.append(f.name)
+    return image_paths
 
 
 class VisionAgentPlannerV2(Agent):
@@ -162,42 +219,13 @@ class VisionAgentPlannerV2(Agent):
         with CodeInterpreterFactory.new_instance(
             self.code_sandbox_runtime
         ) as code_interpreter:
-            orig_chat = copy.deepcopy(chat)
-            int_chat = copy.deepcopy(chat)
-            media_list = []
-            for chat_i in int_chat:
-                if "media" in chat_i:
-                    for media in chat_i["media"]:
-                        media = (
-                            media
-                            if type(media) is str
-                            and media.startswith(("http", "https"))
-                            else code_interpreter.upload_file(cast(str, media))
-                        )
-                        chat_i["content"] += f" Media name {media}"  # type: ignore
-                        media_list.append(str(media))
-
-            int_chat = cast(
-                List[Message],
-                [
-                    (
-                        {
-                            "role": c["role"],
-                            "content": c["content"],
-                            "media": c["media"],
-                        }
-                        if "media" in c
-                        else {"role": c["role"], "content": c["content"]}
-                    )
-                    for c in int_chat
-                ],
-            )
-
+            int_chat, orig_chat = fix_chat(chat, code_interpreter)
             step = 0
             finished = False
             while step < self.max_steps or not finished:
                 __import__("ipdb").set_trace()
                 response = run_planning(int_chat, self.planner)
+                response = response_safeguards(response)
                 if self.verbosity > 1:
                     _LOGGER.info(f"Response: {response}")
 
@@ -213,10 +241,14 @@ class VisionAgentPlannerV2(Agent):
 
                 if code is not None:
                     code = code_safeguards(code)
-                    _, obs, code = execute_code_action(
+                    execution, obs, code = execute_code_action(
                         code, code_interpreter, self.verbosity
                     )
-                    int_chat.append({"role": "observation", "content": obs})
+                    media_list = capture_images_from_exec(execution)
+                    int_chat_elt = {"role": "assistant", "content": obs}
+                    if media_list:
+                        int_chat_elt["media"] = media_list
+                    int_chat.append(int_chat_elt)
                     orig_chat.append({"role": "observation", "content": obs})
 
                 if finalize_plan is not None:
@@ -232,8 +264,8 @@ class VisionAgentPlannerV2(Agent):
 
             __import__("ipdb").set_trace()
             plan_str = cast(str, self.planner.generate(prompt))
-            plan = extract_json(plan_str)
-            code_snippets = extract_tag("code", plan_str)
+            plan = extract_json(extract_tag(plan_str, "json"))
+            code_snippets = extract_tag(plan_str, "code")
             plan["code"] = code_snippets
             if self.verbosity > 0:
                 _LOGGER.info(f"Final Plan: {plan}")
