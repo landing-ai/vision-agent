@@ -505,13 +505,10 @@ class VisionAgent(Agent):
                     }
                 )
 
+                code_action = response.get("execute_python", None)
                 # sometimes it gets stuck in a loop, so we force it to exit
                 if last_response == response:
                     response["let_user_respond"] = True
-
-                finished = response.get("let_user_respond", False)
-
-                if last_response == response:
                     self.streaming_message(
                         {
                             "role": "assistant",
@@ -521,7 +518,7 @@ class VisionAgent(Agent):
                                 "value": "Agent is stuck in conversation loop, exited",
                                 "traceback_raw": [],
                             },
-                            "finished": finished and code_action is None,
+                            "finished": code_action is None,
                         }
                     )
                 else:
@@ -531,8 +528,16 @@ class VisionAgent(Agent):
                             "content": new_format_to_old_format(
                                 add_step_descriptions(response)
                             ),
-                            "finished": finished and code_action is None,
+                            "finished": response.get("let_user_respond", False)
+                            and code_action is None,
                         }
+                    )
+
+                finished = response.get("let_user_respond", False)
+
+                if code_action is not None:
+                    code_action = use_extra_vision_agent_args(
+                        code_action, test_multi_plan, custom_tool_names
                     )
 
                 if code_action is not None:
