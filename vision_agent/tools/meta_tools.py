@@ -695,6 +695,9 @@ def use_extra_vision_agent_args(
     Returns:
         str: The edited code.
     """
+    if code is None:
+        return None
+
     class VisionAgentTransformer(cst.CSTTransformer):
         def __init__(
             self, test_multi_plan: bool, custom_tool_names: Optional[List[str]]
