@@ -76,6 +76,14 @@ class Artifacts:
     def __init__(
         self, remote_save_path: Union[str, Path], local_save_path: Union[str, Path]
     ) -> None:
+        """Initializes the Artifacts object with it's remote and local save paths.
+
+        Parameters:
+            remote_save_path (Union[str, Path]): The path to save the artifacts in the
+                remote environment. For example "/home/user/artifacts.pkl".
+            local_save_path (Union[str, Path]): The path to save the artifacts in the
+                local environment. For example "/Users/my_user/workspace/artifacts.pkl".
+        """
         self.remote_save_path = Path(remote_save_path)
         self.local_save_path = Path(local_save_path)
         self.artifacts: Dict[str, Any] = {}
@@ -85,31 +93,46 @@ class Artifacts:
     def load(
         self,
         artifacts_path: Union[str, Path],
-        load_to: Optional[Union[str, Path]] = None,
+        load_to_dir: Optional[Union[str, Path]] = None,
     ) -> None:
-        """Loads are artifacts into the load_to path. If load_to is None, it will load
-        into remote_save_path. If an artifact value is None it will skip loading it.
+        """Loads are artifacts into the load_to_dir directory. If load_to_dir is None,
+        it will load into remote_save_path directory. If an artifact value is None it
+        will skip loading it.
 
         Parameters:
-            artifacts_path (Union[str, Path]): The file path to load the artifacts from
+            artifacts_path (Union[str, Path]): The file path to load the artifacts from.
+                If you are in the remote environment this would be remote_save_path, if
+                you are in the local environment this would be local_save_path.
+            load_to_dir (Optional[Union[str, Path]): The directory to load the artifacts
+                into. If None, it will load into remote_save_path directory.
         """
         with open(artifacts_path, "rb") as f:
             self.artifacts = pkl.load(f)
 
-        load_to = self.remote_save_path.parent if load_to is None else Path(load_to)
+        load_to_dir = (
+            self.remote_save_path.parent if load_to_dir is None else Path(load_to_dir)
+        )
 
         for k, v in self.artifacts.items():
             if v is not None:
                 mode = "w" if isinstance(v, str) else "wb"
-                with open(load_to / k, mode) as f:
+                with open(load_to_dir / k, mode) as f:
                     f.write(v)
 
-    def show(self, uploaded_file_path: Optional[Union[str, Path]] = None) -> str:
-        """Shows the artifacts that have been loaded and their remote save paths."""
+    def show(self, uploaded_file_dir: Optional[Union[str, Path]] = None) -> str:
+        """Prints out the artifacts and the directory they have been loaded to. If you
+        pass in upload_file_dir, it will show the artifacts have been loaded to the
+        upload_file_dir directory. If you don't pass in upload_file_dir, it will show
+        the artifacts have been loaded to the remote_save_path directory.
+
+        Parameters:
+            uploaded_file_dir (Optional[Union[str, Path]): The directory the artifacts
+                have been loaded to.
+        """
         loaded_path = (
-            Path(uploaded_file_path)
-            if uploaded_file_path is not None
-            else self.remote_save_path
+            Path(uploaded_file_dir)
+            if uploaded_file_dir is not None
+            else self.remote_save_path.parent
         )
         output_str = "[Artifacts loaded]\n"
         for k in self.artifacts.keys():
@@ -121,6 +144,9 @@ class Artifacts:
         return output_str
 
     def save(self, local_path: Optional[Union[str, Path]] = None) -> None:
+        """Saves the artifacts to the local_save_path directory. If local_path is None,
+        it will save to the local_save_path directory.
+        """
         save_path = Path(local_path) if local_path is not None else self.local_save_path
         with open(save_path, "wb") as f:
             pkl.dump(self.artifacts, f)
