@@ -212,6 +212,19 @@ def add_step_descriptions(response: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def setup_artifacts() -> Artifacts:
+    # this is setting remote artifacts path
+    sandbox = os.environ.get("CODE_SANDBOX_RUNTIME", None)
+    if sandbox is None or sandbox == "local":
+        remote = WORKSPACE / "artifacts.pkl"
+    elif sandbox == "e2b":
+        remote = Path("/home/user/artifacts.pkl")
+    else:
+        raise ValueError(f"Unknown code sandbox runtime {sandbox}")
+    artifacts = Artifacts(remote, Path(os.getcwd()) / "artifacts.pkl")
+    return artifacts
+
+
 def new_format_to_old_format(new_format: Dict[str, Any]) -> Dict[str, Any]:
     thoughts = new_format["thinking"] if new_format["thinking"] is not None else ""
     response = new_format["response"] if new_format["response"] is not None else ""
@@ -384,15 +397,7 @@ class VisionAgent(Agent):
             raise ValueError("chat cannot be empty")
 
         if not artifacts:
-            # this is setting remote artifacts path
-            sandbox = os.environ.get("CODE_SANDBOX_RUNTIME", None)
-            if sandbox is None or sandbox == "local":
-                remote = WORKSPACE / "artifacts.pkl"
-            elif sandbox == "e2b":
-                remote = Path("/home/user/artifacts.pkl")
-            else:
-                raise ValueError(f"Unknown code sandbox runtime {sandbox}")
-            artifacts = Artifacts(remote, Path(os.getcwd()) / "artifacts.pkl")
+            artifacts = setup_artifacts()
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         code_interpreter = (
