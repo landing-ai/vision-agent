@@ -450,12 +450,16 @@ FINALIZE_PLAN = """
 4. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
 5. Do not include {excluded_tools} tools in your instructions.
 6. Respond in the following JSON format followed by the code:
+
+<json>
 {{
     "plan": str # the plan you have summarized
     "instructions": [
         str # the instructions for each step in the plan with either specific code or a specific tool name
     ]
 }}
+</json>
+
 <code>
 # Code snippets here
 </code>
