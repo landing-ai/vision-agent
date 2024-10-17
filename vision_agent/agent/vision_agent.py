@@ -560,7 +560,12 @@ class VisionAgent(Agent):
                     obs_chat_elt: Message = {"role": "observation", "content": obs}
                     media_obs = check_and_load_image(code_action)
                     if media_obs and result.success:
-                        obs_chat_elt["media"] = media_obs
+                        # media paths will be under the local_save_path when we download
+                        # them after each turn
+                        obs_chat_elt["media"] = [
+                            artifacts.local_save_path.parent / media_ob
+                            for media_ob in media_obs
+                        ]
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
