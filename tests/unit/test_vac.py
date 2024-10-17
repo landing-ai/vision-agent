@@ -136,9 +136,7 @@ def check_helmets(image_path):
     # Save the count dictionary as JSON
     save_json(count_dict, "/home/user/helmet_counts.json")
     
-    return count_dict
-
-# The function can be called with the image path"""
+    return count_dict"""
     code_out = strip_function_calls(code, exclusions=["register_heif_opener"])
     assert code_out == expected_code
 
@@ -151,6 +149,82 @@ if __name__ == "__main__":
     f()"""
     expected_code = """import os
 def f():
-    print("Hello!")"""
+    print("Hello!")
+if __name__ == "__main__":
+    pass"""
+    code_out = strip_function_calls(code)
+    assert code_out == expected_code
+
+
+def test_strip_function_call_for_loop():
+    code = """import os
+def f():
+    print("Hello!")
+for i in range(10):
+    f()"""
+    expected_code = """import os
+def f():
+    print("Hello!")
+for i in range(10):
+    pass"""
+    code_out = strip_function_calls(code)
+    assert code_out == expected_code
+
+
+def test_strip_function_call_while_loop():
+    code = """import os
+def f():
+    print("Hello!")
+i = 0
+while i < 10:
+    f()
+    i += 1"""
+    expected_code = """import os
+def f():
+    print("Hello!")
+i = 0
+while i < 10:
+    i += 1"""
+    code_out = strip_function_calls(code)
+    assert code_out == expected_code
+
+
+def test_strip_function_call_with():
+    code = """import os
+def f():
+    return "Hello!"
+
+with open("file.txt", "w") as f:
+    out = f()
+    f.write(out)"""
+    expected_code = """import os
+def f():
+    return "Hello!"
+
+with open("file.txt", "w") as f:
+    pass"""
+    code_out = strip_function_calls(code)
+    assert code_out == expected_code
+
+
+def test_strip_function_call_with_try_except():
+    code = """import os
+def f():
+    return "Hello!"
+try:
+    out = f()
+except:
+    out = f()
+finally:
+    out = f()"""
+    expected_code = """import os
+def f():
+    return "Hello!"
+try:
+    pass
+except:
+    pass
+finally:
+    pass"""
     code_out = strip_function_calls(code)
     assert code_out == expected_code

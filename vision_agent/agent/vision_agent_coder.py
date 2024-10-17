@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
-from redbaron import RedBaron  # type: ignore
+import libcst as cst
 from tabulate import tabulate
 
 import vision_agent.tools as T
@@ -49,42 +49,112 @@ WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 _LOGGER = logging.getLogger(__name__)
 
 
-def strip_function_calls(code: str, exclusions: Optional[List[str]] = None) -> str:
+def strip_function_calls(  # noqa: C901
+    code: str, exclusions: Optional[List[str]] = None
+) -> str:
     """This will strip out all code that calls functions except for functions included
     in exclusions.
     """
     if exclusions is None:
         exclusions = []
 
-    red = RedBaron(code)
-    nodes_to_remove = []
-    for node in red:
-        if node.type == "def":
-            continue
-        elif node.type == "import" or node.type == "from_import":
-            continue
-        elif node.type == "call":
-            if node.value and node.value[0].value in exclusions:
-                continue
-            nodes_to_remove.append(node)
-        elif node.type == "atomtrailers":
-            if node[0].value in exclusions:
-                continue
-            nodes_to_remove.append(node)
-        elif node.type == "assignment":
-            if node.value.type == "call" or node.value.type == "atomtrailers":
-                func_name = node.value[0].value
-                if func_name in exclusions:
-                    continue
-                nodes_to_remove.append(node)
-        elif node.type == "endl":
-            continue
-        else:
-            nodes_to_remove.append(node)
-    for node in nodes_to_remove:
-        node.parent.remove(node)
-    cleaned_code = red.dumps().strip()
-    return cleaned_code if isinstance(cleaned_code, str) else code
+    def check_and_remove_node(node: cst.CSTNode, exclusions: List[str]) -> cst.CSTNode:
+        if hasattr(node, "value") and isinstance(node.value, cst.Call):
+            if (
+                isinstance(node.value.func, cst.Name)
+                and node.value.func.value in exclusions
+            ):
+                return node
+            return cst.RemoveFromParent()  # type: ignore
+        return node
+
+    class StripFunctionCallsTransformer(cst.CSTTransformer):
+        def __init__(self, exclusions: List[str]):
+            # Store exclusions to skip removing certain function calls
+            self.exclusions = exclusions
+            self.in_function_or_class = False
+
+        def visit_FunctionDef(self, node: cst.FunctionDef) -> Optional[bool]:
+            self.in_function_or_class = True
+            return True
+
+        def leave_FunctionDef(
+            self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
+        ) -> cst.BaseStatement:
+            self.in_function_or_class = False
+            return updated_node
+
+        def visit_ClassDef(self, node: cst.ClassDef) -> Optional[bool]:
+            self.in_function_or_class = True
+            return True
+
+        def leave_ClassDef(
+            self, node: cst.ClassDef, updated_node: cst.ClassDef
+        ) -> cst.BaseStatement:
+            self.in_function_or_class = False
+            return updated_node
+
+        def leave_Expr(
+            self, original_node: cst.Expr, updated_node: cst.Expr
+        ) -> cst.Expr:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.Expr, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_Assign(
+            self, original_node: cst.Assign, updated_node: cst.Assign
+        ) -> cst.Assign:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.Assign, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_If(self, original_node: cst.If, updated_node: cst.If) -> cst.If:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.If, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_For(self, original_node: cst.For, updated_node: cst.For) -> cst.For:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.For, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_While(
+            self, original_node: cst.While, updated_node: cst.While
+        ) -> cst.While:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.While, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_With(
+            self, original_node: cst.With, updated_node: cst.With
+        ) -> cst.With:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.With, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_Try(self, original_node: cst.Try, updated_node: cst.Try) -> cst.Try:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.Try, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+    tree = cst.parse_module(code)
+    transformer = StripFunctionCallsTransformer(exclusions)
+    modified_tree = tree.visit(transformer)
+    return modified_tree.code
 
 
 def write_code(
