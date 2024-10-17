@@ -385,7 +385,14 @@ class VisionAgent(Agent):
 
         if not artifacts:
             # this is setting remote artifacts path
-            artifacts = Artifacts("", "")
+            sandbox = os.environ.get("CODE_SANDBOX_RUNTIME", None)
+            if sandbox is None or sandbox == "local":
+                remote = WORKSPACE / "artifacts.pkl"
+            elif sandbox == "e2b":
+                remote = Path("/home/user/artifacts.pkl")
+            else:
+                raise ValueError(f"Unknown code sandbox runtime {sandbox}")
+            artifacts = Artifacts(remote, Path(os.getcwd()) / "artifacts.pkl")
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         code_interpreter = (
@@ -400,7 +407,7 @@ class VisionAgent(Agent):
 
         if code_interpreter.remote_path != artifacts.remote_save_path.parent:
             raise ValueError(
-                f"Code interpreter remote path {code_interpreter.remote_path} does not match {artifacts.remote_save_path.parent}"
+                f"Code interpreter remote path {code_interpreter.remote_path} does not match artifacts remote path {artifacts.remote_save_path.parent}"
             )
 
         with code_interpreter:
@@ -415,7 +422,7 @@ class VisionAgent(Agent):
                         artifacts.artifacts[Path(media).name] = open(media, "rb").read()
 
                         media_remote_path = (
-                            Path(code_interpreter.remote_path) / Path(media).name
+                            Path(artifacts.remote_save_path.parent) / Path(media).name
                         )
                         chat_i["content"] += f" Media name {media_remote_path}"  # type: ignore
                         media_list.append(media_remote_path)
