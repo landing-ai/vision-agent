@@ -1,6 +1,6 @@
 # Vision Agent Chat Application
 
-The Vision Agent chat appliction allows you to have conversations with the agent system
+The VisionAgent chat appliction allows you to have conversations with the agent system
 to accomplish a wider variety of tasks.
 
 ## Get Started
@@ -36,12 +36,12 @@ Can you count the number of people in this image? Use image.jpg for testing.
 ## Layout
 The are two columns, left and right, each with two tabs.
 
-`Chat` the left column first tab is where you can chat with Vision Agent. It can answer
+`Chat` the left column first tab is where you can chat with VisionAgent. It can answer
 your questions and execute python code on your behalf. Note if you ask it to generate
 vision code it may take awhile to run.
 
 `Code Execution Logs` the left column second tab is where you will see intermediate logs
-when Vision Agent is generating vision code. Because code generation can take some
+when VisionAgent is generating vision code. Because code generation can take some
 time, you can monitor this tab to see what the agent is doing.
 
 `File Browser` the right column first tab is where you can see the files in your
@@ -49,3 +49,20 @@ workspace.
 
 `Code Editor` the right column second tab is where you can examine code files the agent
 has written. You can also modify the code and save it in case the code is incorrect.
+
+## Gotchas
+If you set `ZMQ_PORT` you must be running code to consume the messages or else the
+VisionAgent will get stuck. You can find teh code to consume the zmq messages in `app.py`
+
+```python
+def get_updates(updates, lock):
+    context = zmq.Context()
+    socket = context.socket(zmq.PULL)
+    socket.bind(f"tcp://*:{ZMQ_PORT}")
+
+    while True:
+        message = socket.recv_json()
+        with lock:
+            updates.append(message)
+        time.sleep(0.1)
+```
