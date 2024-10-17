@@ -286,8 +286,6 @@ class VisionAgent(Agent):
         self,
         agent: Optional[LMM] = None,
         verbosity: int = 0,
-        local_artifacts_path: Optional[Union[str, Path]] = None,
-        remote_artifacts_path: Optional[Union[str, Path]] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
@@ -297,10 +295,6 @@ class VisionAgent(Agent):
             agent (Optional[LMM]): The agent to use for conversation and orchestration
                 of other agents.
             verbosity (int): The verbosity level of the agent.
-            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
-                artifacts file.
-            remote_artifacts_path (Optional[Union[str, Path]]): The path to the remote
-                artifacts file.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
@@ -316,16 +310,6 @@ class VisionAgent(Agent):
         self.callback_message = callback_message
         if self.verbosity >= 1:
             _LOGGER.setLevel(logging.INFO)
-        self.local_artifacts_path = (
-            Path(local_artifacts_path)
-            if local_artifacts_path is not None
-            else Path(tempfile.NamedTemporaryFile(delete=False).name)
-        )
-        self.remote_artifacts_path = (
-            Path(remote_artifacts_path)
-            if remote_artifacts_path is not None
-            else Path(WORKSPACE / "artifacts.pkl")
-        )
 
     def __call__(
         self,
@@ -402,7 +386,7 @@ class VisionAgent(Agent):
 
         if not artifacts:
             # this is setting remote artifacts path
-            artifacts = Artifacts(self.remote_artifacts_path, self.local_artifacts_path)
+            artifacts = Artifacts("", "")
 
         # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
         code_interpreter = (
@@ -411,13 +395,13 @@ class VisionAgent(Agent):
             and not isinstance(self.code_interpreter, str)
             else CodeInterpreterFactory.new_instance(
                 code_sandbox_runtime=self.code_interpreter,
-                remote_path=self.remote_artifacts_path.parent,
+                remote_path=artifacts.remote_save_path.parent,
             )
         )
 
-        if code_interpreter.remote_path != self.remote_artifacts_path.parent:
+        if code_interpreter.remote_path != artifacts.remote_save_path.parent:
             raise ValueError(
-                f"Code interpreter remote path {code_interpreter.remote_path} does not match {self.remote_artifacts_path.parent}"
+                f"Code interpreter remote path {code_interpreter.remote_path} does not match {artifacts.remote_save_path.parent}"
             )
 
         with code_interpreter:
@@ -459,13 +443,13 @@ class VisionAgent(Agent):
 
             # Save the current state of artifacts, will include any images the user
             # passed in.
-            artifacts.save(self.local_artifacts_path)
+            artifacts.save()
 
             # Upload artifacts to remote location and show where they are going
             # to be loaded to. The actual loading happens in BoilerplateCode as
             # part of the pre_code.
-            code_interpreter.upload_file(self.local_artifacts_path)
-            artifacts_loaded = artifacts.show(code_interpreter.remote_path)
+            code_interpreter.upload_file(artifacts.local_save_path)
+            artifacts_loaded = artifacts.show(artifacts.remote_save_path.parent)
             int_chat.append({"role": "observation", "content": artifacts_loaded})
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
@@ -494,7 +478,7 @@ class VisionAgent(Agent):
             while not finished and iterations < self.max_iterations:
                 # ensure we upload the artifacts before each turn, so any local
                 # modifications we made to it will be reflected in the remote
-                code_interpreter.upload_file(self.local_artifacts_path)
+                code_interpreter.upload_file(artifacts.local_save_path)
 
                 response = run_conversation(self.agent, int_chat)
                 code_action = use_extra_vision_agent_args(
@@ -588,7 +572,7 @@ class VisionAgent(Agent):
 
                 # after each turn, download the artifacts locally
                 code_interpreter.download_file(
-                    str(artifacts.remote_save_path),
+                    str(artifacts.remote_save_path.name),
                     str(artifacts.local_save_path),
                 )
                 artifacts.load(
@@ -610,8 +594,6 @@ class OpenAIVisionAgent(VisionAgent):
         self,
         agent: Optional[LMM] = None,
         verbosity: int = 0,
-        local_artifacts_path: Optional[Union[str, Path]] = None,
-        remote_artifacts_path: Optional[Union[str, Path]] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
@@ -621,10 +603,6 @@ class OpenAIVisionAgent(VisionAgent):
             agent (Optional[LMM]): The agent to use for conversation and orchestration
                 of other agents.
             verbosity (int): The verbosity level of the agent.
-            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
-                artifacts file.
-            remote_artifacts_path (Optional[Union[str, Path]]): The path to the remote
-                artifacts file.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
@@ -637,8 +615,6 @@ class OpenAIVisionAgent(VisionAgent):
         super().__init__(
             agent,
             verbosity,
-            local_artifacts_path,
-            remote_artifacts_path,
             callback_message,
             code_interpreter,
         )
@@ -649,8 +625,6 @@ class AnthropicVisionAgent(VisionAgent):
         self,
         agent: Optional[LMM] = None,
         verbosity: int = 0,
-        local_artifacts_path: Optional[Union[str, Path]] = None,
-        remote_artifacts_path: Optional[Union[str, Path]] = None,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
@@ -660,10 +634,6 @@ class AnthropicVisionAgent(VisionAgent):
             agent (Optional[LMM]): The agent to use for conversation and orchestration
                 of other agents.
             verbosity (int): The verbosity level of the agent.
-            local_artifacts_path (Optional[Union[str, Path]]): The path to the local
-                artifacts file.
-            remote_artifacts_path (Optional[Union[str, Path]]): The path to the remote
-                artifacts file.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
@@ -676,8 +646,6 @@ class AnthropicVisionAgent(VisionAgent):
         super().__init__(
             agent,
             verbosity,
-            local_artifacts_path,
-            remote_artifacts_path,
             callback_message,
             code_interpreter,
         )

@@ -35,11 +35,7 @@ if Path("artifacts.pkl").exists():
 else:
     artifacts.save("artifacts.pkl")
 
-agent = va.agent.VisionAgent(
-    verbosity=2,
-    local_artifacts_path=local_artifacts_path,
-    remote_artifacts_path=remote_artifacts_path,
-)
+agent = va.agent.VisionAgent(verbosity=2)
 
 st.set_page_config(layout="wide")
 
