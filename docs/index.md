@@ -1,28 +1,22 @@
-# 🔍🤖 Vision Agent
-[![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
-![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
-[![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
-![version](https://img.shields.io/pypi/pyversions/vision-agent)
-
-Vision Agent is a library that helps you utilize agent frameworks to generate code to
+VisionAgent is a library that helps you utilize agent frameworks to generate code to
 solve your vision task. Many current vision problems can easily take hours or days to
 solve, you need to find the right model, figure out how to use it and program it to
-accomplish the task you want. Vision Agent aims to provide an in-seconds experience by
+accomplish the task you want. VisionAgent aims to provide an in-seconds experience by
 allowing users to describe their problem in text and have the agent framework generate
 code to solve the task for them. Check out our discord for updates and roadmaps!
 
 ## Table of Contents
 - [🚀Quick Start](#quick-start)
 - [📚Documentation](#documentation)
-- [🔍🤖Vision Agent](#vision-agent-basic-usage)
+- [🔍🤖VisionAgent](#vision-agent-basic-usage)
 - [🛠️Tools](#tools)
 - [🤖LMMs](#lmms)
-- [💻🤖Vision Agent Coder](#vision-agent-coder)
+- [💻🤖VisionAgent Coder](#vision-agent-coder)
 - [🏗️Additional Backends](#additional-backends)
 
 ## Quick Start
 ### Web Application
-The fastest way to test out Vision Agent is to use our web application. You can find it
+The fastest way to test out VisionAgent is to use our web application. You can find it
 [here](https://va.landing.ai/).
 
 
@@ -59,9 +53,9 @@ be images or video files.
 
 ## Documentation
 
-[Vision Agent Library Docs](https://landing-ai.github.io/vision-agent/)
+[VisionAgent Library Docs](https://landing-ai.github.io/vision-agent/)
 
-## Vision Agent Basic Usage
+## VisionAgent Basic Usage
 ### Chatting and Message Formats
 `VisionAgent` is an agent that can chat with you and call other tools or agents to
 write vision code for you. You can interact with it like you would ChatGPT or any other
@@ -243,7 +237,7 @@ response = lmm(
 )
 ```
 
-## Vision Agent Coder
+## VisionAgent Coder
 Underneath the hood, `VisionAgent` uses `VisionAgentCoder` to generate code to solve
 vision tasks. You can use `VisionAgentCoder` directly to generate code if you want:
 
@@ -439,7 +433,7 @@ export AZURE_OPENAI_EMBEDDING_MODEL_DEPLOYMENT_NAME="your_embedding_model_deploy
 
 > NOTE: make sure your Azure model deployment have enough quota (token per minute) to support it. The default value 8000TPM is not enough.
 
-You can then run Vision Agent using the Azure OpenAI models:
+You can then run VisionAgent using the Azure OpenAI models:
 
 ```python
 import vision_agent as va
