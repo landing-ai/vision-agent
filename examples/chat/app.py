@@ -27,13 +27,15 @@ SAVE = {
     "style": {"bottom": "calc(50% - 4.25rem", "right": "0.4rem"},
 }
 # set artifacts remote_path to WORKSPACE
-artifacts = va.tools.meta_tools.Artifacts(WORKSPACE / "artifacts.pkl")
+local_artifacts_path = "artifacts.pkl"
+remote_artifacts_path = WORKSPACE / "artifacts.pkl"
+artifacts = va.tools.meta_tools.Artifacts(remote_artifacts_path, local_artifacts_path)
 if Path("artifacts.pkl").exists():
     artifacts.load("artifacts.pkl")
 else:
     artifacts.save("artifacts.pkl")
 
-agent = va.agent.VisionAgent(verbosity=1, local_artifacts_path="artifacts.pkl")
+agent = va.agent.VisionAgent(verbosity=2)
 
 st.set_page_config(layout="wide")
 
@@ -54,7 +56,9 @@ def update_messages(messages, lock):
     with lock:
         if Path("artifacts.pkl").exists():
             artifacts.load("artifacts.pkl")
-        new_chat, _ = agent.chat_with_artifacts(messages, artifacts=artifacts)
+        new_chat, _ = agent.chat_with_artifacts(
+            messages, artifacts=artifacts, test_multi_plan=False
+        )
         for new_message in new_chat[len(messages) :]:
             messages.append(new_message)
 

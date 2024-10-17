@@ -22,7 +22,7 @@ def test_check_and_load_image_two():
 
 
 def test_use_object_detection_fine_tuning_none():
-    artifacts = Artifacts("test")
+    artifacts = Artifacts("test", "test")
     code = "print('Hello, World!')"
     artifacts["code"] = code
     output = use_object_detection_fine_tuning(artifacts, "code", "123")
@@ -33,7 +33,7 @@ def test_use_object_detection_fine_tuning_none():
 
 
 def test_use_object_detection_fine_tuning():
-    artifacts = Artifacts("test")
+    artifacts = Artifacts("test", "test")
     code = """florence2_phrase_grounding('one', image1)
 owl_v2_image('two', image2)
 florence2_sam2_image('three', image3)"""
@@ -50,7 +50,7 @@ florence2_sam2_image("three", image3, "123")"""
 
 
 def test_use_object_detection_fine_tuning_twice():
-    artifacts = Artifacts("test")
+    artifacts = Artifacts("test", "test")
     code = """florence2_phrase_grounding('one', image1)
 owl_v2_image('two', image2)
 florence2_sam2_image('three', image3)"""
@@ -75,7 +75,7 @@ florence2_sam2_image("three", image3, "456")"""
 
 
 def test_use_object_detection_fine_tuning_real_case():
-    artifacts = Artifacts("test")
+    artifacts = Artifacts("test", "test")
     code = "florence2_phrase_grounding('(strange arg)', image1)"
     expected_code = 'florence2_phrase_grounding("(strange arg)", image1, "123")'
     artifacts["code"] = code

@@ -575,6 +575,7 @@ class LocalCodeInterpreter(CodeInterpreter):
         super().__init__(timeout=timeout)
         self.nb = nbformat.v4.new_notebook()
         # Set the notebook execution path to the remote path
+        self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
         self.resources = {"metadata": {"path": str(self.remote_path)}}
         self.nb_client = NotebookClient(
             self.nb,
@@ -591,7 +592,6 @@ Timeout: {self.timeout}"""
         )
         sleep(1)
         self._new_kernel()
-        self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
 
     def _new_kernel(self) -> None:
         if self.nb_client.kc is None or not run_sync(self.nb_client.kc.is_alive)():  # type: ignore
@@ -659,7 +659,7 @@ Timeout: {self.timeout}"""
     def download_file(
         self, remote_file_path: Union[str, Path], local_file_path: Union[str, Path]
     ) -> Path:
-        with open(self.remote_path / remote_file_path, "rb") as f:
+        with open(self.remote_path / Path(remote_file_path).name, "rb") as f:
             contents = f.read()
         with open(local_file_path, "wb") as f:
             f.write(contents)
