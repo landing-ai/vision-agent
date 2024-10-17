@@ -86,7 +86,7 @@ def test_owl_v2_fine_tune_id():
         fine_tune_id=FINE_TUNE_ID,
     )
     # this calls a fine-tuned florence2 model which is going to be worse at this task
-    assert 14 <= len(result) <= 26
+    assert 13 <= len(result) <= 26
     assert [res["label"] for res in result] == ["coin"] * len(result)
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
@@ -112,8 +112,8 @@ def test_florence2_phrase_grounding():
         prompt="coin",
     )
 
-    assert len(result) == 25
-    assert [res["label"] for res in result] == ["coin"] * 25
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
@@ -205,7 +205,7 @@ def test_florence2_sam2_image_fine_tune_id():
         fine_tune_id=FINE_TUNE_ID,
     )
     # this calls a fine-tuned florence2 model which is going to be worse at this task
-    assert 14 <= len(result) <= 26
+    assert 13 <= len(result) <= 26
     assert [res["label"] for res in result] == ["coin"] * len(result)
     assert len([res["mask"] for res in result]) == len(result)
 

@@ -72,7 +72,9 @@ def extract_json(json_str: str) -> Dict[str, Any]:
         if json_dict is None:
             error_msg = f"Could not extract JSON from the given str: {json_orig}"
             _LOGGER.exception(error_msg)
-            raise ValueError(error_msg)
+            raise json.JSONDecodeError(
+                msg="Could not extract JSON", doc=json_orig, pos=0
+            )
 
         return json_dict
 

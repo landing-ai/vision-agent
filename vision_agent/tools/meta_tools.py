@@ -6,15 +6,13 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import libcst as cst
 from IPython.display import display
 
 import vision_agent as va
-from vision_agent.agent.agent_utils import extract_json
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm import AnthropicLMM
 from vision_agent.lmm.types import Message
 from vision_agent.tools.tool_utils import get_tool_documentation
 from vision_agent.tools.tools import TOOL_DESCRIPTIONS
@@ -26,7 +24,6 @@ CURRENT_FILE = None
 CURRENT_LINE = 0
 DEFAULT_WINDOW_SIZE = 100
 ZMQ_PORT = os.environ.get("ZMQ_PORT", None)
-VERBOSITY = os.environ.get("VERBOSITY", 0)
 
 
 def report_progress_callback(port: int, inp: Dict[str, Any]) -> None:
@@ -36,16 +33,6 @@ def report_progress_callback(port: int, inp: Dict[str, Any]) -> None:
     socket = context.socket(zmq.PUSH)
     socket.connect(f"tcp://localhost:{port}")
     socket.send_json(inp)
-
-
-def filter_file(file_name: Union[str, Path]) -> bool:
-    file_name_p = Path(file_name)
-    return (
-        file_name_p.is_file()
-        and "__pycache__" not in str(file_name_p)
-        and file_name_p.suffix in [".py", ".txt"]
-        and not file_name_p.name.startswith(".")
-    )
 
 
 def redisplay_results(execution: Execution) -> None:
@@ -86,8 +73,11 @@ class Artifacts:
     need to be in sync with the remote environment the VisionAgent is running in.
     """
 
-    def __init__(self, remote_save_path: Union[str, Path]) -> None:
+    def __init__(
+        self, remote_save_path: Union[str, Path], local_save_path: Union[str, Path]
+    ) -> None:
         self.remote_save_path = Path(remote_save_path)
+        self.local_save_path = Path(local_save_path)
         self.artifacts: Dict[str, Any] = {}
 
         self.code_sandbox_runtime = None
@@ -131,9 +121,7 @@ class Artifacts:
         return output_str
 
     def save(self, local_path: Optional[Union[str, Path]] = None) -> None:
-        save_path = (
-            Path(local_path) if local_path is not None else self.remote_save_path
-        )
+        save_path = Path(local_path) if local_path is not None else self.local_save_path
         with open(save_path, "wb") as f:
             pkl.dump(self.artifacts, f)
 
@@ -148,6 +136,38 @@ class Artifacts:
 
     def __contains__(self, name: str) -> bool:
         return name in self.artifacts
+
+
+def filter_file(file_name: Union[str, Path]) -> Tuple[bool, bool]:
+    file_name_p = Path(file_name)
+    return (
+        file_name_p.is_file()
+        and "__pycache__" not in str(file_name_p)
+        and not file_name_p.name.startswith(".")
+        and file_name_p.suffix
+        in [".png", ".jpeg", ".jpg", ".mp4", ".txt", ".json", ".csv"]
+    ), file_name_p.suffix in [".png", ".jpeg", ".jpg", ".mp4"]
+
+
+def capture_files_into_artifacts(artifacts: Artifacts) -> None:
+    """This function is used to capture all files in the current directory into an
+    artifact object. This is useful if you want to capture all files in the current
+    directory and use them in a different environment where you don't have access to
+    the file system.
+
+    Parameters:
+        artifact (Artifacts): The artifact object to save the files to.
+    """
+    for file in Path(".").glob("**/*"):
+        usable_file, is_media = filter_file(file)
+        mode = "rb" if is_media else "r"
+        if usable_file:
+            file_name = file.name
+            if file_name.startswith(str(Path(artifacts.remote_save_path).parents)):
+                idx = len(Path(artifacts.remote_save_path).parents)
+                file_name = file_name[idx:]
+            with open(file, mode) as f:
+                artifacts[file_name] = f.read()
 
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
@@ -174,9 +194,9 @@ def view_lines(
         f"[Artifact: {name} ({total_lines} lines total)]\n"
         + format_lines(lines[start:end], start)
         + (
-            "[End of artifact]"
+            "\n[End of artifact]"
             if end == len(lines)
-            else f"[{len(lines) - end} more lines]"
+            else f"\n[{len(lines) - end} more lines]"
         )
     )
 
@@ -256,8 +276,10 @@ def edit_code_artifact(
     Parameters:
         artifacts (Artifacts): The artifacts object to edit the artifact from.
         name (str): The name of the artifact to edit.
-        start (int): The line number to start the edit.
-        end (int): The line number to end the edit.
+        start (int): The line number to start the edit, can be in [-1, total_lines]
+            where -1 represents the end of the file.
+        end (int): The line number to end the edit, can be in [-1, total_lines] where
+            -1 represents the end of the file.
         content (str): The content to insert.
     """
     # just make the artifact if it doesn't exist instead of forcing agent to call
@@ -266,17 +288,21 @@ def edit_code_artifact(
         artifacts[name] = ""
 
     total_lines = len(artifacts[name].splitlines())
+    if start == -1:
+        start = total_lines
+    if end == -1:
+        end = total_lines
+
     if start < 0 or end < 0 or start > end or end > total_lines:
         print("[Invalid line range]")
         return "[Invalid line range]"
-    if start == end:
-        end += 1
 
     new_content_lines = content.splitlines(keepends=True)
     new_content_lines = [
         line if line.endswith("\n") else line + "\n" for line in new_content_lines
     ]
     lines = artifacts[name].splitlines(keepends=True)
+    lines = [line if line.endswith("\n") else line + "\n" for line in lines]
     edited_lines = lines[:start] + new_content_lines + lines[end:]
 
     cur_line = start + len(content.split("\n")) // 2
@@ -371,14 +397,16 @@ def generate_vision_plan(
         [End Plan Context]
     """
 
+    # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
     if ZMQ_PORT is not None:
         agent = va.agent.VisionAgentPlanner(
             report_progress_callback=lambda inp: report_progress_callback(
                 int(ZMQ_PORT), inp
-            )
+            ),
+            verbosity=0,
         )
     else:
-        agent = va.agent.VisionAgentPlanner()
+        agent = va.agent.VisionAgentPlanner(verbosity=0)
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.generate_plan(
@@ -435,14 +463,16 @@ def generate_vision_code(
             dogs = owl_v2("dog", image)
             return dogs
     """
+    # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
     if ZMQ_PORT is not None:
         agent = va.agent.VisionAgentCoder(
             report_progress_callback=lambda inp: report_progress_callback(
                 int(ZMQ_PORT), inp
-            )
+            ),
+            verbosity=0,
         )
     else:
-        agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
+        agent = va.agent.VisionAgentCoder(verbosity=0)
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.generate_code(
@@ -506,7 +536,8 @@ def edit_vision_code(
             return dogs
     """
 
-    agent = va.agent.VisionAgentCoder(verbosity=int(VERBOSITY))
+    # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
+    agent = va.agent.VisionAgentCoder(verbosity=0)
     if name not in artifacts:
         print(f"[Artifact {name} does not exist]")
         return f"[Artifact {name} does not exist]"
@@ -570,8 +601,9 @@ def check_and_load_image(code: str) -> List[str]:
 
 
 def view_media_artifact(artifacts: Artifacts, name: str) -> str:
-    """Allows you to view the media artifact with the given name. This does not show
-    the media to the user, the user can already see all media saved in the artifacts.
+    """Allows only the agent to view the media artifact with the given name. DO NOT use
+    this to show media to the user, the user can already see all media saved in the
+    artifacts.
 
     Parameters:
         artifacts (Artifacts): The artifacts object to show the image from.
@@ -648,10 +680,10 @@ def get_diff_with_prompts(name: str, before: str, after: str) -> str:
 
 
 def use_extra_vision_agent_args(
-    code: str,
+    code: Optional[str],
     test_multi_plan: bool = True,
     custom_tool_names: Optional[List[str]] = None,
-) -> str:
+) -> Optional[str]:
     """This is for forcing arguments passed by the user to VisionAgent into the
     VisionAgentCoder call.
 
@@ -663,6 +695,8 @@ def use_extra_vision_agent_args(
     Returns:
         str: The edited code.
     """
+    if code is None:
+        return None
 
     class VisionAgentTransformer(cst.CSTTransformer):
         def __init__(
@@ -815,74 +849,12 @@ def use_object_detection_fine_tuning(
     return diff
 
 
-def extract_and_save_files_to_artifacts(
-    artifacts: Artifacts, code: str, obs: str
-) -> None:
-    """Extracts and saves files used in the code to the artifacts object.
-
-    Parameters:
-        artifacts (Artifacts): The artifacts object to save the files to.
-        code (str): The code to extract the files from.
-    """
-    try:
-        response = extract_json(
-            AnthropicLMM()(  # type: ignore
-                f"""You are a helpful AI assistant. Your job is to look at a snippet of code and the output of running that code and return the file paths that are being saved in the file. Below is the code snippet:
-
-```python
-{code}
-```
-
-```output
-{obs}
-```
-
-Return the file paths in the following JSON format:
-{{"file_paths": ["/path/to/image1.jpg", "/other/path/to/data.json"]}}"""
-            )
-        )
-    except json.JSONDecodeError:
-        return
-
-    text_file_ext = [
-        ".txt",
-        ".md",
-        "rtf",
-        ".html",
-        ".htm",
-        "xml",
-        ".json",
-        ".csv",
-        ".tsv",
-        ".yaml",
-        ".yml",
-        ".toml",
-        ".conf",
-        ".env" ".ini",
-        ".log",
-        ".py",
-        ".java",
-        ".js",
-        ".cpp",
-        ".c" ".sql",
-        ".sh",
-    ]
-
-    if "file_paths" in response and isinstance(response["file_paths"], list):
-        for file_path in response["file_paths"]:
-            read_mode = "r" if Path(file_path).suffix in text_file_ext else "rb"
-            if Path(file_path).is_file():
-                with open(file_path, read_mode) as f:
-                    artifacts[Path(file_path).name] = f.read()
-
-
 META_TOOL_DOCSTRING = get_tool_documentation(
     [
         get_tool_descriptions,
         open_code_artifact,
         create_code_artifact,
         edit_code_artifact,
-        generate_vision_plan,
         generate_vision_code,
         edit_vision_code,
         view_media_artifact,
