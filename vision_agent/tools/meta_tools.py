@@ -8,8 +8,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import libcst as cst
 from IPython.display import display
-from redbaron import RedBaron  # type: ignore
 
 import vision_agent as va
 from vision_agent.clients.landing_public_api import LandingPublicAPI
@@ -695,23 +695,78 @@ def use_extra_vision_agent_args(
     Returns:
         str: The edited code.
     """
-    if code is None:
-        return None
-    red = RedBaron(code)
-    for node in red:
-        # seems to always be atomtrailers not call type
-        if node.type == "atomtrailers":
-            if node.name.value == "generate_vision_code":
-                node.value[1].value.append(f"test_multi_plan={test_multi_plan}")
+    class VisionAgentTransformer(cst.CSTTransformer):
+        def __init__(
+            self, test_multi_plan: bool, custom_tool_names: Optional[List[str]]
+        ):
+            self.test_multi_plan = test_multi_plan
+            self.custom_tool_names = custom_tool_names
 
-            if (
-                node.name.value == "generate_vision_code"
-                or node.name.value == "edit_vision_code"
-            ):
-                if custom_tool_names is not None:
-                    node.value[1].value.append(f"custom_tool_names={custom_tool_names}")
-    cleaned_code = red.dumps().strip()
-    return cleaned_code if isinstance(cleaned_code, str) else code
+        def leave_Call(
+            self, original_node: cst.Call, updated_node: cst.Call
+        ) -> cst.Call:
+            # Check if the function being called is generate_vision_code or edit_vision_code
+            if isinstance(updated_node.func, cst.Name) and updated_node.func.value in [
+                "generate_vision_code",
+                "edit_vision_code",
+            ]:
+                # Add test_multi_plan argument to generate_vision_code calls
+                if updated_node.func.value == "generate_vision_code":
+                    new_arg = cst.Arg(
+                        keyword=cst.Name("test_multi_plan"),
+                        value=cst.Name(str(self.test_multi_plan)),
+                        equal=cst.AssignEqual(
+                            whitespace_before=cst.SimpleWhitespace(""),
+                            whitespace_after=cst.SimpleWhitespace(""),
+                        ),
+                    )
+                    updated_node = updated_node.with_changes(
+                        args=[*updated_node.args, new_arg]
+                    )
+
+                # Add custom_tool_names if provided
+                if self.custom_tool_names is not None:
+                    list_arg = []
+                    for i, tool_name in enumerate(self.custom_tool_names):
+                        if i < len(self.custom_tool_names) - 1:
+                            list_arg.append(
+                                cst._nodes.expression.Element(
+                                    value=cst.SimpleString(value=f'"{tool_name}"'),
+                                    comma=cst.Comma(
+                                        whitespace_before=cst.SimpleWhitespace(""),
+                                        whitespace_after=cst.SimpleWhitespace(" "),
+                                    ),
+                                )
+                            )
+                        else:
+                            list_arg.append(
+                                cst._nodes.expression.Element(
+                                    value=cst.SimpleString(value=f'"{tool_name}"'),
+                                )
+                            )
+                    new_arg = cst.Arg(
+                        keyword=cst.Name("custom_tool_names"),
+                        value=cst.List(list_arg),
+                        equal=cst.AssignEqual(
+                            whitespace_before=cst.SimpleWhitespace(""),
+                            whitespace_after=cst.SimpleWhitespace(""),
+                        ),
+                    )
+                    updated_node = updated_node.with_changes(
+                        args=[*updated_node.args, new_arg]
+                    )
+
+            return updated_node
+
+    # Parse the input code into a CST node
+    tree = cst.parse_module(code)
+
+    # Apply the transformer to modify the CST
+    transformer = VisionAgentTransformer(test_multi_plan, custom_tool_names)
+    modified_tree = tree.visit(transformer)
+
+    # Return the modified code as a string
+    return modified_tree.code
 
 
 def use_object_detection_fine_tuning(

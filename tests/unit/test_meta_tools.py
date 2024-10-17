@@ -98,11 +98,18 @@ def test_use_extra_vision_agent_args_real_case():
 
 def test_use_extra_vision_args_with_custom_tools():
     code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
-    expected_code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True, custom_tool_names=['tool1', 'tool2'])"
+    expected_code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], test_multi_plan=True, custom_tool_names=[\"tool1\", \"tool2\"])"
     out_code = use_extra_vision_agent_args(code, custom_tool_names=["tool1", "tool2"])
     assert out_code == expected_code
 
     code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'])"
-    expected_code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], custom_tool_names=['tool1', 'tool2'])"
+    expected_code = "edit_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1).mov'], custom_tool_names=[\"tool1\", \"tool2\"])"
+    out_code = use_extra_vision_agent_args(code, custom_tool_names=["tool1", "tool2"])
+    assert out_code == expected_code
+
+
+def test_use_extra_vision_args_with_non_ascii():
+    code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1)漢.mov'])"
+    expected_code = "generate_vision_code(artifacts, 'code.py', 'write code', ['/home/user/n0xn5X6_IMG_2861%20(1)漢.mov'], test_multi_plan=True, custom_tool_names=[\"tool1\", \"tool2\"])"
     out_code = use_extra_vision_agent_args(code, custom_tool_names=["tool1", "tool2"])
     assert out_code == expected_code
