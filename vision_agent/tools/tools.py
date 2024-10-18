@@ -1665,6 +1665,60 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
+def flux_image_generation(prompt: str, image: np.ndarray) -> List[Image.Image]:
+    """'flux_image_generation' is a tool that uses a rectified flow transformer capable of
+    generating images from a text description. It receives a prompt and
+    returns a list of generated image(s) based on the prompt.
+
+    Parameters:
+        prompt (str): The text description that will be used to generate the image.
+
+    Returns:
+        List[Image.Image]: A list of generated image(s) based on the prompt.
+
+    Example
+    -------
+    >>> flux_image_generation(prompt="a cat sitting on a table")
+    """
+
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return []
+
+    image_b64 = convert_to_b64(image)
+    landing_api = LandingPublicAPI()
+
+    return []
+
+
+def flux_image_inpainting(prompt: str, image: np.ndarray, mask_image: np.ndarray) -> List[Image.Image]:
+    """'flux_image_inpainting' is a tool that uses a rectified flow transformer capable of
+    inpainting images. It receives a prompt, an image, a mask and returns the inpainted image.
+    The mask white pixels in the mask are repainted while black pixels are preserved.
+
+    Parameters:
+        prompt (str): The question about the image
+        image (np.ndarray): The reference image used for the question
+        mask_image (np.ndarray): The image representing the mask.
+
+    Returns:
+        List[Image.Image]: A list of generated image(s) based on the prompt.
+
+    Example
+    -------
+    >>> flux_image_inpainting("image.png", "mask.png")
+    """
+
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return []
+    
+    if mask_image.shape[0] < 1 or mask_image.shape[1] < 1:
+        return []
+
+    image_b64 = convert_to_b64(image)
+    landing_api = LandingPublicAPI()
+
+    return []
+
 # Utility and visualization functions
 
 
