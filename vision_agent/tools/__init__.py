@@ -1,5 +1,17 @@
 from typing import Callable, List, Optional
 
+from .meta_tools import (
+    create_code_artifact,
+    edit_code_artifact,
+    edit_vision_code,
+    generate_vision_code,
+    get_tool_descriptions,
+    list_artifacts,
+    object_detection_fine_tuning,
+    open_code_artifact,
+    use_object_detection_fine_tuning,
+    view_media_artifact,
+)
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tool_utils import get_tool_descriptions_by_names
 from .tools import (
@@ -65,7 +77,11 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from .tools import get_tool_descriptions, get_tools_df, get_tools_info
+        from .tools import (  # noqa: F811
+            get_tool_descriptions,
+            get_tools_df,
+            get_tools_info,
+        )
 
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
 
