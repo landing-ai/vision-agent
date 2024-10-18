@@ -35,6 +35,7 @@ from vision_agent.tools import (
     vit_nsfw_classification,
     qwen2_vl_images_vqa,
     video_temporal_localization,
+    flux_image_inpainting,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -503,3 +504,22 @@ def test_countgd_example_based_counting_empty():
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
     assert result == []
+
+
+def test_flux_image_inpainting():
+    mask_image = ski.util.invert(ski.data.horse())
+    mask_image = np.array(mask_image, dtype=float)
+    image = np.zeros_like(mask_image)
+
+    result = flux_image_inpainting(
+        prompt="horse",
+        image=image,
+        mask_image=mask_image,
+        height=image.shape[0],
+        width=image.shape[1],
+    )
+
+    assert len(result) == 1
+    output = result[0]
+    assert output.shape[0] == image.shape[0]
+    assert output.shape[1] == image.shape[1]
