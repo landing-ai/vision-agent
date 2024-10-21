@@ -677,9 +677,9 @@ def countgd_counting(
     image: np.ndarray,
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
-    """'countgd_counting' is a tool that can precisely count multiple instances of an
-    object given a text prompt. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated confidence scores.
+    """'countgd_counting' is a tool that can precisely detect multiple instances of an
+    object given a text prompt for counting. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated confidence scores.
 
     Parameters:
         prompt (str): The object that needs to be counted.
