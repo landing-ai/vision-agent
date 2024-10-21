@@ -976,13 +976,13 @@ def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
 
 
 def video_temporal_localization(
-        prompt: str,
-        frames: List[np.ndarray],
-        model: str = "qwen2vl",
-        chunk_length: Optional[float] = None,
-        chunk_length_seconds: Optional[float]=None,
-        chunk_length_frames: Optional[int]=2,
-        ) -> str:
+    prompt: str,
+    frames: List[np.ndarray],
+    model: str = "qwen2vl",
+    chunk_length: Optional[float] = None,
+    chunk_length_seconds: Optional[float] = None,
+    chunk_length_frames: Optional[int] = 2,
+) -> str:
     """'video_temporal_localization' is a tool that can find objects in a video given a question about it.
     It returns a list of floats with a value of 1.0 if the object to be found is present in the chunk of video being analyzed.
 
