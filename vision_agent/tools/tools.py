@@ -982,7 +982,7 @@ def video_temporal_localization(
     chunk_length: Optional[float] = None,
     chunk_length_seconds: Optional[float] = None,
     chunk_length_frames: Optional[int] = 2,
-) -> str:
+) -> List[float]:
     """'video_temporal_localization' is a tool that can find objects in a video given a question about it.
     It returns a list of floats with a value of 1.0 if the object to be found is present in the chunk of video being analyzed.
 
@@ -1005,7 +1005,7 @@ def video_temporal_localization(
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
-    payload = {
+    payload: Dict[str, Any] = {
         "prompt": prompt,
         "model": model,
         "function_name": "video_temporal_localization",
