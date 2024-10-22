@@ -65,6 +65,7 @@ from .tools import (
     template_match,
     vit_image_classification,
     vit_nsfw_classification,
+    video_temporal_localization,
 )
 
 __new_tools__ = [
