@@ -66,6 +66,7 @@ from .tools import (
     vit_image_classification,
     vit_nsfw_classification,
     docqa_image,
+    video_temporal_localization,
 )
 
 __new_tools__ = [

@@ -34,6 +34,7 @@ from vision_agent.tools import (
     vit_image_classification,
     vit_nsfw_classification,
     docqa_image,
+    video_temporal_localization,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -370,6 +371,18 @@ def test_ixc25_video_vqa():
         frames=frames,
     )
     assert "cat" in result.strip()
+
+
+def test_video_temporal_localization():
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
+    ]
+    result = video_temporal_localization(
+        prompt="Is it there a cat in this video?",
+        frames=frames,
+        model="internlm-xcomposer",
+    )
+    assert len(result) == 5
 
 
 def test_ocr():
