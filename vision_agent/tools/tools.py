@@ -975,6 +975,54 @@ def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
     return answer["text"][0]  # type: ignore
 
 
+def video_temporal_localization(
+    prompt: str,
+    frames: List[np.ndarray],
+    model: str = "qwen2vl",
+    chunk_length: Optional[float] = None,
+    chunk_length_seconds: Optional[float] = None,
+    chunk_length_frames: Optional[int] = 2,
+) -> List[float]:
+    """'video_temporal_localization' is a tool that can find objects in a video given a question about it.
+    It returns a list of floats with a value of 1.0 if the object to be found is present in the chunk of video being analyzed.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+        model (str): The model to use for the inference. Valid values are 'qwen2vl', 'gpt4o', 'internlm-xcomposer'
+        chunk_length (Optional[float]): length of each chunk in seconds
+        chunk_length_seconds (Optional[float]): alternative length for chunk in seconds
+        chunk_length_frames (Optional[int]): length of each chunk in frames
+
+    Returns:
+        List[float]: A list of floats with a value of 1.0 if the object to be found is present in the chunk of video
+
+    Example
+    -------
+        >>> video_temporal_localization('Did a goal happened?', frames)
+        [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
+    """
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload: Dict[str, Any] = {
+        "prompt": prompt,
+        "model": model,
+        "function_name": "video_temporal_localization",
+    }
+    if chunk_length is not None:
+        payload["chunk_length"] = chunk_length
+    if chunk_length_seconds is not None:
+        payload["chunk_length_seconds"] = chunk_length_seconds
+    if chunk_length_frames is not None:
+        payload["chunk_length_frames"] = chunk_length_frames
+
+    data = send_inference_request(
+        payload, "video-temporal-localization", files=files, v2=True
+    )
+    return [cast(float, value) for value in data]
+
+
 def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
     """'clip' is a tool that can classify an image or a cropped detection given a list
     of input classes or tags. It returns the same list of the input classes along with
