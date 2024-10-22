@@ -852,6 +852,38 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
     return cast(str, data["answer"])
 
 
+def docqa_image(prompt: str, image: np.ndarray) -> str:
+    """'docqa_image' is a tool that can answer any questions about  images of documents.
+    It returns text as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the document image
+        image (np.ndarray): The reference image used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> docqa_image('Give a summary if the document', image)
+        'The document talks about the history of the United States of America and its...'
+    """
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        raise ValueError(f"Image is empty, image shape: {image.shape}")
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("images", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen2vl",
+        "function_name": "docqa_image",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    return cast(str, data)
+
+
 def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     """'ixc25_video_vqa' is a tool that can answer any questions about arbitrary videos
     including regular videos or videos of documents or presentations. It returns text
@@ -2162,6 +2194,7 @@ FUNCTION_TOOLS = [
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
+    docqa_image,
 ]
 
 UTIL_TOOLS = [

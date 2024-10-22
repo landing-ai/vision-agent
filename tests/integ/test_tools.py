@@ -33,6 +33,7 @@ from vision_agent.tools import (
     template_match,
     vit_image_classification,
     vit_nsfw_classification,
+    docqa_image,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -349,6 +350,15 @@ def test_ixc25_image_vqa():
         image=img,
     )
     assert "cat" in result.strip()
+
+
+def test_docqa_image():
+    img = ski.data.page()
+    result = docqa_image(
+        prompt="What is the document about?",
+        image=img,
+    )
+    assert len(result) > 0
 
 
 def test_ixc25_video_vqa():
