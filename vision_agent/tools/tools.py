@@ -852,20 +852,21 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
     return cast(str, data["answer"])
 
 
-def docqa_images(prompt: str, images: List[np.ndarray]) -> str:
-    """'docqa_images' is a tool that can answer any questions about  images of documents.
-    It returns text as an answer to the question.
+def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
+    """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary images
+    including regular images or images of documents or presentations. It returns text
+    as an answer to the question.
 
     Parameters:
         prompt (str): The question about the document image
-        image (np.ndarray): The reference image used for the question
+        images (List[np.ndarray]): The reference images used for the question
 
     Returns:
         str: A string which is the answer to the given prompt.
 
     Example
     -------
-        >>> docqa_images('Give a summary of the document', images)
+        >>> qwen2_vl_images_vqa('Give a summary of the document', images)
         'The document talks about the history of the United States of America and its...'
     """
     for image in images:
@@ -876,7 +877,7 @@ def docqa_images(prompt: str, images: List[np.ndarray]) -> str:
     payload = {
         "prompt": prompt,
         "model": "qwen2vl",
-        "function_name": "docqa_images",
+        "function_name": "qwen2_vl_images_vqa",
     }
     data: Dict[str, Any] = send_inference_request(
         payload, "image-to-text", files=files, v2=True
