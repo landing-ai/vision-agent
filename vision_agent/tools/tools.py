@@ -2194,7 +2194,6 @@ FUNCTION_TOOLS = [
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
-    docqa_image,
 ]
 
 UTIL_TOOLS = [
