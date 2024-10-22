@@ -2210,7 +2210,6 @@ FUNCTION_TOOLS = [
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
-    video_temporal_localization,
 ]
 
 UTIL_TOOLS = [
