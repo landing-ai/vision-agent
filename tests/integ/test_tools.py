@@ -33,6 +33,7 @@ from vision_agent.tools import (
     template_match,
     vit_image_classification,
     vit_nsfw_classification,
+    qwen2_vl_images_vqa,
     video_temporal_localization,
 )
 
@@ -350,6 +351,15 @@ def test_ixc25_image_vqa():
         image=img,
     )
     assert "cat" in result.strip()
+
+
+def test_qwen2_vl_images_vqa():
+    img = ski.data.page()
+    result = qwen2_vl_images_vqa(
+        prompt="What is the document about?",
+        images=[img],
+    )
+    assert len(result) > 0
 
 
 def test_ixc25_video_vqa():

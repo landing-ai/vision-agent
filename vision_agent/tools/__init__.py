@@ -65,6 +65,7 @@ from .tools import (
     template_match,
     vit_image_classification,
     vit_nsfw_classification,
+    qwen2_vl_images_vqa,
     video_temporal_localization,
 )
 
