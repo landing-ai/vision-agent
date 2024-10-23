@@ -852,6 +852,39 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
     return cast(str, data["answer"])
 
 
+def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
+    """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary images
+    including regular images or images of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the document image
+        images (List[np.ndarray]): The reference images used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> qwen2_vl_images_vqa('Give a summary of the document', images)
+        'The document talks about the history of the United States of America and its...'
+    """
+    for image in images:
+        if image.shape[0] < 1 or image.shape[1] < 1:
+            raise ValueError(f"Image is empty, image shape: {image.shape}")
+
+    files = [("images", numpy_to_bytes(image)) for image in images]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen2vl",
+        "function_name": "qwen2_vl_images_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    return cast(str, data)
+
+
 def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     """'ixc25_video_vqa' is a tool that can answer any questions about arbitrary videos
     including regular videos or videos of documents or presentations. It returns text
