@@ -1,7 +1,6 @@
 import difflib
 import json
 import os
-import pickle as pkl
 import re
 import subprocess
 import tempfile
