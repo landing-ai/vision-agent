@@ -1971,10 +1971,13 @@ def overlay_bounding_boxes(
         [medias] if isinstance(medias, np.ndarray) else medias
     )
     if len(bboxes) == 0:
-        bbox_int = [[]]
+        bbox_int: List[List[Dict[str, Any]]] = [[] for _ in medias_int]
     else:
-        bbox_int = [bboxes] if isinstance(bboxes[0], dict) else bboxes
-    bbox_int = cast(List[List[Dict[str, Any]]], bbox_int)
+        if isinstance(bboxes[0], dict):
+            bbox_int = [cast(List[Dict[str, Any]], bboxes)]
+        else:
+            bbox_int = cast(List[List[Dict[str, Any]]], bboxes)
+
     labels = set([bb["label"] for b in bbox_int for bb in b])
 
     if len(labels) > len(COLORS):
