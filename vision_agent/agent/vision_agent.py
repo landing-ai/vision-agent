@@ -38,7 +38,7 @@ class BoilerplateCode:
         "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning, list_artifacts",
         "artifacts = Artifacts('{cwd}')",
     ]
-    post_code = []
+    post_code: List[str] = []
 
     @staticmethod
     def add_boilerplate(code: str, **format: Any) -> str:
