@@ -67,6 +67,8 @@ from .tools import (
     vit_nsfw_classification,
     qwen2_vl_images_vqa,
     video_temporal_localization,
+    flux_image_inpainting,
+    convert_florence2_sam2_to_flux_mask,
 )
 
 __new_tools__ = [

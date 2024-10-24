@@ -1746,6 +1746,136 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
+def flux_image_inpainting(
+    prompt: str,
+    image: np.ndarray,
+    mask_image: np.ndarray,
+    height: Optional[int] = None,
+    width: Optional[int] = None,
+    strength: Optional[float] = 0.95,
+    num_inference_steps: Optional[int] = 15,
+    guidance_scale: Optional[float] = 18,
+    seed: Optional[int] = None,
+) -> List[np.ndarray]:
+    """'flux_image_inpainting' performs image inpainting using a rectified flow transformer model to
+    fill masked regions of an image based on textual prompts and surrounding context.
+    The function uses image generation model and transformer architecture with rectified flows to
+    understand both the textual prompt and visual context, ensuring the inpainted regions
+    blend naturally with the preserved areas.
+
+    Parameters:
+        prompt (str):
+            A detailed text description guiding what should be generated in the masked area.
+            More detailed and specific prompts typically yield better results.
+        image (np.ndarray):
+            The source image to be inpainted. The image will serve as the base context for
+            the inpainting process.
+        mask_image (np.ndarray):
+            A binary mask image where:
+            - White pixels (255) indicate areas to be inpainted/replaced
+            - Black pixels (0) indicate areas to be preserved
+            The mask should have the same dimensions as the input image.
+        height (int, optional):
+            Output image height in pixels. Must be a multiple of 8.
+            For better results, should use a height that is proportional to the input image.
+            If not provided, the inpainted image height defaults to image height.
+        width (int, optional):
+            Output image width in pixels. Must be a multiple of 8.
+            For better results, should use a width that is proportional to the input image.
+            If not provided, the inpainted image width defaults to image width.
+        strength (float, optional):
+            Controls how much the model should deviate from the original image.
+            - 0.0:Preserves more of the original image
+            - 1.0:Allows complete transformation
+            Values between 0.3-0.8 typically give best results.
+            Defaults to 0.95.
+        num_inference_steps (int, optional):
+            Number of denoising steps during generation. Higher values generally
+            produce higher quality images but increase processing time.
+            - Range:5-50 steps typically
+            - <10 steps:Faster but lower quality
+            - >30 steps:Higher quality but diminishing returns
+            Defaults to 15.
+        guidance_scale (float, optional):
+            Controls how closely the model follows the prompt.
+            - Lower values (1-5): More creative, diverse outputs
+            - Higher values (7-20): More literal interpretation of prompt
+            - Very high values: May cause artifacts
+            Defaults to 18.
+        seed (int, optional):
+            Random seed for reproducible results. If None, a random seed is used.
+
+    Returns:
+        List[np.ndarray]:
+            A list containing the generated image(s) as numpy arrays in RGB format
+            with values ranging from 0 to 255. Currently returns a single-element.
+
+    Raises:
+        ValueError:
+            - If strength is not between 0 and 1
+            - If image dimensions don't match mask dimensions
+            - If height or width are not multiples of 8
+            - If input arrays are not valid numpy arrays
+            - If prompt is empty or not a string
+
+    -------
+    Example:
+        >>> # Load image and create mask
+        >>> image = load_image("room.png")
+        >>> mask = load_image("room_mask.png")
+        >>> # Generate inpainting
+        >>> result = flux_image_inpainting(
+        ...     prompt="a modern black leather sofa with white pillows",
+        ...     image=image,
+        ...     mask_image=mask,
+        ...     height=image.shape[0], # Use same height as input image
+        ...     width=image.shape[1], # Use same width as input image
+        ...     strength=0.95, # Increased strength for more noticeable effect
+        ...     guidance_scale=18, # Increased guidance scale for more literal interpretation of prompt
+        ...     num_inference_steps=20, # Increased steps for better quality
+        ... )
+        >>> save_image(result[0], "inpainted_room.png")
+    """
+    if (
+        image.shape[0] < 8
+        or image.shape[1] < 8
+        or mask_image.shape[0] < 8
+        or mask_image.shape[1] < 8
+    ):
+        return []
+
+    image_file = numpy_to_bytes(image)
+    mask_image_file = numpy_to_bytes(mask_image)
+
+    files = [
+        ("image", image_file),
+        ("mask_image", mask_image_file),
+    ]
+
+    payload = {
+        "prompt": prompt,
+        "task": "inpainting",
+        "height": height or image.shape[0],
+        "width": width or image.shape[1],
+        "strength": strength,
+        "num_inference_steps": num_inference_steps,
+        "guidance_scale": guidance_scale,
+        "seed": seed,
+    }
+
+    response = send_inference_request(
+        payload=payload,
+        endpoint_name="flux1",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "flux_image_inpainting"},
+    )
+
+    return_data = [np.array(b64_to_pil(image).convert("RGB")) for image in response]
+
+    return return_data
+
+
 # Utility and visualization functions
 
 
@@ -2224,6 +2354,44 @@ def _plot_counting(
     return image
 
 
+def convert_florence2_sam2_to_flux_mask(
+    florence2_sam2_masks: List[Dict[str, Any]],
+    height: int,
+    width: int,
+) -> np.ndarray:
+    """`convert_florence2_sam2_to_flux_mask` Convert the segmentation mask from
+    florence2_sam2 mask to a mask that can be used by the flux_image_inpainting tool.
+
+    Parameters:
+        florence2_sam2_mask (Dict[str, Any]): The mask output from florence2_sam2.
+
+    Returns:
+        np.ndarray: A binary mask where 255 indicates the object and 0 indicates the background.
+        Sets the mask pixels to white (255) and background to black (0).
+
+    Example
+    -------
+        >>> florence2_sam2_masks = [{
+                'label': 'object',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': 'encoded_rle_string',
+                'score': 1.0
+            }]
+        >>> flux_mask = convert_florence2_sam2_to_flux_mask(florence2_sam2_mask)
+    """
+    if len(florence2_sam2_masks) == 0:
+        return np.zeros((height, width), dtype=np.uint8)
+
+    height, width = florence2_sam2_masks[0]["mask"].shape
+    mask = np.zeros((height, width), dtype=np.uint8)
+
+    for segment in florence2_sam2_masks:
+        mask_array = segment["mask"]
+        mask = np.maximum(mask, mask_array * 255)
+
+    return mask
+
+
 FUNCTION_TOOLS = [
     owl_v2_image,
     owl_v2_video,
@@ -2243,6 +2411,7 @@ FUNCTION_TOOLS = [
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
+    flux_image_inpainting,
 ]
 
 UTIL_TOOLS = [
@@ -2254,6 +2423,7 @@ UTIL_TOOLS = [
     overlay_bounding_boxes,
     overlay_segmentation_masks,
     overlay_heat_map,
+    convert_florence2_sam2_to_flux_mask,
 ]
 
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
