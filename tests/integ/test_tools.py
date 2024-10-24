@@ -507,9 +507,9 @@ def test_countgd_example_based_counting_empty():
 
 
 def test_flux_image_inpainting():
-    mask_image = ski.util.invert(ski.data.horse())
-    mask_image = np.array(mask_image, dtype=float)
-    image = np.zeros_like(mask_image)
+    mask_image = np.zeros((32, 32), dtype=np.uint8)
+    mask_image[:4, :4] = 1
+    image = np.zeros((32, 32), dtype=np.uint8)
 
     result = flux_image_inpainting(
         prompt="horse",
