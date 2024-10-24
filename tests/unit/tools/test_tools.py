@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from vision_agent.tools.tools import save_image, save_video
+from vision_agent.tools.tools import overlay_bounding_boxes, save_image, save_video
 
 
 def test_saves_frames_without_output_path():
@@ -67,3 +67,10 @@ def test_save_invalid_frame():
         save_video(frames, "tmp.mp4")
     except ValueError as e:
         assert str(e) == "A frame is not a valid NumPy array with shape (H, W, C)"
+
+
+def test_overlay_bounding_boxes_with_empty_bboxes():
+    image = np.zeros((480, 640, 3), dtype=np.uint8)
+    bboxes = []
+    output = overlay_bounding_boxes(image, bboxes)
+    assert np.array_equal(image, output)
