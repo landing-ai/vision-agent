@@ -107,6 +107,21 @@ def test_owl_v2_video():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
 
+def test_owl_v2_video_fine_tune_id():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    result = owl_v2_video(
+        prompt="coin",
+        frames=frames,
+        fine_tune_id=FINE_TUNE_ID,
+    )
+
+    assert len(result) == 10
+    assert 24 <= len([res["label"] for res in result[0]]) <= 26
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
+
+
 def test_florence2_phrase_grounding():
     img = ski.data.coins()
     result = florence2_phrase_grounding(
