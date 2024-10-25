@@ -31,8 +31,6 @@ class Florence2FtRequest(BaseModel):
     video: Optional[bytes] = None
     task: PromptTask
     prompt: Optional[str] = ""
-    chunk_length_frames: Optional[int] = None
-    postprocessing: Optional[str] = None
     job_id: Optional[UUID] = Field(None, alias="jobId")
 
     @field_serializer("job_id")
