@@ -492,13 +492,37 @@ class VisionAgent(Agent):
                 code_interpreter.upload_file(artifacts.local_save_path)
 
                 response = run_conversation(self.agent, int_chat)
-                code_action = use_extra_vision_agent_args(
-                    response.get("execute_python", None),
-                    test_multi_plan,
-                    custom_tool_names,
-                )
                 if self.verbosity >= 1:
                     _LOGGER.info(response)
+
+                code_action = response.get("execute_python", None)
+                # sometimes it gets stuck in a loop, so we force it to exit
+                if last_response == response:
+                    response["let_user_respond"] = True
+                    self.streaming_message(
+                        {
+                            "role": "assistant",
+                            "content": "{}",
+                            "error": {
+                                "name": "Error when running conversation agent",
+                                "value": "Agent is stuck in conversation loop, exited",
+                                "traceback_raw": [],
+                            },
+                            "finished": True,
+                        }
+                    )
+                else:
+                    self.streaming_message(
+                        {
+                            "role": "assistant",
+                            "content": new_format_to_old_format(
+                                add_step_descriptions(response)
+                            ),
+                            "finished": response.get("let_user_respond", False)
+                            and code_action is None,
+                        }
+                    )
+
                 int_chat.append(
                     {
                         "role": "assistant",
@@ -515,35 +539,6 @@ class VisionAgent(Agent):
                         ),
                     }
                 )
-
-                code_action = response.get("execute_python", None)
-                # sometimes it gets stuck in a loop, so we force it to exit
-                if last_response == response:
-                    response["let_user_respond"] = True
-                    self.streaming_message(
-                        {
-                            "role": "assistant",
-                            "content": "{}",
-                            "error": {
-                                "name": "Error when running conversation agent",
-                                "value": "Agent is stuck in conversation loop, exited",
-                                "traceback_raw": [],
-                            },
-                            "finished": code_action is None,
-                        }
-                    )
-                else:
-                    self.streaming_message(
-                        {
-                            "role": "assistant",
-                            "content": new_format_to_old_format(
-                                add_step_descriptions(response)
-                            ),
-                            "finished": response.get("let_user_respond", False)
-                            and code_action is None,
-                        }
-                    )
-
                 finished = response.get("let_user_respond", False)
 
                 if code_action is not None:
