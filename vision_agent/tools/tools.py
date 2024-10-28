@@ -1,4 +1,3 @@
-import base64
 import io
 import json
 import logging
@@ -184,8 +183,16 @@ def owl_v2_image(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "confidence": box_threshold,
+        "model": "owlv2",
+    }
+    metadata = {"function_name": "owl_v2_image"}
+
     if fine_tune_id is not None:
-        image_b64 = convert_to_b64(image)
         landing_api = LandingPublicAPI()
         status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
         if status is not JobStatus.SUCCEEDED:
@@ -193,43 +200,22 @@ def owl_v2_image(
                 f"Fine-tuned model {fine_tune_id} is not ready yet"
             )
 
-        data_obj = Florence2FtRequest(
-            image=image_b64,
-            task=PromptTask.PHRASE_GROUNDING,
-            prompt=prompt,
-            job_id=UUID(fine_tune_id),
-        )
-        data = data_obj.model_dump(by_alias=True, exclude_none=True)
-        detections = send_inference_request(
-            data,
-            "florence2-ft",
-            v2=True,
-            is_form=True,
-            metadata_payload={"function_name": "owl_v2_image"},
-        )
-        # get the first frame
-        detection = detections[0]
-        bboxes_formatted = [
-            ODResponseData(
-                label=detection["labels"][i],
-                bbox=normalize_bbox(detection["bboxes"][i], image_size),
-                score=1.0,
-            )
-            for i in range(len(detection["bboxes"]))
-        ]
-        return [bbox.model_dump() for bbox in bboxes_formatted]
+        # we can only execute fine-tuned models with florence2
+        payload = {
+            "prompts": payload["prompts"],
+            "jobId": fine_tune_id,
+            "model": "florence2",
+        }
 
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    payload = {
-        "prompts": [s.strip() for s in prompt.split(",")],
-        "model": "owlv2",
-        "function_name": "owl_v2_image",
-    }
-    resp_data = send_inference_request(
-        payload, "text-to-object-detection", files=files, v2=True
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
     )
-    bboxes = resp_data[0]
+
+    # get the first frame
+    bboxes = detections[0]
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
@@ -238,17 +224,17 @@ def owl_v2_image(
         )
         for bbox in bboxes
     ]
-    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return [bbox.model_dump() for bbox in filtered_bboxes]
+    return [bbox.model_dump() for bbox in bboxes_formatted]
 
 
 def owl_v2_video(
     prompt: str,
     frames: List[np.ndarray],
     box_threshold: float = 0.10,
+    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'owl_v2_video' will run owl_v2 on each frame of a video. It can detect multiple
-    objects indepdently per frame given a text prompt such as a category name or
+    objects independently per frame given a text prompt such as a category name or
     referring expression but does not track objects across frames. The categories in
     text prompt are separated by commas. It returns a list of lists where each inner
     list contains the score, label, and bounding box of the detections for that frame.
@@ -258,6 +244,8 @@ def owl_v2_video(
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         box_threshold (float, optional): The threshold for the box detection. Defaults
             to 0.30.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of lists of dictionaries containing the
@@ -285,30 +273,45 @@ def owl_v2_video(
     files = [("video", buffer_bytes)]
     payload = {
         "prompts": [s.strip() for s in prompt.split(",")],
+        "confidence": box_threshold,
         "model": "owlv2",
-        "function_name": "owl_v2_video",
     }
-    data: Dict[str, Any] = send_inference_request(
-        payload, "text-to-object-detection", files=files, v2=True
-    )
-    bboxes_formatted = []
-    if data is not None:
-        for frame_data in data:
-            bboxes_formated_frame = []
-            for elt in frame_data:
-                bboxes_formated_frame.append(
-                    ODResponseData(
-                        label=elt["label"],  # type: ignore
-                        bbox=normalize_bbox(elt["bounding_box"], image_size),  # type: ignore
-                        score=round(elt["score"], 2),  # type: ignore
-                    )
-                )
-            bboxes_formatted.append(bboxes_formated_frame)
+    metadata = {"function_name": "owl_v2_video"}
 
-    filtered_bboxes = [
-        filter_bboxes_by_threshold(elt, box_threshold) for elt in bboxes_formatted
-    ]
-    return [[bbox.model_dump() for bbox in frame] for frame in filtered_bboxes]
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        # we can only execute fine-tuned models with florence2
+        payload = {
+            "prompts": payload["prompts"],
+            "jobId": fine_tune_id,
+            "model": "florence2",
+        }
+
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
+    )
+
+    bboxes_formatted = []
+    for frame_data in detections:
+        bboxes_formatted_per_frame = [
+            ODResponseData(
+                label=bbox["label"],
+                bbox=normalize_bbox(bbox["bounding_box"], image_size),
+                score=round(bbox["score"], 2),
+            )
+            for bbox in frame_data
+        ]
+        bboxes_formatted.append(bboxes_formatted_per_frame)
+    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
 
 def grounding_sam(
@@ -708,23 +711,31 @@ def countgd_counting(
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
         return []
+
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
-    prompt = prompt.replace(", ", " .")
-    payload = {"prompts": [prompt], "model": "countgd"}
+    payload = {
+        "prompts": [prompt.replace(", ", " .")],
+        "confidence": box_threshold,  # still not being used in the API
+        "model": "countgd",
+    }
     metadata = {"function_name": "countgd_counting"}
-    resp_data = send_task_inference_request(
+
+    detections = send_task_inference_request(
         payload, "text-to-object-detection", files=files, metadata=metadata
     )
-    bboxes_per_frame = resp_data[0]
+
+    # get the first frame
+    bboxes = detections[0]
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
             bbox=normalize_bbox(bbox["bounding_box"], image_size),
             score=round(bbox["score"], 2),
         )
-        for bbox in bboxes_per_frame
+        for bbox in bboxes
     ]
+    # TODO: remove this once we start to use the confidence on countgd
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
@@ -768,6 +779,7 @@ def countgd_example_based_counting(
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
         return []
+
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     visual_prompts = [
@@ -775,10 +787,13 @@ def countgd_example_based_counting(
     ]
     payload = {"visual_prompts": json.dumps(visual_prompts), "model": "countgd"}
     metadata = {"function_name": "countgd_example_based_counting"}
-    resp_data = send_task_inference_request(
+
+    detections = send_task_inference_request(
         payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
     )
-    bboxes_per_frame = resp_data[0]
+
+    # get the first frame
+    bboxes_per_frame = detections[0]
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
@@ -1240,7 +1255,14 @@ def florence2_phrase_grounding(
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
         return []
-    image_b64 = convert_to_b64(image)
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "model": "florence2",
+    }
+    metadata = {"function_name": "florence2_phrase_grounding"}
 
     if fine_tune_id is not None:
         landing_api = LandingPublicAPI()
@@ -1250,42 +1272,27 @@ def florence2_phrase_grounding(
                 f"Fine-tuned model {fine_tune_id} is not ready yet"
             )
 
-        data_obj = Florence2FtRequest(
-            image=image_b64,
-            task=PromptTask.PHRASE_GROUNDING,
-            prompt=prompt,
-            job_id=UUID(fine_tune_id),
-        )
-        data = data_obj.model_dump(by_alias=True, exclude_none=True)
-        detections = send_inference_request(
-            data,
-            "florence2-ft",
-            v2=True,
-            is_form=True,
-            metadata_payload={"function_name": "florence2_phrase_grounding"},
-        )
-        # get the first frame
-        detection = detections[0]
-    else:
-        data = {
-            "image": image_b64,
-            "task": "<CAPTION_TO_PHRASE_GROUNDING>",
-            "prompt": prompt,
-            "function_name": "florence2_phrase_grounding",
-        }
-        detections = send_inference_request(data, "florence2", v2=True)
-        detection = detections["<CAPTION_TO_PHRASE_GROUNDING>"]
+        payload["jobId"] = fine_tune_id
 
-    return_data = []
-    for i in range(len(detection["bboxes"])):
-        return_data.append(
-            ODResponseData(
-                label=detection["labels"][i],
-                bbox=normalize_bbox(detection["bboxes"][i], image_size),
-                score=1.0,
-            )
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
+    )
+
+    # get the first frame
+    bboxes = detections[0]
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),
+            score=round(bbox["score"], 2),
         )
-    return [bbox.model_dump() for bbox in return_data]
+        for bbox in bboxes
+    ]
+
+    return [bbox.model_dump() for bbox in bboxes_formatted]
 
 
 def florence2_phrase_grounding_video(
@@ -1327,6 +1334,11 @@ def florence2_phrase_grounding_video(
     image_size = frames[0].shape[:2]
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "model": "florence2",
+    }
+    metadata = {"function_name": "florence2_phrase_grounding_video"}
 
     if fine_tune_id is not None:
         landing_api = LandingPublicAPI()
@@ -1336,41 +1348,25 @@ def florence2_phrase_grounding_video(
                 f"Fine-tuned model {fine_tune_id} is not ready yet"
             )
 
-        data_obj = Florence2FtRequest(
-            task=PromptTask.PHRASE_GROUNDING,
-            prompt=prompt,
-            job_id=UUID(fine_tune_id),
-        )
+        payload["jobId"] = fine_tune_id
 
-        data = data_obj.model_dump(by_alias=True, exclude_none=True, mode="json")
-        detections = send_inference_request(
-            data,
-            "florence2-ft",
-            v2=True,
-            files=files,
-            metadata_payload={"function_name": "florence2_phrase_grounding_video"},
-        )
-    else:
-        data = {
-            "prompt": prompt,
-            "task": "<CAPTION_TO_PHRASE_GROUNDING>",
-            "function_name": "florence2_phrase_grounding_video",
-            "video": base64.b64encode(buffer_bytes).decode("utf-8"),
-        }
-        detections = send_inference_request(data, "florence2", v2=True)
-        detections = [d["<CAPTION_TO_PHRASE_GROUNDING>"] for d in detections]
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
+    )
 
     bboxes_formatted = []
     for frame_data in detections:
-        bboxes_formatted_per_frame = []
-        for idx in range(len(frame_data["bboxes"])):
-            bboxes_formatted_per_frame.append(
-                ODResponseData(
-                    label=frame_data["labels"][idx],
-                    bbox=normalize_bbox(frame_data["bboxes"][idx], image_size),
-                    score=1.0,
-                )
+        bboxes_formatted_per_frame = [
+            ODResponseData(
+                label=bbox["label"],
+                bbox=normalize_bbox(bbox["bounding_box"], image_size),
+                score=round(bbox["score"], 2),
             )
+            for bbox in frame_data
+        ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
     return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
