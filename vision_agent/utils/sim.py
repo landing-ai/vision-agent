@@ -33,7 +33,8 @@ class Sim:
             df: pd.DataFrame: The dataframe to use for similarity.
             sim_key: Optional[str]: The column name that you want to use to construct
                 the embeddings.
-            model: str: The model to use for embeddings.
+            api_key: Optional[str]: The OpenAI API key to use for embeddings.
+            model: str: The model to use for embeddingshttps://github.com/landing-ai/vision-agent/pull/280.
         """
         self.df = df
         client = OpenAI(api_key=api_key)
@@ -51,15 +52,27 @@ class Sim:
                 lambda x: get_embedding(self.emb_call, x)
             )
 
-    def save(self, sim_file: Union[str, Path]) -> None:
-        sim_file = Path(sim_file)
-        sim_file.mkdir(parents=True, exist_ok=True)
+    def save(self, save_dir: Union[str, Path]) -> None:
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
 
         df = self.df.copy()
         embs = np.array(df.embs.tolist())
-        np.save(sim_file / "embs.npy", embs)
+        np.save(save_dir / "embs.npy", embs)
         df = df.drop("embs", axis=1)
-        df.to_csv(sim_file / "df.csv", index=False)
+        df.to_csv(save_dir / "df.csv", index=False)
+
+    @staticmethod
+    def load(
+        load_dir: Union[str, Path],
+        api_key: Optional[str] = None,
+        model: str = "text-embedding-3-small",
+    ) -> "Sim":
+        load_dir = Path(load_dir)
+        df = pd.read_csv(load_dir / "df.csv")
+        embs = np.load(load_dir / "embs.npy")
+        df["embs"] = list(embs)
+        return Sim(df, api_key=api_key, model=model)
 
     @lru_cache(maxsize=256)
     def top_k(
