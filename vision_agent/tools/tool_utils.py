@@ -170,7 +170,7 @@ def get_tool_descriptions_by_names(
 
 
 def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
-    data: Dict[str, List[str]] = {"desc": [], "doc": []}
+    data: Dict[str, List[str]] = {"desc": [], "doc": [], "name": []}
 
     for func in funcs:
         desc = func.__doc__
@@ -182,6 +182,7 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
         doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
         data["desc"].append(desc)
         data["doc"].append(doc)
+        data["name"].append(func.__name__)
 
     return pd.DataFrame(data)  # type: ignore
 
