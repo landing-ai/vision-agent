@@ -930,6 +930,37 @@ def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     return cast(str, data["answer"])
 
 
+def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
+    """'qwen2_vl_video_vqa' is a tool that can answer any questions about arbitrary videos
+    including regular videos or videos of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> qwen2_vl_video_vqa('Which football player made the goal?', frames)
+        'Lionel Messi'
+    """
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen2vl",
+        "function_name": "qwen2_vl_video_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    return cast(str, data)
+
+
 def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
     """'gpt4o_image_vqa' is a tool that can answer any questions about arbitrary images
     including regular images or images of documents or presentations. It returns text
@@ -2238,13 +2269,13 @@ FUNCTION_TOOLS = [
     florence2_sam2_image,
     florence2_sam2_video_tracking,
     florence2_phrase_grounding,
-    ixc25_image_vqa,
-    ixc25_video_vqa,
     detr_segmentation,
     depth_anything_v2,
     generate_pose_image,
     closest_mask_distance,
     closest_box_distance,
+    qwen2_vl_images_vqa,
+    qwen2_vl_video_vqa,
 ]
 
 UTIL_TOOLS = [

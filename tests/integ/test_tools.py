@@ -34,6 +34,7 @@ from vision_agent.tools import (
     vit_image_classification,
     vit_nsfw_classification,
     qwen2_vl_images_vqa,
+    qwen2_vl_video_vqa,
     video_temporal_localization,
 )
 
@@ -376,6 +377,17 @@ def test_qwen2_vl_images_vqa():
         images=[img],
     )
     assert len(result) > 0
+
+
+def test_qwen2_vl_video_vqa():
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
+    ]
+    result = qwen2_vl_video_vqa(
+        prompt="What animal is in this video?",
+        frames=frames,
+    )
+    assert "cat" in result.strip()
 
 
 def test_ixc25_video_vqa():
