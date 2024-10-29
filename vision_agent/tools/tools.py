@@ -1787,7 +1787,6 @@ def flux_image_inpainting(
 
     Raises:
         ValueError:
-            - If strength is not between 0 and 1
             - If image dimensions don't match mask dimensions
             - If height or width are not multiples of 8
             - If input arrays are not valid numpy arrays
@@ -1829,9 +1828,9 @@ def flux_image_inpainting(
         "task": "inpainting",
         "height": height or image.shape[0],
         "width": width or image.shape[1],
-        "strength": 0.95,
+        "strength": 0.99,
+        "guidance_scale": 18,
         "num_inference_steps": 20,
-        "guidance_scale": 20,
         "seed": None,
     }
 
