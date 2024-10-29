@@ -42,10 +42,10 @@ def normalize_bbox(
 ) -> List[float]:
     r"""Normalize the bounding box coordinates to be between 0 and 1."""
     x1, y1, x2, y2 = bbox
-    x1 = round(x1 / image_size[1], 2)
-    y1 = round(y1 / image_size[0], 2)
-    x2 = round(x2 / image_size[1], 2)
-    y2 = round(y2 / image_size[0], 2)
+    x1 = max(round(x1 / image_size[1], 2), 0)
+    y1 = max(round(y1 / image_size[0], 2), 0)
+    x2 = min(round(x2 / image_size[1], 2), image_size[1])
+    y2 = min(round(y2 / image_size[0], 2), image_size[0])
     return [x1, y1, x2, y2]
 
 
