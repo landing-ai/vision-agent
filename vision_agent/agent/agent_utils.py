@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
+from rich.table import Table
 
 import vision_agent.tools as T
 
@@ -176,8 +177,21 @@ def print_code(title: str, code: str, test: Optional[str] = None) -> None:
             "python",
             theme="gruvbox-dark",
             line_numbers=True,
+            word_wrap=True,
         )
     )
     if test:
         _CONSOLE.print("=" * 30 + " Test " + "=" * 30)
         _CONSOLE.print(Syntax(test, "python", theme="gruvbox-dark", line_numbers=True))
+
+
+def print_table(title: str, columns: List[str], rows: List[List[str]]) -> None:
+    table = Table(title=title, show_header=True, header_style="bold magenta")
+    for col in columns:
+        table.add_column(col, style="cyan", no_wrap=True)
+
+    for i, row in enumerate(rows):
+        table.add_row(*row)
+        if i < len(rows) - 1:
+            table.add_row(*["-" * len(col) for col in row])
+    _CONSOLE.print(table)
