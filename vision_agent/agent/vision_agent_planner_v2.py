@@ -188,7 +188,7 @@ def response_safeguards(response: str) -> str:
 
 
 def fix_chat(
-    chat: List[Message], code_interpreter: CodeInterpreter
+    chat: List[Message], code_interpreter: CodeInterpreter, step: int = 0
 ) -> Tuple[List[Message], List[Message], List[str]]:
     orig_chat = copy.deepcopy(chat)
     int_chat = copy.deepcopy(chat)
@@ -219,6 +219,8 @@ def fix_chat(
             for c in int_chat
         ],
     )
+    int_chat[-1]["content"] += f"\n<count>{step}</count>\n"
+    orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"
     return int_chat, orig_chat, media_list
 
 
@@ -329,11 +331,11 @@ class VisionAgentPlannerV2(Agent):
         with CodeInterpreterFactory.new_instance(
             self.code_sandbox_runtime
         ) as code_interpreter:
-            int_chat, orig_chat, media_list = fix_chat(chat, code_interpreter)
             critque_steps = 1
-            step = 1
+            step = self.max_steps
             finished = False
-            while step < self.max_steps or not finished:
+            int_chat, orig_chat, media_list = fix_chat(chat, code_interpreter, step)
+            while step > 0 and not finished:
                 if self.use_multi_trial_planning:
                     response = run_multi_trial_planning(
                         int_chat, media_list, self.planner
@@ -386,7 +388,9 @@ class VisionAgentPlannerV2(Agent):
                         finished = False
 
                 critque_steps += 1
-                step += 1
+                step -= 1
+                int_chat[-1]["content"] += f"\n<count>{step}</count>\n"
+                orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"
 
             prompt = FINALIZE_PLAN.format(
                 planning=get_planning(int_chat),
