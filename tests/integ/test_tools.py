@@ -408,7 +408,7 @@ def test_video_temporal_localization():
     result = video_temporal_localization(
         prompt="Is it there a cat in this video?",
         frames=frames,
-        model="internlm-xcomposer",
+        model="qwen2vl",
     )
     assert len(result) == 5
 

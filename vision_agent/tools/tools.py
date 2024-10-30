@@ -2276,6 +2276,7 @@ FUNCTION_TOOLS = [
     closest_box_distance,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    video_temporal_localization,
 ]
 
 UTIL_TOOLS = [
