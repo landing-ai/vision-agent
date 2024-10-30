@@ -17,7 +17,7 @@ from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm.lmm import OpenAILMM
+from vision_agent.lmm.lmm import AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
     filter_bboxes_by_threshold,
     get_tool_descriptions,
@@ -895,6 +895,30 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
         payload, "image-to-text", files=files, v2=True
     )
     return cast(str, data)
+
+
+def claude35_text_extraction(image: np.ndarray) -> str:
+    """'claude35_text_extraction' is a tool that can extract text from an image. It
+    returns the extracted text as a string and can be used as an alternative to OCR if
+    you do not need to know the exact bounding box of the text.
+
+    Parameters:
+        image (np.ndarray): The image to extract text from.
+
+    Returns:
+        str: The extracted text from the image.
+    """
+
+    lmm = AnthropicLMM()
+    buffer = io.BytesIO()
+    Image.fromarray(image).save(buffer, format="PNG")
+    image_bytes = buffer.getvalue()
+    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+    text = lmm.generate(
+        "Extract and return any text you see in this image and nothing else. If you do not read any text respond with an empty string.",
+        [image_b64],
+    )
+    return cast(str, text)
 
 
 def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
@@ -2394,6 +2418,7 @@ FUNCTION_TOOLS = [
     florence2_sam2_image,
     florence2_sam2_video_tracking,
     florence2_phrase_grounding,
+    claude35_text_extraction,
     detr_segmentation,
     depth_anything_v2,
     generate_pose_image,
