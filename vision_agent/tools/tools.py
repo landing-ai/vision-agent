@@ -28,10 +28,8 @@ from vision_agent.tools.tool_utils import (
     send_task_inference_request,
 )
 from vision_agent.tools.tools_types import (
-    Florence2FtRequest,
     JobStatus,
     ODResponseData,
-    PromptTask,
 )
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -421,8 +419,15 @@ def florence2_sam2_image(
     if image.shape[0] < 1 or image.shape[1] < 1:
         return []
 
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "model": "florence2sam2",
+    }
+    metadata = {"function_name": "florence2_sam2_image"}
+
     if fine_tune_id is not None:
-        image_b64 = convert_to_b64(image)
         landing_api = LandingPublicAPI()
         status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
         if status is not JobStatus.SUCCEEDED:
@@ -430,58 +435,31 @@ def florence2_sam2_image(
                 f"Fine-tuned model {fine_tune_id} is not ready yet"
             )
 
-        req_data_obj = Florence2FtRequest(
-            image=image_b64,
-            task=PromptTask.PHRASE_GROUNDING,
-            prompt=prompt,
-            postprocessing="sam2",
-            job_id=UUID(fine_tune_id),
-        )
-        req_data = req_data_obj.model_dump(by_alias=True, exclude_none=True)
-        detections_ft = send_inference_request(
-            req_data,
-            "florence2-ft",
-            v2=True,
-            is_form=True,
-            metadata_payload={"function_name": "florence2_sam2_image"},
-        )
-        # get the first frame
-        detection = detections_ft[0]
-        return_data = []
-        for i in range(len(detection["bboxes"])):
-            return_data.append(
-                {
-                    "score": 1.0,
-                    "label": detection["labels"][i],
-                    "bbox": normalize_bbox(
-                        detection["bboxes"][i], detection["masks"][i]["size"]
-                    ),
-                    "mask": rle_decode_array(detection["masks"][i]),
-                }
-            )
-        return return_data
+        payload["jobId"] = fine_tune_id
 
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    payload = {
-        "prompts": [s.strip() for s in prompt.split(",")],
-        "function_name": "florence2_sam2_image",
-    }
-    detections: Dict[str, Any] = send_inference_request(
-        payload, "florence2-sam2", files=files, v2=True
+    detections = send_task_inference_request(
+        payload,
+        "text-to-instance-segmentation",
+        files=files,
+        metadata=metadata,
     )
 
+    # get the first frame
+    frame = detections[0]
     return_data = []
-    for _, data_i in detections["0"].items():
-        mask = rle_decode_array(data_i["mask"])
-        label = data_i["label"]
-        bbox = normalize_bbox(data_i["bounding_box"], data_i["mask"]["size"])
+    for detection in frame:
+        mask = rle_decode_array(detection["mask"])
+        label = detection["label"]
+        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
         return_data.append({"label": label, "bbox": bbox, "mask": mask, "score": 1.0})
     return return_data
 
 
 def florence2_sam2_video_tracking(
-    prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 3
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 3,
+    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
     entities in a video given a text prompt such as category names or referring
@@ -494,6 +472,8 @@ def florence2_sam2_video_tracking(
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run florence2 to find
             new objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
@@ -519,24 +499,43 @@ def florence2_sam2_video_tracking(
             ...
         ]
     """
+    if len(frames) == 0:
+        raise ValueError("No frames provided")
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     payload = {
-        "prompts": [s.strip() for s in prompt.split(",")],
-        "function_name": "florence2_sam2_video_tracking",
+        "prompt": prompt,
+        "model": "florence2sam2",
     }
+    metadata = {"function_name": "florence2_sam2_video_tracking"}
+
     if chunk_length is not None:
-        payload["chunk_length"] = chunk_length  # type: ignore
-    data: Dict[str, Any] = send_inference_request(
-        payload, "florence2-sam2", files=files, v2=True
+        payload["chunk_length_frames"] = chunk_length
+
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        payload["jobId"] = fine_tune_id
+
+    detections = send_task_inference_request(
+        payload,
+        "text-to-instance-segmentation",
+        files=files,
+        metadata=metadata,
     )
+
     return_data = []
-    for frame_i in data.keys():
+    for frame in detections:
         return_frame_data = []
-        for obj_id, data_j in data[frame_i].items():
-            mask = rle_decode_array(data_j["mask"])
-            label = obj_id + ": " + data_j["label"]
+        for detection in frame:
+            mask = rle_decode_array(detection["mask"])
+            label = detection["id"] + ": " + detection["label"]
             return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
         return_data.append(return_frame_data)
     return return_data
@@ -552,7 +551,7 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the detected text, bbox
-            with nornmalized coordinates, and confidence score.
+            with normalized coordinates, and confidence score.
 
     Example
     -------
@@ -608,7 +607,7 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visaulization purposes.
+            value, e.g. {count: 12} and a heat map for visualization purposes.
 
     Example
     -------
@@ -647,7 +646,7 @@ def loca_visual_prompt_counting(
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visaulization purposes.
+            value, e.g. {count: 12} and a heat map for visualization purposes.
 
     Example
     -------
