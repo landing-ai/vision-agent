@@ -511,7 +511,7 @@ def florence2_sam2_video_tracking(
     metadata = {"function_name": "florence2_sam2_video_tracking"}
 
     if chunk_length is not None:
-        payload["chunk_length_frames"] = chunk_length
+        payload["chunk_length_frames"] = chunk_length  # type: ignore
 
     if fine_tune_id is not None:
         landing_api = LandingPublicAPI()
