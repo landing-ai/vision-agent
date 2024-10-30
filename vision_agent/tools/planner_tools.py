@@ -29,6 +29,8 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     FINALIZE_PLAN,
     PICK_TOOL,
     TEST_TOOLS,
+    TEST_TOOLS_EXAMPLE1,
+    TEST_TOOLS_EXAMPLE2,
 )
 from vision_agent.lmm import AnthropicLMM
 from vision_agent.utils.execute import CodeInterpreterFactory
@@ -53,10 +55,12 @@ TOOL_LIST_PRIORS = {
     "florence2_phrase_grounding": 0.6,
     "ixc25_image_vqa": 0.6,
     "ixc25_video_vqa": 0.6,
+    "claude35_text_extraction": 0.9,
     "detr_segmentation": 0.5,
     "depth_anything_v2": 0.6,
     "generate_pose_image": 0.5,
 }
+EXAMPLES = f"\n{TEST_TOOLS_EXAMPLE1}\n{TEST_TOOLS_EXAMPLE2}\n"
 
 
 def _get_b64_images(medias: List[np.ndarray]) -> List[str]:
@@ -115,9 +119,7 @@ def get_tool_for_task(
         - Video object tracking
 
     Wait until the documentation is printed to use the function so you know what the
-    input and output signatures are. For text detection and extraction tasks, provide
-    the text you want to extract in the task string to help the model find the right
-    tool.
+    input and output signatures are.
 
     Parameters:
         task: str: The task to accomplish.
@@ -127,7 +129,11 @@ def get_tool_for_task(
             and do not want the same tool recommended.
 
     Returns:
-        None: The tool to use for the task is printed to stdout
+        The tool to use for the task is printed to stdout
+
+    Examples
+    --------
+        >>> get_tool_for_task("Give me an OCR model that can find 'hot chocolate' in the image", [image])
     """
     lmm = AnthropicLMM()
 
@@ -145,8 +151,12 @@ def get_tool_for_task(
         category = extract_tag(query, "category")  # type: ignore
         if category is None:
             category = task
+        else:
+            category = (
+                f"I need models from the {category.strip()} category of tools. {task}"
+            )
 
-        tool_docs = TOOL_RECOMMENDER.top_k(category, k=5, thresh=0.2)
+        tool_docs = TOOL_RECOMMENDER.top_k(category, k=10, thresh=0.2)
         if exclude_tools is not None and len(exclude_tools) > 0:
             cleaned_tool_docs = []
             for tool_doc in tool_docs:
@@ -159,6 +169,7 @@ def get_tool_for_task(
             tool_docs=tool_docs_str,
             previous_attempts="",
             user_request=task,
+            examples=EXAMPLES,
             media=str(image_paths),
         )
 
@@ -180,6 +191,7 @@ def get_tool_for_task(
                 tool_docs=tool_docs_str,
                 previous_attempts=f"<code>\n{code}\n</code>\nTOOL OUTPUT\n{tool_output_str}",
                 user_request=task,
+                examples=EXAMPLES,
                 media=str(image_paths),
             )
             code = extract_code(lmm.generate(prompt, media=image_paths))  # type: ignore
@@ -243,11 +255,14 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
 
     Parameters:
         prompt: str: The question to ask the model.
-        medias: List[np.ndarray]: The images to ask the question about.
+        medias: List[np.ndarray]: The images to ask the question about, it could also
+            be frames from a video. You can send up to 5 frames from a video.
     """
     lmm = AnthropicLMM()
     if isinstance(medias, np.ndarray):
         medias = [medias]
+    if isinstance(medias, list) and len(medias) > 5:
+        medias = medias[:5]
     all_media_b64 = _get_b64_images(medias)
 
     response = cast(str, lmm.generate(prompt, media=all_media_b64))  # type: ignore
