@@ -1796,7 +1796,7 @@ def flux_image_inpainting(
 
     files = [
         ("image", image_file),
-        ("mask", mask_file),
+        ("mask_image", mask_file),
     ]
 
     payload = {
