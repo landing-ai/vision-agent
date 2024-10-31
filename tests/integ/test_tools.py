@@ -517,7 +517,7 @@ def test_flux_image_inpainting():
         mask=mask_image,
     )
 
-    assert len(result) == 1
-    output = result[0]
-    assert output.shape[0] == image.shape[0]
-    assert output.shape[1] == image.shape[1]
+    assert result.shape[0] == 32
+    assert result.shape[1] == 32
+    assert result.shape[0] == image.shape[0]
+    assert result.shape[1] == image.shape[1]
