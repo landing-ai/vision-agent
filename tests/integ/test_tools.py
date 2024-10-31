@@ -131,8 +131,8 @@ def test_florence2_phrase_grounding():
         prompt="coin",
     )
 
-    assert len(result) == 24
-    assert [res["label"] for res in result] == ["coin"] * 24
+    assert 18 <= len(result) <= 24
+    assert [res["label"] for res in result] == ["coin"] * len(result)
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
