@@ -431,11 +431,7 @@ class VisionAgent(Agent):
                 self.streaming_message(
                     {
                         "role": "observation",
-                        "content": (
-                            json.dumps(user_obs)
-                            if not isinstance(user_obs, str)
-                            else user_obs
-                        ),
+                        "content": user_obs,
                         "execution": user_result,
                         "finished": finished,
                     }
@@ -466,10 +462,8 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "assistant",
-                            "content": json.dumps(
-                                new_format_to_old_format(
-                                    add_step_descriptions(response)
-                                )
+                            "content": new_format_to_old_format(
+                                add_step_descriptions(response)
                             ),
                             "finished": response.get("let_user_respond", False)
                             and code_action is None,
@@ -517,10 +511,8 @@ class VisionAgent(Agent):
                     self.streaming_message(
                         {
                             "role": "observation",
-                            "content": (
-                                json.dumps(obs) if not isinstance(obs, str) else obs
-                            ),
-                            "execution": result.to_json(),
+                            "content": obs,
+                            "execution": result,
                             "finished": finished,
                         }
                     )
