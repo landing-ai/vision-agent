@@ -449,29 +449,8 @@ class VisionAgent(Agent):
 
             while not finished and iterations < self.max_iterations:
                 response = run_conversation(self.agent, int_chat)
-                code_action = use_extra_vision_agent_args(
-                    response.get("execute_python", None),
-                    test_multi_plan,
-                    custom_tool_names,
-                )
                 if self.verbosity >= 1:
                     _LOGGER.info(response)
-                int_chat.append(
-                    {
-                        "role": "assistant",
-                        "content": json.dumps(
-                            new_format_to_old_format(add_step_descriptions(response))
-                        ),
-                    }
-                )
-                orig_chat.append(
-                    {
-                        "role": "assistant",
-                        "content": json.dumps(
-                            new_format_to_old_format(add_step_descriptions(response))
-                        ),
-                    }
-                )
 
                 code_action = response.get("execute_python", None)
                 # sometimes it gets stuck in a loop, so we force it to exit
@@ -486,7 +465,7 @@ class VisionAgent(Agent):
                                 "value": "Agent is stuck in conversation loop, exited",
                                 "traceback_raw": [],
                             },
-                            "finished": code_action is None,
+                            "finished": True,
                         }
                     )
                 else:
@@ -503,6 +482,22 @@ class VisionAgent(Agent):
                         }
                     )
 
+                int_chat.append(
+                    {
+                        "role": "assistant",
+                        "content": json.dumps(
+                            new_format_to_old_format(add_step_descriptions(response))
+                        ),
+                    }
+                )
+                orig_chat.append(
+                    {
+                        "role": "assistant",
+                        "content": json.dumps(
+                            new_format_to_old_format(add_step_descriptions(response))
+                        ),
+                    }
+                )
                 finished = response.get("let_user_respond", False)
 
                 if code_action is not None:

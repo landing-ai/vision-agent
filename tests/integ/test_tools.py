@@ -34,6 +34,7 @@ from vision_agent.tools import (
     vit_image_classification,
     vit_nsfw_classification,
     qwen2_vl_images_vqa,
+    qwen2_vl_video_vqa,
     video_temporal_localization,
 )
 
@@ -104,6 +105,22 @@ def test_owl_v2_video():
 
     assert len(result) == 10
     assert 24 <= len([res["label"] for res in result[0]]) <= 26
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
+
+
+def test_owl_v2_video_fine_tune_id():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    # this calls a fine-tuned florence2 model which is going to be worse at this task
+    result = owl_v2_video(
+        prompt="coin",
+        frames=frames,
+        fine_tune_id=FINE_TUNE_ID,
+    )
+
+    assert len(result) == 10
+    assert 12 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
 
@@ -360,6 +377,17 @@ def test_qwen2_vl_images_vqa():
         images=[img],
     )
     assert len(result) > 0
+
+
+def test_qwen2_vl_video_vqa():
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
+    ]
+    result = qwen2_vl_video_vqa(
+        prompt="What animal is in this video?",
+        frames=frames,
+    )
+    assert "cat" in result.strip()
 
 
 def test_ixc25_video_vqa():
