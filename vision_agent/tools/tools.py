@@ -19,11 +19,13 @@ from pytube import YouTube  # type: ignore
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
+    add_bboxes_from_masks,
     filter_bboxes_by_threshold,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
     get_tools_info,
+    nms,
     send_inference_request,
     send_task_inference_request,
 )
@@ -473,11 +475,11 @@ def florence2_sam2_video_tracking(
             fine-tuned model ID here to use it.
 
     Returns:
-        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
-        and segment mask. The outer list represents each frame and the inner list is
-        the entities per frame. The label contains the object ID followed by the label
-        name. The objects are only identified in the first framed and tracked
-        throughout the video.
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+        label,segment mask and bounding boxes. The outer list represents each frame and
+        the inner list is the entities per frame. The label contains the object ID
+        followed by the label name. The objects are only identified in the first framed
+        and tracked throughout the video.
 
     Example
     -------
@@ -486,6 +488,7 @@ def florence2_sam2_video_tracking(
             [
                 {
                     'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
                     'mask': array([[0, 0, 0, ..., 0, 0, 0],
                         [0, 0, 0, ..., 0, 0, 0],
                         ...,
@@ -535,7 +538,8 @@ def florence2_sam2_video_tracking(
             label = str(detection["id"]) + ": " + detection["label"]
             return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
         return_data.append(return_frame_data)
-    return return_data
+    return_data = add_bboxes_from_masks(return_data)
+    return nms(return_data, iou_threshold=0.95)
 
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
