@@ -1764,9 +1764,9 @@ def flux_image_inpainting(
             where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
-        List[np.ndarray]:
-            A list containing the generated image(s) as numpy arrays in RGB format
-            with values ranging from 0 to 255. Currently returns a single-element.
+        np.ndarray:
+            The generated image(s) as a numpy array in RGB format
+            with values ranging from 0 to 255.
 
     -------
     Example:
@@ -1776,7 +1776,7 @@ def flux_image_inpainting(
         ...     image=image,
         ...     mask=mask,
         ... )
-        >>> save_image(result[0], "inpainted_room.png")
+        >>> save_image(result, "inpainted_room.png")
     """
     if (
         image.shape[0] < 8
