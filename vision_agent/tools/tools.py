@@ -1818,9 +1818,8 @@ def flux_image_inpainting(
         metadata_payload={"function_name": "flux_image_inpainting"},
     )
 
-    output_image = response[0]
-    return_data = np.array(b64_to_pil(output_image).convert("RGB"))
-    return return_data
+    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
+    return output_image
 
 
 # Utility and visualization functions
