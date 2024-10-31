@@ -514,9 +514,7 @@ def test_flux_image_inpainting():
     result = flux_image_inpainting(
         prompt="horse",
         image=image,
-        mask_image=mask_image,
-        height=image.shape[0],
-        width=image.shape[1],
+        mask=mask_image,
     )
 
     assert len(result) == 1
