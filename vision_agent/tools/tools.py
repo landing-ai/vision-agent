@@ -1756,17 +1756,12 @@ def flux_image_inpainting(
     It can be used to edit regions of an image according to the prompt given.
 
     Parameters:
-        prompt (str):
-            A detailed text description guiding what should be generated in the masked area.
-            More detailed and specific prompts typically yield better results.
-        image (np.ndarray):
-            The source image to be inpainted. The image will serve as the base context for
-            the inpainting process.
-        mask (np.ndarray):
-            A binary mask image where:
-            - White pixels (255) indicate areas to be inpainted/replaced
-            - Black pixels (0) indicate areas to be preserved
-            The mask should have the same dimensions as the input image.
+        prompt (str): A detailed text description guiding what should be generated
+            in the masked area. More detailed and specific prompts typically yield better results.
+        image (np.ndarray): The source image to be inpainted.
+            The image will serve as the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's,
+            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
         List[np.ndarray]:
@@ -1790,6 +1785,11 @@ def flux_image_inpainting(
         or mask.shape[1] < 8
     ):
         raise ValueError("The image or mask does not have enough size for inpainting")
+
+    if np.array_equal(mask, mask.astype(bool).astype(int)):
+        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
+    else:
+        raise ValueError("The mask should be a binary mask with 0's and 1's")
 
     image_file = numpy_to_bytes(image)
     mask_file = numpy_to_bytes(mask)
