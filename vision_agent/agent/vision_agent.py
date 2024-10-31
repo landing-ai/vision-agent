@@ -388,12 +388,6 @@ class VisionAgent(Agent):
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
             last_user_message = chat[-1]
-            for chat_i in int_chat:
-                if "media" in chat_i:
-                    for media in chat_i["media"]:
-                        media = cast(str, media)
-                        artifacts[Path(media).name] = open(media, "rb").read()
-
             int_chat = cast(
                 List[Message],
                 [
