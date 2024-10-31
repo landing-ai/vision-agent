@@ -1749,15 +1749,11 @@ def closest_box_distance(
 def flux_image_inpainting(
     prompt: str,
     image: np.ndarray,
-    mask_image: np.ndarray,
-    height: Optional[int] = None,
-    width: Optional[int] = None,
-) -> List[np.ndarray]:
-    """'flux_image_inpainting' performs image inpainting using a rectified flow transformer model to
-    fill masked regions of an image based on textual prompts and surrounding context.
-    The function uses image generation model and transformer architecture with rectified flows to
-    understand both the textual prompt and visual context, ensuring the inpainted regions
-    blend naturally with the preserved areas.
+    mask: np.ndarray,
+) -> np.ndarray:
+    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
+    given by mask, in the image, given image based on the text prompt and surrounding image context.
+    It can be used to edit regions of an image according to the prompt given.
 
     Parameters:
         prompt (str):
@@ -1766,68 +1762,48 @@ def flux_image_inpainting(
         image (np.ndarray):
             The source image to be inpainted. The image will serve as the base context for
             the inpainting process.
-        mask_image (np.ndarray):
+        mask (np.ndarray):
             A binary mask image where:
             - White pixels (255) indicate areas to be inpainted/replaced
             - Black pixels (0) indicate areas to be preserved
             The mask should have the same dimensions as the input image.
-        height (int, optional):
-            Output image height in pixels. Must be a multiple of 8.
-            For better results, should use a height that is proportional to the input image.
-            If not provided, the inpainted image height defaults to image height.
-        width (int, optional):
-            Output image width in pixels. Must be a multiple of 8.
-            For better results, should use a width that is proportional to the input image.
-            If not provided, the inpainted image width defaults to image width.
 
     Returns:
         List[np.ndarray]:
             A list containing the generated image(s) as numpy arrays in RGB format
             with values ranging from 0 to 255. Currently returns a single-element.
 
-    Raises:
-        ValueError:
-            - If image dimensions don't match mask dimensions
-            - If height or width are not multiples of 8
-            - If input arrays are not valid numpy arrays
-            - If prompt is empty or not a string
-
     -------
     Example:
-        >>> # Load image and create mask
-        >>> image = load_image("room.png")
-        >>> mask = load_image("room_mask.png")
         >>> # Generate inpainting
         >>> result = flux_image_inpainting(
         ...     prompt="a modern black leather sofa with white pillows",
         ...     image=image,
-        ...     mask_image=mask,
-        ...     height=image.shape[0], # Use same height as input image
-        ...     width=image.shape[1], # Use same width as input image
+        ...     mask=mask,
         ... )
         >>> save_image(result[0], "inpainted_room.png")
     """
     if (
         image.shape[0] < 8
         or image.shape[1] < 8
-        or mask_image.shape[0] < 8
-        or mask_image.shape[1] < 8
+        or mask.shape[0] < 8
+        or mask.shape[1] < 8
     ):
-        return []
+        raise ValueError("The image or mask does not have enough size for inpainting")
 
     image_file = numpy_to_bytes(image)
-    mask_image_file = numpy_to_bytes(mask_image)
+    mask_file = numpy_to_bytes(mask)
 
     files = [
         ("image", image_file),
-        ("mask_image", mask_image_file),
+        ("mask", mask_file),
     ]
 
     payload = {
         "prompt": prompt,
         "task": "inpainting",
-        "height": height or image.shape[0],
-        "width": width or image.shape[1],
+        "height": image.shape[0],
+        "width": image.shape[1],
         "strength": 0.99,
         "guidance_scale": 18,
         "num_inference_steps": 20,
@@ -1842,8 +1818,8 @@ def flux_image_inpainting(
         metadata_payload={"function_name": "flux_image_inpainting"},
     )
 
-    return_data = [np.array(b64_to_pil(image).convert("RGB")) for image in response]
-
+    output_image = response[0]
+    return_data = np.array(b64_to_pil(output_image).convert("RGB"))
     return return_data
 
 
