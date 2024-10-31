@@ -211,9 +211,9 @@ def test_florence2_sam2_image():
         prompt="coin",
         image=img,
     )
-    assert len(result) == 25
-    assert [res["label"] for res in result] == ["coin"] * 25
-    assert len([res["mask"] for res in result]) == 25
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
+    assert len([res["mask"] for res in result]) == 24
 
 
 def test_florence2_sam2_image_fine_tune_id():

@@ -535,7 +535,7 @@ def florence2_sam2_video_tracking(
         return_frame_data = []
         for detection in frame:
             mask = rle_decode_array(detection["mask"])
-            label = detection["id"] + ": " + detection["label"]
+            label = str(detection["id"]) + ": " + detection["label"]
             return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
         return_data.append(return_frame_data)
     return return_data
