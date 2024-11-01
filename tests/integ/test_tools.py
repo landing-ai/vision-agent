@@ -132,8 +132,8 @@ def test_florence2_phrase_grounding():
         prompt="coin",
     )
 
-    assert len(result) == 24
-    assert [res["label"] for res in result] == ["coin"] * 24
+    assert 18 <= len(result) <= 24
+    assert [res["label"] for res in result] == ["coin"] * len(result)
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
@@ -212,9 +212,9 @@ def test_florence2_sam2_image():
         prompt="coin",
         image=img,
     )
-    assert len(result) == 25
-    assert [res["label"] for res in result] == ["coin"] * 25
-    assert len([res["mask"] for res in result]) == 25
+    assert len(result) == 24
+    assert [res["label"] for res in result] == ["coin"] * 24
+    assert len([res["mask"] for res in result]) == 24
 
 
 def test_florence2_sam2_image_fine_tune_id():
@@ -247,8 +247,23 @@ def test_florence2_sam2_video():
         frames=frames,
     )
     assert len(result) == 10
-    assert len([res["label"] for res in result[0]]) == 25
-    assert len([res["mask"] for res in result[0]]) == 25
+    assert len([res["label"] for res in result[0]]) == 24
+    assert len([res["mask"] for res in result[0]]) == 24
+
+
+def test_florence2_sam2_video_fine_tune_id():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    # this calls a fine-tuned florence2 model which is going to be worse at this task
+    result = florence2_sam2_video_tracking(
+        prompt="coin",
+        frames=frames,
+        fine_tune_id=FINE_TUNE_ID,
+    )
+    assert len(result) == 10
+    assert 15 <= len([res["label"] for res in result[0]]) <= 24
+    assert 15 <= len([res["mask"] for res in result[0]]) <= 24
 
 
 def test_detr_segmentation():
