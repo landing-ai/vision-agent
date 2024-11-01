@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+import os
 import shutil
 import tempfile
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
@@ -17,6 +18,7 @@ from vision_agent.agent.agent_utils import (
 )
 from vision_agent.agent.plan_repository import (
     CHECK_COLOR,
+    FINDING_FEATURES_WITH_VIDEO_TRACKING,
     LARGE_IMAGE,
     MISSING_GRID_ELEMENTS,
     MISSING_HORIZONTAL_ELEMENTS,
@@ -38,8 +40,11 @@ from vision_agent.utils.image_utils import encode_image_bytes
 from vision_agent.utils.sim import Sim
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
-# build this here so we don't have to create it every call to `get_tool_for_task`
-TOOL_RECOMMENDER = Sim(df=T.TOOLS_DF, sim_key="doc")
+if os.environ.get("TOOL_REC_PATH") is not None:
+    TOOL_RECOMMENDER = Sim.load(os.environ["TOOL_REC_PATH"])
+else:
+    TOOL_RECOMMENDER = Sim(df=T.TOOLS_DF, sim_key="doc")
+
 _LOGGER = logging.getLogger(__name__)
 TOOL_LIST_PRIORS = {
     "owl_v2_image": 0.6,
@@ -142,7 +147,7 @@ def get_tool_for_task(
         CodeInterpreterFactory.new_instance() as code_interpreter,
     ):
         image_paths = []
-        for i, image in enumerate(images):
+        for i, image in enumerate(images[:3]):
             image_path = f"{tmpdirname}/image_{i}.png"
             Image.fromarray(image).save(image_path)
             image_paths.append(image_path)
@@ -309,6 +314,7 @@ def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
         MISSING_GRID_ELEMENTS,
         MISSING_HORIZONTAL_ELEMENTS,
         MISSING_VERTICAL_ELEMENTS,
+        FINDING_FEATURES_WITH_VIDEO_TRACKING,
     ]:
         if len(categories & suggestion_and_cat[1]) > 0:
             suggestion += (
