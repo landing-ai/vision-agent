@@ -106,12 +106,15 @@ def frames_to_bytes(
 # same file name and the time savings are very large.
 @lru_cache(maxsize=8)
 def extract_frames_from_video(
-    video_uri: str, fps: float = _DEFAULT_INPUT_FPS
+    video: str, fps: float = _DEFAULT_INPUT_FPS
 ) -> List[Tuple[np.ndarray, float]]:
     """Extract frames from a video along with the timestamp in seconds.
 
     Parameters:
-        video_uri (str): the path to the video file or a video file url
+        video (str): it could be one of the following types:
+            - the path to the video file
+            - a url to the video file or video stream that can be opened by cv2.VideoCapture
+            - a base64 encoded video string with a 'data:video/*;base64' prefix
         fps (float): the frame rate per second to extract the frames
 
     Returns:
@@ -120,12 +123,27 @@ def extract_frames_from_video(
             from the start of the video. E.g. 12.125 means 12.125 seconds from the start of
             the video. The frames are sorted by the timestamp in ascending order.
     """
+    if video.startswith("data:video"):
+        # Extract video format from base64 string
+        video_format = video.split(";")[0].split("/")[1]
+        video_data = base64.b64decode(video.split(",")[1])
+        if video_format == "*":
+            video_format = "mp4"
+        # Write to temporary file since cv2 can't read directly from bytes
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=f".{video_format}"
+        ) as temp_file:
+            temp_file.write(video_data)
+            temp_file.flush()
+            video_file = temp_file.name
+    else:
+        video_file = video
 
-    cap = cv2.VideoCapture(video_uri)
+    cap = cv2.VideoCapture(video_file)
     orig_fps = cap.get(cv2.CAP_PROP_FPS)
     if not orig_fps or orig_fps <= 0:
         _LOGGER.warning(
-            f"Input video, {video_uri}, has no fps, using the default value {_DEFAULT_VIDEO_FPS}"
+            f"Input video, {video_file}, has no fps, using the default value {_DEFAULT_VIDEO_FPS}"
         )
         orig_fps = _DEFAULT_VIDEO_FPS
     if not fps or fps <= 0:
@@ -154,5 +172,5 @@ def extract_frames_from_video(
 
         i += 1
     cap.release()
-    _LOGGER.info(f"Extracted {len(frames)} frames from {video_uri}")
+    _LOGGER.info(f"Extracted {len(frames)} frames from {video_file}")
     return frames

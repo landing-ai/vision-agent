@@ -1,3 +1,4 @@
+import base64
 import tempfile
 from typing import Optional
 
@@ -5,6 +6,17 @@ import cv2
 import numpy as np
 
 from vision_agent.utils.video import extract_frames_from_video
+
+
+def test_extract_frames_from_base64_video():
+    video_path = _create_video(duration=2)
+    with open(video_path, "rb") as f:
+        video_bytes = f.read()
+    video_base64 = (
+        f"data:video/mp4;base64,{base64.b64encode(video_bytes).decode('utf-8')}"
+    )
+    res = extract_frames_from_video(video_base64, fps=24)
+    assert len(res) == 48
 
 
 def test_extract_frames_from_video():
