@@ -7,6 +7,7 @@ from .vision_agent_coder import (
     OpenAIVisionAgentCoder,
     VisionAgentCoder,
 )
+from .vision_agent_coder_v2 import VisionAgentCoderV2
 from .vision_agent_planner import (
     AnthropicVisionAgentPlanner,
     AzureVisionAgentPlanner,
