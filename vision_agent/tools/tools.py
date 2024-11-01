@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import logging
@@ -1941,11 +1942,15 @@ def save_json(data: Any, file_path: str) -> None:
         json.dump(data, f, cls=NumpyEncoder)
 
 
-def load_image(image_path: str) -> np.ndarray:
+def load_image(image: str | np.ndarray) -> np.ndarray:
     """'load_image' is a utility function that loads an image from the given file path string or an URL.
 
     Parameters:
-        image_path (str): The path or URL to the image.
+        image (str): it could be one of the following types:
+            - local file path
+            - remote http(s) url to the image
+            - base64 encoded image string with a 'data:image/*;base64' prefix
+            - a NumPy array
 
     Returns:
         np.ndarray: The image as a NumPy array.
@@ -1955,17 +1960,29 @@ def load_image(image_path: str) -> np.ndarray:
         >>> load_image("path/to/image.jpg")
     """
     # NOTE: sometimes the generated code pass in a NumPy array
-    if isinstance(image_path, np.ndarray):
-        return image_path
-    if image_path.startswith(("http", "https")):
-        _, image_suffix = os.path.splitext(image_path)
+    if isinstance(image, np.ndarray):
+        return image
+
+    if not isinstance(image, str):
+        raise ValueError(f"Unsupported image type: {type(image)}")
+
+    if image.lower().startswith("data:image"):
+        image_bytes = base64.b64decode(image.split(",")[1])
+        image_pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    elif image.startswith(("http", "https")):
+        _, image_suffix = os.path.splitext(image)
         with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
             # Download the image and save it to the temporary file
-            with urllib.request.urlopen(image_path) as response:
+            with urllib.request.urlopen(image) as response:
                 tmp_file.write(response.read())
-            image_path = tmp_file.name
-    image = Image.open(image_path).convert("RGB")
-    return np.array(image)
+            image = tmp_file.name
+        image_pil = Image.open(image).convert("RGB")
+    else:
+        if not os.path.exists(image):
+            raise ValueError(f"Input image file not found: {image}")
+        image_pil = Image.open(image).convert("RGB")
+
+    return np.array(image_pil)
 
 
 def save_image(image: np.ndarray, file_path: str) -> None:

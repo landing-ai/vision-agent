@@ -1,10 +1,51 @@
+import base64
 import os
 import tempfile
 from pathlib import Path
 
+import cv2
 import numpy as np
 
-from vision_agent.tools.tools import overlay_bounding_boxes, save_image, save_video
+from vision_agent.tools.tools import (
+    load_image,
+    overlay_bounding_boxes,
+    save_image,
+    save_video,
+)
+
+
+def test_load_image_from_file_path(tmp_path: Path):
+    image_array = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
+    image_path = tmp_path / "test.jpg"
+    cv2.imwrite(image_path, image_array)
+
+    image = load_image(str(image_path))
+    assert isinstance(image, np.ndarray)
+    assert image.shape == (480, 640, 3)
+
+
+def test_load_image_from_url():
+    image_url = "https://upload.wikimedia.org/wikipedia/en/a/a9/Example.jpg"
+    image = load_image(image_url)
+    assert isinstance(image, np.ndarray)
+    assert image.shape == (300, 300, 3)
+
+
+def test_load_image_from_base64():
+    image_array = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
+    img_bytes = cv2.imencode(".jpg", image_array)[1].tobytes()
+    image_base64 = base64.b64encode(img_bytes).decode("utf-8")
+    image_base64 = f"data:image/jpeg;base64,{image_base64}"
+    image = load_image(image_base64)
+    assert isinstance(image, np.ndarray)
+    assert image.shape == (480, 640, 3)
+
+
+def test_load_image_from_numpy_array():
+    image_array = np.random.randint(0, 256, (480, 640, 3), dtype=np.uint8)
+    image = load_image(image_array)
+    assert isinstance(image, np.ndarray)
+    assert np.array_equal(image, image_array)
 
 
 def test_saves_frames_without_output_path():
