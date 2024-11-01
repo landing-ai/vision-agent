@@ -1,20 +1,38 @@
+import copy
 import json
 import logging
 import re
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, cast
 
+import libcst as cst
+from pydantic import BaseModel
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.table import Table
 
 import vision_agent.tools as T
+from vision_agent.lmm.types import Message
+from vision_agent.utils.execute import CodeInterpreter
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _CONSOLE = Console()
 _MAX_TABULATE_COL_WIDTH = 80
+
+
+class PlanContext(BaseModel):
+    plan: str
+    instructions: List[str]
+    code: str
+
+
+class CodeContext(BaseModel):
+    code: str
+    test: str
+    success: bool
+    test_result: str
 
 
 def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
@@ -122,7 +140,7 @@ def remove_installs_from_code(code: str) -> str:
     return code
 
 
-def format_memory(memory: List[Dict[str, str]]) -> str:
+def format_feedback(memory: List[Dict[str, str]]) -> str:
     output_str = ""
     for i, m in enumerate(memory):
         output_str += f"### Feedback {i}:\n"
@@ -133,6 +151,16 @@ def format_memory(memory: List[Dict[str, str]]) -> str:
         output_str += "\n"
 
     return output_str
+
+
+def format_plan_v2(plan: PlanContext) -> str:
+    plan_str = cast(str, plan.plan) + "\n"
+    plan_str += "Instructions:\n"
+    for v in plan.instructions:
+        plan_str += f"    - {v}\n"
+    plan_str += "Code:\n"
+    plan_str += cast(str, plan.code)
+    return plan_str
 
 
 def format_plans(plans: Dict[str, Any]) -> str:
@@ -195,3 +223,146 @@ def print_table(title: str, columns: List[str], rows: List[List[str]]) -> None:
         if i < len(rows) - 1:
             table.add_row(*["-" * len(col) for col in row])
     _CONSOLE.print(table)
+
+
+def add_media_to_chat(
+    chat: List[Message], code_interpreter: CodeInterpreter
+) -> Tuple[List[Message], List[Message], List[str]]:
+    orig_chat = copy.deepcopy(chat)
+    int_chat = copy.deepcopy(chat)
+    media_list = []
+    for chat_i in int_chat:
+        if "media" in chat_i:
+            for media in chat_i["media"]:
+                media = (
+                    media
+                    if type(media) is str and media.startswith(("http", "https"))
+                    else code_interpreter.upload_file(cast(str, media))
+                )
+                chat_i["content"] += f" Media name {media}"  # type: ignore
+                media_list.append(str(media))
+
+    int_chat = cast(
+        List[Message],
+        [
+            (
+                {
+                    "role": c["role"],
+                    "content": c["content"],
+                    "media": c["media"],
+                }
+                if "media" in c
+                else {"role": c["role"], "content": c["content"]}
+            )
+            for c in int_chat
+        ],
+    )
+    return int_chat, orig_chat, media_list
+
+
+def strip_function_calls(  # noqa: C901
+    code: str, exclusions: Optional[List[str]] = None
+) -> str:
+    """This will strip out all code that calls functions except for functions included
+    in exclusions.
+    """
+    if exclusions is None:
+        exclusions = []
+
+    def check_and_remove_node(node: cst.CSTNode, exclusions: List[str]) -> cst.CSTNode:
+        if hasattr(node, "value") and isinstance(node.value, cst.Call):
+            if (
+                isinstance(node.value.func, cst.Name)
+                and node.value.func.value in exclusions
+            ):
+                return node
+            return cst.RemoveFromParent()  # type: ignore
+        return node
+
+    class StripFunctionCallsTransformer(cst.CSTTransformer):
+        def __init__(self, exclusions: List[str]):
+            # Store exclusions to skip removing certain function calls
+            self.exclusions = exclusions
+            self.in_function_or_class = False
+
+        def visit_FunctionDef(self, node: cst.FunctionDef) -> Optional[bool]:
+            self.in_function_or_class = True
+            return True
+
+        def leave_FunctionDef(
+            self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
+        ) -> cst.BaseStatement:
+            self.in_function_or_class = False
+            return updated_node
+
+        def visit_ClassDef(self, node: cst.ClassDef) -> Optional[bool]:
+            self.in_function_or_class = True
+            return True
+
+        def leave_ClassDef(
+            self, node: cst.ClassDef, updated_node: cst.ClassDef
+        ) -> cst.BaseStatement:
+            self.in_function_or_class = False
+            return updated_node
+
+        def leave_Expr(
+            self, original_node: cst.Expr, updated_node: cst.Expr
+        ) -> cst.Expr:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.Expr, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_Assign(
+            self, original_node: cst.Assign, updated_node: cst.Assign
+        ) -> cst.Assign:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.Assign, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_If(self, original_node: cst.If, updated_node: cst.If) -> cst.If:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.If, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_For(self, original_node: cst.For, updated_node: cst.For) -> cst.For:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.For, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_While(
+            self, original_node: cst.While, updated_node: cst.While
+        ) -> cst.While:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.While, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_With(
+            self, original_node: cst.With, updated_node: cst.With
+        ) -> cst.With:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.With, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+        def leave_Try(self, original_node: cst.Try, updated_node: cst.Try) -> cst.Try:
+            if not self.in_function_or_class:
+                return cast(
+                    cst.Try, check_and_remove_node(updated_node, self.exclusions)
+                )
+            return updated_node
+
+    tree = cst.parse_module(code)
+    transformer = StripFunctionCallsTransformer(exclusions)
+    modified_tree = tree.visit(transformer)
+    return modified_tree.code
