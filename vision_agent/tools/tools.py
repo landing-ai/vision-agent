@@ -1847,6 +1847,48 @@ def flux_image_inpainting(
     return output_image
 
 
+def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
+    """'siglip_classification' is a tool that can classify an image or a cropped detection given a list
+    of input labels or tags. It returns the same list of the input labels along with
+    their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+        labels (List[str]): The list of labels or tags that is associated with the image
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of given labels and other a list of scores.
+
+    Example
+    -------
+        >>> siglip_classification(image, ['dog', 'cat', 'bird'])
+        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
+    """
+
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "siglip",
+        "labels": labels,
+    }
+
+    response: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="classification",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "siglip_classification"},
+    )
+
+    return response
+
+
 # Utility and visualization functions
 
 

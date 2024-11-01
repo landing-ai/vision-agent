@@ -37,6 +37,7 @@ from vision_agent.tools import (
     qwen2_vl_video_vqa,
     video_temporal_localization,
     flux_image_inpainting,
+    siglip_classification,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -564,3 +565,21 @@ def test_flux_image_inpainting():
     assert result.shape[1] == 32
     assert result.shape[0] == image.shape[0]
     assert result.shape[1] == image.shape[1]
+
+
+def test_siglip_classification():
+    img = ski.data.cat()
+    labels = ["cat", "dog", "bird"]
+
+    result = siglip_classification(
+        image=img,
+        labels=labels,
+    )
+
+    assert len(result["scores"]) == 3
+    assert len(result["labels"]) == 3
+    assert result["labels"][0] == "cat"
+    assert result["labels"][1] == "dog"
+    assert result["labels"][2] == "bird"
+    assert result["scores"][0] > result["scores"][1]
+    assert result["scores"][0] > result["scores"][2]
