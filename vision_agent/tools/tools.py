@@ -1942,7 +1942,7 @@ def save_json(data: Any, file_path: str) -> None:
         json.dump(data, f, cls=NumpyEncoder)
 
 
-def load_image(image: str | np.ndarray) -> np.ndarray:
+def load_image(image: Union[str, np.ndarray]) -> np.ndarray:
     """'load_image' is a utility function that loads an image from the given file path string or an URL.
 
     Parameters:
