@@ -13,7 +13,7 @@ from .meta_tools import (
     view_media_artifact,
 )
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
-from .tool_utils import get_tool_descriptions_by_names
+from .tool_utils import add_bboxes_from_masks, get_tool_descriptions_by_names
 from .tools import (
     FUNCTION_TOOLS,
     TOOL_DESCRIPTIONS,
