@@ -1773,6 +1773,82 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
+def flux_image_inpainting(
+    prompt: str,
+    image: np.ndarray,
+    mask: np.ndarray,
+) -> np.ndarray:
+    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
+    given by mask, in the image, given image based on the text prompt and surrounding image context.
+    It can be used to edit regions of an image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the masked area. More detailed and specific prompts typically yield better results.
+        image (np.ndarray): The source image to be inpainted.
+            The image will serve as the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's,
+            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
+
+    Returns:
+        np.ndarray:
+            The generated image(s) as a numpy array in RGB format
+            with values ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = flux_image_inpainting(
+        ...     prompt="a modern black leather sofa with white pillows",
+        ...     image=image,
+        ...     mask=mask,
+        ... )
+        >>> save_image(result, "inpainted_room.png")
+    """
+    if (
+        image.shape[0] < 8
+        or image.shape[1] < 8
+        or mask.shape[0] < 8
+        or mask.shape[1] < 8
+    ):
+        raise ValueError("The image or mask does not have enough size for inpainting")
+
+    if np.array_equal(mask, mask.astype(bool).astype(int)):
+        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
+    else:
+        raise ValueError("The mask should be a binary mask with 0's and 1's")
+
+    image_file = numpy_to_bytes(image)
+    mask_file = numpy_to_bytes(mask)
+
+    files = [
+        ("image", image_file),
+        ("mask_image", mask_file),
+    ]
+
+    payload = {
+        "prompt": prompt,
+        "task": "inpainting",
+        "height": image.shape[0],
+        "width": image.shape[1],
+        "strength": 0.99,
+        "guidance_scale": 18,
+        "num_inference_steps": 20,
+        "seed": None,
+    }
+
+    response = send_inference_request(
+        payload=payload,
+        endpoint_name="flux1",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "flux_image_inpainting"},
+    )
+
+    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
+    return output_image
+
+
 # Utility and visualization functions
 
 

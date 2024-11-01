@@ -36,6 +36,7 @@ from vision_agent.tools import (
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     video_temporal_localization,
+    flux_image_inpainting,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -531,3 +532,20 @@ def test_countgd_example_based_counting_empty():
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
     assert result == []
+
+
+def test_flux_image_inpainting():
+    mask_image = np.zeros((32, 32), dtype=np.uint8)
+    mask_image[:4, :4] = 1
+    image = np.zeros((32, 32), dtype=np.uint8)
+
+    result = flux_image_inpainting(
+        prompt="horse",
+        image=image,
+        mask=mask_image,
+    )
+
+    assert result.shape[0] == 32
+    assert result.shape[1] == 32
+    assert result.shape[0] == image.shape[0]
+    assert result.shape[1] == image.shape[1]
