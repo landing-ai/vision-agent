@@ -5,11 +5,15 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import numpy as np
+from rich.console import Console
+from rich.markup import escape
 
 import vision_agent.tools as T
 import vision_agent.tools.planner_tools as pt
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
+    PlanContext,
+    add_media_to_chat,
     extract_json,
     extract_tag,
     print_code,
@@ -18,6 +22,7 @@ from vision_agent.agent.agent_utils import (
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     CRITIQUE_PLAN,
     EXAMPLE_PLAN1,
+    EXAMPLE_PLAN2,
     FINALIZE_PLAN,
     FIX_BUG,
     PICK_PLAN,
@@ -32,7 +37,6 @@ from vision_agent.utils.execute import (
 from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
 
 logging.basicConfig(level=logging.INFO)
-_LOGGER = logging.getLogger(__name__)
 UTIL_DOCSTRING = T.get_tool_documentation(
     [
         T.load_image,
@@ -44,6 +48,7 @@ UTIL_DOCSTRING = T.get_tool_documentation(
     ]
 )
 PLANNING_TOOLS_DOCSTRING = UTIL_DOCSTRING + "\n" + pt.PLANNER_DOCSTRING
+_CONSOLE = Console()
 
 
 class DefaultPlanningImports:
@@ -90,7 +95,7 @@ def run_planning(
     planning = get_planning(chat)
     prompt = PLAN.format(
         tool_desc=PLANNING_TOOLS_DOCSTRING,
-        examples=EXAMPLE_PLAN1,
+        examples=f"{EXAMPLE_PLAN1}\n{EXAMPLE_PLAN2}",
         planning=planning,
         media_list=str(media_list),
     )
@@ -187,56 +192,21 @@ def response_safeguards(response: str) -> str:
     return response
 
 
-def fix_chat(
-    chat: List[Message], code_interpreter: CodeInterpreter, step: int = 0
-) -> Tuple[List[Message], List[Message], List[str]]:
-    orig_chat = copy.deepcopy(chat)
-    int_chat = copy.deepcopy(chat)
-    media_list = []
-    for chat_i in int_chat:
-        if "media" in chat_i:
-            for media in chat_i["media"]:
-                media = (
-                    media
-                    if type(media) is str and media.startswith(("http", "https"))
-                    else code_interpreter.upload_file(cast(str, media))
-                )
-                chat_i["content"] += f" Media name {media}"  # type: ignore
-                media_list.append(str(media))
-
-    int_chat = cast(
-        List[Message],
-        [
-            (
-                {
-                    "role": c["role"],
-                    "content": c["content"],
-                    "media": c["media"],
-                }
-                if "media" in c
-                else {"role": c["role"], "content": c["content"]}
-            )
-            for c in int_chat
-        ],
-    )
-    int_chat[-1]["content"] += f"\n<count>{step}</count>\n"
-    orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"
-    return int_chat, orig_chat, media_list
-
-
 def execute_code_action(
     code: str,
     code_interpreter: CodeInterpreter,
     chat: List[Message],
     model: LMM,
-    verbosity: int = 0,
+    verbose: bool = False,
 ) -> Tuple[Execution, str, str]:
-    if verbosity > 0:
+    if verbose:
         print_code("Code to Execute:", code)
     execution = code_interpreter.exec_cell(DefaultPlanningImports.prepend_imports(code))
     obs = execution.text(include_results=False).strip()
-    if verbosity > 0:
-        _LOGGER.info(f"Code Execution Output: {obs}")
+    if verbose:
+        _CONSOLE.print(
+            f"[bold cyan]Code Execution Output:[/bold cyan] [yellow]{escape(obs)}[/yellow]"
+        )
 
     count = 1
     while not execution.success and count <= 3:
@@ -254,9 +224,11 @@ def execute_code_action(
             DefaultPlanningImports.prepend_imports(code)
         )
         obs = execution.text(include_results=False).strip()
-        if verbosity > 0:
+        if verbose:
             print_code(f"Fixing Bug Round {count}:", code)
-            _LOGGER.info(f"Code Execution Output: {obs}")
+            _CONSOLE.print(
+                f"[bold cyan]Code Execution Output:[/bold cyan] [yellow]{escape(obs)}[/yellow]"
+            )
         count += 1
 
     if obs.startswith("----- stdout -----\n"):
@@ -291,11 +263,11 @@ class VisionAgentPlannerV2(Agent):
         planner: Optional[LMM] = None,
         critic: Optional[LMM] = None,
         report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        verbosity: int = 0,
         max_steps: int = 10,
-        code_sandbox_runtime: Optional[str] = None,
         use_multi_trial_planning: bool = False,
-        critique_steps: int = 3,
+        critique_steps: int = 11,
+        verbose: bool = False,
+        code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         self.planner = planner if planner is not None else AnthropicLMM(temperature=0.0)
         self.critic = critic if critic is not None else AnthropicLMM(temperature=0.0)
@@ -304,9 +276,7 @@ class VisionAgentPlannerV2(Agent):
         self.code_sandbox_runtime = code_sandbox_runtime
         self.use_multi_trial_planning = use_multi_trial_planning
         self.critique_steps = critique_steps
-        self.verbosity = verbosity
-        if self.verbosity >= 1:
-            _LOGGER.setLevel(logging.INFO)
+        self.verbose = verbose
 
     def __call__(
         self,
@@ -324,17 +294,23 @@ class VisionAgentPlannerV2(Agent):
     def generate_plan(
         self,
         chat: List[Message],
-    ) -> Dict[str, Any]:
+        code_interpreter: Optional[CodeInterpreter] = None,
+    ) -> PlanContext:
         if not chat:
             raise ValueError("Chat cannot be empty")
 
-        with CodeInterpreterFactory.new_instance(
+        chat = copy.deepcopy(chat)
+        code_interpreter = code_interpreter or CodeInterpreterFactory.new_instance(
             self.code_sandbox_runtime
-        ) as code_interpreter:
+        )
+
+        with code_interpreter:
             critque_steps = 1
             step = self.max_steps
             finished = False
-            int_chat, orig_chat, media_list = fix_chat(chat, code_interpreter, step)
+            int_chat, orig_chat, media_list = add_media_to_chat(chat, code_interpreter)
+            int_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
+            orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
             while step > 0 and not finished:
                 if self.use_multi_trial_planning:
                     response = run_multi_trial_planning(
@@ -349,15 +325,19 @@ class VisionAgentPlannerV2(Agent):
                 finalize_plan = extract_tag(response, "finalize_plan")
                 finished = finalize_plan is not None
 
-                if self.verbosity > 0:
-                    _LOGGER.info(f"Step {step}: {thinking}")
+                if self.verbose:
+                    _CONSOLE.print(
+                        f"[bold cyan]Step {step}:[/bold cyan] [green]{thinking}[/green]"
+                    )
                     if finalize_plan is not None:
-                        _LOGGER.info(f"Finalizing Plan: {finalize_plan}")
+                        _CONSOLE.print(
+                            f"[bold cyan]Finalizing Plan:[/bold cyan] [magenta]{finalize_plan}[/magenta]"
+                        )
 
                 if code is not None:
                     code = code_safeguards(code)
                     execution, obs, code = execute_code_action(
-                        code, code_interpreter, int_chat, self.planner, self.verbosity
+                        code, code_interpreter, int_chat, self.planner, self.verbose
                     )
 
                     # if we had to debug the code to fix an issue, replace the old code
@@ -379,18 +359,20 @@ class VisionAgentPlannerV2(Agent):
                 if critque_steps % self.critique_steps == 0:
                     critique = run_critic(int_chat, media_list, self.critic)
                     if critique is not None and int_chat[-1]["role"] == "observation":
-                        _LOGGER.info(f"Critique: {critique}")
+                        _CONSOLE.print(
+                            f"[bold cyan]Critique:[/bold cyan] [red]{critique}[/red]"
+                        )
                         critique_str = f"\n[critique]\n{critique}\n[end of critique]"
-                        int_chat[-1]["content"] += critique_str
-                        orig_chat[-1]["content"] += critique_str
+                        int_chat[-1]["content"] += critique_str  # type: ignore
+                        orig_chat[-1]["content"] += critique_str  # type: ignore
                         # if plan was critiqued, ensure we don't finish so we can
                         # respond to the critique
                         finished = False
 
                 critque_steps += 1
                 step -= 1
-                int_chat[-1]["content"] += f"\n<count>{step}</count>\n"
-                orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"
+                int_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
+                orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
 
             prompt = FINALIZE_PLAN.format(
                 planning=get_planning(int_chat),
@@ -398,17 +380,24 @@ class VisionAgentPlannerV2(Agent):
             )
 
             plan_str = cast(str, self.planner.generate(prompt))
-            plan = extract_json(extract_tag(plan_str, "json"))
+            plan_json = extract_tag(plan_str, "json")
+            plan = (
+                extract_json(plan_json)
+                if plan_json is not None
+                else {"plan": plan_str, "instructions": [], "code": ""}
+            )
             code_snippets = extract_tag(plan_str, "code")
-            plan["code"] = code_snippets
-            if self.verbosity > 0:
-                _LOGGER.info(f"Final Plan: {plan['plan']}")
+            plan["code"] = code_snippets if code_snippets is not None else ""
+            if self.verbose:
+                _CONSOLE.print(
+                    f"[bold cyan]Final Plan:[/bold cyan] [magenta]{plan['plan']}[/magenta]"
+                )
                 print_table(
                     "Plan", ["Instructions"], [[p] for p in plan["instructions"]]
                 )
-                print_code("Plan Code", code_snippets)
+                print_code("Plan Code", plan["code"])
 
-        return plan
+        return PlanContext(**plan)
 
     def log_progress(self, data: Dict[str, Any]) -> None:
         pass
