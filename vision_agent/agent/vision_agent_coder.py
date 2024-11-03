@@ -527,9 +527,6 @@ class VisionAgentCoder(Agent):
                 [{"role": "user", "content": "describe your task here..."}].
             plan_context (PlanContext): The context of the plan, including the plans,
                 best_plan, plan_thoughts, tool_doc, and tool_output.
-            test_multi_plan (bool): Whether to test multiple plans or just the best plan.
-            custom_tool_names (Optional[List[str]]): A list of custom tool names to use
-                for the planner.
 
         Returns:
             Dict[str, Any]: A dictionary containing the code output by the
