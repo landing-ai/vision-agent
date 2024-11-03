@@ -27,12 +27,7 @@ from vision_agent.tools.tool_utils import (
     send_inference_request,
     send_task_inference_request,
 )
-from vision_agent.tools.tools_types import (
-    Florence2FtRequest,
-    JobStatus,
-    ODResponseData,
-    PromptTask,
-)
+from vision_agent.tools.tools_types import JobStatus, ODResponseData
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -421,8 +416,15 @@ def florence2_sam2_image(
     if image.shape[0] < 1 or image.shape[1] < 1:
         return []
 
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "model": "florence2sam2",
+    }
+    metadata = {"function_name": "florence2_sam2_image"}
+
     if fine_tune_id is not None:
-        image_b64 = convert_to_b64(image)
         landing_api = LandingPublicAPI()
         status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
         if status is not JobStatus.SUCCEEDED:
@@ -430,58 +432,31 @@ def florence2_sam2_image(
                 f"Fine-tuned model {fine_tune_id} is not ready yet"
             )
 
-        req_data_obj = Florence2FtRequest(
-            image=image_b64,
-            task=PromptTask.PHRASE_GROUNDING,
-            prompt=prompt,
-            postprocessing="sam2",
-            job_id=UUID(fine_tune_id),
-        )
-        req_data = req_data_obj.model_dump(by_alias=True, exclude_none=True)
-        detections_ft = send_inference_request(
-            req_data,
-            "florence2-ft",
-            v2=True,
-            is_form=True,
-            metadata_payload={"function_name": "florence2_sam2_image"},
-        )
-        # get the first frame
-        detection = detections_ft[0]
-        return_data = []
-        for i in range(len(detection["bboxes"])):
-            return_data.append(
-                {
-                    "score": 1.0,
-                    "label": detection["labels"][i],
-                    "bbox": normalize_bbox(
-                        detection["bboxes"][i], detection["masks"][i]["size"]
-                    ),
-                    "mask": rle_decode_array(detection["masks"][i]),
-                }
-            )
-        return return_data
+        payload["jobId"] = fine_tune_id
 
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    payload = {
-        "prompts": [s.strip() for s in prompt.split(",")],
-        "function_name": "florence2_sam2_image",
-    }
-    detections: Dict[str, Any] = send_inference_request(
-        payload, "florence2-sam2", files=files, v2=True
+    detections = send_task_inference_request(
+        payload,
+        "text-to-instance-segmentation",
+        files=files,
+        metadata=metadata,
     )
 
+    # get the first frame
+    frame = detections[0]
     return_data = []
-    for _, data_i in detections["0"].items():
-        mask = rle_decode_array(data_i["mask"])
-        label = data_i["label"]
-        bbox = normalize_bbox(data_i["bounding_box"], data_i["mask"]["size"])
+    for detection in frame:
+        mask = rle_decode_array(detection["mask"])
+        label = detection["label"]
+        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
         return_data.append({"label": label, "bbox": bbox, "mask": mask, "score": 1.0})
     return return_data
 
 
 def florence2_sam2_video_tracking(
-    prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 3
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 3,
+    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
     entities in a video given a text prompt such as category names or referring
@@ -494,6 +469,8 @@ def florence2_sam2_video_tracking(
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run florence2 to find
             new objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
@@ -519,24 +496,43 @@ def florence2_sam2_video_tracking(
             ...
         ]
     """
+    if len(frames) == 0:
+        raise ValueError("No frames provided")
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     payload = {
-        "prompts": [s.strip() for s in prompt.split(",")],
-        "function_name": "florence2_sam2_video_tracking",
+        "prompt": prompt,
+        "model": "florence2sam2",
     }
+    metadata = {"function_name": "florence2_sam2_video_tracking"}
+
     if chunk_length is not None:
-        payload["chunk_length"] = chunk_length  # type: ignore
-    data: Dict[str, Any] = send_inference_request(
-        payload, "florence2-sam2", files=files, v2=True
+        payload["chunk_length_frames"] = chunk_length  # type: ignore
+
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        payload["jobId"] = fine_tune_id
+
+    detections = send_task_inference_request(
+        payload,
+        "text-to-instance-segmentation",
+        files=files,
+        metadata=metadata,
     )
+
     return_data = []
-    for frame_i in data.keys():
+    for frame in detections:
         return_frame_data = []
-        for obj_id, data_j in data[frame_i].items():
-            mask = rle_decode_array(data_j["mask"])
-            label = obj_id + ": " + data_j["label"]
+        for detection in frame:
+            mask = rle_decode_array(detection["mask"])
+            label = str(detection["id"]) + ": " + detection["label"]
             return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
         return_data.append(return_frame_data)
     return return_data
@@ -552,7 +548,7 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the detected text, bbox
-            with nornmalized coordinates, and confidence score.
+            with normalized coordinates, and confidence score.
 
     Example
     -------
@@ -608,7 +604,7 @@ def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visaulization purposes.
+            value, e.g. {count: 12} and a heat map for visualization purposes.
 
     Example
     -------
@@ -642,12 +638,12 @@ def loca_visual_prompt_counting(
 
     Parameters:
         image (np.ndarray): The image that contains lot of instances of a single object
-        visual_prompt (Dict[str, List[float]]): Bounding box of the object in format
-        [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
+            visual_prompt (Dict[str, List[float]]): Bounding box of the object in
+            format [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visaulization purposes.
+            value, e.g. {count: 12} and a heat map for visualization purposes.
 
     Example
     -------
@@ -751,10 +747,10 @@ def countgd_example_based_counting(
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-        [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided.
-        image (np.ndarray): The image that contains multiple instances of the object.
-        box_threshold (float, optional): The threshold for detection. Defaults
-            to 0.23.
+            [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided. image
+            (np.ndarray): The image that contains multiple instances of the object.
+            box_threshold (float, optional): The threshold for detection. Defaults to
+            0.23.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1058,23 +1054,25 @@ def video_temporal_localization(
     prompt: str,
     frames: List[np.ndarray],
     model: str = "qwen2vl",
-    chunk_length: Optional[float] = None,
-    chunk_length_seconds: Optional[float] = None,
     chunk_length_frames: Optional[int] = 2,
 ) -> List[float]:
-    """'video_temporal_localization' is a tool that can find objects in a video given a question about it.
-    It returns a list of floats with a value of 1.0 if the object to be found is present in the chunk of video being analyzed.
+    """'video_temporal_localization' will run qwen2vl on each chunk_length_frames
+    value selected for the video. It can detect multiple objects independently per
+    chunk_length_frames given a text prompt such as a referring expression
+    but does not track objects across frames.
+    It returns a list of floats with a value of 1.0 if the objects are found in a given
+    chunk_length_frames of the video.
 
     Parameters:
         prompt (str): The question about the video
         frames (List[np.ndarray]): The reference frames used for the question
-        model (str): The model to use for the inference. Valid values are 'qwen2vl', 'gpt4o', 'internlm-xcomposer'
-        chunk_length (Optional[float]): length of each chunk in seconds
-        chunk_length_seconds (Optional[float]): alternative length for chunk in seconds
+        model (str): The model to use for the inference. Valid values are
+            'qwen2vl', 'gpt4o', 'internlm-xcomposer'
         chunk_length_frames (Optional[int]): length of each chunk in frames
 
     Returns:
-        List[float]: A list of floats with a value of 1.0 if the object to be found is present in the chunk of video
+        List[float]: A list of floats with a value of 1.0 if the objects to be found
+            are present in the chunk_length_frames of the video.
 
     Example
     -------
@@ -1089,10 +1087,6 @@ def video_temporal_localization(
         "model": model,
         "function_name": "video_temporal_localization",
     }
-    if chunk_length is not None:
-        payload["chunk_length"] = chunk_length
-    if chunk_length_seconds is not None:
-        payload["chunk_length_seconds"] = chunk_length_seconds
     if chunk_length_frames is not None:
         payload["chunk_length_frames"] = chunk_length_frames
 
@@ -1773,6 +1767,138 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
+def flux_image_inpainting(
+    prompt: str,
+    image: np.ndarray,
+    mask: np.ndarray,
+) -> np.ndarray:
+    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
+    given by mask, in the image, given image based on the text prompt and surrounding image context.
+    It can be used to edit regions of an image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the masked area. More detailed and specific prompts typically yield better results.
+        image (np.ndarray): The source image to be inpainted.
+            The image will serve as the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's,
+            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
+
+    Returns:
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = flux_image_inpainting(
+        ...     prompt="a modern black leather sofa with white pillows",
+        ...     image=image,
+        ...     mask=mask,
+        ... )
+        >>> save_image(result, "inpainted_room.png")
+    """
+
+    min_dim = 8
+
+    if any(dim < min_dim for dim in image.shape[:2] + mask.shape[:2]):
+        raise ValueError(f"Image and mask must be at least {min_dim}x{min_dim} pixels")
+
+    max_size = (512, 512)
+
+    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
+        new_size = (
+            int(image.shape[1] * scaling_factor),
+            int(image.shape[0] * scaling_factor),
+        )
+        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
+
+    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
+        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
+
+    if np.array_equal(mask, mask.astype(bool).astype(int)):
+        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
+    else:
+        raise ValueError("Mask should contain only binary values (0 or 1)")
+
+    image_file = numpy_to_bytes(image)
+    mask_file = numpy_to_bytes(mask)
+
+    files = [
+        ("image", image_file),
+        ("mask_image", mask_file),
+    ]
+
+    payload = {
+        "prompt": prompt,
+        "task": "inpainting",
+        "height": image.shape[0],
+        "width": image.shape[1],
+        "strength": 0.99,
+        "guidance_scale": 18,
+        "num_inference_steps": 20,
+        "seed": None,
+    }
+
+    response = send_inference_request(
+        payload=payload,
+        endpoint_name="flux1",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "flux_image_inpainting"},
+    )
+
+    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
+    return output_image
+
+
+def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
+    """'siglip_classification' is a tool that can classify an image or a cropped detection given a list
+    of input labels or tags. It returns the same list of the input labels along with
+    their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+        labels (List[str]): The list of labels or tags that is associated with the image
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of given labels and other a list of scores.
+
+    Example
+    -------
+        >>> siglip_classification(image, ['dog', 'cat', 'bird'])
+        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
+    """
+
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "siglip",
+        "labels": labels,
+    }
+
+    response: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="classification",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "siglip_classification"},
+    )
+
+    return response
+
+
 # Utility and visualization functions
 
 
@@ -1799,6 +1925,9 @@ def extract_frames_and_timestamps(
         >>> extract_frames("path/to/video.mp4")
         [{"frame": np.ndarray, "timestamp": 0.0}, ...]
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
 
     def reformat(
         frames_and_timestamps: List[Tuple[np.ndarray, float]],
@@ -1862,6 +1991,7 @@ def save_json(data: Any, file_path: str) -> None:
                 return bool(obj)
             return json.JSONEncoder.default(self, obj)
 
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, "w") as f:
         json.dump(data, f, cls=NumpyEncoder)
 
@@ -1904,6 +2034,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
     -------
         >>> save_image(image)
     """
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     from IPython.display import display
 
     if not isinstance(image, np.ndarray) or (
@@ -1934,6 +2065,9 @@ def save_video(
         >>> save_video(frames)
         "/tmp/tmpvideo123.mp4"
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
     if fps <= 0:
         raise ValueError(f"fps must be greater than 0 got {fps}")
 
@@ -1950,6 +2084,8 @@ def save_video(
         output_video_path = tempfile.NamedTemporaryFile(
             delete=False, suffix=".mp4"
         ).name
+    else:
+        Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
 
     output_video_path = video_writer(frames, fps, output_video_path)
     _save_video_to_result(output_video_path)
@@ -2116,6 +2252,9 @@ def overlay_segmentation_masks(
             }],
         )
     """
+    if not masks:
+        return medias
+
     medias_int: List[np.ndarray] = (
         [medias] if isinstance(medias, np.ndarray) else medias
     )
@@ -2276,6 +2415,8 @@ FUNCTION_TOOLS = [
     closest_box_distance,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    video_temporal_localization,
+    flux_image_inpainting,
 ]
 
 UTIL_TOOLS = [
