@@ -1,3 +1,8 @@
+[![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
+![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
+[![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
+![version](https://img.shields.io/pypi/pyversions/vision-agent)
+
 VisionAgent is a library that helps you utilize agent frameworks to generate code to
 solve your vision task. Many current vision problems can easily take hours or days to
 solve, you need to find the right model, figure out how to use it and program it to
@@ -8,10 +13,10 @@ code to solve the task for them. Check out our discord for updates and roadmaps!
 ## Table of Contents
 - [🚀Quick Start](#quick-start)
 - [📚Documentation](#documentation)
-- [🔍🤖VisionAgent](#vision-agent-basic-usage)
+- [🔍🤖VisionAgent](#visionagent-basic-usage)
 - [🛠️Tools](#tools)
 - [🤖LMMs](#lmms)
-- [💻🤖VisionAgent Coder](#vision-agent-coder)
+- [💻🤖VisionAgent Coder](#visionagent-coder)
 - [🏗️Additional Backends](#additional-backends)
 
 ## Quick Start
