@@ -21,10 +21,10 @@ code to solve the task for them. Check out our discord for updates and roadmaps!
 ## Table of Contents
 - [🚀Quick Start](#quick-start)
 - [📚Documentation](#documentation)
-- [🔍🤖VisionAgent](#vision-agent-basic-usage)
+- [🔍🤖VisionAgent](#visionagent-basic-usage)
 - [🛠️Tools](#tools)
 - [🤖LMMs](#lmms)
-- [💻🤖VisionAgent Coder](#vision-agent-coder)
+- [💻🤖VisionAgent Coder](#visionagent-coder)
 - [🏗️Additional Backends](#additional-backends)
 
 ## Quick Start

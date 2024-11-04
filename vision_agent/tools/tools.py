@@ -1790,9 +1790,8 @@ def flux_image_inpainting(
             where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
-        np.ndarray:
-            The generated image(s) as a numpy array in RGB format
-            with values ranging from 0 to 255.
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
 
     -------
     Example:
