@@ -2349,6 +2349,7 @@ FUNCTION_TOOLS = [
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     video_temporal_localization,
+    flux_image_inpainting,
 ]
 
 UTIL_TOOLS = [
