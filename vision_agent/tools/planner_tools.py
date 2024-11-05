@@ -1,5 +1,3 @@
-import io
-import json
 import logging
 import os
 import shutil
@@ -16,16 +14,6 @@ from vision_agent.agent.agent_utils import (
     extract_json,
     extract_tag,
 )
-from vision_agent.agent.plan_repository import (
-    CHECK_COLOR,
-    FINDING_FEATURES_WITH_VIDEO_TRACKING,
-    LARGE_IMAGE,
-    MISSING_GRID_ELEMENTS,
-    MISSING_HORIZONTAL_ELEMENTS,
-    MISSING_VERTICAL_ELEMENTS,
-    SMALL_TEXT,
-    SUGGESTIONS,
-)
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     CATEGORIZE_TOOL_REQUEST,
     FINALIZE_PLAN,
@@ -36,7 +24,7 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
 )
 from vision_agent.lmm import AnthropicLMM
 from vision_agent.utils.execute import CodeInterpreterFactory
-from vision_agent.utils.image_utils import encode_image_bytes
+from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.sim import Sim
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
@@ -66,17 +54,6 @@ TOOL_LIST_PRIORS = {
     "generate_pose_image": 0.5,
 }
 EXAMPLES = f"\n{TEST_TOOLS_EXAMPLE1}\n{TEST_TOOLS_EXAMPLE2}\n"
-
-
-def _get_b64_images(medias: List[np.ndarray]) -> List[str]:
-    all_media_b64 = []
-    for media in medias:
-        buffer = io.BytesIO()
-        Image.fromarray(media).save(buffer, format="PNG")
-        image_bytes = buffer.getvalue()
-        image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
-        all_media_b64.append(image_b64)
-    return all_media_b64
 
 
 def extract_tool_info(
@@ -268,7 +245,9 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
         medias = [medias]
     if isinstance(medias, list) and len(medias) > 5:
         medias = medias[:5]
-    all_media_b64 = _get_b64_images(medias)
+    all_media_b64 = [
+        "data:image/png;base64," + convert_to_b64(media) for media in medias
+    ]
 
     response = cast(str, lmm.generate(prompt, media=all_media_b64))  # type: ignore
     print(f"[claude35_vqa output]\n{response}\n[end of claude35_vqa output]")
@@ -283,49 +262,13 @@ def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
         prompt: str: The problem statement.
         medias: List[np.ndarray]: The images to use for the problem
     """
-    lmm = AnthropicLMM()
-    if isinstance(medias, np.ndarray):
-        medias = [medias]
-    all_media_b64 = _get_b64_images(medias)
-    image_sizes = [media.shape for media in medias]
-    image_size_info = (
-        " The original image sizes were "
-        + str(image_sizes)
-        + ", I have resized them to 768x768, if my resize is much smaller than the original image size I may have missed some details."
-    )
-    prompt = SUGGESTIONS.format(user_request=prompt, image_size_info=image_size_info)
-    response = cast(str, lmm.generate(prompt, media=all_media_b64))  # type: ignore
-    json_str = extract_tag(response, "json")
-
     try:
-        output = extract_json(json_str)
-    except json.JSONDecodeError as e:
-        _LOGGER.error(f"Error decoding JSON: {e}")
-        output = {"reason": "No strategies found", "categories": []}
-    reason = output["reason"]
-    categories = set(output["categories"])
+        from .suggestion import suggestion_impl
 
-    suggestion = ""
-    i = 0
-    for suggestion_and_cat in [
-        LARGE_IMAGE,
-        SMALL_TEXT,
-        CHECK_COLOR,
-        MISSING_GRID_ELEMENTS,
-        MISSING_HORIZONTAL_ELEMENTS,
-        MISSING_VERTICAL_ELEMENTS,
-        FINDING_FEATURES_WITH_VIDEO_TRACKING,
-    ]:
-        if len(categories & suggestion_and_cat[1]) > 0:
-            suggestion += (
-                f"\n[suggestion {i}]\n"
-                + suggestion_and_cat[0]
-                + f"\n[end of suggestion {i}]"
-            )
-            i += 1
-
-    response = f"[suggestions]\n{reason}\n{suggestion}\n[end of suggestions]"
-    print(response)
+        suggestion = suggestion_impl(prompt, medias)
+        print(suggestion)
+    except ImportError:
+        print("")
 
 
 PLANNER_TOOLS = [
