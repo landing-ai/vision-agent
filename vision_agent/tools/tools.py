@@ -28,6 +28,7 @@ from vision_agent.tools.tool_utils import (
     nms,
     send_inference_request,
     send_task_inference_request,
+    single_nms,
 )
 from vision_agent.tools.tools_types import JobStatus, ODResponseData
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
@@ -716,7 +717,7 @@ def countgd_counting(
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     payload = {
-        "prompts": [prompt.replace(", ", " .")],
+        "prompts": [prompt.replace(", ", ". ")],
         "confidence": box_threshold,  # still not being used in the API
         "model": "countgd",
     }
@@ -738,7 +739,8 @@ def countgd_counting(
     ]
     # TODO: remove this once we start to use the confidence on countgd
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return [bbox.model_dump() for bbox in filtered_bboxes]
+    return_data = [bbox.model_dump() for bbox in filtered_bboxes]
+    return single_nms(return_data, iou_threshold=0.80)
 
 
 def countgd_example_based_counting(
