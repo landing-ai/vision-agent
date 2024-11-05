@@ -1057,23 +1057,25 @@ def video_temporal_localization(
     prompt: str,
     frames: List[np.ndarray],
     model: str = "qwen2vl",
-    chunk_length: Optional[float] = None,
-    chunk_length_seconds: Optional[float] = None,
     chunk_length_frames: Optional[int] = 2,
 ) -> List[float]:
-    """'video_temporal_localization' is a tool that can find objects in a video given a question about it.
-    It returns a list of floats with a value of 1.0 if the object to be found is present in the chunk of video being analyzed.
+    """'video_temporal_localization' will run qwen2vl on each chunk_length_frames
+    value selected for the video. It can detect multiple objects independently per
+    chunk_length_frames given a text prompt such as a referring expression
+    but does not track objects across frames.
+    It returns a list of floats with a value of 1.0 if the objects are found in a given
+    chunk_length_frames of the video.
 
     Parameters:
         prompt (str): The question about the video
         frames (List[np.ndarray]): The reference frames used for the question
-        model (str): The model to use for the inference. Valid values are 'qwen2vl', 'gpt4o', 'internlm-xcomposer'
-        chunk_length (Optional[float]): length of each chunk in seconds
-        chunk_length_seconds (Optional[float]): alternative length for chunk in seconds
+        model (str): The model to use for the inference. Valid values are
+            'qwen2vl', 'gpt4o', 'internlm-xcomposer'
         chunk_length_frames (Optional[int]): length of each chunk in frames
 
     Returns:
-        List[float]: A list of floats with a value of 1.0 if the object to be found is present in the chunk of video
+        List[float]: A list of floats with a value of 1.0 if the objects to be found
+            are present in the chunk_length_frames of the video.
 
     Example
     -------
@@ -1088,10 +1090,6 @@ def video_temporal_localization(
         "model": model,
         "function_name": "video_temporal_localization",
     }
-    if chunk_length is not None:
-        payload["chunk_length"] = chunk_length
-    if chunk_length_seconds is not None:
-        payload["chunk_length_seconds"] = chunk_length_seconds
     if chunk_length_frames is not None:
         payload["chunk_length_frames"] = chunk_length_frames
 
@@ -2350,6 +2348,7 @@ FUNCTION_TOOLS = [
     closest_box_distance,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    video_temporal_localization,
 ]
 
 UTIL_TOOLS = [
