@@ -262,21 +262,22 @@ class VisionAgentPlannerV2(Agent):
         self,
         planner: Optional[LMM] = None,
         critic: Optional[LMM] = None,
-        report_progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None,
         max_steps: int = 10,
         use_multi_trial_planning: bool = False,
         critique_steps: int = 11,
         verbose: bool = False,
         code_sandbox_runtime: Optional[str] = None,
+        update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
     ) -> None:
         self.planner = planner if planner is not None else AnthropicLMM(temperature=0.0)
         self.critic = critic if critic is not None else AnthropicLMM(temperature=0.0)
-        self.report_progress_callback = report_progress_callback
         self.max_steps = max_steps
-        self.code_sandbox_runtime = code_sandbox_runtime
         self.use_multi_trial_planning = use_multi_trial_planning
         self.critique_steps = critique_steps
+
         self.verbose = verbose
+        self.code_sandbox_runtime = code_sandbox_runtime
+        self.update_callback = update_callback
 
     def __call__(
         self,
@@ -345,6 +346,7 @@ class VisionAgentPlannerV2(Agent):
                     fixed_response = find_and_replace_code(response, code)
                     int_chat.append({"role": "assistant", "content": fixed_response})
                     orig_chat.append({"role": "assistant", "content": fixed_response})
+                    self.update_callback(int_chat[-1])
 
                     media_data = capture_images_from_exec(execution)
                     int_chat_elt: Message = {"role": "observation", "content": obs}
@@ -352,9 +354,11 @@ class VisionAgentPlannerV2(Agent):
                         int_chat_elt["media"] = media_data
                     int_chat.append(int_chat_elt)
                     orig_chat.append({"role": "observation", "content": obs})
+                    self.update_callback(int_chat[-1])
                 else:
                     int_chat.append({"role": "assistant", "content": response})
                     orig_chat.append({"role": "assistant", "content": response})
+                    self.update_callback(int_chat[-1])
 
                 if critque_steps % self.critique_steps == 0:
                     critique = run_critic(int_chat, media_list, self.critic)
