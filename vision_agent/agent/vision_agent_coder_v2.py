@@ -1,6 +1,6 @@
 import copy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 
 from rich.console import Console
 from rich.markup import escape
@@ -92,7 +92,8 @@ def write_test(
 
 def debug_code(
     debugger: LMM,
-    tool_util_docs: str,
+    tool_docs: str,
+    plan: str,
     code: str,
     test: str,
     result: Execution,
@@ -110,7 +111,8 @@ def debug_code(
             # followed by code each wrapped in markdown blocks.
             fixed_code_and_test_str = debugger(
                 FIX_BUG.format(
-                    docstring=tool_util_docs,
+                    docstring=tool_docs,
+                    plan=plan,
                     code=code,
                     tests=test,
                     # Because of the way we trace function calls the trace information
@@ -119,7 +121,7 @@ def debug_code(
                     result="\n".join(
                         result.text(include_results=False).splitlines()[-50:]
                     ),
-                    previous_run=debug_info,
+                    debug=debug_info,
                 ),
                 stream=False,
             )
@@ -158,10 +160,6 @@ def debug_code(
     if verbose:
         _CONSOLE.print(
             f"[bold cyan]Thoughts on attempted fix:[/bold cyan] [green]{thoughts}[/green]"
-        )
-        print_code("Code and test after attempted fix:", code, test)
-        _CONSOLE.print(
-            f"[bold cyan]Code execution result after attempted fix:[/bold cyan] [yellow]{escape(result.text(include_logs=True))}[/yellow]"
         )
 
     return code, test, debug_info
@@ -205,11 +203,11 @@ def write_and_test_code(
 
     count = 0
     debug_info = ""
-    while not result.success and count < 3 and len(result.logs.stdout) == 0:
-        debug_info += f"\n{result.text(include_logs=True)}\n"
+    while (not result.success or len(result.logs.stdout) == 0) and count < 3:
         code, test, debug_info = debug_code(
             debugger,
-            T.UTILITIES_DOCSTRING,
+            T.UTILITIES_DOCSTRING + "\n" + tool_docs,
+            plan,
             code,
             test,
             result,
@@ -220,12 +218,17 @@ def write_and_test_code(
             f"{DefaultImports.to_code_string()}\n{code}\n{test}"
         )
         count += 1
+        if verbose:
+            print_code("Code and test after attempted fix:", code, test)
+            _CONSOLE.print(
+                f"[bold cyan]Code execution result after attempted fix:[/bold cyan] [yellow]{escape(result.text(include_logs=True))}[/yellow]"
+            )
 
     return CodeContext(
         code=code,
         test=test,
         success=result.success,
-        test_result=result.text(include_logs=True),
+        test_result=result,
     )
 
 
@@ -239,9 +242,12 @@ class VisionAgentCoderV2(Agent):
         tool_recommender: Optional[Union[str, Sim]] = None,
         verbose: bool = False,
         code_sandbox_runtime: Optional[str] = None,
+        update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
     ) -> None:
         self.planner = (
-            planner if planner is not None else VisionAgentPlannerV2(verbose=verbose)
+            planner
+            if planner is not None
+            else VisionAgentPlannerV2(verbose=verbose, update_callback=update_callback)
         )
         self.coder = coder if coder is not None else AnthropicLMM(temperature=0.0)
         self.tester = tester if tester is not None else AnthropicLMM(temperature=0.0)
@@ -255,8 +261,10 @@ class VisionAgentCoderV2(Agent):
                 self.tool_recommender = tool_recommender
         else:
             self.tool_recommender = Sim(T.TOOLS_DF, sim_key="desc")
+
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime
+        self.update_callback = update_callback
 
     def __call__(self, chat: List[Message]):
         return ""
@@ -268,6 +276,12 @@ class VisionAgentCoderV2(Agent):
         ) as code_interpreter:
             int_chat, orig_chat, _ = add_media_to_chat(chat, code_interpreter)
             plan_context = self.planner.generate_plan(int_chat, code_interpreter)  # type: ignore
+            self.update_callback(
+                {
+                    "role": "assistant",
+                    "content": f"{plan_context.plan}\n{plan_context.instructions}",
+                }
+            )
             code_context = self.generate_code_from_plan(
                 orig_chat,
                 plan_context,
