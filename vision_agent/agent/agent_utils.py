@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import sys
+import tempfile
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import libcst as cst
@@ -14,7 +15,8 @@ from rich.table import Table
 
 import vision_agent.tools as T
 from vision_agent.lmm.types import Message
-from vision_agent.utils.execute import CodeInterpreter
+from vision_agent.utils.execute import CodeInterpreter, Execution
+from vision_agent.utils.image_utils import b64_to_pil
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ class CodeContext(BaseModel):
     code: str
     test: str
     success: bool
-    test_result: str
+    test_result: Execution
 
 
 def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
@@ -233,14 +235,22 @@ def add_media_to_chat(
     media_list = []
     for chat_i in int_chat:
         if "media" in chat_i:
+            media_list_i = []
             for media in chat_i["media"]:
-                media = (
-                    media
-                    if type(media) is str and media.startswith(("http", "https"))
-                    else code_interpreter.upload_file(cast(str, media))
-                )
-                chat_i["content"] += f" Media name {media}"  # type: ignore
-                media_list.append(str(media))
+                if isinstance(media, str) and media.startswith("data:image/"):
+                    media_pil = b64_to_pil(media)
+                    with tempfile.NamedTemporaryFile(
+                        mode="wb", suffix=".png", delete=False
+                    ) as temp_file:
+                        media_pil.save(temp_file, format="PNG")
+                        media = str(temp_file.name)
+                media = str(code_interpreter.upload_file(media))
+                media_list_i.append(media)
+                # don't duplicate appending media name
+                if not str(chat_i["content"]).endswith(f" Media name {media}"):
+                    chat_i["content"] += f" Media name {media}"  # type: ignore
+            chat_i["media"] = media_list_i  # type: ignore
+            media_list.extend(media_list_i)
 
     int_chat = cast(
         List[Message],
