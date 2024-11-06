@@ -1871,6 +1871,9 @@ def extract_frames_and_timestamps(
         >>> extract_frames("path/to/video.mp4")
         [{"frame": np.ndarray, "timestamp": 0.0}, ...]
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
 
     def reformat(
         frames_and_timestamps: List[Tuple[np.ndarray, float]],
@@ -1934,6 +1937,7 @@ def save_json(data: Any, file_path: str) -> None:
                 return bool(obj)
             return json.JSONEncoder.default(self, obj)
 
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, "w") as f:
         json.dump(data, f, cls=NumpyEncoder)
 
@@ -1976,6 +1980,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
     -------
         >>> save_image(image)
     """
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     from IPython.display import display
 
     if not isinstance(image, np.ndarray) or (
@@ -2006,6 +2011,9 @@ def save_video(
         >>> save_video(frames)
         "/tmp/tmpvideo123.mp4"
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
     if fps <= 0:
         raise ValueError(f"fps must be greater than 0 got {fps}")
 
@@ -2022,6 +2030,8 @@ def save_video(
         output_video_path = tempfile.NamedTemporaryFile(
             delete=False, suffix=".mp4"
         ).name
+    else:
+        Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
 
     output_video_path = video_writer(frames, fps, output_video_path)
     _save_video_to_result(output_video_path)

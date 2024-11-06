@@ -58,6 +58,9 @@ def video_writer(
     fps: float = _DEFAULT_INPUT_FPS,
     filename: Optional[str] = None,
 ) -> str:
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
     if filename is None:
         filename = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
     container = av.open(filename, mode="w")
@@ -92,6 +95,9 @@ def frames_to_bytes(
         fps: the frames per second of the video
         file_ext: the file extension of the video file
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
     with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
         video_writer(frames, fps, temp_file.name)
 
@@ -120,6 +126,9 @@ def extract_frames_from_video(
             from the start of the video. E.g. 12.125 means 12.125 seconds from the start of
             the video. The frames are sorted by the timestamp in ascending order.
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
 
     cap = cv2.VideoCapture(video_uri)
     orig_fps = cap.get(cv2.CAP_PROP_FPS)
