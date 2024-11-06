@@ -74,6 +74,15 @@ class Sim:
         df["embs"] = list(embs)
         return Sim(df, api_key=api_key, model=model)
 
+    @staticmethod
+    def check_load(
+        load_dir: Union[str, Path],
+        df: pd.DataFrame,
+    ) -> bool:
+        load_dir = Path(load_dir)
+        df_load = pd.read_csv(load_dir / "df.csv")
+        return df.equals(df_load)
+
     @lru_cache(maxsize=256)
     def top_k(
         self, query: str, k: int = 5, thresh: Optional[float] = None
