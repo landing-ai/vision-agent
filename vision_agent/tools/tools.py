@@ -2198,6 +2198,9 @@ def overlay_segmentation_masks(
             }],
         )
     """
+    if not masks:
+        return medias
+
     medias_int: List[np.ndarray] = (
         [medias] if isinstance(medias, np.ndarray) else medias
     )
