@@ -871,9 +871,10 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
 
 
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
-    """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary images
-    including regular images or images of documents or presentations. It returns text
-    as an answer to the question.
+    """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary
+    images including regular images or images of documents or presentations. It can be
+    very useful for document QA or OCR text extraction. It returns text as an answer to
+    the question.
 
     Parameters:
         prompt (str): The question about the document image
@@ -887,6 +888,9 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
         >>> qwen2_vl_images_vqa('Give a summary of the document', images)
         'The document talks about the history of the United States of America and its...'
     """
+    if isinstance(images, np.ndarray):
+        images = [images]
+
     for image in images:
         if image.shape[0] < 1 or image.shape[1] < 1:
             raise ValueError(f"Image is empty, image shape: {image.shape}")
@@ -2424,7 +2428,7 @@ FUNCTION_TOOLS = [
     florence2_sam2_image,
     florence2_sam2_video_tracking,
     florence2_phrase_grounding,
-    claude35_text_extraction,
+    # claude35_text_extraction,
     detr_segmentation,
     depth_anything_v2,
     generate_pose_image,
