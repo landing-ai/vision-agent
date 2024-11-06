@@ -92,7 +92,8 @@ def run_planning(
     media_list: List[str],
     model: LMM,
 ) -> str:
-    planning = get_planning(chat)
+    # only keep last 10 messages for planning
+    planning = get_planning(chat[-10:])
     prompt = PLAN.format(
         tool_desc=PLANNING_TOOLS_DOCSTRING,
         examples=f"{EXAMPLE_PLAN1}\n{EXAMPLE_PLAN2}",
