@@ -225,8 +225,8 @@ def write_and_test_code(
             )
 
     return CodeContext(
-        code=code,
-        test=test,
+        code=f"{DefaultImports.to_code_string()}\n{code}",
+        test=f"{DefaultImports.to_code_string()}\n{test}",
         success=result.success,
         test_result=result,
     )
