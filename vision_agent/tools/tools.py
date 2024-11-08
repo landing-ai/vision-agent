@@ -458,7 +458,7 @@ def florence2_sam2_image(
 def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 3,
+    chunk_length: Optional[int] = 1,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
