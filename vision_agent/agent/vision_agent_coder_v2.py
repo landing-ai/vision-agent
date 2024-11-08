@@ -12,6 +12,7 @@ from vision_agent.agent.agent_utils import (
     DefaultImports,
     PlanContext,
     add_media_to_chat,
+    capture_media_from_exec,
     extract_tag,
     format_feedback,
     format_plan_v2,
@@ -174,6 +175,7 @@ def write_and_test_code(
     tool_docs: str,
     code_interpreter: CodeInterpreter,
     media_list: List[Union[str, Path]],
+    update_callback: Callable[[Dict[str, Any]], None],
     verbose: bool,
 ) -> CodeContext:
     code = write_code(
@@ -223,6 +225,14 @@ def write_and_test_code(
             _CONSOLE.print(
                 f"[bold cyan]Code execution result after attempted fix:[/bold cyan] [yellow]{escape(result.text(include_logs=True))}[/yellow]"
             )
+
+    update_callback(
+        {
+            "role": "assistant",
+            "content": f"<final_code>{code}</final_code>\n<final_test>{test}</final_test>",
+            "media": capture_media_from_exec(result),
+        }
+    )
 
     return CodeContext(
         code=f"{DefaultImports.to_code_string()}\n{code}",
@@ -310,6 +320,7 @@ class VisionAgentCoderV2(Agent):
                 tool_docs=tool_docs,
                 code_interpreter=code_interpreter,
                 media_list=media_list,
+                update_callback=self.update_callback,
                 verbose=self.verbose,
             )
         return code_context
