@@ -14,6 +14,7 @@ from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
     PlanContext,
     add_media_to_chat,
+    capture_media_from_exec,
     extract_json,
     extract_tag,
     print_code,
@@ -34,7 +35,6 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
 
 logging.basicConfig(level=logging.INFO)
 UTIL_DOCSTRING = T.get_tool_documentation(
@@ -239,23 +239,72 @@ def execute_code_action(
     return execution, obs, code
 
 
-def capture_images_from_exec(execution: Execution) -> List[str]:
-    images = []
-    for result in execution.results:
-        for format in result.formats():
-            if format in ["png", "jpeg"]:
-                # converts the image to png and then to base64
-                images.append(
-                    "data:image/png;base64,"
-                    + convert_to_b64(b64_to_pil(result[format]))
-                )
-    return images
-
-
 def find_and_replace_code(response: str, code: str) -> str:
     code_start = response.index("<execute_python>") + len("<execute_python>")
     code_end = response.index("</execute_python>")
     return response[:code_start] + code + response[code_end:]
+
+
+def maybe_run_code(
+    code: Optional[str],
+    response: str,
+    chat: List[Message],
+    media_list: List[str],
+    model: LMM,
+    code_interpreter: CodeInterpreter,
+    verbose: bool = False,
+) -> List[Message]:
+    return_chat = []
+    if code is not None:
+        code = code_safeguards(code)
+        execution, obs, code = execute_code_action(
+            code, code_interpreter, chat, model, verbose
+        )
+
+        # if we had to debug the code to fix an issue, replace the old code
+        # with the fixed code in the response
+        fixed_response = find_and_replace_code(response, code)
+        return_chat.append({"role": "assistant", "content": fixed_response})
+
+        media_data = capture_media_from_exec(execution)
+        int_chat_elt: Message = {"role": "observation", "content": obs}
+        if media_list:
+            int_chat_elt["media"] = media_data
+        return_chat.append(int_chat_elt)
+    else:
+        return_chat.append({"role": "assistant", "content": response})
+    return return_chat
+
+
+def create_finalize_plan(
+    chat: List[Message],
+    model: LMM,
+    verbose: bool = False,
+) -> Tuple[List[Message], PlanContext]:
+    prompt = FINALIZE_PLAN.format(
+        planning=get_planning(chat),
+        excluded_tools=str([t.__name__ for t in pt.PLANNER_TOOLS]),
+    )
+    response = model.chat([{"role": "user", "content": prompt}])
+    plan_str = cast(str, response)
+    return_chat: List[Message] = [{"role": "assistant", "content": plan_str}]
+
+    plan_json = extract_tag(plan_str, "json")
+    plan = (
+        extract_json(plan_json)
+        if plan_json is not None
+        else {"plan": plan_str, "instructions": [], "code": ""}
+    )
+    code_snippets = extract_tag(plan_str, "code")
+    plan["code"] = code_snippets if code_snippets is not None else ""
+    if verbose:
+        _CONSOLE.print(
+            f"[bold cyan]Final Plan:[/bold cyan] [magenta]{plan['plan']}[/magenta]"
+        )
+        print_table("Plan", ["Instructions"], [[p] for p in plan["instructions"]])
+        print_code("Plan Code", plan["code"])
+
+    return return_chat, PlanContext(**plan)
 
 
 class VisionAgentPlannerV2(Agent):
@@ -310,9 +359,8 @@ class VisionAgentPlannerV2(Agent):
             critque_steps = 1
             step = self.max_steps
             finished = False
-            int_chat, orig_chat, media_list = add_media_to_chat(chat, code_interpreter)
+            int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
             int_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
-            orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
             while step > 0 and not finished:
                 if self.use_multi_trial_planning:
                     response = run_multi_trial_planning(
@@ -320,8 +368,8 @@ class VisionAgentPlannerV2(Agent):
                     )
                 else:
                     response = run_planning(int_chat, media_list, self.planner)
-                response = response_safeguards(response)
 
+                response = response_safeguards(response)
                 thinking = extract_tag(response, "thinking")
                 code = extract_tag(response, "execute_python")
                 finalize_plan = extract_tag(response, "finalize_plan")
@@ -336,30 +384,15 @@ class VisionAgentPlannerV2(Agent):
                             f"[bold cyan]Finalizing Plan:[/bold cyan] [magenta]{finalize_plan}[/magenta]"
                         )
 
-                if code is not None:
-                    code = code_safeguards(code)
-                    execution, obs, code = execute_code_action(
-                        code, code_interpreter, int_chat, self.planner, self.verbose
-                    )
-
-                    # if we had to debug the code to fix an issue, replace the old code
-                    # with the fixed code in the response
-                    fixed_response = find_and_replace_code(response, code)
-                    int_chat.append({"role": "assistant", "content": fixed_response})
-                    orig_chat.append({"role": "assistant", "content": fixed_response})
-                    self.update_callback(int_chat[-1])
-
-                    media_data = capture_images_from_exec(execution)
-                    int_chat_elt: Message = {"role": "observation", "content": obs}
-                    if media_list:
-                        int_chat_elt["media"] = media_data
-                    int_chat.append(int_chat_elt)
-                    orig_chat.append({"role": "observation", "content": obs})
-                    self.update_callback(int_chat[-1])
-                else:
-                    int_chat.append({"role": "assistant", "content": response})
-                    orig_chat.append({"role": "assistant", "content": response})
-                    self.update_callback(int_chat[-1])
+                updated_chat = maybe_run_code(
+                    code,
+                    response,
+                    int_chat,
+                    media_list,
+                    self.planner,
+                    code_interpreter,
+                    self.verbose,
+                )
 
                 if critque_steps % self.critique_steps == 0:
                     critique = run_critic(int_chat, media_list, self.critic)
@@ -368,41 +401,26 @@ class VisionAgentPlannerV2(Agent):
                             f"[bold cyan]Critique:[/bold cyan] [red]{critique}[/red]"
                         )
                         critique_str = f"\n[critique]\n{critique}\n[end of critique]"
-                        int_chat[-1]["content"] += critique_str  # type: ignore
-                        orig_chat[-1]["content"] += critique_str  # type: ignore
+                        updated_chat[-1]["content"] += critique_str  # type: ignore
                         # if plan was critiqued, ensure we don't finish so we can
                         # respond to the critique
                         finished = False
 
                 critque_steps += 1
                 step -= 1
-                int_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
-                orig_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
+                updated_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
+                int_chat.extend(updated_chat)
+                for chat_elt in updated_chat:
+                    self.update_callback(chat_elt)
 
-            prompt = FINALIZE_PLAN.format(
-                planning=get_planning(int_chat),
-                excluded_tools=str([t.__name__ for t in pt.PLANNER_TOOLS]),
+            updated_chat, plan_context = create_finalize_plan(
+                int_chat, self.planner, self.verbose
             )
+            int_chat.extend(updated_chat)
+            for chat_elt in updated_chat:
+                self.update_callback(chat_elt)
 
-            plan_str = cast(str, self.planner.generate(prompt))
-            plan_json = extract_tag(plan_str, "json")
-            plan = (
-                extract_json(plan_json)
-                if plan_json is not None
-                else {"plan": plan_str, "instructions": [], "code": ""}
-            )
-            code_snippets = extract_tag(plan_str, "code")
-            plan["code"] = code_snippets if code_snippets is not None else ""
-            if self.verbose:
-                _CONSOLE.print(
-                    f"[bold cyan]Final Plan:[/bold cyan] [magenta]{plan['plan']}[/magenta]"
-                )
-                print_table(
-                    "Plan", ["Instructions"], [[p] for p in plan["instructions"]]
-                )
-                print_code("Plan Code", plan["code"])
-
-        return PlanContext(**plan)
+        return plan_context
 
     def log_progress(self, data: Dict[str, Any]) -> None:
         pass
