@@ -146,9 +146,9 @@ def run_multi_trial_planning(
     if json_str:
         json_data = extract_json(json_str)
         best = np.argmax([int(json_data[f"response{k}"]) for k in [1, 2, 3]])
-        return responses[best]
+        return cast(str, responses[best])
     else:
-        return responses[0]
+        return cast(str, responses[0])
 
 
 def run_critic(chat: List[Message], media_list: List[str], model: LMM) -> Optional[str]:
@@ -165,8 +165,8 @@ def run_critic(chat: List[Message], media_list: List[str], model: LMM) -> Option
     thoughts = extract_tag(response, "thoughts")
     if score is not None and thoughts is not None:
         try:
-            score = float(score)
-            if score < 8:
+            fscore = float(score)
+            if fscore < 8:
                 return thoughts
         except ValueError:
             pass
@@ -211,9 +211,7 @@ def execute_code_action(
 
     count = 1
     while not execution.success and count <= 3:
-        prompt = cast(
-            str, FIX_BUG.format(chat_history=get_planning(chat), code=code, error=obs)
-        )
+        prompt = FIX_BUG.format(chat_history=get_planning(chat), code=code, error=obs)
         response = cast(str, model.chat([{"role": "user", "content": prompt}]))
         new_code = extract_tag(response, "code")
         if not new_code:
@@ -254,7 +252,7 @@ def maybe_run_code(
     code_interpreter: CodeInterpreter,
     verbose: bool = False,
 ) -> List[Message]:
-    return_chat = []
+    return_chat: List[Message] = []
     if code is not None:
         code = code_safeguards(code)
         execution, obs, code = execute_code_action(

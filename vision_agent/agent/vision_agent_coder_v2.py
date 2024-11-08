@@ -276,8 +276,16 @@ class VisionAgentCoderV2(Agent):
         self.code_sandbox_runtime = code_sandbox_runtime
         self.update_callback = update_callback
 
-    def __call__(self, chat: List[Message]):
-        return ""
+    def __call__(
+        self,
+        input: Union[str, List[Message]],
+        media: Optional[Union[str, Path]] = None,
+    ) -> Union[str, List[Message]]:
+        if isinstance(input, str):
+            input = [{"role": "user", "content": input}]
+        if media is not None:
+            input[0]["media"] = [media]
+        return self.generate_code(input).code
 
     def generate_code(self, chat: List[Message]) -> CodeContext:
         chat = copy.deepcopy(chat)
@@ -319,7 +327,7 @@ class VisionAgentCoderV2(Agent):
                 plan=format_plan_v2(plan_context),
                 tool_docs=tool_docs,
                 code_interpreter=code_interpreter,
-                media_list=media_list,
+                media_list=media_list,  # type: ignore
                 update_callback=self.update_callback,
                 verbose=self.verbose,
             )

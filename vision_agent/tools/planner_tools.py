@@ -96,13 +96,13 @@ def extract_tool_info_v2(
     if len(tool_posteriors) == 0:
         return None, "", "", "No tool was found."
 
-    best_tool = max(tool_posteriors, key=tool_posteriors.get)
+    best_tool = max(tool_posteriors, key=tool_posteriors.get)  # type: ignore
     tool_docstring = T.TOOLS_INFO[best_tool]
     tool = TOOL_FUNCTIONS[best_tool]
 
     if "thoughts" in tool_choice_context:
         tool_thoughts = tool_choice_context["thoughts"]
-    return tool, tool_thoughts, tool_docstring, error_message
+    return tool, tool_thoughts, tool_docstring, error_message  # type: ignore
 
 
 def get_tool_for_task(
@@ -149,7 +149,7 @@ def get_tool_for_task(
             Image.fromarray(image).save(image_path)
             image_paths.append(image_path)
 
-        query = lmm.generate(CATEGORIZE_TOOL_REQUEST.format(task=task))  # type: ignore
+        query = lmm.generate(CATEGORIZE_TOOL_REQUEST.format(task=task))
         category = extract_tag(query, "category")  # type: ignore
         if category is None:
             category = task
@@ -177,6 +177,8 @@ def get_tool_for_task(
 
         response = lmm.generate(prompt, media=image_paths)
         code = extract_tag(response, "code")  # type: ignore
+        if code is None:
+            raise ValueError(f"Could not extract code from response: {response}")
         tool_output = code_interpreter.exec_isolation(
             DefaultImports.prepend_imports(code)
         )
@@ -212,10 +214,10 @@ def get_tool_for_task(
 
         response = lmm.generate(prompt, media=image_paths)
         tool_choice_context = extract_tag(response, "json")  # type: ignore
-        tool_choice_context = extract_json(tool_choice_context)  # type: ignore
+        tool_choice_context_dict = extract_json(tool_choice_context)  # type: ignore
 
         tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
-            tool_choice_context
+            tool_choice_context_dict
         )
 
         count = 1
@@ -226,9 +228,9 @@ def get_tool_for_task(
                 context=f"<code>\n{code}\n</code>\n<tool_output>\n{tool_output_str}\n</tool_output>",
                 previous_attempts=error_message,
             )
-            tool_choice_context = extract_json(lmm.generate(prompt, media=image_paths))  # type: ignore
+            tool_choice_context_dict = extract_json(lmm.generate(prompt, media=image_paths))  # type: ignore
             tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
-                tool_choice_context
+                tool_choice_context_dict
             )
         try:
             shutil.rmtree(tmpdirname)
@@ -248,7 +250,7 @@ def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
     prompt = FINALIZE_PLAN.format(
         user_request=user_request, chain_of_thoughts=chain_of_thoughts
     )
-    finalized_plan = cast(str, lmm.generate(prompt))  # type: ignore
+    finalized_plan = cast(str, lmm.generate(prompt))
     return finalized_plan
 
 
@@ -269,7 +271,7 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
         "data:image/png;base64," + convert_to_b64(media) for media in medias
     ]
 
-    response = cast(str, lmm.generate(prompt, media=all_media_b64))  # type: ignore
+    response = cast(str, lmm.generate(prompt, media=all_media_b64))
     print(f"[claude35_vqa output]\n{response}\n[end of claude35_vqa output]")
 
 
@@ -300,4 +302,4 @@ PLANNER_TOOLS = [
     T.extract_frames_and_timestamps,
     T.save_video,
 ]
-PLANNER_DOCSTRING = T.get_tool_documentation(PLANNER_TOOLS)
+PLANNER_DOCSTRING = T.get_tool_documentation(PLANNER_TOOLS)  # type: ignore

@@ -81,7 +81,7 @@ class Sim:
     ) -> bool:
         load_dir = Path(load_dir)
         df_load = pd.read_csv(load_dir / "df.csv")
-        return df.equals(df_load)
+        return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
     def top_k(

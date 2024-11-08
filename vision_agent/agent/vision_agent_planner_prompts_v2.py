@@ -532,7 +532,7 @@ with ThreadPoolExecutor() as executor:
         executor.submit(process_florence2, image_paths): "florence2_phrase_grounding",
         executor.submit(process_countgd, image_paths): "countgd_counting",
     }}
-    
+
     final_results = {{}}
     for future in as_completed(futures):
         tool_name = futures[future]

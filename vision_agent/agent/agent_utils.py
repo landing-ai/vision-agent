@@ -16,7 +16,7 @@ from rich.table import Table
 import vision_agent.tools as T
 from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, Execution
-from vision_agent.utils.image_utils import b64_to_pil
+from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
 
 logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
@@ -156,12 +156,12 @@ def format_feedback(memory: List[Dict[str, str]]) -> str:
 
 
 def format_plan_v2(plan: PlanContext) -> str:
-    plan_str = cast(str, plan.plan) + "\n"
+    plan_str = plan.plan + "\n"
     plan_str += "Instructions:\n"
     for v in plan.instructions:
         plan_str += f"    - {v}\n"
     plan_str += "Code:\n"
-    plan_str += cast(str, plan.code)
+    plan_str += plan.code
     return plan_str
 
 
@@ -244,12 +244,12 @@ def add_media_to_chat(
                     ) as temp_file:
                         media_pil.save(temp_file, format="PNG")
                         media = str(temp_file.name)
-                media = str(code_interpreter.upload_file(media))
+                media = str(code_interpreter.upload_file(media))  # type: ignore
                 media_list_i.append(media)
                 # don't duplicate appending media name
                 if not str(chat_i["content"]).endswith(f" Media name {media}"):
                     chat_i["content"] += f" Media name {media}"  # type: ignore
-            chat_i["media"] = media_list_i  # type: ignore
+            chat_i["media"] = media_list_i
             media_list.extend(media_list_i)
 
     int_chat = cast(
@@ -268,6 +268,19 @@ def add_media_to_chat(
         ],
     )
     return int_chat, orig_chat, media_list
+
+
+def capture_media_from_exec(execution: Execution) -> List[str]:
+    images = []
+    for result in execution.results:
+        for format in result.formats():
+            if format in ["png", "jpeg"]:
+                # converts the image to png and then to base64
+                images.append(
+                    "data:image/png;base64,"
+                    + convert_to_b64(b64_to_pil(result[format]))
+                )
+    return images
 
 
 def strip_function_calls(  # noqa: C901
