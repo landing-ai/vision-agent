@@ -7,7 +7,6 @@ import tempfile
 from typing import Any, Dict, List, Optional, Tuple, cast
 
 import libcst as cst
-import numpy as np
 from pydantic import BaseModel
 from rich.console import Console
 from rich.style import Style
