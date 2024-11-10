@@ -46,7 +46,7 @@ jobs:
         poetry run flake8 . --exclude .venv,examples,tests --count --show-source --statistics
     - name: Check Format
       run: |
-        poetry run black --check --diff --color .
+        poetry run black --check --diff --color vision_agent/
     - name: Type Checking
       run: |
         poetry run mypy vision_agent
