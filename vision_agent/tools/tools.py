@@ -2208,7 +2208,12 @@ def overlay_bounding_boxes(
                 draw.text((box[0], box[1]), text, fill="black", font=font)
 
         frame_out.append(np.array(pil_image))
-    return frame_out[0] if len(frame_out) == 1 else frame_out
+    return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
+
+    from IPython.display import display
+
+    display(Image.fromarray(return_frame))
+    return return_frame
 
 
 def _get_text_coords_from_mask(
@@ -2320,7 +2325,12 @@ def overlay_segmentation_masks(
                     draw.rectangle((x, y, text_box[2], text_box[3]), fill=color[label])
                     draw.text((x, y), text, fill="black", font=font)
         frame_out.append(np.array(pil_image))
-    return frame_out[0] if len(frame_out) == 1 else frame_out
+    return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
+
+    from IPython.display import display
+
+    display(Image.fromarray(return_frame))
+    return return_frame
 
 
 def overlay_heat_map(
