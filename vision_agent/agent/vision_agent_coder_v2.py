@@ -229,7 +229,7 @@ def write_and_test_code(
     update_callback(
         {
             "role": "assistant",
-            "content": f"<final_code>{code}</final_code>\n<final_test>{test}</final_test>",
+            "content": f"<final_code>{DefaultImports.to_code_string()}\n{code}</final_code>\n<final_test>{DefaultImports.to_code_string()}\n{test}</final_test>",
             "media": capture_media_from_exec(result),
         }
     )
@@ -294,12 +294,6 @@ class VisionAgentCoderV2(Agent):
         ) as code_interpreter:
             int_chat, orig_chat, _ = add_media_to_chat(chat, code_interpreter)
             plan_context = self.planner.generate_plan(int_chat, code_interpreter)  # type: ignore
-            self.update_callback(
-                {
-                    "role": "assistant",
-                    "content": f"{plan_context.plan}\n{plan_context.instructions}",
-                }
-            )
             code_context = self.generate_code_from_plan(
                 orig_chat,
                 plan_context,
