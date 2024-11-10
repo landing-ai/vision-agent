@@ -1,8 +1,8 @@
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -37,10 +37,11 @@ def update_callback(message: Dict[str, Any]):
 
 
 agent = VisionAgentCoderV2(
-    tool_recommender="/Users/dillonlaird/landing.ai/vision-agent/sim_tools/",
+    tool_recommender="/Users/dillonlaird/landing.ai/vision-agent/.sim_tools/",
     verbose=True,
     update_callback=update_callback,
 )
+
 
 def process_messages_background(messages: List[Dict[str, Any]]):
     for message in messages:
@@ -59,9 +60,16 @@ class Message(BaseModel):
 
 
 @app.post("/chat")
-async def chat(messages: List[Message], background_tasks: BackgroundTasks) -> Dict[str, Any]:
-    background_tasks.add_task(process_messages_background, [elt.model_dump() for elt in messages])
-    return {"status": "Processing started", "message": "Your messages are being processed in the background"}
+async def chat(
+    messages: List[Message], background_tasks: BackgroundTasks
+) -> Dict[str, Any]:
+    background_tasks.add_task(
+        process_messages_background, [elt.model_dump() for elt in messages]
+    )
+    return {
+        "status": "Processing started",
+        "message": "Your messages are being processed in the background",
+    }
 
 
 @app.websocket("/ws")
