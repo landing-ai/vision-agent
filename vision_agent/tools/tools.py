@@ -2213,7 +2213,7 @@ def overlay_bounding_boxes(
     from IPython.display import display
 
     display(Image.fromarray(return_frame))
-    return return_frame
+    return return_frame  # type: ignore
 
 
 def _get_text_coords_from_mask(
@@ -2330,7 +2330,7 @@ def overlay_segmentation_masks(
     from IPython.display import display
 
     display(Image.fromarray(return_frame))
-    return return_frame
+    return return_frame  # type: ignore
 
 
 def overlay_heat_map(
