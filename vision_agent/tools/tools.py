@@ -681,7 +681,7 @@ def countgd_counting(
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
     """'countgd_counting' is a tool that can precisely count multiple instances of an
-    object given a text prompt. It returns a list of bounding boxes with normalized
+    object given a text prompt. It returns a list of bounding boxes with unnormalized
     coordinates, label names and associated confidence scores.
 
     Parameters:
@@ -692,7 +692,7 @@ def countgd_counting(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
+            bounding box of the detected objects with unnormalized coordinates between 0
             and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
             top-left and xmax and ymax are the coordinates of the bottom-right of the
             bounding box.
@@ -746,7 +746,7 @@ def countgd_example_based_counting(
 ) -> List[Dict[str, Any]]:
     """'countgd_example_based_counting' is a tool that can precisely count multiple
     instances of an object given few visual example prompts. It returns a list of bounding
-    boxes with normalized coordinates, label names and associated confidence scores.
+    boxes with unnormalized coordinates, label names and associated confidence scores.
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
@@ -757,7 +757,7 @@ def countgd_example_based_counting(
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
+            bounding box of the detected objects with unnormalized coordinates between 0
             and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
             top-left and xmax and ymax are the coordinates of the bottom-right of the
             bounding box.
