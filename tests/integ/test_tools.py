@@ -596,7 +596,7 @@ def test_flux_image_inpainting_resizing():
         mask=mask_image,
     )
 
-    assert result.shape[0] == 36
-    assert result.shape[1] == 36
+    assert result.shape[0] == 32
+    assert result.shape[1] == 32
     assert result.shape[0] != image.shape[0]
     assert result.shape[1] != image.shape[1]
