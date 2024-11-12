@@ -69,6 +69,7 @@ from .tools import (
     qwen2_vl_video_vqa,
     video_temporal_localization,
     flux_image_inpainting,
+    siglip_classification,
 )
 
 __new_tools__ = [
