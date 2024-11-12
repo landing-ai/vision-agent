@@ -1781,6 +1781,7 @@ def flux_image_inpainting(
             in the masked area. More detailed and specific prompts typically yield better results.
         image (np.ndarray): The source image to be inpainted.
             The image will serve as the base context for the inpainting process.
+            The image height and width should be multiples of 8.
         mask (np.ndarray): A binary mask image with 0's and 1's,
             where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
 
@@ -1805,6 +1806,12 @@ def flux_image_inpainting(
         or mask.shape[1] < 8
     ):
         raise ValueError("The image or mask does not have enough size for inpainting")
+
+    if image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
+        new_height = (image.shape[0] // 8) * 8
+        new_width = (image.shape[1] // 8) * 8
+        image = cv2.resize(image, (new_width, new_height))
+        mask = cv2.resize(mask, (new_width, new_height))
 
     if np.array_equal(mask, mask.astype(bool).astype(int)):
         mask = np.where(mask > 0, 255, 0).astype(np.uint8)
