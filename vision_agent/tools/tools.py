@@ -1798,24 +1798,33 @@ def flux_image_inpainting(
         ... )
         >>> save_image(result, "inpainted_room.png")
     """
-    if (
-        image.shape[0] < 8
-        or image.shape[1] < 8
-        or mask.shape[0] < 8
-        or mask.shape[1] < 8
-    ):
-        raise ValueError("The image or mask does not have enough size for inpainting")
 
-    if image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
-        new_height = (image.shape[0] // 8) * 8
-        new_width = (image.shape[1] // 8) * 8
-        image = cv2.resize(image, (new_width, new_height))
-        mask = cv2.resize(mask, (new_width, new_height))
+    min_dim = 8
+
+    if any(dim < min_dim for dim in image.shape[:2] + mask.shape[:2]):
+        raise ValueError(f"Image and mask must be at least {min_dim}x{min_dim} pixels")
+
+    max_size = (512, 512)
+
+    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
+        new_size = (
+            int(image.shape[1] * scaling_factor),
+            int(image.shape[0] * scaling_factor),
+        )
+        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
+
+    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
+        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
 
     if np.array_equal(mask, mask.astype(bool).astype(int)):
         mask = np.where(mask > 0, 255, 0).astype(np.uint8)
     else:
-        raise ValueError("The mask should be a binary mask with 0's and 1's")
+        raise ValueError("Mask should contain only binary values (0 or 1)")
 
     image_file = numpy_to_bytes(image)
     mask_file = numpy_to_bytes(mask)
