@@ -1842,6 +1842,48 @@ def flux_image_inpainting(
     return output_image
 
 
+def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
+    """'siglip_classification' is a tool that can classify an image or a cropped detection given a list
+    of input labels or tags. It returns the same list of the input labels along with
+    their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+        labels (List[str]): The list of labels or tags that is associated with the image
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of given labels and other a list of scores.
+
+    Example
+    -------
+        >>> siglip_classification(image, ['dog', 'cat', 'bird'])
+        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
+    """
+
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "siglip",
+        "labels": labels,
+    }
+
+    response: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="classification",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "siglip_classification"},
+    )
+
+    return response
+
+
 # Utility and visualization functions
 
 
@@ -1868,6 +1910,9 @@ def extract_frames_and_timestamps(
         >>> extract_frames("path/to/video.mp4")
         [{"frame": np.ndarray, "timestamp": 0.0}, ...]
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
 
     def reformat(
         frames_and_timestamps: List[Tuple[np.ndarray, float]],
@@ -1931,6 +1976,7 @@ def save_json(data: Any, file_path: str) -> None:
                 return bool(obj)
             return json.JSONEncoder.default(self, obj)
 
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, "w") as f:
         json.dump(data, f, cls=NumpyEncoder)
 
@@ -1973,6 +2019,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
     -------
         >>> save_image(image)
     """
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
     from IPython.display import display
 
     if not isinstance(image, np.ndarray) or (
@@ -2003,6 +2050,9 @@ def save_video(
         >>> save_video(frames)
         "/tmp/tmpvideo123.mp4"
     """
+    if isinstance(fps, str):
+        # fps could be a string when it's passed in from a web endpoint deployment
+        fps = float(fps)
     if fps <= 0:
         raise ValueError(f"fps must be greater than 0 got {fps}")
 
@@ -2019,6 +2069,8 @@ def save_video(
         output_video_path = tempfile.NamedTemporaryFile(
             delete=False, suffix=".mp4"
         ).name
+    else:
+        Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
 
     output_video_path = video_writer(frames, fps, output_video_path)
     _save_video_to_result(output_video_path)
@@ -2185,6 +2237,9 @@ def overlay_segmentation_masks(
             }],
         )
     """
+    if not masks:
+        return medias
+
     medias_int: List[np.ndarray] = (
         [medias] if isinstance(medias, np.ndarray) else medias
     )
@@ -2346,6 +2401,7 @@ FUNCTION_TOOLS = [
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     video_temporal_localization,
+    flux_image_inpainting,
 ]
 
 UTIL_TOOLS = [
