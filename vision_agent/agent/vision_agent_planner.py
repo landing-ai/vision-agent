@@ -520,7 +520,7 @@ class OpenAIVisionAgentPlanner(VisionAgentPlanner):
     ) -> None:
         super().__init__(
             planner=(
-                OpenAILMM(temperature=0.0, json_mode=True)
+                OpenAILMM(temperature=0.0)
                 if planner is None
                 else planner
             ),
@@ -568,7 +568,7 @@ class AzureVisionAgentPlanner(VisionAgentPlanner):
     ) -> None:
         super().__init__(
             planner=(
-                AzureOpenAILMM(temperature=0.0, json_mode=True)
+                AzureOpenAILMM(temperature=0.0)
                 if planner is None
                 else planner
             ),
