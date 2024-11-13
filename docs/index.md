@@ -4,11 +4,7 @@
 ![version](https://img.shields.io/pypi/pyversions/vision-agent)
 
 VisionAgent is a library that helps you utilize agent frameworks to generate code to
-solve your vision task. Many current vision problems can easily take hours or days to
-solve, you need to find the right model, figure out how to use it and program it to
-accomplish the task you want. VisionAgent aims to provide an in-seconds experience by
-allowing users to describe their problem in text and have the agent framework generate
-code to solve the task for them. Check out our discord for updates and roadmaps!
+solve your vision task. Check out our discord for updates and roadmaps!
 
 ## Table of Contents
 - [🚀Quick Start](#quick-start)
@@ -32,19 +28,19 @@ To get started with the python library, you can install it using pip:
 pip install vision-agent
 ```
 
-Ensure you have an Anthropic key and an OpenAI API key and set in your environment
+Ensure you have both an Anthropic key and an OpenAI API key and set in your environment
 variables (if you are using Azure OpenAI please see the Azure setup section):
 
 ```bash
-export ANTHROPIC_API_KEY="your-api-key"
-export OPENAI_API_KEY="your-api-key"
+export ANTHROPIC_API_KEY="your-api-key" # needed for VisionAgent and VisionAgentCoder
+export OPENAI_API_KEY="your-api-key" # needed for ToolRecommender
 ```
 
 ### Basic Usage
 To get started you can just import the `VisionAgent` and start chatting with it:
 ```python
 >>> from vision_agent.agent import VisionAgent
->>> agent = VisionAgent()
+>>> agent = VisionAgent(verbosity=2)
 >>> resp = agent("Hello")
 >>> print(resp)
 [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "{'thoughts': 'The user has greeted me. I will respond with a greeting and ask how I can assist them.', 'response': 'Hello! How can I assist you today?', 'let_user_respond': True}"}]
@@ -53,7 +49,7 @@ To get started you can just import the `VisionAgent` and start chatting with it:
 ```
 
 The chat messages are similar to `OpenAI`'s format with `role` and `content` keys but
-in addition to those you can add `medai` which is a list of media files that can either
+in addition to those you can add `media` which is a list of media files that can either
 be images or video files.
 
 ## Documentation
