@@ -27,10 +27,7 @@ from vision_agent.tools.tool_utils import (
     send_inference_request,
     send_task_inference_request,
 )
-from vision_agent.tools.tools_types import (
-    JobStatus,
-    ODResponseData,
-)
+from vision_agent.tools.tools_types import JobStatus, ODResponseData
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
