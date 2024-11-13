@@ -27,10 +27,7 @@ from vision_agent.tools.tool_utils import (
     send_inference_request,
     send_task_inference_request,
 )
-from vision_agent.tools.tools_types import (
-    JobStatus,
-    ODResponseData,
-)
+from vision_agent.tools.tools_types import JobStatus, ODResponseData
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -641,8 +638,8 @@ def loca_visual_prompt_counting(
 
     Parameters:
         image (np.ndarray): The image that contains lot of instances of a single object
-        visual_prompt (Dict[str, List[float]]): Bounding box of the object in format
-        [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
+            visual_prompt (Dict[str, List[float]]): Bounding box of the object in
+            format [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
 
     Returns:
         Dict[str, Any]: A dictionary containing the key 'count' and the count as a
@@ -750,10 +747,10 @@ def countgd_example_based_counting(
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-        [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided.
-        image (np.ndarray): The image that contains multiple instances of the object.
-        box_threshold (float, optional): The threshold for detection. Defaults
-            to 0.23.
+            [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided. image
+            (np.ndarray): The image that contains multiple instances of the object.
+            box_threshold (float, optional): The threshold for detection. Defaults to
+            0.23.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and

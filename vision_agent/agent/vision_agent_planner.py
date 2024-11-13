@@ -519,11 +519,7 @@ class OpenAIVisionAgentPlanner(VisionAgentPlanner):
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
-            planner=(
-                OpenAILMM(temperature=0.0, json_mode=True)
-                if planner is None
-                else planner
-            ),
+            planner=(OpenAILMM(temperature=0.0) if planner is None else planner),
             tool_recommender=tool_recommender,
             verbosity=verbosity,
             report_progress_callback=report_progress_callback,
@@ -567,11 +563,7 @@ class AzureVisionAgentPlanner(VisionAgentPlanner):
         code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         super().__init__(
-            planner=(
-                AzureOpenAILMM(temperature=0.0, json_mode=True)
-                if planner is None
-                else planner
-            ),
+            planner=(AzureOpenAILMM(temperature=0.0) if planner is None else planner),
             tool_recommender=(
                 AzureSim(T.TOOLS_DF, sim_key="desc")
                 if tool_recommender is None
