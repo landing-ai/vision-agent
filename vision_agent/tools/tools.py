@@ -1806,6 +1806,12 @@ def flux_image_inpainting(
     ):
         raise ValueError("The image or mask does not have enough size for inpainting")
 
+    if image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
+        new_height = (image.shape[0] // 8) * 8
+        new_width = (image.shape[1] // 8) * 8
+        image = cv2.resize(image, (new_width, new_height))
+        mask = cv2.resize(mask, (new_width, new_height))
+
     if np.array_equal(mask, mask.astype(bool).astype(int)):
         mask = np.where(mask > 0, 255, 0).astype(np.uint8)
     else:
