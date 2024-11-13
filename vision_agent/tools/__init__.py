@@ -65,15 +65,11 @@ from .tools import (
     save_image,
     save_json,
     save_video,
+    siglip_classification,
     template_match,
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
-    qwen2_vl_images_vqa,
-    qwen2_vl_video_vqa,
-    video_temporal_localization,
-    flux_image_inpainting,
-    siglip_classification,
 )
 
 __new_tools__ = [
