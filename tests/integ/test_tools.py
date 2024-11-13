@@ -585,7 +585,7 @@ def test_siglip_classification():
     assert result["scores"][0] > result["scores"][2]
 
 
-def test_flux_image_inpainting_resizing():
+def test_flux_image_inpainting_resizing_not_multiple_8():
     mask_image = np.zeros((37, 37), dtype=np.uint8)
     mask_image[:4, :4] = 1
     image = np.zeros((37, 37), dtype=np.uint8)
@@ -600,3 +600,18 @@ def test_flux_image_inpainting_resizing():
     assert result.shape[1] == 32
     assert result.shape[0] != image.shape[0]
     assert result.shape[1] != image.shape[1]
+
+
+def test_flux_image_inpainting_resizing_big_image():
+    mask_image = np.zeros((1200, 500), dtype=np.uint8)
+    mask_image[:100, :100] = 1
+    image = np.zeros((1200, 500), dtype=np.uint8)
+
+    result = flux_image_inpainting(
+        prompt="horse",
+        image=image,
+        mask=mask_image,
+    )
+
+    assert result.shape[0] == 512
+    assert result.shape[1] == 208
