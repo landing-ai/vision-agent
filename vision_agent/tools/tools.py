@@ -263,8 +263,8 @@ def owl_v2_video(
             ...
         ]
     """
-    if len(frames) == 0:
-        raise ValueError("No frames provided")
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
 
     image_size = frames[0].shape[:2]
     buffer_bytes = frames_to_bytes(frames)
@@ -458,7 +458,7 @@ def florence2_sam2_image(
 def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 1,
+    chunk_length: Optional[int] = 10,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
@@ -500,8 +500,8 @@ def florence2_sam2_video_tracking(
             ...
         ]
     """
-    if len(frames) == 0:
-        raise ValueError("No frames provided")
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
@@ -978,6 +978,9 @@ def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         >>> qwen2_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'
     """
+
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
@@ -2210,9 +2213,11 @@ def overlay_bounding_boxes(
         frame_out.append(np.array(pil_image))
     return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
 
-    from IPython.display import display
+    if isinstance(return_frame, np.ndarray):
+        from IPython.display import display
 
-    display(Image.fromarray(return_frame))
+        display(Image.fromarray(return_frame))
+
     return return_frame  # type: ignore
 
 
@@ -2327,9 +2332,11 @@ def overlay_segmentation_masks(
         frame_out.append(np.array(pil_image))
     return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
 
-    from IPython.display import display
+    if isinstance(return_frame, np.ndarray):
+        from IPython.display import display
 
-    display(Image.fromarray(return_frame))
+        display(Image.fromarray(return_frame))
+
     return return_frame  # type: ignore
 
 
@@ -2438,7 +2445,7 @@ FUNCTION_TOOLS = [
     florence2_sam2_image,
     florence2_sam2_video_tracking,
     florence2_phrase_grounding,
-    # claude35_text_extraction,
+    claude35_text_extraction,
     detr_segmentation,
     depth_anything_v2,
     generate_pose_image,

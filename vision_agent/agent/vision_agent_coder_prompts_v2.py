@@ -26,10 +26,11 @@ This is the documentation for the functions you have access to. You may call any
 **Instructions**:
 1. Reread the plan and all code and understand the task.
 2. Organize the code snippets into a single function that can be called by the user.
-3. Do not alter the code logic and ensure you utilize all the code provided as is without changing it.
-4. Do not create dummy input or functions, the code must be usable if the user provides new media.
-5. Ensure the function is well-documented and follows the best practices, comment which function is the main function.
-6. Output your code using <code> tags:
+3. DO NOT alter the code logic and ensure you utilize all the code provided as is without changing it.
+4. DO NOT create dummy input or functions, the code must be usable if the user provides new media.
+5. DO NOT hardcode the output, the function must work for any media provided by the user.
+6. Ensure the function is well-documented and follows the best practices and returns the expected output from the user.
+7. Output your code using <code> tags:
 
 <code>
 # your code here
