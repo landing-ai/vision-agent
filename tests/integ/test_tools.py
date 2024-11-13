@@ -583,3 +583,20 @@ def test_siglip_classification():
     assert result["labels"][2] == "bird"
     assert result["scores"][0] > result["scores"][1]
     assert result["scores"][0] > result["scores"][2]
+
+
+def test_flux_image_inpainting_resizing():
+    mask_image = np.zeros((37, 37), dtype=np.uint8)
+    mask_image[:4, :4] = 1
+    image = np.zeros((37, 37), dtype=np.uint8)
+
+    result = flux_image_inpainting(
+        prompt="horse",
+        image=image,
+        mask=mask_image,
+    )
+
+    assert result.shape[0] == 32
+    assert result.shape[1] == 32
+    assert result.shape[0] != image.shape[0]
+    assert result.shape[1] != image.shape[1]
