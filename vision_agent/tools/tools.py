@@ -1781,7 +1781,6 @@ def flux_image_inpainting(
             in the masked area. More detailed and specific prompts typically yield better results.
         image (np.ndarray): The source image to be inpainted.
             The image will serve as the base context for the inpainting process.
-            The image height and width should be multiples of 8.
         mask (np.ndarray): A binary mask image with 0's and 1's,
             where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
 
