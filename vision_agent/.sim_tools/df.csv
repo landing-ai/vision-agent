@@ -461,6 +461,33 @@ desc,doc,name
         >>> video_temporal_localization('Did a goal happened?', frames)
         [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
     ",video_temporal_localization
+"'flux_image_inpainting' performs image inpainting to fill the masked regions, given by mask, in the image, given image based on the text prompt and surrounding image context. It can be used to edit regions of an image according to the prompt given.","flux_image_inpainting(prompt: str, image: numpy.ndarray, mask: numpy.ndarray) -> numpy.ndarray:
+'flux_image_inpainting' performs image inpainting to fill the masked regions,
+    given by mask, in the image, given image based on the text prompt and surrounding image context.
+    It can be used to edit regions of an image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the masked area. More detailed and specific prompts typically yield better results.
+        image (np.ndarray): The source image to be inpainted.
+            The image will serve as the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's,
+            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
+
+    Returns:
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = flux_image_inpainting(
+        ...     prompt=""a modern black leather sofa with white pillows"",
+        ...     image=image,
+        ...     mask=mask,
+        ... )
+        >>> save_image(result, ""inpainted_room.png"")
+    ",flux_image_inpainting
 "'extract_frames_and_timestamps' extracts frames and timestamps from a video which can be a file path, url or youtube link, returns a list of dictionaries with keys ""frame"" and ""timestamp"" where ""frame"" is a numpy array and ""timestamp"" is the relative time in seconds where the frame was captured. The frame is a numpy array.","extract_frames_and_timestamps(video_uri: Union[str, pathlib.Path], fps: float = 1) -> List[Dict[str, Union[numpy.ndarray, float]]]:
 'extract_frames_and_timestamps' extracts frames and timestamps from a video
     which can be a file path, url or youtube link, returns a list of dictionaries
