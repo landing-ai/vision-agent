@@ -37,7 +37,6 @@ def update_callback(message: Dict[str, Any]):
 
 
 agent = VisionAgentCoderV2(
-    tool_recommender="/Users/dillonlaird/landing.ai/vision-agent/.sim_tools/",
     verbose=True,
     update_callback=update_callback,
 )
