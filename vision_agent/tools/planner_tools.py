@@ -1,5 +1,4 @@
 import logging
-import os
 import shutil
 import tempfile
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
@@ -25,7 +24,7 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
 from vision_agent.lmm import AnthropicLMM
 from vision_agent.utils.execute import CodeInterpreterFactory
 from vision_agent.utils.image_utils import convert_to_b64
-from vision_agent.utils.sim import Sim, load_cached_sim
+from vision_agent.utils.sim import load_cached_sim
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
 TOOL_RECOMMENDER = load_cached_sim(T.TOOLS_DF)
