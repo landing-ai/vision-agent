@@ -29,7 +29,7 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.sim import Sim
+from vision_agent.utils.sim import Sim, load_cached_sim
 
 _CONSOLE = Console()
 
@@ -270,7 +270,7 @@ class VisionAgentCoderV2(Agent):
             elif isinstance(tool_recommender, Sim):
                 self.tool_recommender = tool_recommender
         else:
-            self.tool_recommender = Sim(T.TOOLS_DF, sim_key="desc")
+            self.tool_recommender = load_cached_sim(T.TOOLS_DF)
 
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime

@@ -1,4 +1,5 @@
 import os
+import shutil
 from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
@@ -16,6 +17,21 @@ def get_embedding(
 ) -> List[float]:
     text = text.replace("\n", " ")
     return emb_call([text])
+
+
+def load_cached_sim(
+    tools_df: pd.DataFrame, sim_key: str = "desc", cached_dir: str = ".sim_tools"
+) -> "Sim":
+    if os.path.exists(cached_dir):
+        if tools_df is not None:
+            if Sim.check_load(cached_dir, tools_df):
+                return Sim.load(cached_dir)
+    if os.path.exists(cached_dir):
+        shutil.rmtree(cached_dir)
+
+    sim = Sim(tools_df, sim_key)
+    sim.save(cached_dir)
+    return sim
 
 
 class Sim:
