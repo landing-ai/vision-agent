@@ -1,6 +1,7 @@
 import os
 import shutil
 from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
@@ -22,15 +23,17 @@ def get_embedding(
 def load_cached_sim(
     tools_df: pd.DataFrame, sim_key: str = "desc", cached_dir: str = ".sim_tools"
 ) -> "Sim":
-    if os.path.exists(cached_dir):
+
+    cached_dir_full_path = str(resources.files("vision_agent") / cached_dir)
+    if os.path.exists(cached_dir_full_path):
         if tools_df is not None:
-            if Sim.check_load(cached_dir, tools_df):
-                return Sim.load(cached_dir)
-    if os.path.exists(cached_dir):
-        shutil.rmtree(cached_dir)
+            if Sim.check_load(cached_dir_full_path, tools_df):
+                return Sim.load(cached_dir_full_path)
+    if os.path.exists(cached_dir_full_path):
+        shutil.rmtree(cached_dir_full_path)
 
     sim = Sim(tools_df, sim_key)
-    sim.save(cached_dir)
+    sim.save(cached_dir_full_path)
     return sim
 
 
