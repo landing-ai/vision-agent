@@ -25,16 +25,10 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
 from vision_agent.lmm import AnthropicLMM
 from vision_agent.utils.execute import CodeInterpreterFactory
 from vision_agent.utils.image_utils import convert_to_b64
-from vision_agent.utils.sim import Sim
+from vision_agent.utils.sim import Sim, load_cached_sim
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
-if os.path.exists(".sim_tools") and Sim.check_load(".sim_tools", T.TOOLS_DF):
-    TOOL_RECOMMENDER = Sim.load(".sim_tools")
-else:
-    TOOL_RECOMMENDER = Sim(df=T.TOOLS_DF, sim_key="desc")
-    if os.path.exists(".sim_tools"):
-        shutil.rmtree(".sim_tools")
-    TOOL_RECOMMENDER.save(".sim_tools")
+TOOL_RECOMMENDER = load_cached_sim(T.TOOLS_DF)
 
 _LOGGER = logging.getLogger(__name__)
 EXAMPLES = f"\n{TEST_TOOLS_EXAMPLE1}\n{TEST_TOOLS_EXAMPLE2}\n"
