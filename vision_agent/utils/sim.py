@@ -23,9 +23,8 @@ def get_embedding(
 def load_cached_sim(
     tools_df: pd.DataFrame, sim_key: str = "desc", cached_dir: str = ".sim_tools"
 ) -> "Sim":
+    import ipdb; ipdb.set_trace()
     cached_dir_full_path = str(resources.files("vision_agent") / cached_dir)
-    print(cached_dir_full_path)
-    print(os.path.exists(cached_dir_full_path))
     if os.path.exists(cached_dir_full_path):
         if tools_df is not None:
             if Sim.check_load(cached_dir_full_path, tools_df):
