@@ -27,11 +27,11 @@ def load_cached_sim(
     if os.path.exists(cached_dir_full_path):
         if tools_df is not None:
             if Sim.check_load(cached_dir_full_path, tools_df):
-                return Sim.load(cached_dir_full_path)
+                return Sim.load(cached_dir_full_path, sim_key=sim_key)
     if os.path.exists(cached_dir_full_path):
         shutil.rmtree(cached_dir_full_path)
 
-    sim = Sim(tools_df, sim_key)
+    sim = Sim(tools_df, sim_key=sim_key)
     sim.save(cached_dir_full_path)
     return sim
 
@@ -84,13 +84,14 @@ class Sim:
     def load(
         load_dir: Union[str, Path],
         api_key: Optional[str] = None,
+        sim_key: Optional[str] = None,
         model: str = "text-embedding-3-small",
     ) -> "Sim":
         load_dir = Path(load_dir)
         df = pd.read_csv(load_dir / "df.csv")
         embs = np.load(load_dir / "embs.npy")
         df["embs"] = list(embs)
-        return Sim(df, api_key=api_key, model=model)
+        return Sim(df, sim_key=sim_key, api_key=api_key, model=model)
 
     @staticmethod
     def check_load(
