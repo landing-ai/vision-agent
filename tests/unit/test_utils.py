@@ -75,17 +75,17 @@ def test_chat_agent_case():
 
 def test_extract_execution():
     a = """<execute_python>print('hello world!')</execute_python>"""
-    a_code = extract_tag("execute_python", a)
+    a_code = extract_tag(a, "execute_python")
     assert a_code == "print('hello world!')"
 
 
 def test_extract_execution_null():
     a = """<execute_python>print('hello world!')"""
-    a_code = extract_tag("execute_python", a)
+    a_code = extract_tag(a, "execute_python")
     assert a_code is None
 
 
 def test_extract_execution_double():
     a = """<execute_python>print('hello world!')</execute_python><execute_python>print('hello world!')</execute_python>"""
-    a_code = extract_tag("execute_python", a)
+    a_code = extract_tag(a, "execute_python")
     assert a_code == "print('hello world!')\nprint('hello world!')"
