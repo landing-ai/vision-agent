@@ -55,19 +55,21 @@ class Sim:
             model: str: The model to use for embeddingshttps://github.com/landing-ai/vision-agent/pull/280.
         """
         self.df = df
-        client = OpenAI(api_key=api_key)
-        self.emb_call = (
-            lambda text: client.embeddings.create(input=text, model=model)
-            .data[0]
-            .embedding
-        )
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         if "embs" not in df.columns and sim_key is None:
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
             self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(self.emb_call, x)
+                lambda x: get_embedding(
+                    lambda text: self.client.embeddings.create(
+                        input=text, model=self.model
+                    )
+                    .data[0]
+                    .embedding,
+                    x,
+                )
             )
 
     def save(self, save_dir: Union[str, Path]) -> None:
@@ -117,7 +119,12 @@ class Sim:
             Sequence[Dict]: The top k most similar items.
         """
 
-        embedding = get_embedding(self.emb_call, query)
+        embedding = get_embedding(
+            lambda text: self.client.embeddings.create(input=text, model=self.model)
+            .data[0]
+            .embedding,
+            query,
+        )
         self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
         res = self.df.sort_values("sim", ascending=False).head(k)
         if thresh is not None:
