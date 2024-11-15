@@ -3,14 +3,19 @@ import tempfile
 
 import pytest
 from PIL import Image
-
-from vision_agent.lmm.lmm import OllamaLMM, OpenAILMM
+from unittest import mock
 
 from .fixtures import (  # noqa: F401
     chat_ollama_lmm_mock,
     generate_ollama_lmm_mock,
     openai_lmm_mock,
+    mock_openai_embedding,
 )
+
+
+# mock the embedding model for Sim class
+with mock.patch("vision_agent.utils.sim.OpenAI", mock_openai_embedding()):
+    from vision_agent.lmm.lmm import OllamaLMM, OpenAILMM
 
 
 def create_temp_image(image_format="jpeg"):
