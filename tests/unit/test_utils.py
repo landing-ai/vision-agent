@@ -1,15 +1,9 @@
-from unittest import mock
-
-from .fixtures import mock_openai_embedding
-
-# mock the embedding model for Sim class
-with mock.patch("vision_agent.utils.sim.OpenAI", mock_openai_embedding()):
-    from vision_agent.agent.agent_utils import (
-        extract_code,
-        extract_json,
-        extract_tag,
-        remove_installs_from_code,
-    )
+from vision_agent.agent.agent_utils import (
+    extract_code,
+    extract_json,
+    extract_tag,
+    remove_installs_from_code,
+)
 
 
 def test_basic_json_extract():

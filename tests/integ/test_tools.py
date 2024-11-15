@@ -18,6 +18,7 @@ from vision_agent.tools import (
     florence2_roberta_vqa,
     florence2_sam2_image,
     florence2_sam2_video_tracking,
+    flux_image_inpainting,
     generate_pose_image,
     generate_soft_edge_image,
     git_vqa_v2,
@@ -30,14 +31,13 @@ from vision_agent.tools import (
     ocr,
     owl_v2_image,
     owl_v2_video,
-    template_match,
-    vit_image_classification,
-    vit_nsfw_classification,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
-    video_temporal_localization,
-    flux_image_inpainting,
     siglip_classification,
+    template_match,
+    video_temporal_localization,
+    vit_image_classification,
+    vit_nsfw_classification,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"

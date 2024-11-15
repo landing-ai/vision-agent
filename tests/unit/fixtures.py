@@ -3,15 +3,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-def mock_openai_embedding():
-    mock_openai = MagicMock()
-
-    mock_openai.Embedding.create.return_value = {
-        "data": [{"embeddings": [1.0, 2.0, 3.0, 4.0, 5.0]}]
-    }
-    return mock_openai
-
-
 @pytest.fixture
 def langsmith_wrap_oepnai_mock(request, openai_llm_mock):
     with patch("vision_agent.llm.llm.wrap_openai") as mock:

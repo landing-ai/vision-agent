@@ -1,15 +1,9 @@
-from .fixtures import mock_openai_embedding
-from unittest import mock
-
-
-# mock the embedding model for Sim class
-with mock.patch("vision_agent.utils.sim.OpenAI", mock_openai_embedding()):
-    from vision_agent.tools.meta_tools import (
-        Artifacts,
-        check_and_load_image,
-        use_extra_vision_agent_args,
-        use_object_detection_fine_tuning,
-    )
+from vision_agent.tools.meta_tools import (
+    Artifacts,
+    check_and_load_image,
+    use_extra_vision_agent_args,
+    use_object_detection_fine_tuning,
+)
 
 
 def test_check_and_load_image_none():

@@ -1,10 +1,4 @@
-from unittest import mock
-
-from .fixtures import mock_openai_embedding
-
-# mock the embedding model for Sim class
-with mock.patch("vision_agent.utils.sim.OpenAI", mock_openai_embedding()):
-    from vision_agent.agent.vision_agent_coder import strip_function_calls
+from vision_agent.agent.vision_agent_coder import strip_function_calls
 
 
 def test_strip_non_function_real_case():
