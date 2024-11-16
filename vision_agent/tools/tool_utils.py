@@ -183,7 +183,7 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
 
         doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
         data["desc"].append(desc)
-        data["doc"].append(doc)
+        data["doc"].append(doc.encode("utf-8").decode("utf-8"))
         data["name"].append(func.__name__)
 
     return pd.DataFrame(data)  # type: ignore

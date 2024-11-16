@@ -104,15 +104,11 @@ class Sim:
         load_dir = Path(load_dir)
         # ensure to re-encode in utf-8 because windows will load in latin-1
         df_load = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
-        print("DF LOAD", df_load)
-        print("DF", df)
+        print("DF LOAD", df_load["doc"])
+        print("DF", df["doc"])
         print("CHECK DF", df.equals(df_load))  # type: ignore
-        print("NAME")
-        print(df[df["name"] != df_load["name"]])
-        print("DESC")
-        print(df[df["desc"] != df_load["desc"]])
         print("DOC")
-        print(df[df["doc"] != df_load["doc"]])
+        print(df["doc"][df["doc"] != df_load["doc"]])
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
