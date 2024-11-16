@@ -53,7 +53,7 @@ jobs:
         poetry run mypy vision_agent
     - name: Test with pytest
       run: |
-        poetry run pytest -v tests/unit
+        poetry run pytest -s -vvv tests/unit
 
   integ_test:
     name: Integration Test
