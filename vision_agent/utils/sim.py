@@ -81,7 +81,7 @@ class Sim:
         embs = np.array(df.embs.tolist())
         np.save(save_dir / "embs.npy", embs)
         df = df.drop("embs", axis=1)
-        df.to_csv(save_dir / "df.csv", index=False, encoding="utf-8")
+        df.to_csv(save_dir / "df.csv", index=False)
 
     @staticmethod
     def load(
@@ -90,8 +90,7 @@ class Sim:
         model: str = "text-embedding-3-small",
     ) -> "Sim":
         load_dir = Path(load_dir)
-        # ensure to re-encode in utf-8 because windows will load in latin-1
-        df = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
+        df = pd.read_csv(load_dir / "df.csv")
         embs = np.load(load_dir / "embs.npy")
         df["embs"] = list(embs)
         return Sim(df, api_key=api_key, model=model)
@@ -102,8 +101,7 @@ class Sim:
         df: pd.DataFrame,
     ) -> bool:
         load_dir = Path(load_dir)
-        # ensure to re-encode in utf-8 because windows will load in latin-1
-        df_load = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
+        df_load = pd.read_csv(load_dir / "df.csv")
         import sys
 
         print("DEFAULT", sys.getdefaultencoding())
@@ -112,6 +110,9 @@ class Sim:
         print("CHECK DF", df.equals(df_load))  # type: ignore
         print("DOC")
         print(df["doc"][df["doc"] != df_load["doc"]])
+        print("DOC.iloc[0]")
+        print(df["doc"].iloc[0])
+        print(df_load["doc"].iloc[0])
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
