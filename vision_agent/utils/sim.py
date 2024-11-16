@@ -81,7 +81,7 @@ class Sim:
         embs = np.array(df.embs.tolist())
         np.save(save_dir / "embs.npy", embs)
         df = df.drop("embs", axis=1)
-        df.to_csv(save_dir / "df.csv", index=False)
+        df.to_csv(save_dir / "df.csv", index=False, encoding="utf-8")
 
     @staticmethod
     def load(
@@ -104,6 +104,15 @@ class Sim:
         load_dir = Path(load_dir)
         # ensure to re-encode in utf-8 because windows will load in latin-1
         df_load = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
+        print("DF LOAD", df_load)
+        print("DF", df)
+        print("CHECK DF", df.equals(df_load))  # type: ignore
+        print("NAME")
+        print(df[df["name"] != df_load["name"]])
+        print("DESC")
+        print(df[df["desc"] != df_load["desc"]])
+        print("DOC")
+        print(df[df["doc"] != df_load["doc"]])
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
