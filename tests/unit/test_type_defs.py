@@ -1,5 +1,4 @@
 import os
-from unittest import mock
 
 from vision_agent.utils.type_defs import LandingaiAPIKey
 
