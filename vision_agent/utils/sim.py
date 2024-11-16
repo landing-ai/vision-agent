@@ -95,7 +95,7 @@ class Sim:
         model: str = "text-embedding-3-small",
     ) -> "Sim":
         load_dir = Path(load_dir)
-        df = pd.read_csv(load_dir / "df.csv")
+        df = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
         embs = np.load(load_dir / "embs.npy")
         df["embs"] = list(embs)
         return Sim(df, api_key=api_key, model=model)
@@ -107,10 +107,13 @@ class Sim:
     ) -> bool:
         load_dir = Path(load_dir)
         print("LOAD_DIR", load_dir)
-        df_load = pd.read_csv(load_dir / "df.csv")
+        df_load = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
         print("DF_LOAD", df_load)
         print("DF", df)
         print("DF", df.equals(df_load))  # type: ignore
+        comparison = df.equals(df_load)  # type: ignore
+        different_rows = comparison.index.get_level_values(0)  # type: ignore
+        print(df.loc[different_rows])
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
