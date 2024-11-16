@@ -24,14 +24,9 @@ def load_cached_sim(
     tools_df: pd.DataFrame, sim_key: str = "desc", cached_dir: str = ".sim_tools"
 ) -> "Sim":
     cached_dir_full_path = str(resources.files("vision_agent") / cached_dir)
-    print("CAHCED_DIR", cached_dir_full_path)
-    print("LIST_DIR", os.listdir(cached_dir_full_path))
-    print("PATH_EXISTS", os.path.exists(cached_dir_full_path))
     if os.path.exists(cached_dir_full_path):
         if tools_df is not None:
-            print("about to check load")
             if Sim.check_load(cached_dir_full_path, tools_df):
-                print("checked load")
                 # don't pass sim_key to loaded Sim object or else it will re-calculate embeddings
                 return Sim.load(cached_dir_full_path)
     if os.path.exists(cached_dir_full_path):
@@ -95,6 +90,7 @@ class Sim:
         model: str = "text-embedding-3-small",
     ) -> "Sim":
         load_dir = Path(load_dir)
+        # ensure to re-encode in utf-8 because windows will load in latin-1
         df = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
         embs = np.load(load_dir / "embs.npy")
         df["embs"] = list(embs)
@@ -106,14 +102,8 @@ class Sim:
         df: pd.DataFrame,
     ) -> bool:
         load_dir = Path(load_dir)
-        print("LOAD_DIR", load_dir)
+        # ensure to re-encode in utf-8 because windows will load in latin-1
         df_load = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
-        print("DF_LOAD", df_load)
-        print("DF", df)
-        print("DF", df.equals(df_load))  # type: ignore
-        comparison = df.equals(df_load)  # type: ignore
-        different_rows = comparison.index.get_level_values(0)  # type: ignore
-        print(df.loc[different_rows])
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
