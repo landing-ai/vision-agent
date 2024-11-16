@@ -106,7 +106,11 @@ class Sim:
         df: pd.DataFrame,
     ) -> bool:
         load_dir = Path(load_dir)
+        print("LOAD_DIR", load_dir)
         df_load = pd.read_csv(load_dir / "df.csv")
+        print("DF_LOAD", df_load)
+        print("DF", df)
+        print("DF", df.equals(df_load))
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
