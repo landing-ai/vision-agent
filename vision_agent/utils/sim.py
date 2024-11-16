@@ -110,7 +110,7 @@ class Sim:
         df_load = pd.read_csv(load_dir / "df.csv")
         print("DF_LOAD", df_load)
         print("DF", df)
-        print("DF", df.equals(df_load)) # type: ignore
+        print("DF", df.equals(df_load))  # type: ignore
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
