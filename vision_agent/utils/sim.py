@@ -105,6 +105,7 @@ class Sim:
         # ensure to re-encode in utf-8 because windows will load in latin-1
         df_load = pd.read_csv(load_dir / "df.csv", encoding="utf-8")
         import sys
+
         print("DEFAULT", sys.getdefaultencoding())
         print("DF LOAD", df_load["doc"])
         print("DF", df["doc"])
