@@ -24,11 +24,14 @@ def load_cached_sim(
     tools_df: pd.DataFrame, sim_key: str = "desc", cached_dir: str = ".sim_tools"
 ) -> "Sim":
     cached_dir_full_path = str(resources.files("vision_agent") / cached_dir)
-    print(cached_dir_full_path)
-    print(os.listdir(cached_dir_full_path))
+    print("CAHCED_DIR", cached_dir_full_path)
+    print("LIST_DIR", os.listdir(cached_dir_full_path))
+    print("PATH_EXISTS", os.path.exists(cached_dir_full_path))
     if os.path.exists(cached_dir_full_path):
         if tools_df is not None:
+            print("about to check load")
             if Sim.check_load(cached_dir_full_path, tools_df):
+                print("checked load")
                 # don't pass sim_key to loaded Sim object or else it will re-calculate embeddings
                 return Sim.load(cached_dir_full_path)
     if os.path.exists(cached_dir_full_path):
