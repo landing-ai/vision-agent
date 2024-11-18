@@ -102,9 +102,6 @@ class Sim:
     ) -> bool:
         load_dir = Path(load_dir)
         df_load = pd.read_csv(load_dir / "df.csv")
-        import sys
-
-        print("DEFAULT", sys.getdefaultencoding())
         print("DF LOAD", df_load["doc"])
         print("DF", df["doc"])
         print("CHECK DF", df.equals(df_load))  # type: ignore
