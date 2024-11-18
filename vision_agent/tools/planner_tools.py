@@ -46,58 +46,6 @@ def extract_tool_info(
     return tool, tool_thoughts, tool_docstring, ""
 
 
-def extract_tool_info_v2(
-    tool_choice_context: Dict[str, Any]
-) -> Tuple[Optional[Callable], str, str, str]:
-    """Use PICK_TOOL_V2 prompt to extract tool information."""
-    tool_list_priors = {
-        "owl_v2_image": 0.6,
-        "owl_v2_video": 0.6,
-        "ocr": 0.8,
-        "clip": 0.6,
-        "vit_image_classification": 0.5,
-        "vit_nsfw_classification": 0.5,
-        "countgd_counting": 0.9,
-        "florence2_ocr": 0.8,
-        "florence2_sam2_image": 0.6,
-        "florence2_sam2_video_tracking": 0.8,
-        "florence2_phrase_grounding": 0.6,
-        "claude35_text_extraction": 0.9,
-        "detr_segmentation": 0.5,
-        "depth_anything_v2": 0.6,
-        "generate_pose_image": 0.5,
-    }
-
-    error_message = ""
-    tool_docstring = "No tool was found."
-    tool_thoughts = ""
-    tool_posteriors = {}
-    for tool_name in tool_choice_context:
-        try:
-            score = float(tool_choice_context[tool_name]) / 10
-        except ValueError:
-            score = 0.5
-
-        if tool_name in tool_list_priors:
-            prior = tool_list_priors[tool_name]
-            posterior = prior * score
-            tool_posteriors[tool_name] = posterior
-        else:
-            posterior = 0.5 * score
-            tool_posteriors[tool_name] = posterior
-
-    if len(tool_posteriors) == 0:
-        return None, "", "", "No tool was found."
-
-    best_tool = max(tool_posteriors, key=tool_posteriors.get)  # type: ignore
-    tool_docstring = T.TOOLS_INFO[best_tool]
-    tool = TOOL_FUNCTIONS[best_tool]
-
-    if "thoughts" in tool_choice_context:
-        tool_thoughts = tool_choice_context["thoughts"]
-    return tool, tool_thoughts, tool_docstring, error_message  # type: ignore
-
-
 def get_tool_for_task(
     task: str, images: List[np.ndarray], exclude_tools: Optional[List[str]] = None
 ) -> None:
