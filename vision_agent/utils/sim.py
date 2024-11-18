@@ -103,15 +103,18 @@ class Sim:
     ) -> bool:
         load_dir = Path(load_dir)
         df_load = pd.read_csv(load_dir / "df.csv")
+        print("Plaform", platform.system())
         if platform.system() == "Windows":
             df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\n\n", ""))
+            print("DF_LOAD", df_load["doc"].iloc[0])
         print("DF LOAD", df_load["doc"])
         print("DF", df["doc"])
         print("CHECK DF", df.equals(df_load))  # type: ignore
         print("DOC")
         print(df["doc"][df["doc"] != df_load["doc"]])
-        print("DOC.iloc[0]")
+        print("DF.iloc[0]")
         print(df["doc"].iloc[0])
+        print("DF_LOAD.iloc[0]")
         print(df_load["doc"].iloc[0])
         return df.equals(df_load)  # type: ignore
 
