@@ -183,6 +183,7 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
         desc = " ".join(desc.split())
 
         doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
+        print("SYSTEM", platform.system())
         if platform.system() == "Windows":
             doc = doc.replace("\n\n", "\n")
         data["desc"].append(desc)
