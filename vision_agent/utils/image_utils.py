@@ -42,10 +42,10 @@ def normalize_bbox(
 ) -> List[float]:
     r"""Normalize the bounding box coordinates to be between 0 and 1."""
     x1, y1, x2, y2 = bbox
-    x1 = round(x1 / image_size[1], 2)
-    y1 = round(y1 / image_size[0], 2)
-    x2 = round(x2 / image_size[1], 2)
-    y2 = round(y2 / image_size[0], 2)
+    x1 = max(round(x1 / image_size[1], 2), 0)
+    y1 = max(round(y1 / image_size[0], 2), 0)
+    x2 = min(round(x2 / image_size[1], 2), image_size[1])
+    y2 = min(round(y2 / image_size[0], 2), image_size[0])
     return [x1, y1, x2, y2]
 
 
@@ -175,9 +175,15 @@ def encode_media(media: Union[str, Path], resize: Optional[int] = None) -> str:
             return media[:-4] + ".png"
         return media
 
-    # if media is already a base64 encoded image return
+    # if media is in base64 ensure it's the correct resize
     if isinstance(media, str) and media.startswith("data:image/"):
-        return media
+        image_pil = b64_to_pil(media)
+        if resize is not None:
+            if image_pil.size[0] > resize or image_pil.size[1] > resize:
+                image_pil.thumbnail((resize, resize))
+        buffer = io.BytesIO()
+        image_pil.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     extension = "png"
     extension = Path(media).suffix

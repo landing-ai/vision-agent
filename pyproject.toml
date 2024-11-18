@@ -9,6 +9,7 @@ description = "Toolset for Vision Agent"
 authors = ["Landing AI <dev@landing.ai>"]
 readme = "README.md"
 packages = [{include = "vision_agent"}]
+include = [{path = "vision_agent/.sim_tools/*"}]
 
 [tool.poetry.urls]
 "Homepage" = "https://landing.ai"

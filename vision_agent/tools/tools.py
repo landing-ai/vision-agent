@@ -17,15 +17,18 @@ from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm.lmm import OpenAILMM
+from vision_agent.lmm.lmm import AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
+    add_bboxes_from_masks,
     filter_bboxes_by_threshold,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
     get_tools_info,
+    nms,
     send_inference_request,
     send_task_inference_request,
+    single_nms,
 )
 from vision_agent.tools.tools_types import JobStatus, ODResponseData
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
@@ -260,8 +263,8 @@ def owl_v2_video(
             ...
         ]
     """
-    if len(frames) == 0:
-        raise ValueError("No frames provided")
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
 
     image_size = frames[0].shape[:2]
     buffer_bytes = frames_to_bytes(frames)
@@ -455,7 +458,7 @@ def florence2_sam2_image(
 def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 3,
+    chunk_length: Optional[int] = 10,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
@@ -473,11 +476,11 @@ def florence2_sam2_video_tracking(
             fine-tuned model ID here to use it.
 
     Returns:
-        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the label
-        and segment mask. The outer list represents each frame and the inner list is
-        the entities per frame. The label contains the object ID followed by the label
-        name. The objects are only identified in the first framed and tracked
-        throughout the video.
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+        label,segment mask and bounding boxes. The outer list represents each frame and
+        the inner list is the entities per frame. The label contains the object ID
+        followed by the label name. The objects are only identified in the first framed
+        and tracked throughout the video.
 
     Example
     -------
@@ -486,6 +489,7 @@ def florence2_sam2_video_tracking(
             [
                 {
                     'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
                     'mask': array([[0, 0, 0, ..., 0, 0, 0],
                         [0, 0, 0, ..., 0, 0, 0],
                         ...,
@@ -496,8 +500,8 @@ def florence2_sam2_video_tracking(
             ...
         ]
     """
-    if len(frames) == 0:
-        raise ValueError("No frames provided")
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
@@ -535,7 +539,8 @@ def florence2_sam2_video_tracking(
             label = str(detection["id"]) + ": " + detection["label"]
             return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
         return_data.append(return_frame_data)
-    return return_data
+    return_data = add_bboxes_from_masks(return_data)
+    return nms(return_data, iou_threshold=0.95)
 
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -677,8 +682,9 @@ def countgd_counting(
     image: np.ndarray,
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
-    """'countgd_counting' is a tool that can precisely count multiple instances of an
-    object given a text prompt. It returns a list of bounding boxes with normalized
+    """'countgd_counting' is a tool that can detect multiple instances of an object
+    given a text prompt. It is particularly useful when trying to detect and count a
+    large number of objects. It returns a list of bounding boxes with normalized
     coordinates, label names and associated confidence scores.
 
     Parameters:
@@ -711,7 +717,7 @@ def countgd_counting(
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
     payload = {
-        "prompts": [prompt.replace(", ", " .")],
+        "prompts": [prompt.replace(", ", ". ")],
         "confidence": box_threshold,  # still not being used in the API
         "model": "countgd",
     }
@@ -733,7 +739,8 @@ def countgd_counting(
     ]
     # TODO: remove this once we start to use the confidence on countgd
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return [bbox.model_dump() for bbox in filtered_bboxes]
+    return_data = [bbox.model_dump() for bbox in filtered_bboxes]
+    return single_nms(return_data, iou_threshold=0.80)
 
 
 def countgd_example_based_counting(
@@ -864,9 +871,10 @@ def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
 
 
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
-    """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary images
-    including regular images or images of documents or presentations. It returns text
-    as an answer to the question.
+    """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary
+    images including regular images or images of documents or presentations. It can be
+    very useful for document QA or OCR text extraction. It returns text as an answer to
+    the question.
 
     Parameters:
         prompt (str): The question about the document image
@@ -880,6 +888,9 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
         >>> qwen2_vl_images_vqa('Give a summary of the document', images)
         'The document talks about the history of the United States of America and its...'
     """
+    if isinstance(images, np.ndarray):
+        images = [images]
+
     for image in images:
         if image.shape[0] < 1 or image.shape[1] < 1:
             raise ValueError(f"Image is empty, image shape: {image.shape}")
@@ -894,6 +905,30 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
         payload, "image-to-text", files=files, v2=True
     )
     return cast(str, data)
+
+
+def claude35_text_extraction(image: np.ndarray) -> str:
+    """'claude35_text_extraction' is a tool that can extract text from an image. It
+    returns the extracted text as a string and can be used as an alternative to OCR if
+    you do not need to know the exact bounding box of the text.
+
+    Parameters:
+        image (np.ndarray): The image to extract text from.
+
+    Returns:
+        str: The extracted text from the image.
+    """
+
+    lmm = AnthropicLMM()
+    buffer = io.BytesIO()
+    Image.fromarray(image).save(buffer, format="PNG")
+    image_bytes = buffer.getvalue()
+    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+    text = lmm.generate(
+        "Extract and return any text you see in this image and nothing else. If you do not read any text respond with an empty string.",
+        [image_b64],
+    )
+    return cast(str, text)
 
 
 def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
@@ -943,6 +978,9 @@ def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         >>> qwen2_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'
     """
+
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
@@ -2157,7 +2195,8 @@ def overlay_bounding_boxes(
         bboxes = bbox_int[i]
         bboxes = sorted(bboxes, key=lambda x: x["label"], reverse=True)
 
-        if len(bboxes) > 40:
+        # if more than 50 boxes use small boxes to indicate objects else use regular boxes
+        if len(bboxes) > 50:
             pil_image = _plot_counting(pil_image, bboxes, color)
         else:
             width, height = pil_image.size
@@ -2188,7 +2227,14 @@ def overlay_bounding_boxes(
                 draw.text((box[0], box[1]), text, fill="black", font=font)
 
         frame_out.append(np.array(pil_image))
-    return frame_out[0] if len(frame_out) == 1 else frame_out
+    return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
+
+    if isinstance(return_frame, np.ndarray):
+        from IPython.display import display
+
+        display(Image.fromarray(return_frame))
+
+    return return_frame  # type: ignore
 
 
 def _get_text_coords_from_mask(
@@ -2300,7 +2346,14 @@ def overlay_segmentation_masks(
                     draw.rectangle((x, y, text_box[2], text_box[3]), fill=color[label])
                     draw.text((x, y), text, fill="black", font=font)
         frame_out.append(np.array(pil_image))
-    return frame_out[0] if len(frame_out) == 1 else frame_out
+    return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
+
+    if isinstance(return_frame, np.ndarray):
+        from IPython.display import display
+
+        display(Image.fromarray(return_frame))
+
+    return return_frame  # type: ignore
 
 
 def overlay_heat_map(
@@ -2408,6 +2461,7 @@ FUNCTION_TOOLS = [
     florence2_sam2_image,
     florence2_sam2_video_tracking,
     florence2_phrase_grounding,
+    claude35_text_extraction,
     detr_segmentation,
     depth_anything_v2,
     generate_pose_image,

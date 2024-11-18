@@ -1,4 +1,0 @@
-streamlit
-streamlit_code_editor
-streamlit-autorefresh
-zmq
