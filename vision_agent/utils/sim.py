@@ -105,7 +105,7 @@ class Sim:
         df_load = pd.read_csv(load_dir / "df.csv")
         print("Plaform", platform.system())
         if platform.system() == "Windows":
-            df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\n\n", ""))
+            df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\r", ""))
             print("DF_LOAD", df_load["doc"].iloc[0])
         print("DF LOAD", df_load["doc"])
         print("DF", df["doc"])
