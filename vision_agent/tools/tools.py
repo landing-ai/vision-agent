@@ -2180,7 +2180,8 @@ def overlay_bounding_boxes(
         bboxes = bbox_int[i]
         bboxes = sorted(bboxes, key=lambda x: x["label"], reverse=True)
 
-        if len(bboxes) > 100:
+        # if more than 50 boxes use small boxes to indicate objects else use regular boxes
+        if len(bboxes) > 50:
             pil_image = _plot_counting(pil_image, bboxes, color)
         else:
             width, height = pil_image.size

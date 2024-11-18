@@ -317,8 +317,16 @@ class VisionAgentPlannerV2(Agent):
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
     ) -> None:
-        self.planner = planner if planner is not None else AnthropicLMM(temperature=0.0)
-        self.critic = critic if critic is not None else AnthropicLMM(temperature=0.0)
+        self.planner = (
+            planner
+            if planner is not None
+            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
+        )
+        self.critic = (
+            critic
+            if critic is not None
+            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
+        )
         self.max_steps = max_steps
         self.use_multi_trial_planning = use_multi_trial_planning
         self.critique_steps = critique_steps

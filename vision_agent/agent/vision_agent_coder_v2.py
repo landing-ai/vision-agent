@@ -259,10 +259,20 @@ class VisionAgentCoderV2(Agent):
             if planner is not None
             else VisionAgentPlannerV2(verbose=verbose, update_callback=update_callback)
         )
-        self.coder = coder if coder is not None else AnthropicLMM(temperature=0.0)
-        self.tester = tester if tester is not None else AnthropicLMM(temperature=0.0)
+        self.coder = (
+            coder
+            if coder is not None
+            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
+        )
+        self.tester = (
+            tester
+            if tester is not None
+            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
+        )
         self.debugger = (
-            debugger if debugger is not None else AnthropicLMM(temperature=0.0)
+            debugger
+            if debugger is not None
+            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
         )
         if tool_recommender is not None:
             if isinstance(tool_recommender, str):
