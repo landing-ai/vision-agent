@@ -184,7 +184,8 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
 
         doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
         print("SYSTEM", platform.system())
-        if platform.system() == "Windows":
+        # on docker this ends up being 'SYSTEM Windows'
+        if "Windows" in platform.system():
             doc = doc.replace("\n\n", "\n")
         data["desc"].append(desc)
         data["doc"].append(doc)
