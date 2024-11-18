@@ -1,5 +1,8 @@
 import os
+import platform
+import shutil
 from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Union
 
@@ -18,6 +21,23 @@ def get_embedding(
     return emb_call([text])
 
 
+def load_cached_sim(
+    tools_df: pd.DataFrame, sim_key: str = "desc", cached_dir: str = ".sim_tools"
+) -> "Sim":
+    cached_dir_full_path = str(resources.files("vision_agent") / cached_dir)
+    if os.path.exists(cached_dir_full_path):
+        if tools_df is not None:
+            if Sim.check_load(cached_dir_full_path, tools_df):
+                # don't pass sim_key to loaded Sim object or else it will re-calculate embeddings
+                return Sim.load(cached_dir_full_path)
+    if os.path.exists(cached_dir_full_path):
+        shutil.rmtree(cached_dir_full_path)
+
+    sim = Sim(tools_df, sim_key=sim_key)
+    sim.save(cached_dir_full_path)
+    return sim
+
+
 class Sim:
     def __init__(
         self,
@@ -33,33 +53,59 @@ class Sim:
             df: pd.DataFrame: The dataframe to use for similarity.
             sim_key: Optional[str]: The column name that you want to use to construct
                 the embeddings.
-            model: str: The model to use for embeddings.
+            api_key: Optional[str]: The OpenAI API key to use for embeddings.
+            model: str: The model to use for embeddingshttps://github.com/landing-ai/vision-agent/pull/280.
         """
         self.df = df
-        client = OpenAI(api_key=api_key)
-        self.emb_call = (
-            lambda text: client.embeddings.create(input=text, model=model)
-            .data[0]
-            .embedding
-        )
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         if "embs" not in df.columns and sim_key is None:
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
             self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(self.emb_call, x)
+                lambda x: get_embedding(
+                    lambda text: self.client.embeddings.create(
+                        input=text, model=self.model
+                    )
+                    .data[0]
+                    .embedding,
+                    x,
+                )
             )
 
-    def save(self, sim_file: Union[str, Path]) -> None:
-        sim_file = Path(sim_file)
-        sim_file.mkdir(parents=True, exist_ok=True)
+    def save(self, save_dir: Union[str, Path]) -> None:
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
 
         df = self.df.copy()
         embs = np.array(df.embs.tolist())
-        np.save(sim_file / "embs.npy", embs)
+        np.save(save_dir / "embs.npy", embs)
         df = df.drop("embs", axis=1)
-        df.to_csv(sim_file / "df.csv", index=False)
+        df.to_csv(save_dir / "df.csv", index=False)
+
+    @staticmethod
+    def load(
+        load_dir: Union[str, Path],
+        api_key: Optional[str] = None,
+        model: str = "text-embedding-3-small",
+    ) -> "Sim":
+        load_dir = Path(load_dir)
+        df = pd.read_csv(load_dir / "df.csv")
+        embs = np.load(load_dir / "embs.npy")
+        df["embs"] = list(embs)
+        return Sim(df, api_key=api_key, model=model)
+
+    @staticmethod
+    def check_load(
+        load_dir: Union[str, Path],
+        df: pd.DataFrame,
+    ) -> bool:
+        load_dir = Path(load_dir)
+        df_load = pd.read_csv(load_dir / "df.csv")
+        if platform.system() == "Windows":
+            df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\r", ""))
+        return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
     def top_k(
@@ -76,7 +122,12 @@ class Sim:
             Sequence[Dict]: The top k most similar items.
         """
 
-        embedding = get_embedding(self.emb_call, query)
+        embedding = get_embedding(
+            lambda text: self.client.embeddings.create(input=text, model=self.model)
+            .data[0]
+            .embedding,
+            query,
+        )
         self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
         res = self.df.sort_values("sim", ascending=False).head(k)
         if thresh is not None:

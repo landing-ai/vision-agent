@@ -4,6 +4,7 @@ import os
 from base64 import b64encode
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
+import numpy as np
 import pandas as pd
 from IPython.display import display
 from pydantic import BaseModel
@@ -14,6 +15,7 @@ from urllib3.util.retry import Retry
 from vision_agent.tools.tools_types import BoundingBoxes
 from vision_agent.utils.exceptions import RemoteToolCallFailed
 from vision_agent.utils.execute import Error, MimeType
+from vision_agent.utils.image_utils import normalize_bbox
 from vision_agent.utils.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
@@ -170,7 +172,7 @@ def get_tool_descriptions_by_names(
 
 
 def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
-    data: Dict[str, List[str]] = {"desc": [], "doc": []}
+    data: Dict[str, List[str]] = {"desc": [], "doc": [], "name": []}
 
     for func in funcs:
         desc = func.__doc__
@@ -182,6 +184,7 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
         doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
         data["desc"].append(desc)
         data["doc"].append(doc)
+        data["name"].append(func.__name__)
 
     return pd.DataFrame(data)  # type: ignore
 
@@ -256,3 +259,64 @@ def filter_bboxes_by_threshold(
     bboxes: BoundingBoxes, threshold: float
 ) -> BoundingBoxes:
     return list(filter(lambda bbox: bbox.score >= threshold, bboxes))
+
+
+def add_bboxes_from_masks(
+    all_preds: List[List[Dict[str, Any]]],
+) -> List[List[Dict[str, Any]]]:
+    for frame_preds in all_preds:
+        for preds in frame_preds:
+            if np.sum(preds["mask"]) == 0:
+                preds["bbox"] = []
+            else:
+                rows, cols = np.where(preds["mask"])
+                bbox = [
+                    float(np.min(cols)),
+                    float(np.min(rows)),
+                    float(np.max(cols)),
+                    float(np.max(rows)),
+                ]
+                bbox = normalize_bbox(bbox, preds["mask"].shape)
+                preds["bbox"] = bbox
+
+    return all_preds
+
+
+def calculate_iou(bbox1: List[float], bbox2: List[float]) -> float:
+    x1, y1, x2, y2 = bbox1
+    x3, y3, x4, y4 = bbox2
+
+    x_overlap = max(0, min(x2, x4) - max(x1, x3))
+    y_overlap = max(0, min(y2, y4) - max(y1, y3))
+    intersection = x_overlap * y_overlap
+
+    area1 = (x2 - x1) * (y2 - y1)
+    area2 = (x4 - x3) * (y4 - y3)
+    union = area1 + area2 - intersection
+
+    return intersection / union if union > 0 else 0
+
+
+def single_nms(
+    preds: List[Dict[str, Any]], iou_threshold: float
+) -> List[Dict[str, Any]]:
+    for i in range(len(preds)):
+        for j in range(i + 1, len(preds)):
+            if calculate_iou(preds[i]["bbox"], preds[j]["bbox"]) > iou_threshold:
+                if preds[i]["score"] > preds[j]["score"]:
+                    preds[j]["score"] = 0
+                else:
+                    preds[i]["score"] = 0
+
+    return [pred for pred in preds if pred["score"] > 0]
+
+
+def nms(
+    all_preds: List[List[Dict[str, Any]]], iou_threshold: float
+) -> List[List[Dict[str, Any]]]:
+    return_preds = []
+    for frame_preds in all_preds:
+        frame_preds = single_nms(frame_preds, iou_threshold)
+        return_preds.append(frame_preds)
+
+    return return_preds

@@ -8,6 +8,8 @@ on:
 
 env:
   LANDINGAI_DEV_API_KEY: ${{ secrets.LANDINGAI_DEV_API_KEY }}
+  OPENAI_API_KEY: 123test
+  PYTHONUTF8: 1
 
 jobs:
   unit_test:
@@ -15,7 +17,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.9, 3.11]
-        os: [ ubuntu-22.04, windows-2022, macos-12 ]
+        os: [ ubuntu-22.04, windows-2022, macos-14 ]
     runs-on: ${{ matrix.os }}
     env:
       RUNTIME_TAG: ci_job
@@ -46,13 +48,13 @@ jobs:
         poetry run flake8 . --exclude .venv,examples,tests --count --show-source --statistics
     - name: Check Format
       run: |
-        poetry run black --check --diff --color .
+        poetry run black --check --diff --color vision_agent/
     - name: Type Checking
       run: |
         poetry run mypy vision_agent
     - name: Test with pytest
       run: |
-        poetry run pytest -v tests/unit
+        poetry run pytest -s -vvv tests/unit
 
   integ_test:
     name: Integration Test

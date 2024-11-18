@@ -190,7 +190,7 @@ PICK_PLAN = """
 1. Re-read the user request, plans, tool outputs and examine the image.
 2. Solve the problem yourself given the image and pick the most accurate plan that matches your solution the best.
 3. Add modifications to improve the plan including: changing a tool, adding thresholds, string matching.
-3. Output a JSON object with the following format:
+4. Output a JSON object with the following format:
 {{
     "predicted_answer": str # the answer you would expect from the best plan
     "thoughts": str # your thought process for choosing the best plan over other plans and any modifications you made

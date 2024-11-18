@@ -14,7 +14,7 @@ from vision_agent.agent.agent_utils import (
     DefaultImports,
     extract_code,
     extract_json,
-    format_memory,
+    format_feedback,
     format_plans,
     print_code,
 )
@@ -423,7 +423,7 @@ class VisionAgentPlanner(Agent):
                 T.get_tool_descriptions_by_names(
                     custom_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
                 ),
-                format_memory(working_memory),
+                format_feedback(working_memory),
                 self.planner,
             )
             if self.verbosity >= 1:
