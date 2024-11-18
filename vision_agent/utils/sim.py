@@ -1,4 +1,5 @@
 import os
+import platform
 import shutil
 from functools import lru_cache
 from importlib import resources
@@ -102,6 +103,8 @@ class Sim:
     ) -> bool:
         load_dir = Path(load_dir)
         df_load = pd.read_csv(load_dir / "df.csv")
+        if platform.system() == "Windows":
+            df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\n\n", ""))
         print("DF LOAD", df_load["doc"])
         print("DF", df["doc"])
         print("CHECK DF", df.equals(df_load))  # type: ignore
