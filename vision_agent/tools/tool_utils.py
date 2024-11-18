@@ -1,6 +1,7 @@
 import inspect
 import logging
 import os
+import platform
 from base64 import b64encode
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
@@ -182,8 +183,10 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
         desc = " ".join(desc.split())
 
         doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
+        if platform.system() == "Windows":
+            doc = doc.replace("\n\n", "\n")
         data["desc"].append(desc)
-        data["doc"].append(doc.replace("\n\n", "\n"))
+        data["doc"].append(doc)
         data["name"].append(func.__name__)
 
     return pd.DataFrame(data)  # type: ignore
