@@ -238,6 +238,8 @@ def write_and_test_code(
 
 
 class VisionAgentCoderV2(AgentCoder):
+    """VisionAgentCoderV2 is an agent that will write vision code for you."""
+
     def __init__(
         self,
         planner: Optional[AgentPlanner] = None,
@@ -249,6 +251,25 @@ class VisionAgentCoderV2(AgentCoder):
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
     ) -> None:
+        """Initialize the VisionAgentCoderV2.
+
+        Parameters:
+            planner (Optional[AgentPlanner]): The planner agent to use for generating
+                vision plans. If None, a default VisionAgentPlannerV2 will be used.
+            coder (Optional[LMM]): The language model to use for the coder agent. If
+                None, a default AnthropicLMM will be used.
+            tester (Optional[LMM]): The language model to use for the tester agent. If
+                None, a default AnthropicLMM will be used.
+            debugger (Optional[LMM]): The language model to use for the debugger agent.
+            tool_recommender (Optional[Union[str, Sim]]): The tool recommender to use.
+            verbose (bool): Whether to print out debug information.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
+                be one of: None, "local" or "e2b". If None, it will read from the
+                environment variable CODE_SANDBOX_RUNTIME.
+            update_callback (Callable[[Dict[str, Any]], None]): The callback function
+                that will send back intermediate conversation messages.
+        """
+
         self.planner = (
             planner
             if planner is not None
@@ -285,7 +306,20 @@ class VisionAgentCoderV2(AgentCoder):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ) -> Union[str, List[Message]]:
+    ) -> str:
+        """Generate vision code from a conversation.
+
+        Parameters:
+            input (Union[str, List[Message]]): The input to the agent. This can be a
+                string or a list of messages in the format of [{"role": "user",
+                "content": "describe your task here..."}, ...].
+            media (Optional[Union[str, Path]]): The path to the media file to use with
+                the input. This can be an image or video file.
+
+        Returns:
+            str: The generated code as a string.
+        """
+
         input_msg = convert_message_to_agentmessage(input, media)
         return self.generate_code(input_msg).code
 
@@ -294,6 +328,19 @@ class VisionAgentCoderV2(AgentCoder):
         chat: List[AgentMessage],
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> CodeContext:
+        """Generate vision code from a conversation.
+
+        Parameters:
+            chat (List[AgentMessage]): The input to the agent. This should be a list of
+                AgentMessage objects.
+            code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
+
+        Returns:
+            CodeContext: The generated code as a CodeContext object which includes the
+                code, test code, whether or not it was exceuted successfully, and the
+                execution result.
+        """
+
         chat = copy.deepcopy(chat)
         with (
             CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
@@ -315,6 +362,21 @@ class VisionAgentCoderV2(AgentCoder):
         plan_context: PlanContext,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> CodeContext:
+        """Generate vision code from a conversation and a previously made plan. This
+        will skip the planning step and go straight to generating code.
+
+        Parameters:
+            chat (List[AgentMessage]): The input to the agent. This should be a list of
+                AgentMessage objects.
+            plan_context (PlanContext): The plan context that was previously generated.
+            code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
+
+        Returns:
+            CodeContext: The generated code as a CodeContext object which includes the
+                code, test code, whether or not it was exceuted successfully, and the
+                execution result.
+        """
+
         chat = copy.deepcopy(chat)
         with (
             CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
