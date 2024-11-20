@@ -8,9 +8,7 @@ from rich.markup import escape
 import vision_agent.tools as T
 from vision_agent.agent import Agent
 from vision_agent.agent.agent_utils import (
-    CodeContext,
     DefaultImports,
-    PlanContext,
     add_media_to_chat,
     capture_media_from_exec,
     extract_tag,
@@ -19,6 +17,7 @@ from vision_agent.agent.agent_utils import (
     print_code,
     strip_function_calls,
 )
+from vision_agent.agent.types import AgentMessage, CodeContext, PlanContext
 from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
 from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
 from vision_agent.lmm import LMM, AnthropicLMM
@@ -32,6 +31,12 @@ from vision_agent.utils.execute import (
 from vision_agent.utils.sim import Sim, load_cached_sim
 
 _CONSOLE = Console()
+
+
+def format_code_context(
+    code_context: CodeContext,
+) -> str:
+    return f"<final_code>{code_context.code}</final_code>\n<final_test>{code_context.test}</final_test>"
 
 
 def retrieve_tools(
@@ -49,45 +54,43 @@ def retrieve_tools(
 
 def write_code(
     coder: LMM,
-    chat: List[Message],
+    chat: List[AgentMessage],
     tool_docs: str,
     plan: str,
 ) -> str:
     chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
+    if chat[-1].role != "user":
         raise ValueError("Last chat message must be from the user.")
 
-    user_request = chat[-1]["content"]
+    user_request = chat[-1].content
     prompt = CODE.format(
         docstring=tool_docs,
         question=user_request,
         plan=plan,
     )
-    chat[-1]["content"] = prompt
-    response = coder(chat, stream=False)
+    response = coder([{"role": "user", "content": prompt}], stream=False)
     return extract_tag(response, "code")  # type: ignore
 
 
 def write_test(
     tester: LMM,
-    chat: List[Message],
+    chat: List[AgentMessage],
     tool_util_docs: str,
     code: str,
     media_list: Optional[Sequence[Union[str, Path]]] = None,
 ) -> str:
     chat = copy.deepcopy(chat)
-    if chat[-1]["role"] != "user":
+    if chat[-1].role != "user":
         raise ValueError("Last chat message must be from the user.")
 
-    user_request = chat[-1]["content"]
+    user_request = chat[-1].content
     prompt = TEST.format(
         docstring=tool_util_docs,
         question=user_request,
         code=code,
         media=media_list,
     )
-    chat[-1]["content"] = prompt
-    response = tester(chat, stream=False)
+    response = tester([{"role": "user", "content": prompt}], stream=False)
     return extract_tag(response, "code")  # type: ignore
 
 
@@ -170,12 +173,11 @@ def write_and_test_code(
     coder: LMM,
     tester: LMM,
     debugger: LMM,
-    chat: List[Message],
+    chat: List[AgentMessage],
     plan: str,
     tool_docs: str,
     code_interpreter: CodeInterpreter,
     media_list: List[Union[str, Path]],
-    update_callback: Callable[[Dict[str, Any]], None],
     verbose: bool,
 ) -> CodeContext:
     code = write_code(
@@ -225,14 +227,6 @@ def write_and_test_code(
             _CONSOLE.print(
                 f"[bold cyan]Code execution result after attempted fix:[/bold cyan] [yellow]{escape(result.text(include_logs=True))}[/yellow]"
             )
-
-    update_callback(
-        {
-            "role": "assistant",
-            "content": f"<final_code>{DefaultImports.to_code_string()}\n{code}</final_code>\n<final_test>{DefaultImports.to_code_string()}\n{test}</final_test>",
-            "media": capture_media_from_exec(result),
-        }
-    )
 
     return CodeContext(
         code=f"{DefaultImports.to_code_string()}\n{code}",
@@ -292,15 +286,31 @@ class VisionAgentCoderV2(Agent):
         media: Optional[Union[str, Path]] = None,
     ) -> Union[str, List[Message]]:
         if isinstance(input, str):
-            input = [{"role": "user", "content": input}]
-        if media is not None:
-            input[0]["media"] = [media]
-        return self.generate_code(input).code
+            input_msg = [
+                AgentMessage(
+                    role="user",
+                    content=input,
+                    media=([media] if media is not None else None),
+                )
+            ]
+        else:
+            input_msg = [
+                AgentMessage(role=msg["role"], content=msg["content"], media=None)
+                for msg in input
+            ]
+            input_msg[0].media = [media] if media is not None else None
+        return self.generate_code(input_msg).code
 
-    def generate_code(self, chat: List[Message]) -> CodeContext:
+    def generate_code(
+        self,
+        chat: List[AgentMessage],
+        code_interpreter: Optional[CodeInterpreter] = None,
+    ) -> CodeContext:
         chat = copy.deepcopy(chat)
-        with CodeInterpreterFactory.new_instance(
-            self.code_sandbox_runtime
+        with (
+            CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
+            if code_interpreter is None
+            else code_interpreter
         ) as code_interpreter:
             int_chat, orig_chat, _ = add_media_to_chat(chat, code_interpreter)
             plan_context = self.planner.generate_plan(int_chat, code_interpreter)  # type: ignore
@@ -313,13 +323,15 @@ class VisionAgentCoderV2(Agent):
 
     def generate_code_from_plan(
         self,
-        chat: List[Message],
+        chat: List[AgentMessage],
         plan_context: PlanContext,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> CodeContext:
         chat = copy.deepcopy(chat)
-        with CodeInterpreterFactory.new_instance(
-            self.code_sandbox_runtime
+        with (
+            CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
+            if code_interpreter is None
+            else code_interpreter
         ) as code_interpreter:
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
             tool_docs = retrieve_tools(plan_context.instructions, self.tool_recommender)
@@ -331,10 +343,23 @@ class VisionAgentCoderV2(Agent):
                 plan=format_plan_v2(plan_context),
                 tool_docs=tool_docs,
                 code_interpreter=code_interpreter,
-                media_list=media_list,  # type: ignore
-                update_callback=self.update_callback,
+                media_list=media_list,
                 verbose=self.verbose,
             )
+
+        self.update_callback(
+            {
+                "role": "coder",
+                "content": format_code_context(code_context),
+                "media": capture_media_from_exec(code_context.test_result),
+            }
+        )
+        self.update_callback(
+            {
+                "role": "observation",
+                "content": code_context.test_result.text(),
+            }
+        )
         return code_context
 
     def log_progress(self, data: Dict[str, Any]) -> None:
