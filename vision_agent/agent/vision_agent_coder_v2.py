@@ -11,6 +11,7 @@ from vision_agent.agent.agent_utils import (
     DefaultImports,
     add_media_to_chat,
     capture_media_from_exec,
+    convert_message_to_agentmessage,
     extract_tag,
     format_feedback,
     format_plan_v2,
@@ -285,20 +286,7 @@ class VisionAgentCoderV2(AgentCoder):
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
     ) -> Union[str, List[Message]]:
-        if isinstance(input, str):
-            input_msg = [
-                AgentMessage(
-                    role="user",
-                    content=input,
-                    media=([media] if media is not None else None),
-                )
-            ]
-        else:
-            input_msg = [
-                AgentMessage(role=msg["role"], content=msg["content"], media=None)
-                for msg in input
-            ]
-            input_msg[0].media = [media] if media is not None else None
+        input_msg = convert_message_to_agentmessage(input, media)
         return self.generate_code(input_msg).code
 
     def generate_code(

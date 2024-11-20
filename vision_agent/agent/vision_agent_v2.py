@@ -3,7 +3,11 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 from vision_agent.agent import Agent, AgentCoder, VisionAgentCoderV2
-from vision_agent.agent.agent_utils import add_media_to_chat, extract_tag
+from vision_agent.agent.agent_utils import (
+    add_media_to_chat,
+    convert_message_to_agentmessage,
+    extract_tag,
+)
 from vision_agent.agent.types import AgentMessage, PlanContext
 from vision_agent.agent.vision_agent_coder_v2 import format_code_context
 from vision_agent.agent.vision_agent_prompts_v2 import CONVERSATION
@@ -125,7 +129,8 @@ class VisionAgentV2(Agent):
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
     ) -> str:
-        raise NotImplementedError
+        input_msg = convert_message_to_agentmessage(input, media)
+        return self.chat(input_msg)[-1].content
 
     def chat(
         self,

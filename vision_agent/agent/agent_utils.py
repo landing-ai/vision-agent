@@ -15,6 +15,7 @@ from rich.table import Table
 
 import vision_agent.tools as T
 from vision_agent.agent.types import AgentMessage, PlanContext
+from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, Execution
 from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
 
@@ -269,6 +270,27 @@ def capture_media_from_exec(execution: Execution) -> List[str]:
                     + convert_to_b64(b64_to_pil(result[format]))
                 )
     return images
+
+
+def convert_message_to_agentmessage(
+    input: Union[str, List[Message]],
+    media: Optional[Union[str, Path]] = None,
+) -> List[AgentMessage]:
+    if isinstance(input, str):
+        input_msg = [
+            AgentMessage(
+                role="user",
+                content=input,
+                media=([media] if media is not None else None),
+            )
+        ]
+    else:
+        input_msg = [
+            AgentMessage(role=msg["role"], content=msg["content"], media=None)
+            for msg in input
+        ]
+        input_msg[0].media = [media] if media is not None else None
+    return input_msg
 
 
 def strip_function_calls(  # noqa: C901
