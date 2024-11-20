@@ -115,7 +115,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     >
       {message.role === "observation" ? (
         <CollapsibleMessage content={message.content} />
-      ) : message.role === "assistant" ? (
+      ) : (message.role === "assistant" || message.role === "planner" || message.role === "coder")? (
         formatAssistantContent(message.content)
       ) : (
         message.content
