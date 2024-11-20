@@ -94,6 +94,10 @@ def maybe_run_action(
 
 
 class VisionAgentV2(Agent):
+    """VisionAgentV2 is a conversational agent that allows you to more easily use a
+    coder agent such as VisionAgentCoderV2 to write vision code for you.
+    """
+
     def __init__(
         self,
         agent: Optional[LMM] = None,
@@ -102,6 +106,21 @@ class VisionAgentV2(Agent):
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda x: None,
     ) -> None:
+        """Initialize the VisionAgentV2.
+
+        Parameters:
+            agent (Optional[LMM]): The language model to use for the agent. If None, a
+                default AnthropicLMM will be used.
+            coder (Optional[AgentCoder]): The coder agent to use for generating vision
+                code. If None, a default VisionAgentCoderV2 will be used.
+            verbose (bool): Whether to print out debug information.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
+                be one of: None, "local" or "e2b". If None, it will read from the
+                environment variable CODE_SANDBOX_RUNTIME.
+            update_callback (Callable[[Dict[str, Any]], None]): The callback function
+                that will send back intermediate conversation messages.
+        """
+
         self.agent = (
             agent
             if agent is not None
@@ -129,6 +148,21 @@ class VisionAgentV2(Agent):
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
     ) -> str:
+        """Conversational interface to the agent. This is the main method to use to
+        interact with the agent. It takes in a string or list of messages and returns
+        the agent's response as a string.
+
+        Parameters:
+            input (Union[str, List[Message]]): The input to the agent. This can be a
+                string or a list of messages in the format of [{"role": "user",
+                "content": "describe your task here..."}, ...].
+            media (Optional[Union[str, Path]]): The path to the media file to use with
+                the input. This can be an image or video file.
+
+        Returns:
+            str: The agent's response as a string.
+        """
+
         input_msg = convert_message_to_agentmessage(input, media)
         return self.chat(input_msg)[-1].content
 
@@ -136,8 +170,19 @@ class VisionAgentV2(Agent):
         self,
         chat: List[AgentMessage],
     ) -> List[AgentMessage]:
-        return_chat = []
+        """Conversational interface to the agent. This is the main method to use to
+        interact with the agent. It takes in a list of messages and returns the agent's
+        response as a list of messages.
 
+        Parameters:
+            chat (List[AgentMessage]): The input to the agent. This should be a list of
+                AgentMessage objects.
+
+        Returns:
+            List[AgentMessage]: The agent's response as a list of AgentMessage objects.
+        """
+
+        return_chat = []
         with CodeInterpreterFactory.new_instance(
             self.code_sandbox_runtime
         ) as code_interpreter:

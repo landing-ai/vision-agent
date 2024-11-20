@@ -316,6 +316,8 @@ def get_steps(chat: List[AgentMessage], max_steps: int) -> int:
 
 
 class VisionAgentPlannerV2(AgentPlanner):
+    """VisionAgentPlannerV2 is a class that generates a plan to solve a vision task."""
+
     def __init__(
         self,
         planner: Optional[LMM] = None,
@@ -327,6 +329,25 @@ class VisionAgentPlannerV2(AgentPlanner):
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
     ) -> None:
+        """Initialize the VisionAgentPlannerV2.
+
+        Parameters:
+            planner (Optional[LMM]): The language model to use for planning. If None, a
+                default AnthropicLMM will be used.
+            critic (Optional[LMM]): The language model to use for critiquing the plan.
+                If None, a default AnthropicLMM will be used.
+            max_steps (int): The maximum number of steps to plan.
+            use_multi_trial_planning (bool): Whether to use multi-trial planning.
+            critique_steps (int): The number of steps between critiques. If critic steps
+                is larger than max_steps no critiques will be made.
+            verbose (bool): Whether to print out debug information.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
+                be one of: None, "local" or "e2b". If None, it will read from the
+                environment variable CODE_SANDBOX_RUNTIME.
+            update_callback (Callable[[Dict[str, Any]], None]): The callback function
+                that will send back intermediate conversation messages.
+        """
+
         self.planner = (
             planner
             if planner is not None
@@ -349,7 +370,20 @@ class VisionAgentPlannerV2(AgentPlanner):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ) -> Union[str, List[Message]]:
+    ) -> str:
+        """Generate a plan to solve a vision task.
+
+        Parameters:
+            input (Union[str, List[Message]]): The input to the agent. This can be a
+                string or a list of messages in the format of [{"role": "user",
+                "content": "describe your task here..."}, ...].
+            media (Optional[Union[str, Path]]): The path to the media file to use with
+                the input. This can be an image or video file.
+
+        Returns:
+            str: The generated plan as a string.
+        """
+
         input_msg = convert_message_to_agentmessage(input, media)
         plan = self.generate_plan(input_msg)
         return plan.plan
@@ -359,6 +393,17 @@ class VisionAgentPlannerV2(AgentPlanner):
         chat: List[AgentMessage],
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> PlanContext:
+        """Generate a plan to solve a vision task.
+
+        Parameters:
+            chat (List[AgentMessage]): The conversation messages to generate a plan for.
+            code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
+
+        Returns:
+            PlanContext: The generated plan including the instructions and code snippets
+                needed to solve the task.
+        """
+
         if not chat:
             raise ValueError("Chat cannot be empty")
 
