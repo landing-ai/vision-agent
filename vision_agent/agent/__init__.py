@@ -17,3 +17,4 @@ from .vision_agent_planner import (
     VisionAgentPlanner,
 )
 from .vision_agent_planner_v2 import VisionAgentPlannerV2
+from .vision_agent_v2 import VisionAgentV2
