@@ -1,4 +1,4 @@
-from .agent import Agent
+from .agent import Agent, AgentCoder, AgentPlanner
 from .vision_agent import VisionAgent
 from .vision_agent_coder import (
     AnthropicVisionAgentCoder,

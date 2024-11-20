@@ -10,7 +10,7 @@ from rich.markup import escape
 
 import vision_agent.tools as T
 import vision_agent.tools.planner_tools as pt
-from vision_agent.agent import Agent
+from vision_agent.agent import AgentPlanner
 from vision_agent.agent.agent_utils import (
     add_media_to_chat,
     capture_media_from_exec,
@@ -314,7 +314,7 @@ def get_steps(chat: List[AgentMessage], max_steps: int) -> int:
     return max_steps
 
 
-class VisionAgentPlannerV2(Agent):
+class VisionAgentPlannerV2(AgentPlanner):
     def __init__(
         self,
         planner: Optional[LMM] = None,

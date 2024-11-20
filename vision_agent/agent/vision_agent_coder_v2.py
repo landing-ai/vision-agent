@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.markup import escape
 
 import vision_agent.tools as T
-from vision_agent.agent import Agent
+from vision_agent.agent import AgentCoder, AgentPlanner
 from vision_agent.agent.agent_utils import (
     DefaultImports,
     add_media_to_chat,
@@ -236,10 +236,10 @@ def write_and_test_code(
     )
 
 
-class VisionAgentCoderV2(Agent):
+class VisionAgentCoderV2(AgentCoder):
     def __init__(
         self,
-        planner: Optional[Agent] = None,
+        planner: Optional[AgentPlanner] = None,
         coder: Optional[LMM] = None,
         tester: Optional[LMM] = None,
         debugger: Optional[LMM] = None,
@@ -313,7 +313,7 @@ class VisionAgentCoderV2(Agent):
             else code_interpreter
         ) as code_interpreter:
             int_chat, orig_chat, _ = add_media_to_chat(chat, code_interpreter)
-            plan_context = self.planner.generate_plan(int_chat, code_interpreter)  # type: ignore
+            plan_context = self.planner.generate_plan(int_chat, code_interpreter)
             code_context = self.generate_code_from_plan(
                 orig_chat,
                 plan_context,
