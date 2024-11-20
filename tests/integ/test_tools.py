@@ -4,6 +4,7 @@ from PIL import Image
 
 from vision_agent.tools import (
     blip_image_caption,
+    clip,
     closest_mask_distance,
     countgd_counting,
     countgd_example_based_counting,
@@ -283,22 +284,22 @@ def test_detr_segmentation_empty():
     assert result == []
 
 
-# def test_clip():
-#     img = ski.data.coins()
-#     result = clip(
-#         classes=["coins", "notes"],
-#         image=img,
-#     )
-#     assert result["scores"] == [0.9999, 0.0001]
+def test_clip():
+    img = ski.data.coins()
+    result = clip(
+        classes=["coins", "notes"],
+        image=img,
+    )
+    assert result["scores"] == [0.9999, 0.0001]
 
 
-# def test_clip_empty():
-#     result = clip(
-#         classes=["coins", "notes"],
-#         image=np.zeros((0, 0, 3)).astype(np.uint8),
-#     )
-#     assert result["scores"] == []
-#     assert result["labels"] == []
+def test_clip_empty():
+    result = clip(
+        classes=["coins", "notes"],
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result["scores"] == []
+    assert result["labels"] == []
 
 
 def test_vit_classification():

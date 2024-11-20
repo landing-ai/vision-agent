@@ -25,6 +25,7 @@ from .tools import (
     UTILITIES_DOCSTRING,
     blip_image_caption,
     claude35_text_extraction,
+    clip,
     closest_box_distance,
     closest_mask_distance,
     countgd_counting,
