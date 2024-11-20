@@ -2,7 +2,7 @@ import copy
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
-from vision_agent.agent import Agent, VisionAgentCoderV2
+from vision_agent.agent import Agent, AgentCoder, VisionAgentCoderV2
 from vision_agent.agent.agent_utils import add_media_to_chat, extract_tag
 from vision_agent.agent.types import AgentMessage, PlanContext
 from vision_agent.agent.vision_agent_coder_v2 import format_code_context
@@ -51,7 +51,7 @@ def extract_conversation_for_generate_code(
 
 
 def maybe_run_action(
-    coder: Agent,
+    coder: AgentCoder,
     action: Optional[str],
     chat: List[AgentMessage],
     code_interpreter: Optional[CodeInterpreter] = None,
@@ -93,7 +93,7 @@ class VisionAgentV2(Agent):
     def __init__(
         self,
         agent: Optional[LMM] = None,
-        coder: Optional[Agent] = None,
+        coder: Optional[AgentCoder] = None,
         verbose: bool = False,
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda x: None,
