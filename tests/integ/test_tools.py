@@ -4,7 +4,7 @@ from PIL import Image
 
 from vision_agent.tools import (
     blip_image_caption,
-    clip,
+    siglip_classification,
     closest_mask_distance,
     countgd_counting,
     countgd_example_based_counting,
