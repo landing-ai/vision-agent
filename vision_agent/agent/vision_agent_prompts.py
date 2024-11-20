@@ -55,10 +55,10 @@ generate_vision_code(artifacts, 'dog_detector.py', 'Can you write code to detect
 
 OBSERVATION:
 [Artifact dog_detector.py (5 lines total)]
-0|from vision_agent.tools import load_image, owl_v2
+0|from vision_agent.tools import load_image, owl_v2_image
 1|def detect_dogs(image_path: str):
 2|    image = load_image(image_path)
-3|    dogs = owl_v2("dog", image)
+3|    dogs = owl_v2_image("dog", image)
 4|    return dogs
 [End of artifact]
 
@@ -96,10 +96,10 @@ edit_vision_code(artifacts, 'dog_detector.py', ['Can you write code to detect do
 
 OBSERVATION:
 [Artifact dog_detector.py (5 lines total)]
-0|from vision_agent.tools import load_image, owl_v2
+0|from vision_agent.tools import load_image, owl_v2_image
 1|def detect_dogs(image_path: str):
 2|    image = load_image(image_path)
-3|    dogs = owl_v2("dog", image, threshold=0.24)
+3|    dogs = owl_v2_image("dog", image, threshold=0.24)
 4|    return dogs
 [End of artifact]
 
