@@ -2453,7 +2453,6 @@ FUNCTION_TOOLS = [
     owl_v2_image,
     owl_v2_video,
     ocr,
-    siglip_classification,
     vit_image_classification,
     vit_nsfw_classification,
     countgd_counting,
@@ -2469,6 +2468,7 @@ FUNCTION_TOOLS = [
     closest_box_distance,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    siglip_classification,
     video_temporal_localization,
     flux_image_inpainting,
 ]
