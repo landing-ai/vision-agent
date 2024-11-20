@@ -45,6 +45,7 @@ anthropic = "^0.31.0"
 pydantic = "2.7.4"
 av = "^11.0.0"
 libcst = "^1.5.0"
+matplot = "^0.1.9"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
