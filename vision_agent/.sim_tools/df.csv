@@ -80,24 +80,6 @@ desc,doc,name
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
         ]
     ",ocr
-'clip' is a tool that can classify an image or a cropped detection given a list of input classes or tags. It returns the same list of the input classes along with their probability scores based on image content.,"clip(image: numpy.ndarray, classes: List[str]) -> Dict[str, Any]:
-'clip' is a tool that can classify an image or a cropped detection given a list
-    of input classes or tags. It returns the same list of the input classes along with
-    their probability scores based on image content.
-
-    Parameters:
-        image (np.ndarray): The image to classify or tag
-        classes (List[str]): The list of classes or tags that is associated with the image
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
-            contains a list of given labels and other a list of scores.
-
-    Example
-    -------
-        >>> clip(image, ['dog', 'cat', 'bird'])
-        {""labels"": [""dog"", ""cat"", ""bird""], ""scores"": [0.68, 0.30, 0.02]},
-    ",clip
 'vit_image_classification' is a tool that can classify an image. It returns a list of classes and their probability scores based on image content.,"vit_image_classification(image: numpy.ndarray) -> Dict[str, Any]:
 'vit_image_classification' is a tool that can classify an image. It returns a
     list of classes and their probability scores based on image content.
@@ -488,6 +470,24 @@ desc,doc,name
         ... )
         >>> save_image(result, ""inpainted_room.png"")
     ",flux_image_inpainting
+'siglip_classification' is a tool that can classify an image or a cropped detection given a list of input labels or tags. It returns the same list of the input labels along with their probability scores based on image content.,"siglip_classification(image: numpy.ndarray, labels: List[str]) -> Dict[str, Any]:
+'siglip_classification' is a tool that can classify an image or a cropped detection given a list
+    of input labels or tags. It returns the same list of the input labels along with
+    their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+        labels (List[str]): The list of labels or tags that is associated with the image
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of given labels and other a list of scores.
+
+    Example
+    -------
+        >>> siglip_classification(image, ['dog', 'cat', 'bird'])
+        {""labels"": [""dog"", ""cat"", ""bird""], ""scores"": [0.68, 0.30, 0.02]},
+    ",siglip_classification
 "'extract_frames_and_timestamps' extracts frames and timestamps from a video which can be a file path, url or youtube link, returns a list of dictionaries with keys ""frame"" and ""timestamp"" where ""frame"" is a numpy array and ""timestamp"" is the relative time in seconds where the frame was captured. The frame is a numpy array.","extract_frames_and_timestamps(video_uri: Union[str, pathlib.Path], fps: float = 1) -> List[Dict[str, Union[numpy.ndarray, float]]]:
 'extract_frames_and_timestamps' extracts frames and timestamps from a video
     which can be a file path, url or youtube link, returns a list of dictionaries
