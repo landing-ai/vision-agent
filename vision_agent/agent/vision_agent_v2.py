@@ -143,7 +143,6 @@ class VisionAgentV2(Agent):
             )
             self.update_callback(return_chat[-1].model_dump())
 
-            response = extract_tag(response_context, "response")
             action = extract_tag(response_context, "action")
 
             updated_chat = maybe_run_action(
