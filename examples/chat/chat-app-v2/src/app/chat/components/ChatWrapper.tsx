@@ -32,6 +32,7 @@ export const CollapsibleMessage = ({ content, title }: { content: string, title:
 
 const MessageGroup = ({ message }: { message: Message }) => {
   return (<>
+    <MessageBubble message={message} />
     {message.media && message.media.map((mediaURL, index) => (
       <div className={`rounded-xl overflow-hidden max-w-xs relative ${message.role === ChatParticipant.User ? "rounded-br-none self-end" : "rounded-bl-none self-start"}`} key={index}>
         <Image
@@ -46,7 +47,6 @@ const MessageGroup = ({ message }: { message: Message }) => {
           }} />
       </div>
     ))}
-    <MessageBubble message={message} />
   </>);
 }
 
@@ -80,7 +80,7 @@ export const MessageBubble = ({ message }: { message: Message }) => {
 
 
   return (
-    <div className={`flex flex-col gap-2 p-2 rounded-xl ${participantSpecificStyling} mb-4`}>
+    <div className={`flex flex-col gap-2 p-2 rounded-xl ${participantSpecificStyling} mt-4 first:mt-0`}>
       {![ChatParticipant.User, ChatParticipant.Observation].includes(message.role) && <p className="uppercase font-bold text-sm">{`[${message.role}]`}</p>}
       {BubbleContent}
     </div>
