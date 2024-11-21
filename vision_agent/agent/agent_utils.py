@@ -235,8 +235,11 @@ def add_media_to_chat(
                 if code_interpreter is not None:
                     media = str(code_interpreter.upload_file(media))
                 media_list_i.append(media)
-                # don't duplicate appending media name
-                if not str(chat_i.content).endswith(f" Media name {media}"):
+                # don't duplicate appending media name and only add them for user messages
+                if (
+                    not str(chat_i.content).endswith(f" Media name {media}")
+                    and chat_i.role == "user"
+                ):
                     chat_i.content += f" Media name {media}"
             chat_i.media = media_list_i if len(media_list_i) > 0 else None
             media_list.extend(media_list_i)
