@@ -389,7 +389,7 @@ for infos in obj_to_info:
 print(f"{len(objects_with_tape)} boxes with tape found")
 </execute_python>
 
-OBJERVATION:
+OBSERVATION:
 3 boxes were tracked
 2 boxes with tape found
 <count>6</count>

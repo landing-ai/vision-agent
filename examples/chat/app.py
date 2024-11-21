@@ -6,7 +6,8 @@ from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from vision_agent.agent import VisionAgentCoderV2
+from vision_agent.agent import VisionAgentV2
+from vision_agent.agent.types import AgentMessage
 
 app = FastAPI()
 
@@ -36,7 +37,7 @@ def update_callback(message: Dict[str, Any]):
     loop.close()
 
 
-agent = VisionAgentCoderV2(
+agent = VisionAgentV2(
     verbose=True,
     update_callback=update_callback,
 )
@@ -46,7 +47,17 @@ def process_messages_background(messages: List[Dict[str, Any]]):
     for message in messages:
         if "media" in message and message["media"] is None:
             del message["media"]
-    response = agent.generate_code(messages)
+
+    response = agent.chat(
+        [
+            AgentMessage(
+                role=message["role"],
+                content=message["content"],
+                media=message.get("media", None),
+            )
+            for message in messages
+        ]
+    )
     # Here you can handle the response, e.g., send it via WebSocket or store it
     # For now, we'll just print it
     print("Background task completed:", response)
