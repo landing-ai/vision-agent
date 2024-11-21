@@ -3,7 +3,6 @@
 import { createRef, useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Send, Upload } from "lucide-react";
 import Textarea from "react-textarea-autosize";
-import MockFinalResult from "@/mock_data/final_result.json";
 
 import { Message, ChatParticipant, agentResponseToJSX, assistantMessageToAgentResponse } from "@/lib/agent";
 import Image from "next/image";
@@ -193,10 +192,6 @@ export default function Chat() {
   }, []);
 
   // DEBUG
-  useEffect(() => {
-    console.log(MockFinalResult);
-    tryFindingFinalCode(MockFinalResult);
-  },[])
 
 
   useEffect(() => {
