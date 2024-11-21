@@ -6,7 +6,7 @@ from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from vision_agent.agent import VisionAgentCoderV2
+from vision_agent.agent import VisionAgentV2
 from vision_agent.agent.types import AgentMessage
 
 app = FastAPI()
@@ -37,7 +37,7 @@ def update_callback(message: Dict[str, Any]):
     loop.close()
 
 
-agent = VisionAgentCoderV2(
+agent = VisionAgentV2(
     verbose=True,
     update_callback=update_callback,
 )
@@ -48,7 +48,7 @@ def process_messages_background(messages: List[Dict[str, Any]]):
         if "media" in message and message["media"] is None:
             del message["media"]
 
-    response = agent.generate_code(
+    response = agent.chat(
         [
             AgentMessage(
                 role=message["role"],
