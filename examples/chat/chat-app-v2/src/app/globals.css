@@ -1,21 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@100..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 88%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 88%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-commissioner;
+  }
+  h1 {
+    @apply text-4xl font-bold pb-4;
+  }
+  h2 {
+    @apply text-xl;
+  }
+  h3 {
+    @apply text-lg;
+  }
+}
+
+.agent-background {
+  background-size: cover;
+  background: linear-gradient(to bottom, rgb(9, 9, 11), rgb(32, 32, 39));
+}
+
+.text-webkit-center {
+  text-align: -webkit-center;
+}
+
+.svg-shadow {
+  border-radius: 100%;
+  animation: svg-shadow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes svg-shadow {
+  from {
+    filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 5px transparent) drop-shadow(0 0 10px transparent);
+  }
+
+  to {
+    filter: drop-shadow(0 0 20px #fff) drop-shadow(0 0 10px transparent) drop-shadow(0 0 20px transparent);
+  }
+}
+
+.CollapsibleContent {
+  overflow: hidden;
+}
+.CollapsibleContent[data-state='open'] {
+  animation: slideDown 300ms ease-out;
+}
+.CollapsibleContent[data-state='closed'] {
+  animation: slideUp 300ms ease-out;
+}
+
+.GradientBorder {
+  position: relative;
+}
+.GradientBorder::before {
+  @apply absolute top-0 right-0 bottom-0 left-0 m-[-0.5px] pointer-events-none border border-solid;
+  content: '';
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: inherit;
+  mask-image: linear-gradient(-45deg, #fff 0%, transparent 50%);
+}
+
+.glow-box-shadow {
+  box-shadow:
+    0 0 10px rgba(200, 200, 200, 0.5),
+    0 0 20px rgba(200, 200, 200, 0.3),
+    0 0 30px rgba(255, 255, 255, 0.2);
+}
+
+/* Light Mode Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #333;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+.mask-gradient {
+  opacity: 0;
+  animation: reveal-and-hide 1.5s 0.3s forwards;
+}
+
+@keyframes reveal-and-hide {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Custom CSS to hide scrollbar */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.fade-bottom {
+  mask-image: linear-gradient(to bottom, black 250px, transparent 300px);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin; /* For Firefox */
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 2px; /* For WebKit browsers */
+  height: 2px; /* For horizontal scrollbar */
 }
