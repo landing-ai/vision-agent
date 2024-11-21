@@ -28,6 +28,13 @@ solve your vision task. Check out our discord for updates and roadmaps!
 The fastest way to test out VisionAgent is to use our web application. You can find it
 [here](https://va.landing.ai/).
 
+### Local Jupyter Notebook
+You can also run VisionAgent in a local Jupyter Notebook.  Here are some examples of using VisionAgent:
+
+1. [Counting cans in an image](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks/counting_cans.ipynb)
+
+Check out the [notebooks](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks) folder for more examples.
+
 
 ### Installation
 To get started with the python library, you can install it using pip:
@@ -462,3 +469,12 @@ agent = va.agent.AzureVisionAgentCoder()
 Failure to have sufficient API credits may result in limited or no functionality for
 the features that rely on the OpenAI API. For more details on managing your API usage
 and credits, please refer to the OpenAI API documentation.
+
+
+******************************************************************************************************************************
+
+## Troubleshooting
+
+### 1. Encounter `ModuleNotFoundError` when VisionAgent generating code
+
+If you keep seeing a `ModuleNotFoundError` when VisionAgent generating code and seeing VisionAgent got stuck and could not install the missing dependencies, you can manually add the missing dependencies into your Python environment by: `pip install <missing_package_name>`. And then try generating code again.
