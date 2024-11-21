@@ -274,7 +274,7 @@ export default function Chat() {
         </div>
       </div>
       {/* results panel */}
-      <div className={`absolute top-0 left-[40vw] size-full hidden lg:flex flex-col overflow-hidden transition-all duration-300 ${sidePanelOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div className={`absolute px-4 top-0 left-[40vw] w-[60vw] h-full hidden lg:flex flex-col overflow-hidden transition-transform duration-300 ${sidePanelOpen ? "translate-x-0" : "translate-x-full"}`}>
         <ResultsPanel code={uploadedCode} images={uploadedResultImage ? [uploadedResultImage] : null}
           backButton={(<Button
             size="sm"
