@@ -108,9 +108,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       className={`mb-4 ${
         message.role === "user"
           ? "ml-auto bg-primary text-primary-foreground"
-          : message.role === "assistant"
-          ? "mr-auto bg-muted"
-          : "mr-auto bg-secondary"
+            : message.role === "assistant"
+              ? "mr-auto bg-muted"
+              : "mr-auto bg-secondary"
       } max-w-[80%] rounded-lg p-3`}
     >
       {message.role === "observation" ? (
