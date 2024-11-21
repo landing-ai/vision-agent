@@ -69,8 +69,13 @@ def write_code(
         question=user_request,
         plan=plan,
     )
-    response = coder([{"role": "user", "content": prompt}], stream=False)
-    return extract_tag(response, "code")  # type: ignore
+    response = cast(str, coder([{"role": "user", "content": prompt}], stream=False))
+    maybe_code = extract_tag(response, "code")
+
+    # if the response wasn't properly formatted with the code tags just retrun the response
+    if maybe_code is None:
+        return response
+    return maybe_code
 
 
 def write_test(
@@ -91,8 +96,13 @@ def write_test(
         code=code,
         media=media_list,
     )
-    response = tester([{"role": "user", "content": prompt}], stream=False)
-    return extract_tag(response, "code")  # type: ignore
+    response = cast(str, tester([{"role": "user", "content": prompt}], stream=False))
+    maybe_code = extract_tag(response, "code")
+
+    # if the response wasn't properly formatted with the code tags just retrun the response
+    if maybe_code is None:
+        return response
+    return maybe_code
 
 
 def debug_code(
@@ -326,6 +336,7 @@ class VisionAgentCoderV2(AgentCoder):
     def generate_code(
         self,
         chat: List[AgentMessage],
+        max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> CodeContext:
         """Generate vision code from a conversation.
@@ -348,7 +359,9 @@ class VisionAgentCoderV2(AgentCoder):
             else code_interpreter
         ) as code_interpreter:
             int_chat, orig_chat, _ = add_media_to_chat(chat, code_interpreter)
-            plan_context = self.planner.generate_plan(int_chat, code_interpreter)
+            plan_context = self.planner.generate_plan(
+                int_chat, max_steps=max_steps, code_interpreter=code_interpreter
+            )
             code_context = self.generate_code_from_plan(
                 orig_chat,
                 plan_context,

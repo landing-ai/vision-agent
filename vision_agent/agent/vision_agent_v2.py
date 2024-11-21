@@ -60,28 +60,28 @@ def maybe_run_action(
     chat: List[AgentMessage],
     code_interpreter: Optional[CodeInterpreter] = None,
 ) -> Optional[List[AgentMessage]]:
-    if action == "plan_and_write_vision_code":
+    if action == "generate_or_edit_vision_code":
         extracted_chat = extract_conversation_for_generate_code(chat)
         # there's an issue here because coder.generate_code will send it's code_context
         # to the outside user via it's update_callback, but we don't necessarily have
         # access to that update_callback here, so we re-create the message using
         # format_code_context.
-        code_context = coder.generate_code(extracted_chat, code_interpreter)
+        code_context = coder.generate_code(
+            extracted_chat, code_interpreter=code_interpreter
+        )
         return [
             AgentMessage(role="coder", content=format_code_context(code_context)),
             AgentMessage(role="observation", content=code_context.test_result.text()),
         ]
-    elif action == "edit_vision_code":
+    elif action == "edit_code":
         extracted_chat = extract_conversation_for_generate_code(chat)
-        # place in a dummy plan because it just needs to edit the cord according to the
-        # user's latest feedback.
         plan_context = PlanContext(
-            plan="Edit the latest code observed according to the user's feedback.",
+            plan="Edit the latest code observed in the fewest steps possible according to the user's feedback.",
             instructions=[],
             code="",
         )
         code_context = coder.generate_code_from_plan(
-            extracted_chat, plan_context, code_interpreter
+            extracted_chat, plan_context, code_interpreter=code_interpreter
         )
         return [
             AgentMessage(role="coder", content=format_code_context(code_context)),
