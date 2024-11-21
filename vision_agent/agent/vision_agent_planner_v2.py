@@ -1,5 +1,6 @@
 import copy
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
@@ -203,11 +204,13 @@ def execute_code_action(
 ) -> Tuple[Execution, str, str]:
     if verbose:
         print_code("Code to Execute:", code)
+    start = time.time()
     execution = code_interpreter.exec_cell(DefaultPlanningImports.prepend_imports(code))
+    end = time.time()
     obs = execution.text(include_results=False).strip()
     if verbose:
         _CONSOLE.print(
-            f"[bold cyan]Code Execution Output:[/bold cyan] [yellow]{escape(obs)}[/yellow]"
+            f"[bold cyan]Code Execution Output ({end - start:.2f} sec):[/bold cyan] [yellow]{escape(obs)}[/yellow]"
         )
 
     count = 1
@@ -391,12 +394,14 @@ class VisionAgentPlannerV2(AgentPlanner):
     def generate_plan(
         self,
         chat: List[AgentMessage],
+        max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> PlanContext:
         """Generate a plan to solve a vision task.
 
         Parameters:
             chat (List[AgentMessage]): The conversation messages to generate a plan for.
+            max_steps (Optional[int]): The maximum number of steps to plan.
             code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
 
         Returns:
@@ -411,14 +416,15 @@ class VisionAgentPlannerV2(AgentPlanner):
         code_interpreter = code_interpreter or CodeInterpreterFactory.new_instance(
             self.code_sandbox_runtime
         )
+        max_steps = max_steps or self.max_steps
 
         with code_interpreter:
             critque_steps = 1
             finished = False
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
 
-            step = get_steps(int_chat, self.max_steps)
-            if "<count>" not in int_chat[-1].content and step == self.max_steps:
+            step = get_steps(int_chat, max_steps)
+            if "<count>" not in int_chat[-1].content and step == max_steps:
                 int_chat[-1].content += f"\n<count>{step}</count>\n"
             while step > 0 and not finished:
                 if self.use_multi_trial_planning:

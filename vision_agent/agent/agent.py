@@ -29,6 +29,7 @@ class AgentCoder(Agent):
     def generate_code(
         self,
         chat: List[AgentMessage],
+        max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> CodeContext:
         pass
@@ -48,6 +49,7 @@ class AgentPlanner(Agent):
     def generate_plan(
         self,
         chat: List[AgentMessage],
+        max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> PlanContext:
         pass
