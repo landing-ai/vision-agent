@@ -22,7 +22,7 @@ export const CollapsibleMessage = ({ content, title }: { content: string, title:
         <p>{title}</p>
       </button>
 
-      <pre className="hidden opacity-0 group-data-[is-open=true]:block group-data-[is-open=true]:opacity-100 pt-2 bg-gray-700 p-2 rounded-md overflow-x-auto text-sm">
+      <pre className="hidden opacity-0 group-data-[is-open=true]:block group-data-[is-open=true]:opacity-100 pt-2 bg-gray-800 p-2 rounded-md overflow-x-auto text-sm">
         <code>{content}</code>
       </pre>
     </div>
