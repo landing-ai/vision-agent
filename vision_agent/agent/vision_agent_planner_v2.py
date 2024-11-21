@@ -1,5 +1,6 @@
 import copy
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
@@ -10,16 +11,17 @@ from rich.markup import escape
 
 import vision_agent.tools as T
 import vision_agent.tools.planner_tools as pt
-from vision_agent.agent import Agent
+from vision_agent.agent import AgentPlanner
 from vision_agent.agent.agent_utils import (
-    PlanContext,
     add_media_to_chat,
     capture_media_from_exec,
+    convert_message_to_agentmessage,
     extract_json,
     extract_tag,
     print_code,
     print_table,
 )
+from vision_agent.agent.types import AgentMessage, PlanContext
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     CRITIQUE_PLAN,
     EXAMPLE_PLAN1,
@@ -70,26 +72,24 @@ class DefaultPlanningImports:
 
 
 def get_planning(
-    chat: List[Message],
+    chat: List[AgentMessage],
 ) -> str:
     chat = copy.deepcopy(chat)
     planning = ""
     for chat_i in chat:
-        if chat_i["role"] == "user":
-            planning += f"USER: {chat_i['content']}\n\n"
-        elif chat_i["role"] == "observation":
-            planning += f"OBSERVATION: {chat_i['content']}\n\n"
-        elif chat_i["role"] == "assistant":
-            planning += f"ASSISTANT: {chat_i['content']}\n\n"
-        else:
-            raise ValueError(f"Unknown role: {chat_i['role']}")
+        if chat_i.role == "user":
+            planning += f"USER: {chat_i.content}\n\n"
+        elif chat_i.role == "observation":
+            planning += f"OBSERVATION: {chat_i.content}\n\n"
+        elif chat_i.role == "planner":
+            planning += f"AGENT: {chat_i.content}\n\n"
 
     return planning
 
 
 def run_planning(
-    chat: List[Message],
-    media_list: List[str],
+    chat: List[AgentMessage],
+    media_list: List[Union[str, Path]],
     model: LMM,
 ) -> str:
     # only keep last 10 messages for planning
@@ -102,16 +102,16 @@ def run_planning(
     )
 
     message: Message = {"role": "user", "content": prompt}
-    if chat[-1]["role"] == "observation" and "media" in chat[-1]:
-        message["media"] = chat[-1]["media"]
+    if chat[-1].role == "observation" and chat[-1].media is not None:
+        message["media"] = chat[-1].media
 
     response = model.chat([message])
     return cast(str, response)
 
 
 def run_multi_trial_planning(
-    chat: List[Message],
-    media_list: List[str],
+    chat: List[AgentMessage],
+    media_list: List[Union[str, Path]],
     model: LMM,
 ) -> str:
     planning = get_planning(chat)
@@ -123,8 +123,8 @@ def run_multi_trial_planning(
     )
 
     message: Message = {"role": "user", "content": prompt}
-    if chat[-1]["role"] == "observation" and "media" in chat[-1]:
-        message["media"] = chat[-1]["media"]
+    if chat[-1].role == "observation" and chat[-1].media is not None:
+        message["media"] = chat[-1].media
 
     responses = []
     with ThreadPoolExecutor() as executor:
@@ -151,7 +151,9 @@ def run_multi_trial_planning(
         return cast(str, responses[0])
 
 
-def run_critic(chat: List[Message], media_list: List[str], model: LMM) -> Optional[str]:
+def run_critic(
+    chat: List[AgentMessage], media_list: List[Union[str, Path]], model: LMM
+) -> Optional[str]:
     planning = get_planning(chat)
     prompt = CRITIQUE_PLAN.format(
         planning=planning,
@@ -196,17 +198,19 @@ def response_safeguards(response: str) -> str:
 def execute_code_action(
     code: str,
     code_interpreter: CodeInterpreter,
-    chat: List[Message],
+    chat: List[AgentMessage],
     model: LMM,
     verbose: bool = False,
 ) -> Tuple[Execution, str, str]:
     if verbose:
         print_code("Code to Execute:", code)
+    start = time.time()
     execution = code_interpreter.exec_cell(DefaultPlanningImports.prepend_imports(code))
+    end = time.time()
     obs = execution.text(include_results=False).strip()
     if verbose:
         _CONSOLE.print(
-            f"[bold cyan]Code Execution Output:[/bold cyan] [yellow]{escape(obs)}[/yellow]"
+            f"[bold cyan]Code Execution Output ({end - start:.2f} sec):[/bold cyan] [yellow]{escape(obs)}[/yellow]"
         )
 
     count = 1
@@ -246,13 +250,13 @@ def find_and_replace_code(response: str, code: str) -> str:
 def maybe_run_code(
     code: Optional[str],
     response: str,
-    chat: List[Message],
-    media_list: List[str],
+    chat: List[AgentMessage],
+    media_list: List[Union[str, Path]],
     model: LMM,
     code_interpreter: CodeInterpreter,
     verbose: bool = False,
-) -> List[Message]:
-    return_chat: List[Message] = []
+) -> List[AgentMessage]:
+    return_chat: List[AgentMessage] = []
     if code is not None:
         code = code_safeguards(code)
         execution, obs, code = execute_code_action(
@@ -262,30 +266,32 @@ def maybe_run_code(
         # if we had to debug the code to fix an issue, replace the old code
         # with the fixed code in the response
         fixed_response = find_and_replace_code(response, code)
-        return_chat.append({"role": "assistant", "content": fixed_response})
+        return_chat.append(
+            AgentMessage(role="planner", content=fixed_response, media=None)
+        )
 
         media_data = capture_media_from_exec(execution)
-        int_chat_elt: Message = {"role": "observation", "content": obs}
+        int_chat_elt = AgentMessage(role="observation", content=obs, media=None)
         if media_list:
-            int_chat_elt["media"] = media_data
+            int_chat_elt.media = cast(List[Union[str, Path]], media_data)
         return_chat.append(int_chat_elt)
     else:
-        return_chat.append({"role": "assistant", "content": response})
+        return_chat.append(AgentMessage(role="planner", content=response, media=None))
     return return_chat
 
 
 def create_finalize_plan(
-    chat: List[Message],
+    chat: List[AgentMessage],
     model: LMM,
     verbose: bool = False,
-) -> Tuple[List[Message], PlanContext]:
+) -> Tuple[List[AgentMessage], PlanContext]:
     prompt = FINALIZE_PLAN.format(
         planning=get_planning(chat),
         excluded_tools=str([t.__name__ for t in pt.PLANNER_TOOLS]),
     )
     response = model.chat([{"role": "user", "content": prompt}])
     plan_str = cast(str, response)
-    return_chat: List[Message] = [{"role": "assistant", "content": plan_str}]
+    return_chat = [AgentMessage(role="planner", content=plan_str, media=None)]
 
     plan_json = extract_tag(plan_str, "json")
     plan = (
@@ -305,7 +311,16 @@ def create_finalize_plan(
     return return_chat, PlanContext(**plan)
 
 
-class VisionAgentPlannerV2(Agent):
+def get_steps(chat: List[AgentMessage], max_steps: int) -> int:
+    for chat_elt in reversed(chat):
+        if "<count>" in chat_elt.content:
+            return int(extract_tag(chat_elt.content, "count"))  # type: ignore
+    return max_steps
+
+
+class VisionAgentPlannerV2(AgentPlanner):
+    """VisionAgentPlannerV2 is a class that generates a plan to solve a vision task."""
+
     def __init__(
         self,
         planner: Optional[LMM] = None,
@@ -317,6 +332,25 @@ class VisionAgentPlannerV2(Agent):
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
     ) -> None:
+        """Initialize the VisionAgentPlannerV2.
+
+        Parameters:
+            planner (Optional[LMM]): The language model to use for planning. If None, a
+                default AnthropicLMM will be used.
+            critic (Optional[LMM]): The language model to use for critiquing the plan.
+                If None, a default AnthropicLMM will be used.
+            max_steps (int): The maximum number of steps to plan.
+            use_multi_trial_planning (bool): Whether to use multi-trial planning.
+            critique_steps (int): The number of steps between critiques. If critic steps
+                is larger than max_steps no critiques will be made.
+            verbose (bool): Whether to print out debug information.
+            code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
+                be one of: None, "local" or "e2b". If None, it will read from the
+                environment variable CODE_SANDBOX_RUNTIME.
+            update_callback (Callable[[Dict[str, Any]], None]): The callback function
+                that will send back intermediate conversation messages.
+        """
+
         self.planner = (
             planner
             if planner is not None
@@ -339,20 +373,42 @@ class VisionAgentPlannerV2(Agent):
         self,
         input: Union[str, List[Message]],
         media: Optional[Union[str, Path]] = None,
-    ) -> Union[str, List[Message]]:
-        if isinstance(input, str):
-            if media is not None:
-                input = [{"role": "user", "content": input, "media": [media]}]
-            else:
-                input = [{"role": "user", "content": input}]
-        plan = self.generate_plan(input)
-        return str(plan)
+    ) -> str:
+        """Generate a plan to solve a vision task.
+
+        Parameters:
+            input (Union[str, List[Message]]): The input to the agent. This can be a
+                string or a list of messages in the format of [{"role": "user",
+                "content": "describe your task here..."}, ...].
+            media (Optional[Union[str, Path]]): The path to the media file to use with
+                the input. This can be an image or video file.
+
+        Returns:
+            str: The generated plan as a string.
+        """
+
+        input_msg = convert_message_to_agentmessage(input, media)
+        plan = self.generate_plan(input_msg)
+        return plan.plan
 
     def generate_plan(
         self,
-        chat: List[Message],
+        chat: List[AgentMessage],
+        max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
     ) -> PlanContext:
+        """Generate a plan to solve a vision task.
+
+        Parameters:
+            chat (List[AgentMessage]): The conversation messages to generate a plan for.
+            max_steps (Optional[int]): The maximum number of steps to plan.
+            code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
+
+        Returns:
+            PlanContext: The generated plan including the instructions and code snippets
+                needed to solve the task.
+        """
+
         if not chat:
             raise ValueError("Chat cannot be empty")
 
@@ -360,13 +416,16 @@ class VisionAgentPlannerV2(Agent):
         code_interpreter = code_interpreter or CodeInterpreterFactory.new_instance(
             self.code_sandbox_runtime
         )
+        max_steps = max_steps or self.max_steps
 
         with code_interpreter:
             critque_steps = 1
-            step = self.max_steps
             finished = False
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
-            int_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
+
+            step = get_steps(int_chat, max_steps)
+            if "<count>" not in int_chat[-1].content and step == max_steps:
+                int_chat[-1].content += f"\n<count>{step}</count>\n"
             while step > 0 and not finished:
                 if self.use_multi_trial_planning:
                     response = run_multi_trial_planning(
@@ -402,29 +461,29 @@ class VisionAgentPlannerV2(Agent):
 
                 if critque_steps % self.critique_steps == 0:
                     critique = run_critic(int_chat, media_list, self.critic)
-                    if critique is not None and int_chat[-1]["role"] == "observation":
+                    if critique is not None and int_chat[-1].role == "observation":
                         _CONSOLE.print(
                             f"[bold cyan]Critique:[/bold cyan] [red]{critique}[/red]"
                         )
                         critique_str = f"\n[critique]\n{critique}\n[end of critique]"
-                        updated_chat[-1]["content"] += critique_str  # type: ignore
+                        updated_chat[-1].content += critique_str
                         # if plan was critiqued, ensure we don't finish so we can
                         # respond to the critique
                         finished = False
 
                 critque_steps += 1
                 step -= 1
-                updated_chat[-1]["content"] += f"\n<count>{step}</count>\n"  # type: ignore
+                updated_chat[-1].content += f"\n<count>{step}</count>\n"
                 int_chat.extend(updated_chat)
                 for chat_elt in updated_chat:
-                    self.update_callback(chat_elt)
+                    self.update_callback(chat_elt.model_dump())
 
             updated_chat, plan_context = create_finalize_plan(
                 int_chat, self.planner, self.verbose
             )
             int_chat.extend(updated_chat)
             for chat_elt in updated_chat:
-                self.update_callback(chat_elt)
+                self.update_callback(chat_elt.model_dump())
 
         return plan_context
 

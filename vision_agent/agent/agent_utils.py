@@ -4,16 +4,17 @@ import logging
 import re
 import sys
 import tempfile
-from typing import Any, Dict, List, Optional, Tuple, cast
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import libcst as cst
-from pydantic import BaseModel
 from rich.console import Console
 from rich.style import Style
 from rich.syntax import Syntax
 from rich.table import Table
 
 import vision_agent.tools as T
+from vision_agent.agent.types import AgentMessage, PlanContext
 from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, Execution
 from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
@@ -22,19 +23,6 @@ logging.basicConfig(stream=sys.stdout)
 _LOGGER = logging.getLogger(__name__)
 _CONSOLE = Console()
 _MAX_TABULATE_COL_WIDTH = 80
-
-
-class PlanContext(BaseModel):
-    plan: str
-    instructions: List[str]
-    code: str
-
-
-class CodeContext(BaseModel):
-    code: str
-    test: str
-    success: bool
-    test_result: Execution
 
 
 def _extract_sub_json(json_str: str) -> Optional[Dict[str, Any]]:
@@ -228,15 +216,15 @@ def print_table(title: str, columns: List[str], rows: List[List[str]]) -> None:
 
 
 def add_media_to_chat(
-    chat: List[Message], code_interpreter: CodeInterpreter
-) -> Tuple[List[Message], List[Message], List[str]]:
+    chat: List[AgentMessage], code_interpreter: Optional[CodeInterpreter] = None
+) -> Tuple[List[AgentMessage], List[AgentMessage], List[Union[str, Path]]]:
     orig_chat = copy.deepcopy(chat)
     int_chat = copy.deepcopy(chat)
-    media_list = []
+    media_list: List[Union[str, Path]] = []
     for chat_i in int_chat:
-        if "media" in chat_i:
-            media_list_i = []
-            for media in chat_i["media"]:
+        if chat_i.media is not None:
+            media_list_i: List[Union[str, Path]] = []
+            for media in chat_i.media:
                 if isinstance(media, str) and media.startswith("data:image/"):
                     media_pil = b64_to_pil(media)
                     with tempfile.NamedTemporaryFile(
@@ -244,25 +232,29 @@ def add_media_to_chat(
                     ) as temp_file:
                         media_pil.save(temp_file, format="PNG")
                         media = str(temp_file.name)
-                media = str(code_interpreter.upload_file(media))  # type: ignore
+                if code_interpreter is not None:
+                    media = str(code_interpreter.upload_file(media))
                 media_list_i.append(media)
-                # don't duplicate appending media name
-                if not str(chat_i["content"]).endswith(f" Media name {media}"):
-                    chat_i["content"] += f" Media name {media}"  # type: ignore
-            chat_i["media"] = media_list_i
+                # don't duplicate appending media name and only add them for user messages
+                if (
+                    not str(chat_i.content).endswith(f" Media name {media}")
+                    and chat_i.role == "user"
+                ):
+                    chat_i.content += f" Media name {media}"
+            chat_i.media = media_list_i if len(media_list_i) > 0 else None
             media_list.extend(media_list_i)
 
     int_chat = cast(
-        List[Message],
+        List[AgentMessage],
         [
             (
-                {
-                    "role": c["role"],
-                    "content": c["content"],
-                    "media": c["media"],
-                }
-                if "media" in c
-                else {"role": c["role"], "content": c["content"]}
+                AgentMessage(
+                    role=c.role,
+                    content=c.content,
+                    media=c.media,
+                )
+                if c.media is not None
+                else AgentMessage(role=c.role, content=c.content, media=None)
             )
             for c in int_chat
         ],
@@ -281,6 +273,27 @@ def capture_media_from_exec(execution: Execution) -> List[str]:
                     + convert_to_b64(b64_to_pil(result[format]))
                 )
     return images
+
+
+def convert_message_to_agentmessage(
+    input: Union[str, List[Message]],
+    media: Optional[Union[str, Path]] = None,
+) -> List[AgentMessage]:
+    if isinstance(input, str):
+        input_msg = [
+            AgentMessage(
+                role="user",
+                content=input,
+                media=([media] if media is not None else None),
+            )
+        ]
+    else:
+        input_msg = [
+            AgentMessage(role=msg["role"], content=msg["content"], media=None)
+            for msg in input
+        ]
+        input_msg[0].media = [media] if media is not None else None
+    return input_msg
 
 
 def strip_function_calls(  # noqa: C901

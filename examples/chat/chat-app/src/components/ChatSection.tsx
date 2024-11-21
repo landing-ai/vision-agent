@@ -21,7 +21,13 @@ interface ChatSectionProps {
 }
 
 interface Message {
-  role: "assistant" | "user" | "observation";
+  role:
+    | "assistant"
+    | "conversation"
+    | "coder"
+    | "planner"
+    | "user"
+    | "observation";
   content: string;
   media?: string[];
 }
@@ -64,7 +70,8 @@ const checkContent = (content: string) => {
   return !(finalizePlanMatch || finalCodeMatch);
 };
 
-const formatAssistantContent = (content: string) => {
+const formatAssistantContent = (role: string, content: string) => {
+  const responseMatch = content.match(/<response>(.*?)<\/response>/s);
   const thinkingMatch = content.match(/<thinking>(.*?)<\/thinking>/s);
   const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
   const finalPlanJsonMatch = content.match(/<json>(.*?)<\/json>/s);
@@ -72,10 +79,13 @@ const formatAssistantContent = (content: string) => {
   const finalPlanJson = JSON.parse(
     finalPlanJsonMatch ? finalPlanJsonMatch[1] : "{}",
   );
+
   if ("plan" in finalPlanJson && "instructions" in finalPlanJson) {
     return (
       <>
-        <div>{finalPlanJson.plan}</div>
+        <div>
+          <strong className="text-gray-700">[{role.toUpperCase()}]</strong> {finalPlanJson.plan}
+        </div>
         <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
           <code style={{ whiteSpace: "pre-wrap" }}>
             {Array.isArray(finalPlanJson.instructions)
@@ -87,10 +97,19 @@ const formatAssistantContent = (content: string) => {
     );
   }
 
-  if (thinkingMatch || pythonMatch) {
+  if (responseMatch || thinkingMatch || pythonMatch) {
     return (
       <>
-        {thinkingMatch && <div>{thinkingMatch[1]}</div>}
+        {thinkingMatch && (
+          <div>
+            <strong className="text-gray-700">[{role.toUpperCase()}]</strong> {thinkingMatch[1]}
+          </div>
+        )}
+        {responseMatch && (
+          <div>
+            <strong className="text-gray-700">[{role.toUpperCase()}]</strong> {responseMatch[1]}
+          </div>
+        )}
         {pythonMatch && (
           <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
             <code>{pythonMatch[1].trim()}</code>
@@ -115,8 +134,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     >
       {message.role === "observation" ? (
         <CollapsibleMessage content={message.content} />
-      ) : message.role === "assistant" ? (
-        formatAssistantContent(message.content)
+      ) : message.role === "assistant" ||
+        message.role === "conversation" ||
+        message.role === "planner" ||
+        message.role === "coder" ? (
+        formatAssistantContent(message.role, message.content)
       ) : (
         message.content
       )}
@@ -133,7 +155,6 @@ export function ChatSection({
   onUploadedResult,
 }: ChatSectionProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [ws, setWs] = useState<WebSocket | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
