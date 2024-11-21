@@ -51,19 +51,25 @@ const MessageGroup = ({ message }: { message: Message }) => {
 
 export const MessageBubble = ({ message }: { message: Message }) => {
   let participantSpecificStyling = "rounded-bl-none self-start";
-  let BubbleContent: JSX.Element | null;
+  let BubbleContent: JSX.Element | null = null;
   switch (message.role) {
     case ChatParticipant.User:
-      participantSpecificStyling = "rounded-br-none self-end bg-gray-800";
+      participantSpecificStyling = "rounded-br-none self-end bg-gray-700";
       BubbleContent = (<span>{message.content}</span>);
       break;
+    case ChatParticipant.Planner:
+    case ChatParticipant.Coder:
+    case ChatParticipant.Conversation:
     case ChatParticipant.Assistant:
       participantSpecificStyling += " bg-muted";
       BubbleContent = agentResponseToJSX(assistantMessageToAgentResponse(message));
       break;
     case ChatParticipant.Observation:
       participantSpecificStyling += " bg-secondary";
-      BubbleContent = (<CollapsibleMessage content={message.content} title={"Observation"} />);
+      BubbleContent = (<CollapsibleMessage content={message.content} title={"[Observation]"} />);
+      break;
+    default:
+      BubbleContent = (<span>{message.content}</span>);
       break;
   }
 
@@ -73,8 +79,8 @@ export const MessageBubble = ({ message }: { message: Message }) => {
 
 
   return (
-    <div className={`flex flex-col gap-2 p-2 rounded-xl ${participantSpecificStyling}`}>
-      <p className="uppercase font-bold text-sm">{`[${message.role}]`}</p>
+    <div className={`flex flex-col gap-2 p-2 rounded-xl ${participantSpecificStyling} mb-4`}>
+      {![ChatParticipant.User, ChatParticipant.Observation].includes(message.role) && <p className="uppercase font-bold text-sm">{`[${message.role}]`}</p>}
       {BubbleContent}
     </div>
   );
@@ -149,10 +155,10 @@ export default function Chat() {
       console.log("Received response:", data);
     } catch (error) {
       console.error("[MESSAGE POST ERR]", error);
-      setMessages((prev) => [
+      setTimeout(() => setMessages((prev) => [
         ...prev,
-        new Message(ChatParticipant.Assistant, "Sorry, there was an error processing your request.")
-      ]);
+        new Message(ChatParticipant.Assistant, "<response>Sorry, there was an error processing your request.</response>")
+      ]), 0);
     }
 
     // Clear input
