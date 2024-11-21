@@ -38,7 +38,7 @@ from vision_agent.utils.exceptions import (
 
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
-_SESSION_TIMEOUT = 600  # 10 minutes
+_SESSION_TIMEOUT = 180  # 3 minutes
 WORKSPACE = Path(os.getenv("WORKSPACE", ""))
 
 
