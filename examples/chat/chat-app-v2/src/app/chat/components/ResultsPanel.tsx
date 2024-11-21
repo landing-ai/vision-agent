@@ -18,6 +18,7 @@ export default function ResultsPanel({ code, images, backButton }: ResultsPanelP
     <div className="flex flex-col gap-2 h-full overflow-hidden">
       <ToggleGroup.Root
         type="single"
+        value={activeTab}
         defaultValue="code"
         aria-label="Execution result tab"
         className="flex gap-2"
