@@ -1,6 +1,6 @@
 'use client';
 
-import { createRef, useEffect, useState } from "react";
+import { createRef, useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Send, Upload } from "lucide-react";
 import Textarea from "react-textarea-autosize";
 import MockFinalResult from "@/mock_data/final_result.json";
@@ -89,24 +89,31 @@ export default function Chat() {
   const [uploadedResultImage, setUploadedResultImage] = useState<string | null>(null);
 
   const [userImage, setUserImage] = useState<string | null>(null);
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files;
-    console.log(selectedFiles);
-    if (!selectedFiles || selectedFiles.length < 1) return;
-    const file = selectedFiles[0];
-    if (!file || !file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
-      return;
-    }
+  const [clearInputKey, setClearInputKey] = useState<number>(Date.now());
+  const ForceClearInput = () => setClearInputKey(Date.now());
 
-    const reader = new FileReader();
-    reader.onload = (event)=> {
-      const base64String = event.target?.result as string;
-      setUserImage(base64String);
-    };
-    reader.readAsDataURL(file);
-  }
+  const handleFileUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = e.target.files;
+      console.log(selectedFiles);
+      if (!selectedFiles || selectedFiles.length < 1) return;
+      const file = selectedFiles[0];
+      if (!file || !file.type.startsWith("image/")) {
+        alert("Please upload an image file.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event)=> {
+        const base64String = event.target?.result as string;
+        setUserImage(base64String);
+      };
+      reader.readAsDataURL(file);
+    },
+    []
+  );
   const removeUserImage = () => {
+    ForceClearInput();
     setUserImage(null);
   }
 
@@ -241,6 +248,7 @@ export default function Chat() {
 
                 <input
                   type="file"
+                  key={clearInputKey}
                   ref={fileInputRef}
                   accept="image/png,image/jpeg,image/jpg,image/webp,image/heic,image/avif"
                   id="user-file-upload"
