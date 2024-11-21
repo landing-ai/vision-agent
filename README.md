@@ -477,4 +477,4 @@ and credits, please refer to the OpenAI API documentation.
 
 ### 1. Encounter `ModuleNotFoundError` when VisionAgent generating code
 
-If you keep seeing a `ModuleNotFoundError` when VisionAgent generating code and could not install the missing dependencies, you can manually add the missing dependencies into your Python environment by: `pip install <missing_package_name>`. And then try again.
+If you keep seeing a `ModuleNotFoundError` when VisionAgent generating code and seeing VisionAgent got stuck and could not install the missing dependencies, you can manually add the missing dependencies into your Python environment by: `pip install <missing_package_name>`. And then try generating code again.
