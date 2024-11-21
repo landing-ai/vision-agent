@@ -11,14 +11,16 @@ import { cn } from "@/lib/utils";
 import ResultsPanel from "./ResultsPanel";
 import { Button } from "@/components/ui/Button";
 
-export const CollapsibleMessage = ({ content, title }: { content: string, title: string }) => {
+export const CollapsibleMessage = ({ content, title }: { content: string, title: string | JSX.Element }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  if (typeof title === "string") title = (<p>{title}</p>);
 
   return (
     <div className="grid grid-rows-[20px_0fr] data-[is-open=true]:gap-2 data-[is-open=true]:grid-rows-[20px_1fr] group" data-is-open={isOpen ? "true" : undefined}>
       <button onClick={() => setIsOpen(!isOpen)} className="flex gap-2 items-center">
         {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-        <p>{title}</p>
+        {title}
       </button>
 
       <pre className="hidden opacity-0 group-data-[is-open=true]:block group-data-[is-open=true]:opacity-100 pt-2 bg-gray-800 p-2 rounded-md overflow-x-auto text-sm">
@@ -65,7 +67,7 @@ export const MessageBubble = ({ message }: { message: Message }) => {
       break;
     case ChatParticipant.Observation:
       participantSpecificStyling += " bg-secondary";
-      BubbleContent = (<CollapsibleMessage content={message.content} title={"[Observation]"} />);
+      BubbleContent = (<CollapsibleMessage content={message.content} title={(<p className="uppercase font-bold text-sm">{'[Observation]'}</p>)} />);
       break;
     default:
       BubbleContent = (<span>{message.content}</span>);
