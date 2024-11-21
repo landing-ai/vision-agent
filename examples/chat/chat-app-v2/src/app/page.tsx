@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 import Chat from "./chat/components/ChatWrapper";
 
 export default function Home() {
