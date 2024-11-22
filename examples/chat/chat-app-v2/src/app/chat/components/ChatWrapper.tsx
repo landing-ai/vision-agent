@@ -195,6 +195,27 @@ export default function Chat() {
 
   // DEBUG
 
+  const DumpConversationToClipboard = () => {
+    const messageDump = JSON.stringify(messages);
+
+    navigator.clipboard.writeText(messageDump).then(() => {
+      alert("Conversation saved to clipboard!");
+    });
+  }
+
+  const LoadConversationFromClipboard = () => {
+    navigator.clipboard.readText().then((result) => {
+      const potentialMessages = JSON.parse(result);
+      if (!Array.isArray(potentialMessages)) {
+        alert("Clipboard contents do not look like a valid conversation! Please try copying the conversation data again.");
+        return;
+      }
+
+      setMessages(potentialMessages as Message[]);
+      if (potentialMessages.length >= 3) tryFindingFinalCode(potentialMessages[potentialMessages.length - 3]);
+      alert("Loaded conversation from clipboard");
+    })
+  }
 
   useEffect(() => {
     if (messageFeedRef.current) {
@@ -218,9 +239,17 @@ export default function Chat() {
               {messages
                 .map((message, index) => <MessageGroup message={message} key={index} />)}
 
-              <Button variant="ghost" className="bg-gray-800 rounded-full p-2 w-min" onClick={() => setSidePanelOpen(true)}>
-                TEMP: Open Side Panel
-              </Button>
+              <div className="flex gap-4">
+                <Button variant="ghost" className="bg-gray-800 rounded-full p-2 w-min" onClick={() => setSidePanelOpen(true)}>
+                  TEMP: Open Side Panel
+                </Button>
+                <Button variant="ghost" className="bg-green-600 rounded-full p-2 w-min" onClick={() => DumpConversationToClipboard()}>
+                  Save Conversation to Clipboard
+                </Button>
+                <Button variant="ghost" className="bg-gray-800 rounded-full p-2 w-min" onClick={() => LoadConversationFromClipboard()}>
+                  Load Conversation from Clipboard
+                </Button>
+              </div>
             </div>
 
 
