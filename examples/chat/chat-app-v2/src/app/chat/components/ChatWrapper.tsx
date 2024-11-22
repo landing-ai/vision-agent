@@ -205,15 +205,19 @@ export default function Chat() {
 
   const LoadConversationFromClipboard = () => {
     navigator.clipboard.readText().then((result) => {
-      const potentialMessages = JSON.parse(result);
-      if (!Array.isArray(potentialMessages)) {
-        alert("Clipboard contents do not look like a valid conversation! Please try copying the conversation data again.");
-        return;
-      }
+      try {
+        const potentialMessages = JSON.parse(result);
+        if (!Array.isArray(potentialMessages)) {
+          console.error("Clipboard contents do not look like a valid conversation! Please try copying the conversation data again.");
+          return;
+        }
 
-      setMessages(potentialMessages as Message[]);
-      if (potentialMessages.length >= 3) tryFindingFinalCode(potentialMessages[potentialMessages.length - 3]);
-      alert("Loaded conversation from clipboard");
+        setMessages(potentialMessages as Message[]);
+        if (potentialMessages.length >= 3) tryFindingFinalCode(potentialMessages[potentialMessages.length - 3]);
+        alert("Loaded conversation from clipboard");
+      } catch (e) {
+        console.error("Could not load conversation from clipboard.", e);
+      }
     })
   }
 
