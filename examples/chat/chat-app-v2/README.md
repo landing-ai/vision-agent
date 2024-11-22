@@ -10,16 +10,10 @@ fastapi run
 
 to initialize the agent.
 
-Then, run the development server for this frontend UI:
+Then, install all of the dependencies for the UI with `npm i`, then run the development server for this frontend UI:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
