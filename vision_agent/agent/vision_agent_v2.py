@@ -74,6 +74,18 @@ def extract_conversation_for_generate_code(
     return extracted_chat
 
 
+def unroll_interaction(chat: List[AgentMessage]) -> List[AgentMessage]:
+    chat = copy.deepcopy(chat)
+    extracted_chat = []
+    for chat_i in chat:
+        if chat_i.role == "interaction":
+            interaction_chat = json.loads(chat_i.content)
+            extracted_chat.extend(interaction_chat)
+        else:
+            extracted_chat.append(chat_i)
+    return extracted_chat
+
+
 def maybe_run_action(
     coder: AgentCoder,
     action: Optional[str],
