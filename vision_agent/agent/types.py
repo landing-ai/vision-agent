@@ -49,3 +49,7 @@ class CodeContext(BaseModel):
     test: str
     success: bool
     test_result: Execution
+
+
+class InteractionContext(BaseModel):
+    chat: List[AgentMessage]
