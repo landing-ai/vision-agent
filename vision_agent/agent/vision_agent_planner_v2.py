@@ -212,7 +212,7 @@ def execute_code_action(
     obs = execution.text(include_results=False).strip()
     if verbose:
         _CONSOLE.print(
-            f"[bold cyan]Code Execution Output ({end - start:.2f} sec):[/bold cyan] [yellow]{escape(obs)}[/yellow]"
+            f"[bold cyan]Code Execution Output ({end - start:.2f}s):[/bold cyan] [yellow]{escape(obs)}[/yellow]"
         )
 
     count = 1
@@ -258,8 +258,11 @@ def create_hil_response(
             if format == "json":
                 data = result.json
                 try:
-                    data_dict: Dict[str, Any] = dict(data) # type: ignore
-                    if "request" in data_dict and "function_name" in data_dict["request"]:
+                    data_dict: Dict[str, Any] = dict(data)  # type: ignore
+                    if (
+                        "request" in data_dict
+                        and "function_name" in data_dict["request"]
+                    ):
                         content.append(data_dict)
                 except Exception:
                     continue
@@ -287,7 +290,6 @@ def maybe_run_code(
         execution, obs, code = execute_code_action(
             code, code_interpreter, chat, model, verbose
         )
-
 
         # if we had to debug the code to fix an issue, replace the old code
         # with the fixed code in the response
@@ -353,15 +355,25 @@ def get_steps(chat: List[AgentMessage], max_steps: int) -> int:
     return max_steps
 
 
-def add_interaction(chat: List[AgentMessage]) -> List[AgentMessage]:
+def replace_interaction_with_obs(chat: List[AgentMessage]) -> List[AgentMessage]:
     chat = copy.deepcopy(chat)
-    if chat[-1].role == "planner":
-        tool_name = extract_tag(chat[-1].content, "interaction")
-        if tool_name is not None:
-            tool_doc = get_tool_documentation(tool_name)
-            chat.append(AgentMessage(role="observation", content=tool_doc))
+    new_chat = []
 
-    return chat
+    for i, chat_i in enumerate(chat):
+        if chat_i.role == "interaction" and (
+            i < len(chat) and chat[i + 1].role == "interaction_response"
+        ):
+            try:
+                response = json.loads(chat[i + 1].content)
+                function_name = response["function_name"]
+                tool_doc = get_tool_documentation(function_name)
+                new_chat.append(AgentMessage(role="observation", content=tool_doc))
+            except json.JSONDecodeError:
+                raise ValueError(f"Invalid JSON in interaction response: {chat_i}")
+        else:
+            new_chat.append(chat_i)
+
+    return new_chat
 
 
 class VisionAgentPlannerV2(AgentPlanner):
@@ -441,8 +453,10 @@ class VisionAgentPlannerV2(AgentPlanner):
         """
 
         input_msg = convert_message_to_agentmessage(input, media)
-        plan = self.generate_plan(input_msg)
-        return plan.plan
+        plan_or_interaction = self.generate_plan(input_msg)
+        if isinstance(plan_or_interaction, InteractionContext):
+            return plan_or_interaction.chat[-1].content
+        return plan_or_interaction.plan
 
     def generate_plan(
         self,
@@ -462,21 +476,24 @@ class VisionAgentPlannerV2(AgentPlanner):
                 needed to solve the task.
         """
 
-        if not chat:
-            raise ValueError("Chat cannot be empty")
+        if not chat or chat[-1].role not in {"user", "interaction_response"}:
+            raise ValueError(
+                f"Last chat message must be from the user or interaction_response, got {chat[-1].role}."
+            )
 
         chat = copy.deepcopy(chat)
-        code_interpreter = code_interpreter or CodeInterpreterFactory.new_instance(
-            self.code_sandbox_runtime
-        )
         max_steps = max_steps or self.max_steps
 
-        with code_interpreter:
+        with (
+            CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
+            if code_interpreter is None
+            else code_interpreter
+        ) as code_interpreter:
             critque_steps = 1
             finished = False
             interaction = False
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
-            int_chat = add_interaction(int_chat)
+            int_chat = replace_interaction_with_obs(int_chat)
 
             step = get_steps(int_chat, max_steps)
             if "<count>" not in int_chat[-1].content and step == max_steps:
@@ -536,6 +553,7 @@ class VisionAgentPlannerV2(AgentPlanner):
                 for chat_elt in updated_chat:
                     self.update_callback(chat_elt.model_dump())
 
+            context: Union[PlanContext, InteractionContext]
             if interaction:
                 context = InteractionContext(chat=int_chat)
             else:
