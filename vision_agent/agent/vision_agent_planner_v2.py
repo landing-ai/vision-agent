@@ -257,8 +257,12 @@ def create_hil_response(
         for format in result.formats():
             if format == "json":
                 data = result.json
-                if isinstance(data, Dict) and "function_name" in data:
-                    content.append(data)
+                try:
+                    data_dict: Dict[str, Any] = dict(data) # type: ignore
+                    if "request" in data_dict and "function_name" in data_dict["request"]:
+                        content.append(data_dict)
+                except Exception:
+                    continue
 
     return AgentMessage(
         role="interaction",
@@ -284,9 +288,6 @@ def maybe_run_code(
             code, code_interpreter, chat, model, verbose
         )
 
-        # if we are running human-in-the-loop mode, send back an interaction message
-        if "get_tool_for_task" in code and hil:
-            return [create_hil_response(execution)]
 
         # if we had to debug the code to fix an issue, replace the old code
         # with the fixed code in the response
@@ -294,6 +295,11 @@ def maybe_run_code(
         return_chat.append(
             AgentMessage(role="planner", content=fixed_response, media=None)
         )
+
+        # if we are running human-in-the-loop mode, send back an interaction message
+        # make sure we return code from planner and the hil response
+        if "get_tool_for_task" in code and hil:
+            return return_chat + [create_hil_response(execution)]
 
         media_data = capture_media_from_exec(execution)
         int_chat_elt = AgentMessage(role="observation", content=obs, media=None)
@@ -410,7 +416,7 @@ class VisionAgentPlannerV2(AgentPlanner):
         self.hil = hil
         if self.hil:
             DefaultPlanningImports.imports.append(
-                "from vision_agent.tools.planner_tools imoprt get_tool_for_task_human_reviewer as get_tool_for_task"
+                "from vision_agent.tools.planner_tools import get_tool_for_task_human_reviewer as get_tool_for_task"
             )
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime
