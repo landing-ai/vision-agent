@@ -4,6 +4,7 @@ import tempfile
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import numpy as np
+from IPython.display import display
 from PIL import Image
 
 import vision_agent.tools as T
@@ -26,6 +27,7 @@ from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
     Execution,
+    MimeType,
 )
 from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.sim import load_cached_sim
@@ -260,9 +262,15 @@ def get_tool_for_task_human_reviewer(
             Image.fromarray(image).save(image_path)
             image_paths.append(image_path)
 
-        code, tool_docs_str, tool_output = run_tool_testing(
+        _, _, tool_output = run_tool_testing(
             task, image_paths, lmm, exclude_tools, code_interpreter
         )
+
+        # need to re-display results for the outer notebook to see them
+        for result in tool_output.results:
+            if "json" in result.formats():
+                display({MimeType.APPLICATION_JSON: result.json}, raw=True)
+
 
 
 def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
