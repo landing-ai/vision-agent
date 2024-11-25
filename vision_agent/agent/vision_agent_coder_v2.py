@@ -290,10 +290,10 @@ class VisionAgentCoderV2(AgentCoder):
         self.planner = (
             planner
             if planner is not None
-            else VisionAgentPlannerV2(verbose=verbose, update_callback=update_callback)
+            else VisionAgentPlannerV2(
+                verbose=verbose, update_callback=update_callback, hil=hil
+            )
         )
-        if hil and hasattr(self.planner, "hil"):
-            self.planner.hil = hil
 
         self.coder = (
             coder
