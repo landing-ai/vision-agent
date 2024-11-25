@@ -106,7 +106,12 @@ def maybe_run_action(
                 AgentMessage(role="observation", content=context.test_result.text()),
             ]
         elif isinstance(context, InteractionContext):
-            return [AgentMessage(role="interaction", content=json.dumps(context.chat))]
+            return [
+                AgentMessage(
+                    role="interaction",
+                    content=json.dumps([elt.model_dump() for elt in context.chat]),
+                )
+            ]
     elif action == "edit_code":
         extracted_chat = extract_conversation_for_generate_code(chat)
         plan_context = PlanContext(
@@ -136,6 +141,7 @@ class VisionAgentV2(Agent):
         self,
         agent: Optional[LMM] = None,
         coder: Optional[AgentCoder] = None,
+        hil: bool = False,
         verbose: bool = False,
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda x: None,
@@ -147,6 +153,7 @@ class VisionAgentV2(Agent):
                 default AnthropicLMM will be used.
             coder (Optional[AgentCoder]): The coder agent to use for generating vision
                 code. If None, a default VisionAgentCoderV2 will be used.
+            hil (bool): Whether to use human-in-the-loop mode.
             verbose (bool): Whether to print out debug information.
             code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
                 be one of: None, "local" or "e2b". If None, it will read from the
@@ -166,7 +173,9 @@ class VisionAgentV2(Agent):
         self.coder = (
             coder
             if coder is not None
-            else VisionAgentCoderV2(verbose=verbose, update_callback=update_callback)
+            else VisionAgentCoderV2(
+                verbose=verbose, update_callback=update_callback, hil=hil
+            )
         )
 
         self.verbose = verbose
