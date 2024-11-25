@@ -291,9 +291,6 @@ def maybe_run_code(
             code, code_interpreter, chat, model, verbose
         )
 
-        # if we are running human-in-the-loop mode, send back an interaction message
-        if "get_tool_for_task" in code and hil:
-            return [create_hil_response(execution)]
 
         # if we had to debug the code to fix an issue, replace the old code
         # with the fixed code in the response
