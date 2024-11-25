@@ -291,7 +291,6 @@ def maybe_run_code(
             code, code_interpreter, chat, model, verbose
         )
 
-
         # if we had to debug the code to fix an issue, replace the old code
         # with the fixed code in the response
         fixed_response = find_and_replace_code(response, code)
