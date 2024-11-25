@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from vision_agent.agent.types import AgentMessage, CodeContext, PlanContext
+from vision_agent.agent.types import (
+    AgentMessage,
+    CodeContext,
+    InteractionContext,
+    PlanContext,
+)
 from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter
 
@@ -31,7 +36,7 @@ class AgentCoder(Agent):
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> CodeContext:
+    ) -> Union[CodeContext, InteractionContext]:
         pass
 
     @abstractmethod
@@ -51,5 +56,5 @@ class AgentPlanner(Agent):
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> PlanContext:
+    ) -> Union[PlanContext, InteractionContext]:
         pass

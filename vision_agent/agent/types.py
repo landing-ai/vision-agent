@@ -30,6 +30,7 @@ class AgentMessage(BaseModel):
         Literal["assistant"],  # planner, coder and conversation are of type assistant
         Literal["observation"],
         Literal["interaction"],
+        Literal["interaction_response"],
         Literal["conversation"],
         Literal["planner"],
         Literal["coder"],
@@ -49,3 +50,7 @@ class CodeContext(BaseModel):
     test: str
     success: bool
     test_result: Execution
+
+
+class InteractionContext(BaseModel):
+    chat: List[AgentMessage]

@@ -1,4 +1,5 @@
 import copy
+import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
@@ -8,7 +9,12 @@ from vision_agent.agent.agent_utils import (
     convert_message_to_agentmessage,
     extract_tag,
 )
-from vision_agent.agent.types import AgentMessage, PlanContext
+from vision_agent.agent.types import (
+    AgentMessage,
+    CodeContext,
+    InteractionContext,
+    PlanContext,
+)
 from vision_agent.agent.vision_agent_coder_v2 import format_code_context
 from vision_agent.agent.vision_agent_prompts_v2 import CONVERSATION
 from vision_agent.lmm import LMM, AnthropicLMM
@@ -39,10 +45,24 @@ def run_conversation(agent: LMM, chat: List[AgentMessage]) -> str:
     return cast(str, response)
 
 
+def check_for_interaction(chat: List[AgentMessage]) -> bool:
+    return (
+        len(chat) > 2
+        and chat[-2].role == "interaction"
+        and chat[-1].role == "observation"
+    )
+
+
 def extract_conversation_for_generate_code(
     chat: List[AgentMessage],
 ) -> List[AgentMessage]:
     chat = copy.deepcopy(chat)
+
+    # if we are in the middle of an interaction, return all the intermediate planning
+    # steps
+    if check_for_interaction(chat):
+        return chat
+
     extracted_chat = []
     for chat_i in chat:
         if chat_i.role == "user":
@@ -51,6 +71,18 @@ def extract_conversation_for_generate_code(
             if "<final_code>" in chat_i.content and "<final_test>" in chat_i.content:
                 extracted_chat.append(chat_i)
 
+    return extracted_chat
+
+
+def unroll_interaction(chat: List[AgentMessage]) -> List[AgentMessage]:
+    chat = copy.deepcopy(chat)
+    extracted_chat = []
+    for chat_i in chat:
+        if chat_i.role == "interaction":
+            interaction_chat = json.loads(chat_i.content)
+            extracted_chat.extend(interaction_chat)
+        else:
+            extracted_chat.append(chat_i)
     return extracted_chat
 
 
@@ -66,13 +98,20 @@ def maybe_run_action(
         # to the outside user via it's update_callback, but we don't necessarily have
         # access to that update_callback here, so we re-create the message using
         # format_code_context.
-        code_context = coder.generate_code(
-            extracted_chat, code_interpreter=code_interpreter
-        )
-        return [
-            AgentMessage(role="coder", content=format_code_context(code_context)),
-            AgentMessage(role="observation", content=code_context.test_result.text()),
-        ]
+        context = coder.generate_code(extracted_chat, code_interpreter=code_interpreter)
+
+        if isinstance(context, CodeContext):
+            return [
+                AgentMessage(role="coder", content=format_code_context(context)),
+                AgentMessage(role="observation", content=context.test_result.text()),
+            ]
+        elif isinstance(context, InteractionContext):
+            return [
+                AgentMessage(
+                    role="interaction",
+                    content=json.dumps([elt.model_dump() for elt in context.chat]),
+                )
+            ]
     elif action == "edit_code":
         extracted_chat = extract_conversation_for_generate_code(chat)
         plan_context = PlanContext(
@@ -80,12 +119,12 @@ def maybe_run_action(
             instructions=[],
             code="",
         )
-        code_context = coder.generate_code_from_plan(
+        context = coder.generate_code_from_plan(
             extracted_chat, plan_context, code_interpreter=code_interpreter
         )
         return [
-            AgentMessage(role="coder", content=format_code_context(code_context)),
-            AgentMessage(role="observation", content=code_context.test_result.text()),
+            AgentMessage(role="coder", content=format_code_context(context)),
+            AgentMessage(role="observation", content=context.test_result.text()),
         ]
     elif action == "view_image":
         pass
@@ -102,6 +141,7 @@ class VisionAgentV2(Agent):
         self,
         agent: Optional[LMM] = None,
         coder: Optional[AgentCoder] = None,
+        hil: bool = False,
         verbose: bool = False,
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda x: None,
@@ -113,6 +153,7 @@ class VisionAgentV2(Agent):
                 default AnthropicLMM will be used.
             coder (Optional[AgentCoder]): The coder agent to use for generating vision
                 code. If None, a default VisionAgentCoderV2 will be used.
+            hil (bool): Whether to use human-in-the-loop mode.
             verbose (bool): Whether to print out debug information.
             code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
                 be one of: None, "local" or "e2b". If None, it will read from the
@@ -132,7 +173,9 @@ class VisionAgentV2(Agent):
         self.coder = (
             coder
             if coder is not None
-            else VisionAgentCoderV2(verbose=verbose, update_callback=update_callback)
+            else VisionAgentCoderV2(
+                verbose=verbose, update_callback=update_callback, hil=hil
+            )
         )
 
         self.verbose = verbose
@@ -187,18 +230,28 @@ class VisionAgentV2(Agent):
             self.code_sandbox_runtime
         ) as code_interpreter:
             int_chat, _, _ = add_media_to_chat(chat, code_interpreter)
-            response_context = run_conversation(self.agent, int_chat)
-            return_chat.append(
-                AgentMessage(role="conversation", content=response_context)
-            )
-            self.update_callback(return_chat[-1].model_dump())
 
-            action = extract_tag(response_context, "action")
+            # if we had an interaction and then recieved an observation from the user
+            # go back into the same action to finish it.
+            if check_for_interaction(int_chat):
+                action = "generate_or_edit_vision_code"
+                int_chat = unroll_interaction(int_chat)
+            else:
+                response_context = run_conversation(self.agent, int_chat)
+                return_chat.append(
+                    AgentMessage(role="conversation", content=response_context)
+                )
+                self.update_callback(return_chat[-1].model_dump())
+                action = extract_tag(response_context, "action")
 
             updated_chat = maybe_run_action(
                 self.coder, action, int_chat, code_interpreter=code_interpreter
             )
-            if updated_chat is not None:
+
+            # return an interaction early to get users feedback
+            if updated_chat is not None and updated_chat[-1].role == "interaction":
+                return_chat.extend(updated_chat)
+            elif updated_chat is not None and updated_chat[-1].role != "interaction":
                 # do not append updated_chat to return_chat becuase the observation
                 # from running the action will have already been added via the callbacks
                 obs_response_context = run_conversation(

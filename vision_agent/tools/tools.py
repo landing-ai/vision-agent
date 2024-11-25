@@ -2453,7 +2453,6 @@ FUNCTION_TOOLS = [
     owl_v2_image,
     owl_v2_video,
     ocr,
-    clip,
     vit_image_classification,
     vit_nsfw_classification,
     countgd_counting,
@@ -2471,6 +2470,7 @@ FUNCTION_TOOLS = [
     qwen2_vl_video_vqa,
     video_temporal_localization,
     flux_image_inpainting,
+    siglip_classification,
 ]
 
 UTIL_TOOLS = [
