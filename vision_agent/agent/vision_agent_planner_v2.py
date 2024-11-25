@@ -291,9 +291,6 @@ def maybe_run_code(
             code, code_interpreter, chat, model, verbose
         )
 
-        # if we are running human-in-the-loop mode, send back an interaction message
-        if "get_tool_for_task" in code and hil:
-            return [create_hil_response(execution)]
 
         # if we had to debug the code to fix an issue, replace the old code
         # with the fixed code in the response
@@ -434,11 +431,7 @@ class VisionAgentPlannerV2(AgentPlanner):
         self.hil = hil
         if self.hil:
             DefaultPlanningImports.imports.append(
-<<<<<<< HEAD
                 "from vision_agent.tools.planner_tools import get_tool_for_task_human_reviewer as get_tool_for_task"
-=======
-                "from vision_agent.tools.planner_tools imoprt get_tool_for_task_human_reviewer as get_tool_for_task"
->>>>>>> aaf33b3 (planner and coder to handle interaction type)
             )
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime
@@ -503,11 +496,7 @@ class VisionAgentPlannerV2(AgentPlanner):
             finished = False
             interaction = False
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
-<<<<<<< HEAD
             int_chat = replace_interaction_with_obs(int_chat)
-=======
-            int_chat = add_interaction(int_chat)
->>>>>>> aaf33b3 (planner and coder to handle interaction type)
 
             step = get_steps(int_chat, max_steps)
             if "<count>" not in int_chat[-1].content and step == max_steps:
@@ -567,10 +556,7 @@ class VisionAgentPlannerV2(AgentPlanner):
                 for chat_elt in updated_chat:
                     self.update_callback(chat_elt.model_dump())
 
-<<<<<<< HEAD
             context: Union[PlanContext, InteractionContext]
-=======
->>>>>>> aaf33b3 (planner and coder to handle interaction type)
             if interaction:
                 context = InteractionContext(chat=int_chat)
             else:
