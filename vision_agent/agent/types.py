@@ -30,6 +30,7 @@ class AgentMessage(BaseModel):
         Literal["assistant"],  # planner, coder and conversation are of type assistant
         Literal["observation"],
         Literal["interaction"],
+        Literal["interaction_response"],
         Literal["conversation"],
         Literal["planner"],
         Literal["coder"],
