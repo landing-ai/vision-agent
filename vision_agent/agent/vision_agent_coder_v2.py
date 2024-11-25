@@ -294,8 +294,6 @@ class VisionAgentCoderV2(AgentCoder):
                 verbose=verbose, update_callback=update_callback, hil=hil
             )
         )
-        if hil and hasattr(self.planner, "hil"):
-            self.planner.hil = hil
 
         self.coder = (
             coder
