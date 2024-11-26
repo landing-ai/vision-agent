@@ -273,6 +273,25 @@ def get_tool_for_task_human_reviewer(
                 display({MimeType.APPLICATION_JSON: result.json}, raw=True)
 
 
+def check_function_call(code: str, function_name: str) -> bool:
+    class FunctionCallVisitor(cst.CSTVisitor):
+        def __init__(self) -> None:
+            self.function_name = function_name
+            self.function_called = False
+
+        def visit_Call(self, node: cst.Call) -> None:
+            if (
+                isinstance(node.func, cst.Name)
+                and node.func.value == self.function_name
+            ):
+                self.function_called = True
+
+    tree = cst.parse_module(code)
+    visitor = FunctionCallVisitor()
+    tree.visit(visitor)
+    return visitor.function_called
+
+
 def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
     """Finalizes the plan by taking the user request and the chain of thoughts that
     represent the plan and returns the finalized plan.
