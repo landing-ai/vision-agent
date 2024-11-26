@@ -272,7 +272,6 @@ def get_tool_for_task_human_reviewer(
                 display({MimeType.APPLICATION_JSON: result.json}, raw=True)
 
 
-
 def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
     """Finalizes the plan by taking the user request and the chain of thoughts that
     represent the plan and returns the finalized plan.

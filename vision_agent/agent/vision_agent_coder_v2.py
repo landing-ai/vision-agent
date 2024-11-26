@@ -368,6 +368,11 @@ class VisionAgentCoderV2(AgentCoder):
         """
 
         chat = copy.deepcopy(chat)
+        if not chat or chat[-1].role not in {"user", "interaction_response"}:
+            raise ValueError(
+                f"Last chat message must be from the user or interaction_response, got {chat[-1].role}."
+            )
+
         with (
             CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
             if code_interpreter is None
@@ -410,6 +415,19 @@ class VisionAgentCoderV2(AgentCoder):
         """
 
         chat = copy.deepcopy(chat)
+        if not chat or chat[-1].role not in {"user", "interaction_response"}:
+            raise ValueError(
+                f"Last chat message must be from the user or interaction_response, got {chat[-1].role}."
+            )
+
+        # we don't need the user_interaction response for generating code since it's
+        # already in the plan context
+        while chat[-1].role != "user":
+            chat.pop()
+
+        if not chat:
+            raise ValueError("Chat must have at least one user message.")
+
         with (
             CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
             if code_interpreter is None

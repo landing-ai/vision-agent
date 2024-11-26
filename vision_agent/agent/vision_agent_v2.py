@@ -49,7 +49,7 @@ def check_for_interaction(chat: List[AgentMessage]) -> bool:
     return (
         len(chat) > 2
         and chat[-2].role == "interaction"
-        and chat[-1].role == "observation"
+        and chat[-1].role == "interaction_response"
     )
 
 
@@ -71,18 +71,6 @@ def extract_conversation_for_generate_code(
             if "<final_code>" in chat_i.content and "<final_test>" in chat_i.content:
                 extracted_chat.append(chat_i)
 
-    return extracted_chat
-
-
-def unroll_interaction(chat: List[AgentMessage]) -> List[AgentMessage]:
-    chat = copy.deepcopy(chat)
-    extracted_chat = []
-    for chat_i in chat:
-        if chat_i.role == "interaction":
-            interaction_chat = json.loads(chat_i.content)
-            extracted_chat.extend(interaction_chat)
-        else:
-            extracted_chat.append(chat_i)
     return extracted_chat
 
 
@@ -212,6 +200,7 @@ class VisionAgentV2(Agent):
     def chat(
         self,
         chat: List[AgentMessage],
+        code_interpreter: Optional[CodeInterpreter] = None,
     ) -> List[AgentMessage]:
         """Conversational interface to the agent. This is the main method to use to
         interact with the agent. It takes in a list of messages and returns the agent's
@@ -220,22 +209,31 @@ class VisionAgentV2(Agent):
         Parameters:
             chat (List[AgentMessage]): The input to the agent. This should be a list of
                 AgentMessage objects.
+            code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
 
         Returns:
             List[AgentMessage]: The agent's response as a list of AgentMessage objects.
         """
 
+        chat = copy.deepcopy(chat)
+        if not chat or chat[-1].role not in {"user", "interaction_response"}:
+            raise ValueError(
+                f"Last chat message must be from the user or interaction_response, got {chat[-1].role}."
+            )
+
         return_chat = []
-        with CodeInterpreterFactory.new_instance(
-            self.code_sandbox_runtime
+        with (
+            CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
+            if code_interpreter is None
+            else code_interpreter
         ) as code_interpreter:
             int_chat, _, _ = add_media_to_chat(chat, code_interpreter)
 
             # if we had an interaction and then recieved an observation from the user
             # go back into the same action to finish it.
+            action = None
             if check_for_interaction(int_chat):
                 action = "generate_or_edit_vision_code"
-                int_chat = unroll_interaction(int_chat)
             else:
                 response_context = run_conversation(self.agent, int_chat)
                 return_chat.append(

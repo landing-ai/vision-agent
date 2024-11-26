@@ -24,6 +24,8 @@ interface Message {
   role:
     | "assistant"
     | "conversation"
+    | "interaction"
+    | "interaction_response"
     | "coder"
     | "planner"
     | "user"
@@ -75,6 +77,8 @@ const formatAssistantContent = (role: string, content: string) => {
   const thinkingMatch = content.match(/<thinking>(.*?)<\/thinking>/s);
   const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
   const finalPlanJsonMatch = content.match(/<json>(.*?)<\/json>/s);
+  const interactionMatch = content.match(/<interaction>(.*?)<\/interaction>/s);
+  const interactionJson = JSON.parse(interactionMatch ? interactionMatch[1] : "{}");
 
   const finalPlanJson = JSON.parse(
     finalPlanJsonMatch ? finalPlanJsonMatch[1] : "{}",
@@ -95,6 +99,23 @@ const formatAssistantContent = (role: string, content: string) => {
         </pre>
       </>
     );
+  }
+
+  if (interactionMatch) {
+    return (
+      <>
+        <div>
+          <strong className="text-gray-700">[{role.toUpperCase()}]</strong> Function calls:
+        </div>
+        <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
+          <code style={{ whiteSpace: "pre-wrap" }}>
+            {interactionJson.map((interaction: { request: { function_name: string } }) => 
+              `- ${interaction.request.function_name}`
+            ).join('\n')}
+          </code>
+        </pre>
+      </>
+    )
   }
 
   if (responseMatch || thinkingMatch || pythonMatch) {
@@ -125,7 +146,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <div
       className={`mb-4 ${
-        message.role === "user"
+        (message.role === "user" || message.role === "interaction_response")
           ? "ml-auto bg-primary text-primary-foreground"
             : message.role === "assistant"
               ? "mr-auto bg-muted"
@@ -137,6 +158,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       ) : message.role === "assistant" ||
         message.role === "conversation" ||
         message.role === "planner" ||
+        message.role === "interaction" ||
         message.role === "coder" ? (
         formatAssistantContent(message.role, message.content)
       ) : (
@@ -162,15 +184,24 @@ export function ChatSection({
     const input = form.elements.namedItem("message") as HTMLInputElement;
 
     if (input.value.trim()) {
-      const userMessage = { role: "user", content: input.value } as Message;
-      if (uploadedImage) {
-        userMessage.media = [uploadedImage];
+      let userMessage: Message;
+      if (messages.length > 0 && messages[messages.length - 1].role === "interaction") {
+        userMessage = {
+          role: "interaction_response",
+          content: JSON.stringify({function_name: input.value})
+        } as Message;
+      } else {
+        userMessage = { role: "user", content: input.value } as Message;
+        if (uploadedImage) {
+          userMessage.media = [uploadedImage];
+        }
       }
 
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
 
       try {
+        console.log("Sending message:", userMessage);
         const response = await fetch("http://localhost:8000/chat", {
           method: "POST",
           headers: {
