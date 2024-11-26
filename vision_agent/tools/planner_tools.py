@@ -63,6 +63,48 @@ def extract_tool_info(
     return tool, tool_thoughts, tool_docstring, ""
 
 
+def replace_box_threshold(code: str, functions: List[str], box_threshold: float) -> str:
+    class ReplaceBoxThresholdTransformer(cst.CSTTransformer):
+        def leave_Call(
+            self, original_node: cst.Call, updated_node: cst.Call
+        ) -> cst.Call:
+            if (
+                isinstance(updated_node.func, cst.Name)
+                and updated_node.func.value in functions
+            ) or (
+                isinstance(updated_node.func, cst.Attribute)
+                and updated_node.func.attr.value in functions
+            ):
+                new_args = []
+                found = False
+                for arg in updated_node.args:
+                    if arg.keyword and arg.keyword.value == "box_threshold":
+                        new_arg = arg.with_changes(value=cst.Float(str(box_threshold)))
+                        new_args.append(new_arg)
+                        found = True
+                    else:
+                        new_args.append(arg)
+
+                if not found:
+                    new_args.append(
+                        cst.Arg(
+                            keyword=cst.Name("box_threshold"),
+                            value=cst.Float(str(box_threshold)),
+                            equal=cst.AssignEqual(
+                                whitespace_before=cst.SimpleWhitespace(""),
+                                whitespace_after=cst.SimpleWhitespace(""),
+                            )
+                        )
+                    )
+                return updated_node.with_changes(args=new_args)
+            return updated_node
+
+    tree = cst.parse_module(code)
+    transformer = ReplaceBoxThresholdTransformer()
+    new_tree = tree.visit(transformer)
+    return new_tree.code
+
+
 def run_tool_testing(
     task: str,
     image_paths: List[str],
