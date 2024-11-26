@@ -33,7 +33,7 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     PLAN,
 )
 from vision_agent.lmm import LMM, AnthropicLMM, Message
-from vision_agent.tools.planner_tools import get_tool_documentation
+from vision_agent.tools.planner_tools import check_function_call, get_tool_documentation
 from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
@@ -300,7 +300,7 @@ def maybe_run_code(
 
         # if we are running human-in-the-loop mode, send back an interaction message
         # make sure we return code from planner and the hil response
-        if "get_tool_for_task" in code and hil:
+        if check_function_call(code, "get_tool_for_task") and hil:
             return return_chat + [create_hil_response(execution)]
 
         media_data = capture_media_from_exec(execution)
