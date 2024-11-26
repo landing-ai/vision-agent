@@ -72,4 +72,5 @@ class InteractionContext(BaseModel):
 
     chat: A list of messages exchanged between the user and the assistant.
     """
+
     chat: List[AgentMessage]
