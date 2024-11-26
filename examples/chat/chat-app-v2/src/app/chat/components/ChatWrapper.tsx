@@ -4,7 +4,7 @@ import { createRef, useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Send, Upload } from "lucide-react";
 import Textarea from "react-textarea-autosize";
 
-import { Message, ChatParticipant, agentResponseToJSX, assistantMessageToAgentResponse } from "@/lib/agent";
+import { Message, ChatParticipant, agentResponseToJSX, assistantMessageToAgentResponse, interactionResponseToJSX, interactionMessageToAgentResponse, ToolConfiguration, InteractionResponse } from "@/lib/agent";
 import Image from "next/image";
 import { IconArrowDown, IconClose } from "@/components/Icons";
 import { cn } from "@/lib/utils";
@@ -30,9 +30,9 @@ export const CollapsibleMessage = ({ content, title }: { content: string, title:
   );
 };
 
-const MessageGroup = ({ message }: { message: Message }) => {
+const MessageGroup = ({ message, interactionResponseHandler }: { message: Message, interactionResponseHandler: (response: InteractionResponse) => void }) => {
   return (<>
-    <MessageBubble message={message} />
+    <MessageBubble message={message} interactionResponseHandler={interactionResponseHandler} />
     {message.media && message.media.map((mediaURL, index) => (
       <div className={`rounded-xl overflow-hidden max-w-xs relative ${message.role === ChatParticipant.User ? "rounded-br-none self-end" : "rounded-bl-none self-start"}`} key={index}>
         <Image
@@ -50,8 +50,14 @@ const MessageGroup = ({ message }: { message: Message }) => {
   </>);
 }
 
-export const MessageBubble = ({ message }: { message: Message }) => {
-  let participantSpecificStyling = "rounded-bl-none self-start";
+export const MessageBubble = ({
+  message,
+  interactionResponseHandler
+}: {
+  message: Message,
+  interactionResponseHandler: (response: InteractionResponse) => void
+}) => {
+  let participantSpecificStyling = "rounded-bl-none self-start bg-gray-900";
   let BubbleContent: JSX.Element | null = null;
   switch (message.role) {
     case ChatParticipant.User:
@@ -62,6 +68,7 @@ export const MessageBubble = ({ message }: { message: Message }) => {
     case ChatParticipant.Coder:
     case ChatParticipant.Conversation:
     case ChatParticipant.Assistant:
+    case ChatParticipant.AssistantError:
       participantSpecificStyling += " bg-muted";
       BubbleContent = agentResponseToJSX(assistantMessageToAgentResponse(message));
       break;
@@ -69,6 +76,11 @@ export const MessageBubble = ({ message }: { message: Message }) => {
       participantSpecificStyling += " bg-secondary";
       BubbleContent = (<CollapsibleMessage content={message.content} title={(<p className="uppercase font-bold text-sm">{'[Observation]'}</p>)} />);
       break;
+    case ChatParticipant.Interaction:
+      BubbleContent = interactionResponseToJSX(interactionMessageToAgentResponse(message), interactionResponseHandler);
+      break;
+    case ChatParticipant.InteractionResponse:
+      participantSpecificStyling = "rounded-br-none self-end bg-gray-700";
     default:
       BubbleContent = (<span>{message.content}</span>);
       break;
@@ -89,6 +101,37 @@ export const MessageBubble = ({ message }: { message: Message }) => {
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const appendMessage = (message: Message) => setMessages([...messages, message]);
+  /* HOOK TO SEND UPDATED CHAT WHEN MESSAGES UPDATE. */
+  useEffect(() => {
+    if (messages.length < 1) return;
+    const lastMessageWasUser = [ChatParticipant.User, ChatParticipant.InteractionResponse].includes(messages[messages.length - 1].role);
+    if (!lastMessageWasUser) return;
+    (async () => {
+      try {
+        const response = await fetch("http://localhost:8000/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(messages),
+        });
+
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+
+        const data = await response.json();
+        console.log("Received response:", data);
+      } catch (error) {
+        console.error("[MESSAGE POST ERR]", error);
+        setTimeout(() => setMessages((prev) => [
+          ...prev,
+          new Message(ChatParticipant.AssistantError, "<response>Sorry, there was an error processing your request.</response>")
+        ]), 0);
+      }
+    })();
+  }, [messages])
 
   const [sidePanelOpen, setSidePanelOpen] = useState<boolean>(false);
 
@@ -124,7 +167,7 @@ export default function Chat() {
     setUserImage(null);
   }
 
-  const handleUserMessage = async (e: React.FormEvent) => {
+  const handleUserMessage = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const prompt = form.elements.namedItem("message") as HTMLTextAreaElement;
@@ -136,35 +179,16 @@ export default function Chat() {
       userMessage.media = [userImage];
     }
 
-    const allMessages = [...messages, userMessage];
-    setMessages(allMessages);
-
-    try {
-      const response = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(allMessages),
-      });
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const data = await response.json();
-      console.log("Received response:", data);
-    } catch (error) {
-      console.error("[MESSAGE POST ERR]", error);
-      setTimeout(() => setMessages((prev) => [
-        ...prev,
-        new Message(ChatParticipant.Assistant, "<response>Sorry, there was an error processing your request.</response>")
-      ]), 0);
-    }
+    appendMessage(userMessage);
 
     // Clear input
     prompt.value = "";
     removeUserImage();
+  }
+
+  const handleInteractionSelection = (choice: InteractionResponse) => {
+    const interactionResponseMessage = new Message(ChatParticipant.InteractionResponse, JSON.stringify(choice));
+    appendMessage(interactionResponseMessage);
   }
 
   const tryFindingFinalCode = (message: Message) => {
@@ -193,7 +217,6 @@ export default function Chat() {
     return () => ws.close();
   }, []);
 
-  // DEBUG
 
   const DumpConversationToClipboard = () => {
     const messageDump = JSON.stringify(messages);
@@ -241,7 +264,7 @@ export default function Chat() {
             className="flex flex-col items-center justify-between gap-4 overflow-y-auto hide-scrollbar px-8 h-full">
             <div className="flex flex-col items-center gap-2 w-full">
               {messages
-                .map((message, index) => <MessageGroup message={message} key={index} />)}
+                .map((message, index) => <MessageGroup message={message} key={index} interactionResponseHandler={handleInteractionSelection} />)}
 
               <div className="flex gap-4">
                 <Button variant="ghost" className="bg-gray-800 rounded-full p-2 w-min" onClick={() => setSidePanelOpen(true)}>
