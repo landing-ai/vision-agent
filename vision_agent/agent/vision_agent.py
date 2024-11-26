@@ -18,6 +18,7 @@ from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
 from vision_agent.tools.meta_tools import (
     META_TOOL_DOCSTRING,
     Artifacts,
+    check_and_load_image,
     use_extra_vision_agent_args,
 )
 from vision_agent.utils import CodeInterpreterFactory
@@ -388,6 +389,13 @@ class VisionAgent(Agent):
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
             last_user_message = chat[-1]
+            for chat_i in int_chat:
+                if "media" in chat_i:
+                    for media in chat_i["media"]:
+                        media = cast(str, media)
+                        media_remote_path = Path(artifacts.cwd) / Path(media).name
+                        chat_i["content"] += f" Media name {media_remote_path}"  # type: ignore
+
             int_chat = cast(
                 List[Message],
                 [
@@ -500,6 +508,12 @@ class VisionAgent(Agent):
                         code_interpreter,
                     )
                     obs_chat_elt: Message = {"role": "observation", "content": obs}
+                    media_obs = check_and_load_image(code_action)
+                    print(media_obs)
+                    if media_obs and result.success:
+                        obs_chat_elt["media"] = [
+                            artifacts.cwd / media_ob for media_ob in media_obs
+                        ]
 
                     if self.verbosity >= 1:
                         _LOGGER.info(obs)
