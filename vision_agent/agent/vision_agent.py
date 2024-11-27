@@ -36,14 +36,10 @@ class BoilerplateCode:
     pre_code = [
         "from typing import *",
         "from vision_agent.utils.execute import CodeInterpreter",
-        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning, list_artifacts, capture_files_into_artifacts",
-        "artifacts = Artifacts('{remote_path}', '{remote_path}')",
-        "artifacts.load('{remote_path}')",
+        "from vision_agent.tools.meta_tools import Artifacts, open_code_artifact, create_code_artifact, edit_code_artifact, get_tool_descriptions, generate_vision_code, edit_vision_code, view_media_artifact, object_detection_fine_tuning, use_object_detection_fine_tuning, list_artifacts",
+        "artifacts = Artifacts('{cwd}')",
     ]
-    post_code = [
-        "capture_files_into_artifacts(artifacts)",
-        "artifacts.save()",
-    ]
+    post_code: List[str] = []
 
     @staticmethod
     def add_boilerplate(code: str, **format: Any) -> str:
@@ -149,9 +145,7 @@ def execute_code_action(
     code_interpreter: CodeInterpreter,
 ) -> Tuple[Execution, str]:
     result = code_interpreter.exec_isolation(
-        BoilerplateCode.add_boilerplate(
-            code, remote_path=str(artifacts.remote_save_path)
-        )
+        BoilerplateCode.add_boilerplate(code, cwd=str(artifacts.cwd))
     )
 
     obs = str(result.logs)
@@ -210,19 +204,6 @@ def add_step_descriptions(response: Dict[str, Any]) -> Dict[str, Any]:
         response["response"] = description
 
     return response
-
-
-def setup_artifacts() -> Artifacts:
-    # this is setting remote artifacts path
-    sandbox = os.environ.get("CODE_SANDBOX_RUNTIME", None)
-    if sandbox is None or sandbox == "local":
-        remote = WORKSPACE / "artifacts.pkl"
-    elif sandbox == "e2b":
-        remote = Path("/home/user/artifacts.pkl")
-    else:
-        raise ValueError(f"Unknown code sandbox runtime {sandbox}")
-    artifacts = Artifacts(remote, Path(os.getcwd()) / "artifacts.pkl")
-    return artifacts
 
 
 def new_format_to_old_format(new_format: Dict[str, Any]) -> Dict[str, Any]:
@@ -297,9 +278,10 @@ class VisionAgent(Agent):
     def __init__(
         self,
         agent: Optional[LMM] = None,
+        cwd: Optional[Union[Path, str]] = None,
         verbosity: int = 0,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
+        code_sandbox_runtime: Optional[str] = None,
     ) -> None:
         """Initialize the VisionAgent.
 
@@ -317,9 +299,10 @@ class VisionAgent(Agent):
 
         self.agent = AnthropicLMM(temperature=0.0) if agent is None else agent
         self.max_iterations = 12
+        self.cwd = Path(cwd) if cwd is not None else Path.cwd()
         self.verbosity = verbosity
-        self.code_interpreter = code_interpreter
         self.callback_message = callback_message
+        self.code_sandbox_runtime = code_sandbox_runtime
         if self.verbosity >= 1:
             _LOGGER.setLevel(logging.INFO)
 
@@ -397,40 +380,21 @@ class VisionAgent(Agent):
             raise ValueError("chat cannot be empty")
 
         if not artifacts:
-            artifacts = setup_artifacts()
+            artifacts = Artifacts(self.cwd)
 
-        # NOTE: each chat should have a dedicated code interpreter instance to avoid concurrency issues
-        code_interpreter = (
-            self.code_interpreter
-            if self.code_interpreter is not None
-            and not isinstance(self.code_interpreter, str)
-            else CodeInterpreterFactory.new_instance(
-                code_sandbox_runtime=self.code_interpreter,
-                remote_path=artifacts.remote_save_path.parent,
-            )
-        )
-
-        if code_interpreter.remote_path != artifacts.remote_save_path.parent:
-            raise ValueError(
-                f"Code interpreter remote path {code_interpreter.remote_path} does not match artifacts remote path {artifacts.remote_save_path.parent}"
-            )
-
-        with code_interpreter:
+        with CodeInterpreterFactory.new_instance(
+            code_sandbox_runtime=self.code_sandbox_runtime,
+            remote_path=self.cwd,
+        ) as code_interpreter:
             orig_chat = copy.deepcopy(chat)
             int_chat = copy.deepcopy(chat)
             last_user_message = chat[-1]
-            media_list = []
             for chat_i in int_chat:
                 if "media" in chat_i:
                     for media in chat_i["media"]:
                         media = cast(str, media)
-                        artifacts.artifacts[Path(media).name] = open(media, "rb").read()
-
-                        media_remote_path = (
-                            Path(artifacts.remote_save_path.parent) / Path(media).name
-                        )
+                        media_remote_path = Path(artifacts.cwd) / Path(media).name
                         chat_i["content"] += f" Media name {media_remote_path}"  # type: ignore
-                        media_list.append(media_remote_path)
 
             int_chat = cast(
                 List[Message],
@@ -452,15 +416,10 @@ class VisionAgent(Agent):
             iterations = 0
             last_response = None
 
-            # Save the current state of artifacts, will include any images the user
-            # passed in.
-            artifacts.save()
-
             # Upload artifacts to remote location and show where they are going
             # to be loaded to. The actual loading happens in BoilerplateCode as
             # part of the pre_code.
-            code_interpreter.upload_file(artifacts.local_save_path)
-            artifacts_loaded = artifacts.show(artifacts.remote_save_path.parent)
+            artifacts_loaded = artifacts.show()
             int_chat.append({"role": "observation", "content": artifacts_loaded})
             orig_chat.append({"role": "observation", "content": artifacts_loaded})
             self.streaming_message({"role": "observation", "content": artifacts_loaded})
@@ -487,10 +446,6 @@ class VisionAgent(Agent):
                 )
 
             while not finished and iterations < self.max_iterations:
-                # ensure we upload the artifacts before each turn, so any local
-                # modifications we made to it will be reflected in the remote
-                code_interpreter.upload_file(artifacts.local_save_path)
-
                 response = run_conversation(self.agent, int_chat)
                 if self.verbosity >= 1:
                     _LOGGER.info(response)
@@ -555,11 +510,8 @@ class VisionAgent(Agent):
                     obs_chat_elt: Message = {"role": "observation", "content": obs}
                     media_obs = check_and_load_image(code_action)
                     if media_obs and result.success:
-                        # media paths will be under the local_save_path when we download
-                        # them after each turn
                         obs_chat_elt["media"] = [
-                            artifacts.local_save_path.parent / media_ob
-                            for media_ob in media_obs
+                            artifacts.cwd / media_ob for media_ob in media_obs
                         ]
 
                     if self.verbosity >= 1:
@@ -581,15 +533,6 @@ class VisionAgent(Agent):
                 iterations += 1
                 last_response = response
 
-                # after each turn, download the artifacts locally
-                code_interpreter.download_file(
-                    str(artifacts.remote_save_path.name),
-                    str(artifacts.local_save_path),
-                )
-                artifacts.load(
-                    artifacts.local_save_path, artifacts.local_save_path.parent
-                )
-
         return orig_chat, artifacts
 
     def streaming_message(self, message: Dict[str, Any]) -> None:
@@ -604,9 +547,9 @@ class OpenAIVisionAgent(VisionAgent):
     def __init__(
         self,
         agent: Optional[LMM] = None,
+        cwd: Optional[Union[Path, str]] = None,
         verbosity: int = 0,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the VisionAgent using OpenAI LMMs.
 
@@ -625,9 +568,9 @@ class OpenAIVisionAgent(VisionAgent):
         agent = OpenAILMM(temperature=0.0, json_mode=True) if agent is None else agent
         super().__init__(
             agent,
+            cwd,
             verbosity,
             callback_message,
-            code_interpreter,
         )
 
 
@@ -635,9 +578,9 @@ class AnthropicVisionAgent(VisionAgent):
     def __init__(
         self,
         agent: Optional[LMM] = None,
+        cwd: Optional[Union[Path, str]] = None,
         verbosity: int = 0,
         callback_message: Optional[Callable[[Dict[str, Any]], None]] = None,
-        code_interpreter: Optional[Union[str, CodeInterpreter]] = None,
     ) -> None:
         """Initialize the VisionAgent using Anthropic LMMs.
 
@@ -656,7 +599,7 @@ class AnthropicVisionAgent(VisionAgent):
         agent = AnthropicLMM(temperature=0.0) if agent is None else agent
         super().__init__(
             agent,
+            cwd,
             verbosity,
             callback_message,
-            code_interpreter,
         )
