@@ -28,7 +28,7 @@ from .tools import (
     clip,
     closest_box_distance,
     closest_mask_distance,
-    countgd_counting,
+    countgd_object_detection,
     countgd_example_based_counting,
     depth_anything_v2,
     detr_segmentation,

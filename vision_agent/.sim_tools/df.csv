@@ -112,11 +112,11 @@ desc,doc,name
         >>> vit_nsfw_classification(image)
         {""label"": ""normal"", ""scores"": 0.68},
     ",vit_nsfw_classification
-"'countgd_counting' is a tool that can detect multiple instances of an object given a text prompt. It is particularly useful when trying to detect and count a large number of objects. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores.","countgd_counting(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
-'countgd_counting' is a tool that can detect multiple instances of an object
-    given a text prompt. It is particularly useful when trying to detect and count a
-    large number of objects. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated confidence scores.
+"'countgd_object_detection' is a tool that can detect multiple instances of an object given a text prompt. It is particularly useful when trying to detect and count a large number of objects. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores.","countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
+'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated confidence scores.
 
     Parameters:
         prompt (str): The object that needs to be counted.
@@ -133,14 +133,14 @@ desc,doc,name
 
     Example
     -------
-        >>> countgd_counting(""flower"", image)
+        >>> countgd_object_detection(""flower"", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
             {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
-    ",countgd_counting
+    ",countgd_object_detection
 "'florence2_ocr' is a tool that can detect text and text regions in an image. Each text region contains one line of text. It returns a list of detected text, the text region as a bounding box with normalized coordinates, and confidence scores. The results are sorted from top-left to bottom right.","florence2_ocr(image: numpy.ndarray) -> List[Dict[str, Any]]:
 'florence2_ocr' is a tool that can detect text and text regions in an image.
     Each text region contains one line of text. It returns a list of detected text,
@@ -237,12 +237,12 @@ desc,doc,name
             ...
         ]
     ",florence2_sam2_video_tracking
-"'florence2_phrase_grounding' is a tool that can detect multiple objects given a text prompt which can be object names or caption. You can optionally separate the object names in the text with commas. It returns a list of bounding boxes with normalized coordinates, label names and associated probability scores of 1.0.","florence2_phrase_grounding(prompt: str, image: numpy.ndarray, fine_tune_id: Optional[str] = None) -> List[Dict[str, Any]]:
+"'florence2_phrase_grounding' is a tool that can detect multiple objects given a text prompt which can be object names or caption. You can optionally separate the object names in the text with commas. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores of 1.0.","florence2_phrase_grounding(prompt: str, image: numpy.ndarray, fine_tune_id: Optional[str] = None) -> List[Dict[str, Any]]:
 'florence2_phrase_grounding' is a tool that can detect multiple
     objects given a text prompt which can be object names or caption. You
     can optionally separate the object names in the text with commas. It returns a list
     of bounding boxes with normalized coordinates, label names and associated
-    probability scores of 1.0.
+    confidence scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.

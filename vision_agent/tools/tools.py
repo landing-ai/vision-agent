@@ -677,15 +677,15 @@ def loca_visual_prompt_counting(
     return resp_data
 
 
-def countgd_counting(
+def countgd_object_detection(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
-    """'countgd_counting' is a tool that can detect multiple instances of an object
-    given a text prompt. It is particularly useful when trying to detect and count a
-    large number of objects. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated confidence scores.
+    """'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated confidence scores.
 
     Parameters:
         prompt (str): The object that needs to be counted.
@@ -702,7 +702,7 @@ def countgd_counting(
 
     Example
     -------
-        >>> countgd_counting("flower", image)
+        >>> countgd_object_detection("flower", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -1292,7 +1292,7 @@ def florence2_phrase_grounding(
     objects given a text prompt which can be object names or caption. You
     can optionally separate the object names in the text with commas. It returns a list
     of bounding boxes with normalized coordinates, label names and associated
-    probability scores of 1.0.
+    confidence scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -2445,7 +2445,7 @@ FUNCTION_TOOLS = [
     ocr,
     vit_image_classification,
     vit_nsfw_classification,
-    countgd_counting,
+    countgd_object_detection,
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video_tracking,

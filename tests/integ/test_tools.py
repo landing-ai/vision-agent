@@ -6,7 +6,7 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
-    countgd_counting,
+    countgd_object_detection,
     countgd_example_based_counting,
     depth_anything_v2,
     detr_segmentation,
@@ -519,13 +519,13 @@ def test_generate_hed():
 
 def test_countgd_counting():
     img = ski.data.coins()
-    result = countgd_counting(image=img, prompt="coin")
+    result = countgd_object_detection(image=img, prompt="coin")
     assert len(result) == 24
     assert [res["label"] for res in result] == ["coin"] * 24
 
 
 def test_countgd_counting_empty():
-    result = countgd_counting(
+    result = countgd_object_detection(
         prompt="coin",
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
