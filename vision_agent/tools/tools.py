@@ -2229,11 +2229,6 @@ def overlay_bounding_boxes(
         frame_out.append(np.array(pil_image))
     return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
 
-    if isinstance(return_frame, np.ndarray):
-        from IPython.display import display
-
-        display(Image.fromarray(return_frame))
-
     return return_frame  # type: ignore
 
 
@@ -2347,11 +2342,6 @@ def overlay_segmentation_masks(
                     draw.text((x, y), text, fill="black", font=font)
         frame_out.append(np.array(pil_image))
     return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
-
-    if isinstance(return_frame, np.ndarray):
-        from IPython.display import display
-
-        display(Image.fromarray(return_frame))
 
     return return_frame  # type: ignore
 
