@@ -509,7 +509,6 @@ class VisionAgent(Agent):
                     )
                     obs_chat_elt: Message = {"role": "observation", "content": obs}
                     media_obs = check_and_load_image(code_action)
-                    print(media_obs)
                     if media_obs and result.success:
                         obs_chat_elt["media"] = [
                             artifacts.cwd / media_ob for media_ob in media_obs
