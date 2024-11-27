@@ -381,4 +381,3 @@ PLANNER_TOOLS = [
     T.save_video,
 ]
 PLANNER_DOCSTRING = T.get_tool_documentation(PLANNER_TOOLS)  # type: ignore
->>>>>>> 21d71ea (redisplay tool calls so outside world can see them)
