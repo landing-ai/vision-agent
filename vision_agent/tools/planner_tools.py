@@ -283,7 +283,7 @@ def get_tool_for_task_human_reviewer(
         tools = [
             t.__name__
             for t in T.TOOLS
-            if inspect.signature(t).parameters.get("box_threshold")
+            if inspect.signature(t).parameters.get("box_threshold")  # type: ignore
         ]
 
         _, _, tool_output = run_tool_testing(
