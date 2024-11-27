@@ -213,6 +213,8 @@ def _call_post(
     files_in_b64 = None
     if files:
         files_in_b64 = [(file[0], b64encode(file[1]).decode("utf-8")) for file in files]
+
+    tool_call_trace = None
     try:
         if files is not None:
             response = session.post(url, data=payload, files=files)
@@ -250,9 +252,10 @@ def _call_post(
         tool_call_trace.response = result
         return result
     finally:
-        trace = tool_call_trace.model_dump()
-        trace["type"] = "tool_call"
-        display({MimeType.APPLICATION_JSON: trace}, raw=True)
+        if tool_call_trace is not None:
+            trace = tool_call_trace.model_dump()
+            trace["type"] = "tool_call"
+            display({MimeType.APPLICATION_JSON: trace}, raw=True)
 
 
 def filter_bboxes_by_threshold(
