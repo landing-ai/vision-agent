@@ -448,7 +448,7 @@ You are given a task: {task} from the user. Your task is to extract the type of 
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
 
-Return the category inside tags <category># your categories here</category>.
+Return the category or categories (comma separated) inside tags <category># your categories here</category>.
 """
 
 TEST_TOOLS = """
