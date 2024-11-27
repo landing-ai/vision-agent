@@ -298,7 +298,7 @@ class VisionAgent(Agent):
         """
 
         self.agent = AnthropicLMM(temperature=0.0) if agent is None else agent
-        self.max_iterations = 12
+        self.max_iterations = 5
         self.cwd = Path(cwd) if cwd is not None else Path.cwd()
         self.verbosity = verbosity
         self.callback_message = callback_message
