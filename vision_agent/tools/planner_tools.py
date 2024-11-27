@@ -1,3 +1,4 @@
+import inspect
 import logging
 import shutil
 import tempfile
@@ -93,7 +94,7 @@ def replace_box_threshold(code: str, functions: List[str], box_threshold: float)
                             equal=cst.AssignEqual(
                                 whitespace_before=cst.SimpleWhitespace(""),
                                 whitespace_after=cst.SimpleWhitespace(""),
-                            )
+                            ),
                         )
                     )
                 return updated_node.with_changes(args=new_args)
@@ -111,6 +112,7 @@ def run_tool_testing(
     lmm: LMM,
     exclude_tools: Optional[List[str]],
     code_interpreter: CodeInterpreter,
+    process_code: Callable[[str], str] = lambda x: x,
 ) -> tuple[str, str, Execution]:
     """Helper function to generate and run tool testing code."""
     query = lmm.generate(CATEGORIZE_TOOL_REQUEST.format(task=task))
@@ -143,6 +145,7 @@ def run_tool_testing(
     code = extract_tag(response, "code")  # type: ignore
     if code is None:
         raise ValueError(f"Could not extract code from response: {response}")
+    code = process_code(code)
     tool_output = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
     tool_output_str = tool_output.text(include_results=False).strip()
 
@@ -161,6 +164,7 @@ def run_tool_testing(
             media=str(image_paths),
         )
         code = extract_code(lmm.generate(prompt, media=image_paths))  # type: ignore
+        code = process_code(code)
         tool_output = code_interpreter.exec_isolation(
             DefaultImports.prepend_imports(code)
         )
@@ -263,36 +267,7 @@ def get_tool_documentation(tool_name: str) -> str:
 def get_tool_for_task_human_reviewer(
     task: str, images: List[np.ndarray], exclude_tools: Optional[List[str]] = None
 ) -> None:
-    # NOTE: this should be the same documentation as get_tool_for_task
-    """Given a task and one or more images this function will find a tool to accomplish
-    the jobs. It prints the tool documentation and thoughts on why it chose the tool.
-
-    It can produce tools for the following types of tasks:
-        - Object detection and counting
-        - Classification
-        - Segmentation
-        - OCR
-        - VQA
-        - Depth and pose estimation
-        - Video object tracking
-
-    Wait until the documentation is printed to use the function so you know what the
-    input and output signatures are.
-
-    Parameters:
-        task: str: The task to accomplish.
-        images: List[np.ndarray]: The images to use for the task.
-        exclude_tools: Optional[List[str]]: A list of tool names to exclude from the
-            recommendations. This is helpful if you are calling get_tool_for_task twice
-            and do not want the same tool recommended.
-
-    Returns:
-        The tool to use for the task is printed to stdout
-
-    Examples
-    --------
-        >>> get_tool_for_task("Give me an OCR model that can find 'hot chocolate' in the image", [image])
-    """
+    # NOTE: this will have the same documentation as get_tool_for_task
     lmm = AnthropicLMM()
 
     with (
@@ -305,8 +280,19 @@ def get_tool_for_task_human_reviewer(
             Image.fromarray(image).save(image_path)
             image_paths.append(image_path)
 
+        tools = [
+            t.__name__
+            for t in T.TOOLS
+            if inspect.signature(t).parameters.get("box_threshold")
+        ]
+
         _, _, tool_output = run_tool_testing(
-            task, image_paths, lmm, exclude_tools, code_interpreter
+            task,
+            image_paths,
+            lmm,
+            exclude_tools,
+            code_interpreter,
+            process_code=lambda x: replace_box_threshold(x, tools, 0.1),
         )
 
         # need to re-display results for the outer notebook to see them
