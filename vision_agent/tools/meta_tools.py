@@ -1,7 +1,6 @@
 import difflib
 import json
 import os
-import pickle as pkl
 import re
 import subprocess
 import tempfile
@@ -73,95 +72,41 @@ class Artifacts:
     need to be in sync with the remote environment the VisionAgent is running in.
     """
 
-    def __init__(
-        self, remote_save_path: Union[str, Path], local_save_path: Union[str, Path]
-    ) -> None:
+    def __init__(self, cwd: Union[str, Path]) -> None:
         """Initializes the Artifacts object with it's remote and local save paths.
 
         Parameters:
-            remote_save_path (Union[str, Path]): The path to save the artifacts in the
-                remote environment. For example "/home/user/artifacts.pkl".
-            local_save_path (Union[str, Path]): The path to save the artifacts in the
-                local environment. For example "/Users/my_user/workspace/artifacts.pkl".
+            cwd (Union[str, Path]): The path to save all the chat related files. For example "/home/user/chat_abc/".
         """
-        self.remote_save_path = Path(remote_save_path)
-        self.local_save_path = Path(local_save_path)
-        self.artifacts: Dict[str, Any] = {}
+        self.cwd = Path(cwd)
 
-        self.code_sandbox_runtime = None
-
-    def load(
-        self,
-        artifacts_path: Union[str, Path],
-        load_to_dir: Optional[Union[str, Path]] = None,
-    ) -> None:
-        """Loads are artifacts into the load_to_dir directory. If load_to_dir is None,
-        it will load into remote_save_path directory. If an artifact value is None it
-        will skip loading it.
-
-        Parameters:
-            artifacts_path (Union[str, Path]): The file path to load the artifacts from.
-                If you are in the remote environment this would be remote_save_path, if
-                you are in the local environment this would be local_save_path.
-            load_to_dir (Optional[Union[str, Path]): The directory to load the artifacts
-                into. If None, it will load into remote_save_path directory.
-        """
-        with open(artifacts_path, "rb") as f:
-            self.artifacts = pkl.load(f)
-
-        load_to_dir = (
-            self.remote_save_path.parent if load_to_dir is None else Path(load_to_dir)
-        )
-
-        for k, v in self.artifacts.items():
-            if v is not None:
-                mode = "w" if isinstance(v, str) else "wb"
-                with open(load_to_dir / k, mode) as f:
-                    f.write(v)
-
-    def show(self, uploaded_file_dir: Optional[Union[str, Path]] = None) -> str:
-        """Prints out the artifacts and the directory they have been loaded to. If you
-        pass in upload_file_dir, it will show the artifacts have been loaded to the
-        upload_file_dir directory. If you don't pass in upload_file_dir, it will show
-        the artifacts have been loaded to the remote_save_path directory.
-
-        Parameters:
-            uploaded_file_dir (Optional[Union[str, Path]): The directory the artifacts
-                have been loaded to.
-        """
-        loaded_path = (
-            Path(uploaded_file_dir)
-            if uploaded_file_dir is not None
-            else self.remote_save_path.parent
-        )
+    def show(self) -> str:
+        """Prints out all the files in the curret working directory"""
         output_str = "[Artifacts loaded]\n"
-        for k in self.artifacts.keys():
-            output_str += (
-                f"Artifact name: {k}, loaded to path: {str(loaded_path / k)}\n"
-            )
+        for k in self:
+            output_str += f"Artifact name: {k}, loaded to path: {str(self.cwd / k)}\n"
         output_str += "[End of artifacts]\n"
         print(output_str)
         return output_str
 
-    def save(self, local_path: Optional[Union[str, Path]] = None) -> None:
-        """Saves the artifacts to the local_save_path directory. If local_path is None,
-        it will save to the local_save_path directory.
-        """
-        save_path = Path(local_path) if local_path is not None else self.local_save_path
-        with open(save_path, "wb") as f:
-            pkl.dump(self.artifacts, f)
-
     def __iter__(self) -> Any:
-        return iter(self.artifacts)
+        return iter(os.listdir(self.cwd))
 
     def __getitem__(self, name: str) -> Any:
-        return self.artifacts[name]
+        file_path = self.cwd / name
+        if file_path.exists():
+            with open(file_path, "r") as file:
+                return file.read()
+        else:
+            raise KeyError(f"File '{name}' not found in artifacts")
 
     def __setitem__(self, name: str, value: Any) -> None:
-        self.artifacts[name] = value
+        file_path = self.cwd / name
+        with open(file_path, "w") as file:
+            file.write(value)
 
     def __contains__(self, name: str) -> bool:
-        return name in self.artifacts
+        return name in os.listdir(self.cwd)
 
 
 def filter_file(file_name: Union[str, Path]) -> Tuple[bool, bool]:
@@ -173,27 +118,6 @@ def filter_file(file_name: Union[str, Path]) -> Tuple[bool, bool]:
         and file_name_p.suffix
         in [".png", ".jpeg", ".jpg", ".mp4", ".txt", ".json", ".csv"]
     ), file_name_p.suffix in [".png", ".jpeg", ".jpg", ".mp4"]
-
-
-def capture_files_into_artifacts(artifacts: Artifacts) -> None:
-    """This function is used to capture all files in the current directory into an
-    artifact object. This is useful if you want to capture all files in the current
-    directory and use them in a different environment where you don't have access to
-    the file system.
-
-    Parameters:
-        artifact (Artifacts): The artifact object to save the files to.
-    """
-    for file in Path(".").glob("**/*"):
-        usable_file, is_media = filter_file(file)
-        mode = "rb" if is_media else "r"
-        if usable_file:
-            file_name = file.name
-            if file_name.startswith(str(Path(artifacts.remote_save_path).parents)):
-                idx = len(Path(artifacts.remote_save_path).parents)
-                file_name = file_name[idx:]
-            with open(file, mode) as f:
-                artifacts[file_name] = f.read()
 
 
 # These tools are adapted from SWE-Agent https://github.com/princeton-nlp/SWE-agent
