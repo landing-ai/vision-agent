@@ -292,7 +292,7 @@ def get_tool_for_task_human_reviewer(
             lmm,
             exclude_tools,
             code_interpreter,
-            process_code=lambda x: replace_box_threshold(x, tools, 0.1),
+            process_code=lambda x: replace_box_threshold(x, tools, 0.05),
         )
 
         # need to re-display results for the outer notebook to see them
