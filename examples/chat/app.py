@@ -8,8 +8,10 @@ from pydantic import BaseModel
 
 from vision_agent.agent import VisionAgentV2
 from vision_agent.agent.types import AgentMessage
+from vision_agent.utils.execute import CodeInterpreterFactory
 
 app = FastAPI()
+DEBUG_HIL = False
 
 # Configure CORS
 app.add_middleware(
@@ -37,10 +39,20 @@ def update_callback(message: Dict[str, Any]):
     loop.close()
 
 
-agent = VisionAgentV2(
-    verbose=True,
-    update_callback=update_callback,
-)
+if DEBUG_HIL:
+    # Use this code for debugging human-in-the-loop mode.
+    agent = VisionAgentV2(
+        verbose=True,
+        update_callback=update_callback,
+        hil=True,
+    )
+    code_interpreter = CodeInterpreterFactory.new_instance(non_exiting=True)
+else:
+    agent = VisionAgentV2(
+        verbose=True,
+        update_callback=update_callback,
+    )
+    code_interpreter = CodeInterpreterFactory.new_instance()
 
 
 def process_messages_background(messages: List[Dict[str, Any]]):
@@ -56,11 +68,9 @@ def process_messages_background(messages: List[Dict[str, Any]]):
                 media=message.get("media", None),
             )
             for message in messages
-        ]
+        ],
+        code_interpreter=code_interpreter,
     )
-    # Here you can handle the response, e.g., send it via WebSocket or store it
-    # For now, we'll just print it
-    print("Background task completed:", response)
 
 
 class Message(BaseModel):

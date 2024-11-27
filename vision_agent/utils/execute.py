@@ -398,17 +398,20 @@ class CodeInterpreter(abc.ABC):
         self,
         timeout: int,
         remote_path: Optional[Union[str, Path]] = None,
+        non_exiting: bool = False,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         self.timeout = timeout
         self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
+        self.non_exiting = non_exiting
 
     def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc_info: Any) -> None:
-        self.close()
+        if not self.non_exiting:
+            self.close()
 
     def close(self, *args: Any, **kwargs: Any) -> None:
         raise NotImplementedError()
@@ -571,8 +574,9 @@ class LocalCodeInterpreter(CodeInterpreter):
         self,
         timeout: int = _SESSION_TIMEOUT,
         remote_path: Optional[Union[str, Path]] = None,
+        non_exiting: bool = False,
     ) -> None:
-        super().__init__(timeout=timeout)
+        super().__init__(timeout=timeout, non_exiting=non_exiting)
         self.nb = nbformat.v4.new_notebook()
         # Set the notebook execution path to the remote path
         self.remote_path = Path(remote_path if remote_path is not None else WORKSPACE)
@@ -692,6 +696,7 @@ class CodeInterpreterFactory:
     def new_instance(
         code_sandbox_runtime: Optional[str] = None,
         remote_path: Optional[Union[str, Path]] = None,
+        non_exiting: bool = False,
     ) -> CodeInterpreter:
         if not code_sandbox_runtime:
             code_sandbox_runtime = os.getenv("CODE_SANDBOX_RUNTIME", "local")
@@ -702,7 +707,9 @@ class CodeInterpreterFactory:
             )
         elif code_sandbox_runtime == "local":
             instance = LocalCodeInterpreter(
-                timeout=_SESSION_TIMEOUT, remote_path=remote_path
+                timeout=_SESSION_TIMEOUT,
+                remote_path=remote_path,
+                non_exiting=non_exiting,
             )
         else:
             raise ValueError(

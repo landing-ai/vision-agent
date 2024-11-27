@@ -18,7 +18,12 @@ from vision_agent.agent.agent_utils import (
     print_code,
     strip_function_calls,
 )
-from vision_agent.agent.types import AgentMessage, CodeContext, PlanContext
+from vision_agent.agent.types import (
+    AgentMessage,
+    CodeContext,
+    InteractionContext,
+    PlanContext,
+)
 from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
 from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
 from vision_agent.lmm import LMM, AnthropicLMM
@@ -257,6 +262,7 @@ class VisionAgentCoderV2(AgentCoder):
         tester: Optional[LMM] = None,
         debugger: Optional[LMM] = None,
         tool_recommender: Optional[Union[str, Sim]] = None,
+        hil: bool = False,
         verbose: bool = False,
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda _: None,
@@ -272,6 +278,7 @@ class VisionAgentCoderV2(AgentCoder):
                 None, a default AnthropicLMM will be used.
             debugger (Optional[LMM]): The language model to use for the debugger agent.
             tool_recommender (Optional[Union[str, Sim]]): The tool recommender to use.
+            hil (bool): Whether to use human-in-the-loop mode.
             verbose (bool): Whether to print out debug information.
             code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
                 be one of: None, "local" or "e2b". If None, it will read from the
@@ -283,8 +290,11 @@ class VisionAgentCoderV2(AgentCoder):
         self.planner = (
             planner
             if planner is not None
-            else VisionAgentPlannerV2(verbose=verbose, update_callback=update_callback)
+            else VisionAgentPlannerV2(
+                verbose=verbose, update_callback=update_callback, hil=hil
+            )
         )
+
         self.coder = (
             coder
             if coder is not None
@@ -311,6 +321,8 @@ class VisionAgentCoderV2(AgentCoder):
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime
         self.update_callback = update_callback
+        if hasattr(self.planner, "update_callback"):
+            self.planner.update_callback = update_callback
 
     def __call__(
         self,
@@ -331,14 +343,17 @@ class VisionAgentCoderV2(AgentCoder):
         """
 
         input_msg = convert_message_to_agentmessage(input, media)
-        return self.generate_code(input_msg).code
+        code_or_interaction = self.generate_code(input_msg)
+        if isinstance(code_or_interaction, InteractionContext):
+            return code_or_interaction.chat[-1].content
+        return code_or_interaction.code
 
     def generate_code(
         self,
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> CodeContext:
+    ) -> Union[CodeContext, InteractionContext]:
         """Generate vision code from a conversation.
 
         Parameters:
@@ -353,6 +368,11 @@ class VisionAgentCoderV2(AgentCoder):
         """
 
         chat = copy.deepcopy(chat)
+        if not chat or chat[-1].role not in {"user", "interaction_response"}:
+            raise ValueError(
+                f"Last chat message must be from the user or interaction_response, got {chat[-1].role}."
+            )
+
         with (
             CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
             if code_interpreter is None
@@ -362,6 +382,10 @@ class VisionAgentCoderV2(AgentCoder):
             plan_context = self.planner.generate_plan(
                 int_chat, max_steps=max_steps, code_interpreter=code_interpreter
             )
+            # the planner needs an interaction, so return before generating code
+            if isinstance(plan_context, InteractionContext):
+                return plan_context
+
             code_context = self.generate_code_from_plan(
                 orig_chat,
                 plan_context,
@@ -391,6 +415,19 @@ class VisionAgentCoderV2(AgentCoder):
         """
 
         chat = copy.deepcopy(chat)
+        if not chat or chat[-1].role not in {"user", "interaction_response"}:
+            raise ValueError(
+                f"Last chat message must be from the user or interaction_response, got {chat[-1].role}."
+            )
+
+        # we don't need the user_interaction response for generating code since it's
+        # already in the plan context
+        while chat[-1].role != "user":
+            chat.pop()
+
+        if not chat:
+            raise ValueError("Chat must have at least one user message.")
+
         with (
             CodeInterpreterFactory.new_instance(self.code_sandbox_runtime)
             if code_interpreter is None
