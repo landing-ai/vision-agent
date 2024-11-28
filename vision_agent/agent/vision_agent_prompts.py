@@ -280,7 +280,7 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-edit_code_artifact(artifacts, 'streamlit_app.py', CODE, 0, 0)
+edit_code_artifact(artifacts, 'streamlit_app.py', 0, 0, CODE)
 </execute_python>
 
 OBSERVATION:
