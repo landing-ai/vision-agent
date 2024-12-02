@@ -78,7 +78,9 @@ const formatAssistantContent = (role: string, content: string) => {
   const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
   const finalPlanJsonMatch = content.match(/<json>(.*?)<\/json>/s);
   const interactionMatch = content.match(/<interaction>(.*?)<\/interaction>/s);
-  const interactionJson = JSON.parse(interactionMatch ? interactionMatch[1] : "{}");
+  const interactionJson = JSON.parse(
+    interactionMatch ? interactionMatch[1] : "{}",
+  );
 
   const finalPlanJson = JSON.parse(
     finalPlanJsonMatch ? finalPlanJsonMatch[1] : "{}",
@@ -88,7 +90,8 @@ const formatAssistantContent = (role: string, content: string) => {
     return (
       <>
         <div>
-          <strong className="text-gray-700">[{role.toUpperCase()}]</strong> {finalPlanJson.plan}
+          <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
+          {finalPlanJson.plan}
         </div>
         <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
           <code style={{ whiteSpace: "pre-wrap" }}>
@@ -105,17 +108,21 @@ const formatAssistantContent = (role: string, content: string) => {
     return (
       <>
         <div>
-          <strong className="text-gray-700">[{role.toUpperCase()}]</strong> Function calls:
+          <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
+          Function calls:
         </div>
         <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
           <code style={{ whiteSpace: "pre-wrap" }}>
-            {interactionJson.map((interaction: { request: { function_name: string } }) => 
-              `- ${interaction.request.function_name}`
-            ).join('\n')}
+            {interactionJson
+              .map(
+                (interaction: { request: { function_name: string } }) =>
+                  `- ${interaction.request.function_name}`,
+              )
+              .join("\n")}
           </code>
         </pre>
       </>
-    )
+    );
   }
 
   if (responseMatch || thinkingMatch || pythonMatch) {
@@ -123,12 +130,14 @@ const formatAssistantContent = (role: string, content: string) => {
       <>
         {thinkingMatch && (
           <div>
-            <strong className="text-gray-700">[{role.toUpperCase()}]</strong> {thinkingMatch[1]}
+            <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
+            {thinkingMatch[1]}
           </div>
         )}
         {responseMatch && (
           <div>
-            <strong className="text-gray-700">[{role.toUpperCase()}]</strong> {responseMatch[1]}
+            <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
+            {responseMatch[1]}
           </div>
         )}
         {pythonMatch && (
@@ -146,7 +155,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <div
       className={`mb-4 ${
-        (message.role === "user" || message.role === "interaction_response")
+        message.role === "user" || message.role === "interaction_response"
           ? "ml-auto bg-primary text-primary-foreground"
           : message.role === "assistant"
           ? "mr-auto bg-muted"
@@ -185,10 +194,18 @@ export function ChatSection({
 
     if (input.value.trim()) {
       let userMessage: Message;
-      if (messages.length > 0 && messages[messages.length - 1].role === "interaction") {
+      if (
+        messages.length > 0 &&
+        messages[messages.length - 1].role === "interaction"
+      ) {
+        const function_name = input.value.split(",")[0].trim();
+        const box_threshold = input.value.split(",")[1].trim();
         userMessage = {
           role: "interaction_response",
-          content: JSON.stringify({function_name: input.value})
+          content: JSON.stringify({
+            function_name: function_name,
+            box_threshold: box_threshold,
+          }),
         } as Message;
       } else {
         userMessage = { role: "user", content: input.value } as Message;

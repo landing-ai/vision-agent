@@ -367,8 +367,10 @@ def replace_interaction_with_obs(chat: List[AgentMessage]) -> List[AgentMessage]
                 response = json.loads(chat[i + 1].content)
                 function_name = response["function_name"]
                 tool_doc = get_tool_documentation(function_name)
+                if "box_threshold" in response:
+                    tool_doc = f"Use the following function with box_threshold={response['box_threshold']}\n\n{tool_doc}"
                 new_chat.append(AgentMessage(role="observation", content=tool_doc))
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, KeyError):
                 raise ValueError(f"Invalid JSON in interaction response: {chat_i}")
         else:
             new_chat.append(chat_i)
