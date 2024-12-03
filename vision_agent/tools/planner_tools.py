@@ -252,8 +252,8 @@ def get_tool_for_task(
                 previous_attempts=error_message,
             )
             tool_choice_context_dict = extract_json(
-                lmm.generate(prompt, media=image_paths)
-            )  # type: ignore
+                lmm.generate(prompt, media=image_paths)  # type: ignore
+            )
             tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
                 tool_choice_context_dict
             )
