@@ -2314,7 +2314,7 @@ def overlay_bounding_boxes(
     bboxes: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]],
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_bounding_boxes' is a utility function that displays bounding boxes on
-    an image.
+    an image. It will draw a box around the detected object with the label and score.
 
     Parameters:
         medias (Union[np.ndarray, List[np.ndarra]]): The image or frames to display the
@@ -2428,7 +2428,7 @@ def overlay_segmentation_masks(
     secondary_label_key: str = "tracking_label",
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_segmentation_masks' is a utility function that displays segmentation
-    masks.
+    masks. It will overlay a colored mask on the detected object with the label.
 
     Parameters:
         medias (Union[np.ndarray, List[np.ndarray]]): The image or frames to display
@@ -2487,10 +2487,24 @@ def overlay_segmentation_masks(
             mask = elt["mask"]
             label = elt["label"]
             tracking_lbl = elt.get(secondary_label_key, None)
+
+            # Create semi-transparent mask overlay
             np_mask = np.zeros((pil_image.size[1], pil_image.size[0], 4))
-            np_mask[mask > 0, :] = color[label] + (255 * 0.5,)
+            np_mask[mask > 0, :] = color[label] + (255 * 0.7,)
             mask_img = Image.fromarray(np_mask.astype(np.uint8))
             pil_image = Image.alpha_composite(pil_image, mask_img)
+
+            # Draw contour border
+            mask_uint8 = mask.astype(np.uint8) * 255
+            contours, _ = cv2.findContours(
+                mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            border_mask = np.zeros(
+                (pil_image.size[1], pil_image.size[0], 4), dtype=np.uint8
+            )
+            cv2.drawContours(border_mask, contours, -1, color[label] + (255,), 8)
+            border_img = Image.fromarray(border_mask)
+            pil_image = Image.alpha_composite(pil_image, border_img)
 
             if draw_label:
                 draw = ImageDraw.Draw(pil_image)
