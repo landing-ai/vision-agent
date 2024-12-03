@@ -2,6 +2,7 @@ import inspect
 import logging
 import shutil
 import tempfile
+from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import libcst as cst
@@ -32,13 +33,17 @@ from vision_agent.utils.execute import (
     MimeType,
 )
 from vision_agent.utils.image_utils import convert_to_b64
-from vision_agent.utils.sim import load_cached_sim
+from vision_agent.utils.sim import Sim, load_cached_sim
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
-TOOL_RECOMMENDER = load_cached_sim(T.TOOLS_DF)
 
 _LOGGER = logging.getLogger(__name__)
 EXAMPLES = f"\n{TEST_TOOLS_EXAMPLE1}\n{TEST_TOOLS_EXAMPLE2}\n"
+
+
+@lru_cache(maxsize=1)
+def get_tool_recommender() -> Sim:
+    return load_cached_sim(T.TOOLS_DF)
 
 
 def format_tool_output(tool_thoughts: str, tool_docstring: str) -> str:
@@ -52,7 +57,7 @@ def format_tool_output(tool_thoughts: str, tool_docstring: str) -> str:
 
 
 def extract_tool_info(
-    tool_choice_context: Dict[str, Any]
+    tool_choice_context: Dict[str, Any],
 ) -> Tuple[Optional[Callable], str, str, str]:
     tool_thoughts = tool_choice_context.get("thoughts", "")
     tool_docstring = ""
@@ -124,7 +129,7 @@ def run_tool_testing(
             f"I need models from the {category.strip()} category of tools. {task}"
         )
 
-    tool_docs = TOOL_RECOMMENDER.top_k(category, k=10, thresh=0.2)
+    tool_docs = get_tool_recommender().top_k(category, k=10, thresh=0.2)
     if exclude_tools is not None and len(exclude_tools) > 0:
         cleaned_tool_docs = []
         for tool_doc in tool_docs:
@@ -246,7 +251,9 @@ def get_tool_for_task(
                 context=f"<code>\n{code}\n</code>\n<tool_output>\n{tool_output_str}\n</tool_output>",
                 previous_attempts=error_message,
             )
-            tool_choice_context_dict = extract_json(lmm.generate(prompt, media=image_paths))  # type: ignore
+            tool_choice_context_dict = extract_json(
+                lmm.generate(prompt, media=image_paths)
+            )  # type: ignore
             tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
                 tool_choice_context_dict
             )
