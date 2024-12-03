@@ -375,9 +375,5 @@ PLANNER_TOOLS = [
     claude35_vqa,
     suggestion,
     get_tool_for_task,
-    T.load_image,
-    T.save_image,
-    T.extract_frames_and_timestamps,
-    T.save_video,
 ]
 PLANNER_DOCSTRING = T.get_tool_documentation(PLANNER_TOOLS)  # type: ignore
