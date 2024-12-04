@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 import urllib.request
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -45,6 +46,7 @@ from vision_agent.utils.image_utils import (
     rle_decode,
     rle_decode_array,
 )
+from vision_agent.utils.sim import Sim, load_cached_sim
 from vision_agent.utils.video import (
     extract_frames_from_video,
     frames_to_bytes,
@@ -78,6 +80,11 @@ COLORS = [
 _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
 _OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
 _LOGGER = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def get_tool_recommender() -> Sim:
+    return load_cached_sim(TOOLS_DF)
 
 
 def grounding_dino(
