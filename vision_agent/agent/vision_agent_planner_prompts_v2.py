@@ -1,7 +1,7 @@
 PLAN = """
 **Role**: You are an expert planning agent that can understand the user request and search for a plan to accomplish it.
 
-**Task**: As a planning agent you are required to understand the user's request and search for a plan to accomplish it. Use Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Esnure your response is clear, concise, andhelpful. You can use an interactive Pyton (Jupyter Notebok) environment, executing code with <execute_python>, each execution is a new cell so old code and outputs are saved.
+**Task**: As a planning agent you are required to understand the user's request and search for a plan to accomplish it. Use Chain-of-Thought approach to break down the problem, create a plan, and then provide a response. Esnure your response is clear, concise, and helpful. You can use an interactive Pyton (Jupyter Notebok) environment, executing code with <execute_python>, each execution is a new cell so old code and outputs are saved.
 
 **Documentation**: this is the documentation for the functions you can use to accomplish the task:
 {tool_desc}
@@ -18,7 +18,7 @@ PLAN = """
 1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You can <count> number of turns to complete the user's request.
 2. You can execute python code in the ipython notebook using <execute_python> tags. Only output one <execute_python> tag at a time.
 3. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
-4. Only load/save files from {media_list} unless you specifically saved the previously.
+4. Only load/save files from {media_list} unless you specifically saved the file previously.
 5. Ensure you always call `suggestion` initially and `get_tool_for_task` to get the right tool for the subtask.
 6. Calling `plt.imshow` or `save_image` will display the image to you, use this to visually check your results.
 7. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
@@ -130,13 +130,14 @@ In these aerial images, I can see approximately 5-6 pedestrians walking in vario
 [end of claude35_vqa_output]
 
 [get_tool_for_task output]
-After examining the image, I can see it's an aerial view of a busy urban intersection with multiple lanes of traffic. There are numerous cars visible, each likely containing at least one person (the driver). While it's difficult to count exact individuals, I can estimate based on the number of vehicles. The countgd_counting tool returned an empty list, which is incorrect given the visible evidence in the image. This suggests the tool may have failed to detect people inside vehicles or had difficulty with the aerial perspective. Despite this tool being specifically requested, its output is clearly inaccurate for this task.
+After examining the image, I can see it's an aerial view of a busy urban intersection with multiple lanes of traffic. There are numerous cars visible, each likely containing at least one person (the driver). While it's difficult to count exact individuals, I can estimate based on the number of vehicles. The countgd_object_detection tool is the best choice for this task as it can detect and count multiple instances of an object given a text prompt. I will use this tool to count the number of pedestrians in the image.
 
 Tool Documentation:
-countgd_counting(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
-'countgd_counting' is a tool that can precisely count multiple instances of an
-    object given a text prompt. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated confidence scores.
+countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
+    'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated confidence scores.
 
     Parameters:
         prompt (str): The object that needs to be counted.
@@ -153,7 +154,7 @@ countgd_counting(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23)
 
     Example
     -------
-        >>> countgd_counting("flower", image)
+        >>> countgd_object_detection("flower", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
         ]
@@ -195,7 +196,7 @@ def merge_bounding_box_list(bboxes):
 
 detections = []
 for region in subdivide_image(image):
-    detections.extend(countgd_counting("pedestrian", region))
+    detections.extend(countgd_object_detection("pedestrian", region))
 detections = merge_bounding_box_list(detections)
 print(len(detections))
 </execute_python>
@@ -203,8 +204,8 @@ print(len(detections))
 OBSERVATION: 24
 <count>7</count>
 
-AGENT: <thinking>countgd_counting detected 24 pedestrians in the image by subdividing the image into smaller regions, this differs from claude35_vqa's answer of 5-6 pedestrians. I will use countgd_counting's answer since it is specifically designed to count objects.</thinking>
-<finalize_plan>This plan successfully detected 24 pedestrians in the image by subdividing the image into smaller regions and using the countgd_counting tool on each region. The bounding boxes were then merged to count the unique pedestrians.</finalize_plan>
+AGENT: <thinking>countgd_object_detection detected 24 pedestrians in the image by subdividing the image into smaller regions, this differs from claude35_vqa's answer of 5-6 pedestrians. I will use countgd_object_detection's answer since it is specifically designed to count objects.</thinking>
+<finalize_plan>This plan successfully detected 24 pedestrians in the image by subdividing the image into smaller regions and using the countgd_object_detection tool on each region. The bounding boxes were then merged to count the unique pedestrians.</finalize_plan>
 --- END EXAMPLE1 ---
 """
 
@@ -448,7 +449,7 @@ You are given a task: {task} from the user. Your task is to extract the type of 
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
 
-Return the category inside tags <category># your categories here</category>.
+Return the category or categories (comma separated) inside tags <category># your categories here</category>.
 """
 
 TEST_TOOLS = """
@@ -492,7 +493,7 @@ Count the number of pedestrians across all the images.
 
 <code>
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import load_image, owl_v2_image, florence2_phrase_grounding, countgd_counting
+from vision_agent.tools import load_image, owl_v2_image, florence2_phrase_grounding, countgd_object_detection
 
 # process functions in a try catch so that if it fails it doesn't cause `as_completed` to hang
 def process_owl_v2(image_paths):
@@ -520,7 +521,7 @@ def process_countgd(image_paths):
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(countgd_counting("person", image))
+            results.extend(countgd_object_detection("person", image))
     except Exception as e:
         results = f"Encountered error when executing process_countgd: {str(e)}"
     return results
@@ -531,7 +532,7 @@ with ThreadPoolExecutor() as executor:
     futures = {{
         executor.submit(process_owl_v2, image_paths): "owl_v2_image",
         executor.submit(process_florence2, image_paths): "florence2_phrase_grounding",
-        executor.submit(process_countgd, image_paths): "countgd_counting",
+        executor.submit(process_countgd, image_paths): "countgd_object_detection",
     }}
 
     final_results = {{}}

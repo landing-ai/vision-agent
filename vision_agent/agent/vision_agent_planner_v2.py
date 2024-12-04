@@ -49,6 +49,7 @@ UTIL_DOCSTRING = T.get_tool_documentation(
         T.save_video,
         T.overlay_bounding_boxes,
         T.overlay_segmentation_masks,
+        T.minimum_distance,
     ]
 )
 PLANNING_TOOLS_DOCSTRING = UTIL_DOCSTRING + "\n" + pt.PLANNER_DOCSTRING

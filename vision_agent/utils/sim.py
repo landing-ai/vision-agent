@@ -109,7 +109,10 @@ class Sim:
 
     @lru_cache(maxsize=256)
     def top_k(
-        self, query: str, k: int = 5, thresh: Optional[float] = None
+        self,
+        query: str,
+        k: int = 5,
+        thresh: Optional[float] = None,
     ) -> Sequence[Dict]:
         """Returns the top k most similar items to the query.
 
