@@ -60,4 +60,3 @@ test_function2('one', image1)
 test_function2('one', image1)
 """
     assert replace_box_threshold(code, ["test_function"], 0.5) == expected_code
-

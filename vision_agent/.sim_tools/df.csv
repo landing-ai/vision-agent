@@ -112,10 +112,11 @@ desc,doc,name
         >>> vit_nsfw_classification(image)
         {""label"": ""normal"", ""scores"": 0.68},
     ",vit_nsfw_classification
-"'countgd_counting' is a tool that can detect multiple instances of an object given a text prompt. It is particularly useful when trying to detect and count a large number of objects. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores.","countgd_counting(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
-'countgd_counting' is a tool that can detect multiple instances of an object
-    given a text prompt. It is particularly useful when trying to detect and count a
-    large number of objects. It returns a list of bounding boxes with normalized
+"'countgd_object_detection' is a tool that can detect multiple instances of an object given a text prompt. It is particularly useful when trying to detect and count a large number of objects. You can optionally separate object names in the prompt with commas. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores.","countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
+'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized
     coordinates, label names and associated confidence scores.
 
     Parameters:
@@ -133,14 +134,51 @@ desc,doc,name
 
     Example
     -------
-        >>> countgd_counting(""flower"", image)
+        >>> countgd_object_detection(""flower"", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
             {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
             {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
         ]
-    ",countgd_counting
+    ",countgd_object_detection
+"'countgd_sam2_object_detection' is a tool that can detect multiple instances of an object given a text prompt. It is particularly useful when trying to detect and count a large number of objects. You can optionally separate object names in the prompt with commas. It returns a list of bounding boxes with normalized coordinates, label names, masks associated confidence scores.","countgd_sam2_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
+'countgd_sam2_object_detection' is a tool that can detect multiple instances of
+    an object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized coordinates,
+    label names, masks associated confidence scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_object_detection(""flower"", image)
+        [
+            {
+                'score': 0.49,
+                'label': 'flower',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    ",countgd_sam2_object_detection
 "'florence2_ocr' is a tool that can detect text and text regions in an image. Each text region contains one line of text. It returns a list of detected text, the text region as a bounding box with normalized coordinates, and confidence scores. The results are sorted from top-left to bottom right.","florence2_ocr(image: numpy.ndarray) -> List[Dict[str, Any]]:
 'florence2_ocr' is a tool that can detect text and text regions in an image.
     Each text region contains one line of text. It returns a list of detected text,
@@ -214,8 +252,8 @@ desc,doc,name
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
-        label,segment mask and bounding boxes. The outer list represents each frame and
-        the inner list is the entities per frame. The label contains the object ID
+        label, segment mask and bounding boxes. The outer list represents each frame
+        and the inner list is the entities per frame. The label contains the object ID
         followed by the label name. The objects are only identified in the first framed
         and tracked throughout the video.
 
@@ -237,12 +275,12 @@ desc,doc,name
             ...
         ]
     ",florence2_sam2_video_tracking
-"'florence2_phrase_grounding' is a tool that can detect multiple objects given a text prompt which can be object names or caption. You can optionally separate the object names in the text with commas. It returns a list of bounding boxes with normalized coordinates, label names and associated probability scores of 1.0.","florence2_phrase_grounding(prompt: str, image: numpy.ndarray, fine_tune_id: Optional[str] = None) -> List[Dict[str, Any]]:
+"'florence2_phrase_grounding' is a tool that can detect multiple objects given a text prompt which can be object names or caption. You can optionally separate the object names in the text with commas. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores of 1.0.","florence2_phrase_grounding(prompt: str, image: numpy.ndarray, fine_tune_id: Optional[str] = None) -> List[Dict[str, Any]]:
 'florence2_phrase_grounding' is a tool that can detect multiple
     objects given a text prompt which can be object names or caption. You
     can optionally separate the object names in the text with commas. It returns a list
     of bounding boxes with normalized coordinates, label names and associated
-    probability scores of 1.0.
+    confidence scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -353,37 +391,24 @@ desc,doc,name
                 [10, 11, 15, ..., 202, 202, 205],
                 [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
     ",generate_pose_image
-'closest_mask_distance' calculates the closest distance between two masks.,"closest_mask_distance(mask1: numpy.ndarray, mask2: numpy.ndarray) -> float:
-'closest_mask_distance' calculates the closest distance between two masks.
+"'minimum_distance' calculates the minimum distance between two detections which can include bounding boxes and or masks. This will return the closest distance between the objects, not the distance between the centers of the objects.","minimum_distance(det1: Dict[str, Any], det2: Dict[str, Any], image_size: Tuple[int, int]) -> float:
+'minimum_distance' calculates the minimum distance between two detections which
+    can include bounding boxes and or masks. This will return the closest distance
+    between the objects, not the distance between the centers of the objects.
 
     Parameters:
-        mask1 (np.ndarray): The first mask.
-        mask2 (np.ndarray): The second mask.
-
-    Returns:
-        float: The closest distance between the two masks.
-
-    Example
-    -------
-        >>> closest_mask_distance(mask1, mask2)
-        0.5
-    ",closest_mask_distance
-'closest_box_distance' calculates the closest distance between two bounding boxes.,"closest_box_distance(box1: List[float], box2: List[float], image_size: Tuple[int, int]) -> float:
-'closest_box_distance' calculates the closest distance between two bounding boxes.
-
-    Parameters:
-        box1 (List[float]): The first bounding box.
-        box2 (List[float]): The second bounding box.
+        det1 (Dict[str, Any]): The first detection of boxes or masks.
+        det2 (Dict[str, Any]): The second detection of boxes or masks.
         image_size (Tuple[int, int]): The size of the image given as (height, width).
 
     Returns:
-        float: The closest distance between the two bounding boxes.
+        float: The closest distance between the two detections.
 
     Example
     -------
-        >>> closest_box_distance([100, 100, 200, 200], [300, 300, 400, 400])
+        >>> closest_distance(det1, det2, image_size)
         141.42
-    ",closest_box_distance
+    ",minimum_distance
 'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary images including regular images or images of documents or presentations. It can be very useful for document QA or OCR text extraction. It returns text as an answer to the question.,"qwen2_vl_images_vqa(prompt: str, images: List[numpy.ndarray]) -> str:
 'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary
     images including regular images or images of documents or presentations. It can be
@@ -561,9 +586,9 @@ desc,doc,name
         >>> save_video(frames)
         ""/tmp/tmpvideo123.mp4""
     ",save_video
-'overlay_bounding_boxes' is a utility function that displays bounding boxes on an image.,"overlay_bounding_boxes(medias: Union[numpy.ndarray, List[numpy.ndarray]], bboxes: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]) -> Union[numpy.ndarray, List[numpy.ndarray]]:
+'overlay_bounding_boxes' is a utility function that displays bounding boxes on an image. It will draw a box around the detected object with the label and score.,"overlay_bounding_boxes(medias: Union[numpy.ndarray, List[numpy.ndarray]], bboxes: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]]) -> Union[numpy.ndarray, List[numpy.ndarray]]:
 'overlay_bounding_boxes' is a utility function that displays bounding boxes on
-    an image.
+    an image. It will draw a box around the detected object with the label and score.
 
     Parameters:
         medias (Union[np.ndarray, List[np.ndarra]]): The image or frames to display the
@@ -581,9 +606,9 @@ desc,doc,name
             image, [{'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]}],
         )
     ",overlay_bounding_boxes
-'overlay_segmentation_masks' is a utility function that displays segmentation masks.,"overlay_segmentation_masks(medias: Union[numpy.ndarray, List[numpy.ndarray]], masks: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]], draw_label: bool = True, secondary_label_key: str = 'tracking_label') -> Union[numpy.ndarray, List[numpy.ndarray]]:
+'overlay_segmentation_masks' is a utility function that displays segmentation masks. It will overlay a colored mask on the detected object with the label.,"overlay_segmentation_masks(medias: Union[numpy.ndarray, List[numpy.ndarray]], masks: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]], draw_label: bool = True, secondary_label_key: str = 'tracking_label') -> Union[numpy.ndarray, List[numpy.ndarray]]:
 'overlay_segmentation_masks' is a utility function that displays segmentation
-    masks.
+    masks. It will overlay a colored mask on the detected object with the label.
 
     Parameters:
         medias (Union[np.ndarray, List[np.ndarray]]): The image or frames to display
