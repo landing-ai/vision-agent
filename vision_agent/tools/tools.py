@@ -732,7 +732,7 @@ def countgd_object_detection(
             payload, "text-to-object-detection", files=files, metadata=metadata
         )
         # get the first frame
-        return detections[0]
+        return detections[0]  # type: ignore
 
     bboxes = []
     with ThreadPoolExecutor() as executor:
