@@ -41,11 +41,6 @@ def send_inference_request(
     metadata_payload: Optional[Dict[str, Any]] = None,
     is_form: bool = False,
 ) -> Any:
-    # TODO: runtime_tag and function_name should be metadata_payload and not included
-    # in the service payload
-    if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
-        payload["runtime_tag"] = runtime_tag
-
     url = f"{_LND_API_URL_v2 if v2 else _LND_API_URL}/{endpoint_name}"
     if "TOOL_ENDPOINT_URL" in os.environ:
         url = os.environ["TOOL_ENDPOINT_URL"]
@@ -54,6 +49,9 @@ def send_inference_request(
     if "TOOL_ENDPOINT_AUTH" in os.environ:
         headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
         headers.pop("apikey")
+
+    if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
+        headers["runtime_tag"] = runtime_tag
 
     session = _create_requests_session(
         url=url,
