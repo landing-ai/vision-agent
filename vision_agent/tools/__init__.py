@@ -46,6 +46,7 @@ from .tools import (
     generate_pose_image,
     generate_soft_edge_image,
     get_tool_documentation,
+    get_tool_recommender,
     git_vqa_v2,
     gpt4o_image_vqa,
     gpt4o_video_vqa,

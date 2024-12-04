@@ -34,7 +34,7 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.sim import Sim, load_cached_sim
+from vision_agent.utils.sim import Sim
 
 _CONSOLE = Console()
 
@@ -316,7 +316,7 @@ class VisionAgentCoderV2(AgentCoder):
             elif isinstance(tool_recommender, Sim):
                 self.tool_recommender = tool_recommender
         else:
-            self.tool_recommender = load_cached_sim(T.TOOLS_DF)
+            self.tool_recommender = T.get_tool_recommender()
 
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime
