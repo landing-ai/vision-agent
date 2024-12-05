@@ -2634,7 +2634,14 @@ def countgd_sam2_video_tracking(
 
     results = [None] * len(frames)
 
-    for idx in range(0, len(frames), chunk_length):
+    if chunk_length is None:
+        step = 1  # Process every frame
+    elif chunk_length <= 0:
+        raise ValueError("chunk_length must be a positive integer or None.")
+    else:
+        step = chunk_length  # Process frames with the specified step size
+
+    for idx in range(0, len(frames), step):
         results[idx] = countgd_object_detection(prompt=prompt, image=frames[idx])
 
     image_size = frames[0].shape[:2]
