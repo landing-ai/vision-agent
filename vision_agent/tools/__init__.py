@@ -71,6 +71,7 @@ from .tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
+    countgd_sam2_video_tracking,
 )
 
 __new_tools__ = [

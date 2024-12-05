@@ -2439,6 +2439,69 @@ def _plot_counting(
     return image
 
 
+def countgd_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+    fine_tune_id: Optional[str] = None,
+) -> List[List[Dict[str, Any]]]:
+    """`countgd_sam2_video_tracking` it is only a test method
+    """
+
+    results = [None] * len(frames)
+
+    for idx in range(0, len(frames), chunk_length):
+        results[idx] = countgd_counting(prompt=prompt, image=frames[idx])
+
+    image_size = frames[0].shape[:2]
+
+    def _transform_detections(input_list):
+        output_list = []
+
+        for idx, frame in enumerate(input_list):
+            if frame is not None:
+                labels = [detection['label'] for detection in frame]
+                bboxes = [denormalize_bbox(detection['bbox'],  image_size) for detection in frame]
+
+                output_list.append({
+                    "labels": labels,
+                    "bboxes": bboxes,
+                })
+            else:
+                output_list.append(None)
+
+        return output_list
+
+
+    output = _transform_detections(results)
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "bboxes": json.dumps(output),
+        "chunk_length": chunk_length
+    }
+    metadata = {"function_name": "countgd_sam2_video_tracking"}
+
+    detections = send_task_inference_request(
+        payload,
+        "sam2",
+        files=files,
+        metadata=metadata,
+    )
+
+    return_data = []
+    for frame in detections:
+        return_frame_data = []
+        for detection in frame:
+            mask = rle_decode_array(detection["mask"])
+            label = str(detection["id"]) + ": " + detection["label"]
+            return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
+        return_data.append(return_frame_data)
+    return_data = add_bboxes_from_masks(return_data)
+    return nms(return_data, iou_threshold=0.95)
+
+
 FUNCTION_TOOLS = [
     owl_v2_image,
     owl_v2_video,
@@ -2461,6 +2524,7 @@ FUNCTION_TOOLS = [
     video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,
+    countgd_sam2_video_tracking
 ]
 
 UTIL_TOOLS = [
