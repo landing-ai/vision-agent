@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "vision-agent"
-version = "0.2.205"
+version = "0.2.209"
 description = "Toolset for Vision Agent"
 authors = ["Landing AI <dev@landing.ai>"]
 readme = "README.md"
@@ -46,6 +46,7 @@ pydantic = "2.7.4"
 av = "^11.0.0"
 libcst = "^1.5.0"
 matplotlib = "^3.9.2"
+scikit-learn = "^1.5.2"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"

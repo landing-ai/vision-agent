@@ -4,6 +4,8 @@ import logging
 import os
 import tempfile
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -45,6 +47,7 @@ from vision_agent.utils.image_utils import (
     rle_decode,
     rle_decode_array,
 )
+from vision_agent.utils.sim import Sim, load_cached_sim
 from vision_agent.utils.video import (
     extract_frames_from_video,
     frames_to_bytes,
@@ -78,6 +81,11 @@ COLORS = [
 _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
 _OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
 _LOGGER = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def get_tool_recommender() -> Sim:
+    return load_cached_sim(TOOLS_DF)
 
 
 def grounding_dino(
@@ -477,8 +485,8 @@ def florence2_sam2_video_tracking(
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
-        label,segment mask and bounding boxes. The outer list represents each frame and
-        the inner list is the entities per frame. The label contains the object ID
+        label, segment mask and bounding boxes. The outer list represents each frame
+        and the inner list is the entities per frame. The label contains the object ID
         followed by the label name. The objects are only identified in the first framed
         and tracked throughout the video.
 
@@ -677,14 +685,15 @@ def loca_visual_prompt_counting(
     return resp_data
 
 
-def countgd_counting(
+def countgd_object_detection(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
-    """'countgd_counting' is a tool that can detect multiple instances of an object
-    given a text prompt. It is particularly useful when trying to detect and count a
-    large number of objects. It returns a list of bounding boxes with normalized
+    """'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized
     coordinates, label names and associated confidence scores.
 
     Parameters:
@@ -702,7 +711,7 @@ def countgd_counting(
 
     Example
     -------
-        >>> countgd_counting("flower", image)
+        >>> countgd_object_detection("flower", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -716,19 +725,28 @@ def countgd_counting(
 
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
-    payload = {
-        "prompts": [prompt.replace(", ", ". ")],
-        "confidence": box_threshold,  # still not being used in the API
-        "model": "countgd",
-    }
-    metadata = {"function_name": "countgd_counting"}
+    prompts = [p.strip() for p in prompt.split(", ")]
 
-    detections = send_task_inference_request(
-        payload, "text-to-object-detection", files=files, metadata=metadata
-    )
+    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
+        payload = {
+            "prompts": [prompt],
+            "confidence": box_threshold,  # still not being used in the API
+            "model": "countgd",
+        }
+        metadata = {"function_name": "countgd_counting"}
 
-    # get the first frame
-    bboxes = detections[0]
+        detections = send_task_inference_request(
+            payload, "text-to-object-detection", files=files, metadata=metadata
+        )
+        # get the first frame
+        return detections[0]  # type: ignore
+
+    bboxes = []
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
+        for future in as_completed(futures):
+            bboxes.extend(future.result())
+
     bboxes_formatted = [
         ODResponseData(
             label=bbox["label"],
@@ -741,6 +759,131 @@ def countgd_counting(
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return_data = [bbox.model_dump() for bbox in filtered_bboxes]
     return single_nms(return_data, iou_threshold=0.80)
+
+
+def sam2(
+    image: np.ndarray,
+    detections: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """'sam2' is a tool that can segment multiple objects given an input bounding box,
+    label and score. It returns a set of masks along with the corresponding bounding
+    boxes and labels.
+
+    Parameters:
+        image (np.ndarray): The image that contains multiple instances of the object.
+        detections (List[Dict[str, Any]]): A list of dictionaries containing the score,
+            label, and bounding box of the detected objects with normalized coordinates
+            between 0 and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates
+            of the top-left and xmax and ymax are the coordinates of the bottom-right of
+            the bounding box.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> sam2(image, [
+                {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            ])
+        [
+            {
+                'score': 0.49,
+                'label': 'flower',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    image_size = image.shape[:2]
+
+    files = [("images", numpy_to_bytes(image))]
+    payload = {
+        "model": "sam2",
+        "bboxes": json.dumps(
+            [
+                {
+                    "labels": [d["label"] for d in detections],
+                    "bboxes": [
+                        denormalize_bbox(d["bbox"], image_size) for d in detections
+                    ],
+                }
+            ]
+        ),
+    }
+    metadata = {"function_name": "sam2"}
+    pred_detections = send_task_inference_request(
+        payload, "sam2", files=files, metadata=metadata
+    )
+    frame = pred_detections[0]
+    return_data = []
+    for inp_detection, detection in zip(detections, frame):
+        mask = rle_decode_array(detection["mask"])
+        label = detection["label"]
+        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
+        return_data.append(
+            {
+                "label": label,
+                "bbox": bbox,
+                "mask": mask,
+                "score": inp_detection["score"],
+            }
+        )
+    return return_data
+
+
+def countgd_sam2_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_sam2_object_detection' is a tool that can detect multiple instances of
+    an object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized coordinates,
+    label names, masks associated confidence scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_object_detection("flower", image)
+        [
+            {
+                'score': 0.49,
+                'label': 'flower',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    detections = countgd_object_detection(prompt, image, box_threshold)
+    detections_with_masks = sam2(image, detections)
+    return detections_with_masks
 
 
 def countgd_example_based_counting(
@@ -1292,7 +1435,7 @@ def florence2_phrase_grounding(
     objects given a text prompt which can be object names or caption. You
     can optionally separate the object names in the text with commas. It returns a list
     of bounding boxes with normalized coordinates, label names and associated
-    probability scores of 1.0.
+    confidence scores of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -1725,6 +1868,35 @@ def template_match(
     return return_data
 
 
+def minimum_distance(
+    det1: Dict[str, Any], det2: Dict[str, Any], image_size: Tuple[int, int]
+) -> float:
+    """'minimum_distance' calculates the minimum distance between two detections which
+    can include bounding boxes and or masks. This will return the closest distance
+    between the objects, not the distance between the centers of the objects.
+
+    Parameters:
+        det1 (Dict[str, Any]): The first detection of boxes or masks.
+        det2 (Dict[str, Any]): The second detection of boxes or masks.
+        image_size (Tuple[int, int]): The size of the image given as (height, width).
+
+    Returns:
+        float: The closest distance between the two detections.
+
+    Example
+    -------
+        >>> closest_distance(det1, det2, image_size)
+        141.42
+    """
+
+    if "mask" in det1 and "mask" in det2:
+        return closest_mask_distance(det1["mask"], det2["mask"])
+    elif "bbox" in det1 and "bbox" in det2:
+        return closest_box_distance(det1["bbox"], det2["bbox"], image_size)
+    else:
+        raise ValueError("Both detections must have either bbox or mask")
+
+
 def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
     """'closest_mask_distance' calculates the closest distance between two masks.
 
@@ -2149,7 +2321,7 @@ def overlay_bounding_boxes(
     bboxes: Union[List[Dict[str, Any]], List[List[Dict[str, Any]]]],
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_bounding_boxes' is a utility function that displays bounding boxes on
-    an image.
+    an image. It will draw a box around the detected object with the label and score.
 
     Parameters:
         medias (Union[np.ndarray, List[np.ndarra]]): The image or frames to display the
@@ -2263,7 +2435,7 @@ def overlay_segmentation_masks(
     secondary_label_key: str = "tracking_label",
 ) -> Union[np.ndarray, List[np.ndarray]]:
     """'overlay_segmentation_masks' is a utility function that displays segmentation
-    masks.
+    masks. It will overlay a colored mask on the detected object with the label.
 
     Parameters:
         medias (Union[np.ndarray, List[np.ndarray]]): The image or frames to display
@@ -2322,10 +2494,24 @@ def overlay_segmentation_masks(
             mask = elt["mask"]
             label = elt["label"]
             tracking_lbl = elt.get(secondary_label_key, None)
+
+            # Create semi-transparent mask overlay
             np_mask = np.zeros((pil_image.size[1], pil_image.size[0], 4))
-            np_mask[mask > 0, :] = color[label] + (255 * 0.5,)
+            np_mask[mask > 0, :] = color[label] + (255 * 0.7,)
             mask_img = Image.fromarray(np_mask.astype(np.uint8))
             pil_image = Image.alpha_composite(pil_image, mask_img)
+
+            # Draw contour border
+            mask_uint8 = mask.astype(np.uint8) * 255
+            contours, _ = cv2.findContours(
+                mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            border_mask = np.zeros(
+                (pil_image.size[1], pil_image.size[0], 4), dtype=np.uint8
+            )
+            cv2.drawContours(border_mask, contours, -1, color[label] + (255,), 8)
+            border_img = Image.fromarray(border_mask)
+            pil_image = Image.alpha_composite(pil_image, border_img)
 
             if draw_label:
                 draw = ImageDraw.Draw(pil_image)
@@ -2508,7 +2694,8 @@ FUNCTION_TOOLS = [
     ocr,
     vit_image_classification,
     vit_nsfw_classification,
-    countgd_counting,
+    countgd_object_detection,
+    countgd_sam2_object_detection,
     florence2_ocr,
     florence2_sam2_image,
     florence2_sam2_video_tracking,
@@ -2517,8 +2704,7 @@ FUNCTION_TOOLS = [
     detr_segmentation,
     depth_anything_v2,
     generate_pose_image,
-    closest_mask_distance,
-    closest_box_distance,
+    minimum_distance,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     video_temporal_localization,
