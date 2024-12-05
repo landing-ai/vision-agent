@@ -41,7 +41,6 @@ from vision_agent.utils.image_utils import (
     convert_to_b64,
     denormalize_bbox,
     encode_image_bytes,
-    get_image_size,
     normalize_bbox,
     numpy_to_bytes,
     rle_decode,
@@ -86,68 +85,6 @@ _LOGGER = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def get_tool_recommender() -> Sim:
     return load_cached_sim(TOOLS_DF)
-
-
-def grounding_dino(
-    prompt: str,
-    image: np.ndarray,
-    box_threshold: float = 0.20,
-    iou_threshold: float = 0.20,
-    model_size: str = "large",
-) -> List[Dict[str, Any]]:
-    """'grounding_dino' is a tool that can detect and count multiple objects given a text
-    prompt such as category names or referring expressions. The categories in text prompt
-    are separated by commas or periods. It returns a list of bounding boxes with
-    normalized coordinates, label names and associated probability scores.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-        box_threshold (float, optional): The threshold for the box detection. Defaults
-            to 0.20.
-        iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.20.
-        model_size (str, optional): The size of the model to use.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
-            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-            top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box.
-
-    Example
-    -------
-        >>> grounding_dino("car. dinosaur", image)
-        [
-            {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
-        ]
-    """
-    image_size = image.shape[:2]
-    image_b64 = convert_to_b64(image)
-    if model_size not in ["large", "tiny"]:
-        raise ValueError("model_size must be either 'large' or 'tiny'")
-    request_data = {
-        "prompt": prompt,
-        "image": image_b64,
-        "tool": (
-            "visual_grounding" if model_size == "large" else "visual_grounding_tiny"
-        ),
-        "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "grounding_dino",
-    }
-    data: Dict[str, Any] = send_inference_request(request_data, "tools")
-    return_data = []
-    for i in range(len(data["bboxes"])):
-        return_data.append(
-            {
-                "score": round(data["scores"][i], 2),
-                "label": data["labels"][i],
-                "bbox": normalize_bbox(data["bboxes"][i], image_size),
-            }
-        )
-    return return_data
 
 
 def owl_v2_image(
@@ -318,72 +255,6 @@ def owl_v2_video(
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
     return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
-
-
-def grounding_sam(
-    prompt: str,
-    image: np.ndarray,
-    box_threshold: float = 0.20,
-    iou_threshold: float = 0.20,
-) -> List[Dict[str, Any]]:
-    """'grounding_sam' is a tool that can segment multiple objects given a text prompt
-    such as category names or referring expressions. The categories in text prompt are
-    separated by commas or periods. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-        box_threshold (float, optional): The threshold for the box detection. Defaults
-            to 0.20.
-        iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.20.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
-
-    Example
-    -------
-        >>> grounding_sam("car. dinosaur", image)
-        [
-            {
-                'score': 0.99,
-                'label': 'dinosaur',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-        ]
-    """
-    image_size = image.shape[:2]
-    image_b64 = convert_to_b64(image)
-    request_data = {
-        "prompt": prompt,
-        "image": image_b64,
-        "tool": "visual_grounding_segment",
-        "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "grounding_sam",
-    }
-    data: Dict[str, Any] = send_inference_request(request_data, "tools")
-    return_data = []
-    for i in range(len(data["bboxes"])):
-        return_data.append(
-            {
-                "score": round(data["scores"][i], 2),
-                "label": data["labels"][i],
-                "bbox": normalize_bbox(data["bboxes"][i], image_size),
-                "mask": rle_decode(mask_rle=data["masks"][i], shape=data["mask_shape"]),
-            }
-        )
-    return return_data
 
 
 def florence2_sam2_image(
@@ -605,84 +476,6 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     ocr_results = sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
     return ocr_results
-
-
-def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
-    """'loca_zero_shot_counting' is a tool that counts the dominant foreground object given
-    an image and no other information about the content. It returns only the count of
-    the objects in the image.
-
-    Parameters:
-        image (np.ndarray): The image that contains lot of instances of a single object
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visualization purposes.
-
-    Example
-    -------
-        >>> loca_zero_shot_counting(image)
-        {'count': 83,
-        'heat_map': array([[ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  1],
-            ...,
-            [ 0,  0,  0, ..., 30, 35, 41],
-            [ 0,  0,  0, ..., 41, 47, 53],
-            [ 0,  0,  0, ..., 53, 59, 64]], dtype=uint8)}
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "function_name": "loca_zero_shot_counting",
-    }
-    resp_data: dict[str, Any] = send_inference_request(data, "loca", v2=True)
-    resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
-    return resp_data
-
-
-def loca_visual_prompt_counting(
-    image: np.ndarray, visual_prompt: Dict[str, List[float]]
-) -> Dict[str, Any]:
-    """'loca_visual_prompt_counting' is a tool that counts the dominant foreground object
-    given an image and a visual prompt which is a bounding box describing the object.
-    It returns only the count of the objects in the image.
-
-    Parameters:
-        image (np.ndarray): The image that contains lot of instances of a single object
-            visual_prompt (Dict[str, List[float]]): Bounding box of the object in
-            format [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visualization purposes.
-
-    Example
-    -------
-        >>> loca_visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
-        {'count': 83,
-        'heat_map': array([[ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  1],
-            ...,
-            [ 0,  0,  0, ..., 30, 35, 41],
-            [ 0,  0,  0, ..., 41, 47, 53],
-            [ 0,  0,  0, ..., 53, 59, 64]], dtype=uint8)}
-    """
-
-    image_size = get_image_size(image)
-    bbox = visual_prompt["bbox"]
-    image_b64 = convert_to_b64(image)
-
-    data = {
-        "image": image_b64,
-        "bbox": list(map(int, denormalize_bbox(bbox, image_size))),
-        "function_name": "loca_visual_prompt_counting",
-    }
-    resp_data: dict[str, Any] = send_inference_request(data, "loca", v2=True)
-    resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
-    return resp_data
 
 
 def countgd_object_detection(
@@ -952,67 +745,6 @@ def countgd_example_based_counting(
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
 
-def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
-    """'florence2_roberta_vqa' is a tool that takes an image and analyzes
-    its contents, generates detailed captions and then tries to answer the given
-    question using the generated context. It returns text as an answer to the question.
-
-    Parameters:
-        prompt (str): The question about the image
-        image (np.ndarray): The reference image used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> florence2_roberta_vqa('What is the top left animal in this image?', image)
-        'white tiger'
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "question": prompt,
-        "function_name": "florence2_roberta_vqa",
-    }
-
-    answer = send_inference_request(data, "florence2-qa", v2=True)
-    return answer  # type: ignore
-
-
-def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
-    """'ixc25_image_vqa' is a tool that can answer any questions about arbitrary images
-    including regular images or images of documents or presentations. It returns text
-    as an answer to the question.
-
-    Parameters:
-        prompt (str): The question about the image
-        image (np.ndarray): The reference image used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> ixc25_image_vqa('What is the cat doing?', image)
-        'drinking milk'
-    """
-    if image.shape[0] < 1 or image.shape[1] < 1:
-        raise ValueError(f"Image is empty, image shape: {image.shape}")
-
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    payload = {
-        "prompt": prompt,
-        "function_name": "ixc25_image_vqa",
-    }
-    data: Dict[str, Any] = send_inference_request(
-        payload, "internlm-xcomposer2", files=files, v2=True
-    )
-    return cast(str, data["answer"])
-
-
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
     """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary
     images including regular images or images of documents or presentations. It can be
@@ -1072,36 +804,6 @@ def claude35_text_extraction(image: np.ndarray) -> str:
         [image_b64],
     )
     return cast(str, text)
-
-
-def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
-    """'ixc25_video_vqa' is a tool that can answer any questions about arbitrary videos
-    including regular videos or videos of documents or presentations. It returns text
-    as an answer to the question.
-
-    Parameters:
-        prompt (str): The question about the video
-        frames (List[np.ndarray]): The reference frames used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> ixc25_video_vqa('Which football player made the goal?', frames)
-        'Lionel Messi'
-    """
-
-    buffer_bytes = frames_to_bytes(frames)
-    files = [("video", buffer_bytes)]
-    payload = {
-        "prompt": prompt,
-        "function_name": "ixc25_video_vqa",
-    }
-    data: Dict[str, Any] = send_inference_request(
-        payload, "internlm-xcomposer2", files=files, v2=True
-    )
-    return cast(str, data["answer"])
 
 
 def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
@@ -1277,40 +979,6 @@ def video_temporal_localization(
     return [cast(float, value) for value in data]
 
 
-def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
-    """'clip' is a tool that can classify an image or a cropped detection given a list
-    of input classes or tags. It returns the same list of the input classes along with
-    their probability scores based on image content.
-
-    Parameters:
-        image (np.ndarray): The image to classify or tag
-        classes (List[str]): The list of classes or tags that is associated with the image
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
-            contains a list of given labels and other a list of scores.
-
-    Example
-    -------
-        >>> clip(image, ['dog', 'cat', 'bird'])
-        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
-    """
-
-    if image.shape[0] < 1 or image.shape[1] < 1:
-        return {"labels": [], "scores": []}
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "prompt": ",".join(classes),
-        "image": image_b64,
-        "tool": "closed_set_image_classification",
-        "function_name": "clip",
-    }
-    resp_data: dict[str, Any] = send_inference_request(data, "tools")
-    resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
-    return resp_data
-
-
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
     """'vit_image_classification' is a tool that can classify an image. It returns a
     list of classes and their probability scores based on image content.
@@ -1370,62 +1038,6 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
     )
     resp_data["score"] = round(resp_data["score"], 4)
     return resp_data
-
-
-def blip_image_caption(image: np.ndarray) -> str:
-    """'blip_image_caption' is a tool that can caption an image based on its contents. It
-    returns a text describing the image.
-
-    Parameters:
-        image (np.ndarray): The image to caption
-
-    Returns:
-       str: A string which is the caption for the given image.
-
-    Example
-    -------
-        >>> blip_image_caption(image)
-        'This image contains a cat sitting on a table with a bowl of milk.'
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "tool": "image_captioning",
-        "function_name": "blip_image_caption",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return answer["text"][0]  # type: ignore
-
-
-def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
-    """'florence2_image_caption' is a tool that can caption or describe an image based
-    on its contents. It returns a text describing the image.
-
-    Parameters:
-        image (np.ndarray): The image to caption
-        detail_caption (bool): If True, the caption will be as detailed as possible else
-            the caption will be a brief description.
-
-    Returns:
-       str: A string which is the caption for the given image.
-
-    Example
-    -------
-        >>> florence2_image_caption(image, False)
-        'This image contains a cat sitting on a table with a bowl of milk.'
-    """
-    image_b64 = convert_to_b64(image)
-    task = "<MORE_DETAILED_CAPTION>" if detail_caption else "<DETAILED_CAPTION>"
-    data = {
-        "image": image_b64,
-        "task": task,
-        "function_name": "florence2_image_caption",
-    }
-
-    answer = send_inference_request(data, "florence2", v2=True)
-    return answer[task]  # type: ignore
 
 
 def florence2_phrase_grounding(
@@ -1724,71 +1336,6 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
     return depth_map_np
 
 
-def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
-    """'generate_soft_edge_image' is a tool that runs Holistically Nested edge detection
-    to generate a soft edge image (HED) from a given RGB image. The returned image is
-    monochrome and represents object boundaries as soft white edges on black background
-
-    Parameters:
-        image (np.ndarray): The image to used to generate soft edge image
-
-    Returns:
-        np.ndarray: A soft edge image with pixel values ranging from 0 to 255.
-
-    Example
-    -------
-        >>> generate_soft_edge_image(image)
-        array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 20, 24, ..., 0, 100, 103],
-                ...,
-                [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
-    """
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "tool": "generate_hed",
-        "function_name": "generate_soft_edge_image",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("L"))
-    return return_data
-
-
-def dpt_hybrid_midas(image: np.ndarray) -> np.ndarray:
-    """'dpt_hybrid_midas' is a tool that generates a normal mapped from a given RGB
-    image. The returned RGB image is texture mapped image of the surface normals and the
-    RGB values represent the surface normals in the x, y, z directions.
-
-    Parameters:
-        image (np.ndarray): The image to used to generate normal image
-
-    Returns:
-        np.ndarray: A mapped normal image with RGB pixel values indicating surface
-        normals in x, y, z directions.
-
-    Example
-    -------
-        >>> dpt_hybrid_midas(image)
-        array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 20, 24, ..., 0, 100, 103],
-                ...,
-                [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
-    """
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "tool": "generate_normal",
-        "function_name": "dpt_hybrid_midas",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("RGB"))
-    return return_data
-
-
 def generate_pose_image(image: np.ndarray) -> np.ndarray:
     """'generate_pose_image' is a tool that generates a open pose bone/stick image from
     a given RGB image. The returned bone image is RGB with the pose amd keypoints colored
@@ -1866,115 +1413,6 @@ def template_match(
             }
         )
     return return_data
-
-
-def minimum_distance(
-    det1: Dict[str, Any], det2: Dict[str, Any], image_size: Tuple[int, int]
-) -> float:
-    """'minimum_distance' calculates the minimum distance between two detections which
-    can include bounding boxes and or masks. This will return the closest distance
-    between the objects, not the distance between the centers of the objects.
-
-    Parameters:
-        det1 (Dict[str, Any]): The first detection of boxes or masks.
-        det2 (Dict[str, Any]): The second detection of boxes or masks.
-        image_size (Tuple[int, int]): The size of the image given as (height, width).
-
-    Returns:
-        float: The closest distance between the two detections.
-
-    Example
-    -------
-        >>> closest_distance(det1, det2, image_size)
-        141.42
-    """
-
-    if "mask" in det1 and "mask" in det2:
-        return closest_mask_distance(det1["mask"], det2["mask"])
-    elif "bbox" in det1 and "bbox" in det2:
-        return closest_box_distance(det1["bbox"], det2["bbox"], image_size)
-    else:
-        raise ValueError("Both detections must have either bbox or mask")
-
-
-def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
-    """'closest_mask_distance' calculates the closest distance between two masks.
-
-    Parameters:
-        mask1 (np.ndarray): The first mask.
-        mask2 (np.ndarray): The second mask.
-
-    Returns:
-        float: The closest distance between the two masks.
-
-    Example
-    -------
-        >>> closest_mask_distance(mask1, mask2)
-        0.5
-    """
-
-    mask1 = np.clip(mask1, 0, 1)
-    mask2 = np.clip(mask2, 0, 1)
-    contours1, _ = cv2.findContours(mask1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours2, _ = cv2.findContours(mask2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    largest_contour1 = max(contours1, key=cv2.contourArea)
-    largest_contour2 = max(contours2, key=cv2.contourArea)
-    polygon1 = cv2.approxPolyDP(largest_contour1, 1.0, True)
-    polygon2 = cv2.approxPolyDP(largest_contour2, 1.0, True)
-    min_distance = np.inf
-
-    small_polygon, larger_contour = (
-        (polygon1, largest_contour2)
-        if len(largest_contour1) < len(largest_contour2)
-        else (polygon2, largest_contour1)
-    )
-
-    # For each point in the first polygon
-    for point in small_polygon:
-        # Calculate the distance to the second polygon, -1 is to invert result as point inside the polygon is positive
-
-        distance = (
-            cv2.pointPolygonTest(
-                larger_contour, (point[0, 0].item(), point[0, 1].item()), True
-            )
-            * -1
-        )
-
-        # If the distance is negative, the point is inside the polygon, so the distance is 0
-        if distance < 0:
-            continue
-        else:
-            # Update the minimum distance if the point is outside the polygon
-            min_distance = min(min_distance, distance)
-
-    return min_distance if min_distance != np.inf else 0.0
-
-
-def closest_box_distance(
-    box1: List[float], box2: List[float], image_size: Tuple[int, int]
-) -> float:
-    """'closest_box_distance' calculates the closest distance between two bounding boxes.
-
-    Parameters:
-        box1 (List[float]): The first bounding box.
-        box2 (List[float]): The second bounding box.
-        image_size (Tuple[int, int]): The size of the image given as (height, width).
-
-    Returns:
-        float: The closest distance between the two bounding boxes.
-
-    Example
-    -------
-        >>> closest_box_distance([100, 100, 200, 200], [300, 300, 400, 400])
-        141.42
-    """
-
-    x11, y11, x12, y12 = denormalize_bbox(box1, image_size)
-    x21, y21, x22, y22 = denormalize_bbox(box2, image_size)
-
-    horizontal_distance = np.max([0, x21 - x12, x11 - x22])
-    vertical_distance = np.max([0, y21 - y12, y11 - y22])
-    return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
 def flux_image_inpainting(
@@ -2107,6 +1545,115 @@ def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any
     )
 
     return response
+
+
+def minimum_distance(
+    det1: Dict[str, Any], det2: Dict[str, Any], image_size: Tuple[int, int]
+) -> float:
+    """'minimum_distance' calculates the minimum distance between two detections which
+    can include bounding boxes and or masks. This will return the closest distance
+    between the objects, not the distance between the centers of the objects.
+
+    Parameters:
+        det1 (Dict[str, Any]): The first detection of boxes or masks.
+        det2 (Dict[str, Any]): The second detection of boxes or masks.
+        image_size (Tuple[int, int]): The size of the image given as (height, width).
+
+    Returns:
+        float: The closest distance between the two detections.
+
+    Example
+    -------
+        >>> closest_distance(det1, det2, image_size)
+        141.42
+    """
+
+    if "mask" in det1 and "mask" in det2:
+        return closest_mask_distance(det1["mask"], det2["mask"])
+    elif "bbox" in det1 and "bbox" in det2:
+        return closest_box_distance(det1["bbox"], det2["bbox"], image_size)
+    else:
+        raise ValueError("Both detections must have either bbox or mask")
+
+
+def closest_mask_distance(mask1: np.ndarray, mask2: np.ndarray) -> float:
+    """'closest_mask_distance' calculates the closest distance between two masks.
+
+    Parameters:
+        mask1 (np.ndarray): The first mask.
+        mask2 (np.ndarray): The second mask.
+
+    Returns:
+        float: The closest distance between the two masks.
+
+    Example
+    -------
+        >>> closest_mask_distance(mask1, mask2)
+        0.5
+    """
+
+    mask1 = np.clip(mask1, 0, 1)
+    mask2 = np.clip(mask2, 0, 1)
+    contours1, _ = cv2.findContours(mask1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours2, _ = cv2.findContours(mask2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    largest_contour1 = max(contours1, key=cv2.contourArea)
+    largest_contour2 = max(contours2, key=cv2.contourArea)
+    polygon1 = cv2.approxPolyDP(largest_contour1, 1.0, True)
+    polygon2 = cv2.approxPolyDP(largest_contour2, 1.0, True)
+    min_distance = np.inf
+
+    small_polygon, larger_contour = (
+        (polygon1, largest_contour2)
+        if len(largest_contour1) < len(largest_contour2)
+        else (polygon2, largest_contour1)
+    )
+
+    # For each point in the first polygon
+    for point in small_polygon:
+        # Calculate the distance to the second polygon, -1 is to invert result as point inside the polygon is positive
+
+        distance = (
+            cv2.pointPolygonTest(
+                larger_contour, (point[0, 0].item(), point[0, 1].item()), True
+            )
+            * -1
+        )
+
+        # If the distance is negative, the point is inside the polygon, so the distance is 0
+        if distance < 0:
+            continue
+        else:
+            # Update the minimum distance if the point is outside the polygon
+            min_distance = min(min_distance, distance)
+
+    return min_distance if min_distance != np.inf else 0.0
+
+
+def closest_box_distance(
+    box1: List[float], box2: List[float], image_size: Tuple[int, int]
+) -> float:
+    """'closest_box_distance' calculates the closest distance between two bounding boxes.
+
+    Parameters:
+        box1 (List[float]): The first bounding box.
+        box2 (List[float]): The second bounding box.
+        image_size (Tuple[int, int]): The size of the image given as (height, width).
+
+    Returns:
+        float: The closest distance between the two bounding boxes.
+
+    Example
+    -------
+        >>> closest_box_distance([100, 100, 200, 200], [300, 300, 400, 400])
+        141.42
+    """
+
+    x11, y11, x12, y12 = denormalize_bbox(box1, image_size)
+    x21, y21, x22, y22 = denormalize_bbox(box2, image_size)
+
+    horizontal_distance = np.max([0, x21 - x12, x11 - x22])
+    vertical_distance = np.max([0, y21 - y12, y11 - y22])
+    return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
 # Utility and visualization functions
