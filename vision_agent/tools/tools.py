@@ -2630,8 +2630,39 @@ def countgd_sam2_video_tracking(
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 10,
 ) -> List[List[Dict[str, Any]]]:
-    """`countgd_sam2_video_tracking` it is only a test method"""
+    """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
+    prompt such as category names or referring expressions. The categories in the text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores of 1.0.
 
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_video_tracking("car, dinosaur", image)
+        [
+            {
+                'score': 1.0,
+                'label': 'dinosaur',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
     results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
 
     if chunk_length is None:
