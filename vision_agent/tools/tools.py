@@ -5,6 +5,7 @@ import os
 import tempfile
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from enum import Enum
 from functools import lru_cache
 from importlib import resources
 from pathlib import Path
@@ -2625,44 +2626,25 @@ def _plot_counting(
     return image
 
 
-def countgd_sam2_video_tracking(
+class ODModels(str, Enum):
+    COUNTGD = "countgd"
+
+
+def od_sam2_video_tracking(
+    od_model: ODModels,
     prompt: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 10,
+    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
-    """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
-    prompt such as category names or referring expressions. The categories in the text
-    prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores of 1.0.
 
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
+    if od_model == ODModels.COUNTGD:
+        detection_function = countgd_object_detection
+    else:
+        raise NotImplementedError(
+            f"Object detection model '{od_model.value}' is not implemented."
+        )
 
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
-
-    Example
-    -------
-        >>> countgd_sam2_video_tracking("car, dinosaur", image)
-        [
-            {
-                'score': 1.0,
-                'label': 'dinosaur',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-        ]
-    """
     results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
 
     if chunk_length is None:
@@ -2673,7 +2655,7 @@ def countgd_sam2_video_tracking(
         step = chunk_length  # Process frames with the specified step size
 
     for idx in range(0, len(frames), step):
-        results[idx] = countgd_object_detection(prompt=prompt, image=frames[idx])
+        results[idx] = detection_function(prompt=prompt, image=frames[idx])
 
     image_size = frames[0].shape[:2]
 
@@ -2725,6 +2707,50 @@ def countgd_sam2_video_tracking(
         return_data.append(return_frame_data)
     return_data = add_bboxes_from_masks(return_data)
     return nms(return_data, iou_threshold=0.95)
+
+
+def countgd_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+) -> List[List[Dict[str, Any]]]:
+    """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
+    prompt such as category names or referring expressions. The categories in the text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores of 1.0.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_video_tracking("car, dinosaur", image)
+        [
+            {
+                'score': 1.0,
+                'label': 'dinosaur',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+
+    return od_sam2_video_tracking(
+        ODModels.COUNTGD, prompt=prompt, frames=frames, chunk_length=chunk_length
+    )
 
 
 FUNCTION_TOOLS = [
