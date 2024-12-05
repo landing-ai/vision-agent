@@ -6,9 +6,10 @@ from vision_agent.tools import (
     blip_image_caption,
     clip,
     closest_mask_distance,
+    countgd_example_based_counting,
     countgd_object_detection,
     countgd_sam2_object_detection,
-    countgd_example_based_counting,
+    countgd_sam2_video_tracking,
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
@@ -624,3 +625,18 @@ def test_flux_image_inpainting_resizing_big_image():
 
     assert result.shape[0] == 512
     assert result.shape[1] == 208
+
+
+def test_video_tracking_with_countgd():
+
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    result = countgd_sam2_video_tracking(
+        prompt="coin",
+        frames=frames,
+    )
+
+    assert len(result) == 10
+    assert len([res["label"] for res in result[0]]) == 24
+    assert len([res["mask"] for res in result[0]]) == 24
