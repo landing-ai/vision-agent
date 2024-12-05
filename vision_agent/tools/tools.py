@@ -2632,7 +2632,7 @@ def countgd_sam2_video_tracking(
 ) -> List[List[Dict[str, Any]]]:
     """`countgd_sam2_video_tracking` it is only a test method"""
 
-    results = [None] * len(frames)
+    results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
 
     if chunk_length is None:
         step = 1  # Process every frame
@@ -2646,8 +2646,10 @@ def countgd_sam2_video_tracking(
 
     image_size = frames[0].shape[:2]
 
-    def _transform_detections(input_list):
-        output_list = []
+    def _transform_detections(
+        input_list: List[Optional[List[Dict[str, Any]]]]
+    ) -> List[Optional[Dict[str, Any]]]:
+        output_list: List[Optional[Dict[str, Any]]] = []
 
         for idx, frame in enumerate(input_list):
             if frame is not None:
