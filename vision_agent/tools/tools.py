@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 import urllib.request
+from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from importlib import resources
@@ -14,6 +15,7 @@ from uuid import UUID
 import cv2
 import numpy as np
 import requests
+from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
@@ -21,6 +23,7 @@ from pytube import YouTube  # type: ignore
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
+    ToolCallTrace,
     add_bboxes_from_masks,
     filter_bboxes_by_threshold,
     get_tool_descriptions,
@@ -45,6 +48,7 @@ from vision_agent.utils.image_utils import (
     numpy_to_bytes,
     rle_decode,
     rle_decode_array,
+    rle_encode_array,
 )
 from vision_agent.utils.sim import Sim, load_cached_sim
 from vision_agent.utils.video import (
@@ -85,6 +89,30 @@ _LOGGER = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def get_tool_recommender() -> Sim:
     return load_cached_sim(TOOLS_DF)
+
+
+def _display_tool_trace(
+    function_name: str,
+    request: Dict[str, Any],
+    response: Any,
+    files: Union[List[Tuple[str, bytes]], str],
+) -> None:
+    if isinstance(files, str):
+        files_in_b64: List[Tuple[str, str]] = [("images", files)]
+    else:
+        files_in_b64: List[Tuple[str, str]] = [
+            (file[0], b64encode(file[1]).decode("utf-8")) for file in files
+        ]
+
+    request["function_name"] = function_name
+    tool_call_trace = ToolCallTrace(
+        endpoint_url="",
+        request=request,
+        response={"data": response},
+        error=None,
+        files=files_in_b64,
+    )
+    display({MimeType.APPLICATION_JSON: tool_call_trace.model_dump()}, raw=True)
 
 
 def owl_v2_image(
@@ -167,6 +195,13 @@ def owl_v2_image(
         )
         for bbox in bboxes
     ]
+
+    _display_tool_trace(
+        owl_v2_image.__name__,
+        payload,
+        detections[0],
+        cast(List[tuple[str, bytes]], files),
+    )
     return [bbox.model_dump() for bbox in bboxes_formatted]
 
 
@@ -254,6 +289,12 @@ def owl_v2_video(
             for bbox in frame_data
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
+    _display_tool_trace(
+        owl_v2_video.__name__,
+        payload,
+        detections[0],
+        cast(List[tuple[str, bytes]], files),
+    )
     return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
 
@@ -331,6 +372,13 @@ def florence2_sam2_image(
         label = detection["label"]
         bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
         return_data.append({"label": label, "bbox": bbox, "mask": mask, "score": 1.0})
+
+    _display_tool_trace(
+        florence2_sam2_image.__name__,
+        payload,
+        detections[0],
+        cast(List[tuple[str, bytes]], files),
+    )
     return return_data
 
 
@@ -419,7 +467,14 @@ def florence2_sam2_video_tracking(
             return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
         return_data.append(return_frame_data)
     return_data = add_bboxes_from_masks(return_data)
-    return nms(return_data, iou_threshold=0.95)
+    return_data = nms(return_data, iou_threshold=0.95)
+    _display_tool_trace(
+        florence2_sam2_video_tracking.__name__,
+        payload,
+        detections[0],
+        cast(List[tuple[str, bytes]], files),
+    )
+    return return_data
 
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -474,84 +529,13 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
         box = normalize_bbox(box, image_size)
         output.append({"label": label, "bbox": box, "score": round(det["score"], 2)})
 
-    ocr_results = sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
-    return ocr_results
-
-
-def countgd_object_detection(
-    prompt: str,
-    image: np.ndarray,
-    box_threshold: float = 0.23,
-) -> List[Dict[str, Any]]:
-    """'countgd_object_detection' is a tool that can detect multiple instances of an
-    object given a text prompt. It is particularly useful when trying to detect and
-    count a large number of objects. You can optionally separate object names in the
-    prompt with commas. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated confidence scores.
-
-    Parameters:
-        prompt (str): The object that needs to be counted.
-        image (np.ndarray): The image that contains multiple instances of the object.
-        box_threshold (float, optional): The threshold for detection. Defaults
-            to 0.23.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
-            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-            top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box.
-
-    Example
-    -------
-        >>> countgd_object_detection("flower", image)
-        [
-            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
-            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
-            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
-        ]
-    """
-    image_size = image.shape[:2]
-    if image_size[0] < 1 or image_size[1] < 1:
-        return []
-
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    prompts = [p.strip() for p in prompt.split(", ")]
-
-    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
-        payload = {
-            "prompts": [prompt],
-            "confidence": box_threshold,  # still not being used in the API
-            "model": "countgd",
-        }
-        metadata = {"function_name": "countgd_counting"}
-
-        detections = send_task_inference_request(
-            payload, "text-to-object-detection", files=files, metadata=metadata
-        )
-        # get the first frame
-        return detections[0]  # type: ignore
-
-    bboxes = []
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
-        for future in as_completed(futures):
-            bboxes.extend(future.result())
-
-    bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
-        for bbox in bboxes
-    ]
-    # TODO: remove this once we start to use the confidence on countgd
-    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return_data = [bbox.model_dump() for bbox in filtered_bboxes]
-    return single_nms(return_data, iou_threshold=0.80)
+    _display_tool_trace(
+        ocr.__name__,
+        {},
+        data,
+        cast(List[tuple[str, bytes]], [("image", buffer_bytes)]),
+    )
+    return sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
 
 
 def sam2(
@@ -633,6 +617,93 @@ def sam2(
     return return_data
 
 
+def countgd_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> countgd_object_detection("flower", image)
+        [
+            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
+        ]
+    """
+    image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    prompts = [p.strip() for p in prompt.split(", ")]
+
+    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
+        payload = {
+            "prompts": [prompt],
+            "confidence": box_threshold,  # still not being used in the API
+            "model": "countgd",
+        }
+        metadata = {"function_name": "countgd_counting"}
+
+        detections = send_task_inference_request(
+            payload, "text-to-object-detection", files=files, metadata=metadata
+        )
+        # get the first frame
+        return detections[0]  # type: ignore
+
+    bboxes = []
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
+        for future in as_completed(futures):
+            bboxes.extend(future.result())
+
+    bboxes_formatted = [
+        ODResponseData(
+            label=bbox["label"],
+            bbox=normalize_bbox(bbox["bounding_box"], image_size),
+            score=round(bbox["score"], 2),
+        )
+        for bbox in bboxes
+    ]
+    _display_tool_trace(
+        countgd_object_detection.__name__,
+        {
+            "prompts": prompt,
+            "confidence": box_threshold,
+            "model": "countgd",
+        },
+        bboxes,
+        cast(List[tuple[str, bytes]], files),
+    )
+
+    # TODO: remove this once we start to use the confidence on countgd
+    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
+    return_data = [bbox.model_dump() for bbox in filtered_bboxes]
+    return single_nms(return_data, iou_threshold=0.80)
+
+
 def countgd_sam2_object_detection(
     prompt: str,
     image: np.ndarray,
@@ -676,6 +747,25 @@ def countgd_sam2_object_detection(
     """
     detections = countgd_object_detection(prompt, image, box_threshold)
     detections_with_masks = sam2(image, detections)
+    files = [("images", numpy_to_bytes(image))]
+    _display_tool_trace(
+        countgd_sam2_object_detection.__name__,
+        {
+            "prompts": prompt,
+            "confidence": box_threshold,  # still not being used in the API
+            "model": "countgd_sam2",
+        },
+        [
+            {
+                "label": e["label"],
+                "score": e["score"],
+                "bbox": e["bbox"],
+                "mask": rle_encode_array(e["mask"]),
+            }
+            for e in detections_with_masks
+        ],
+        cast(List[tuple[str, bytes]], files),
+    )
     return detections_with_masks
 
 
@@ -741,6 +831,13 @@ def countgd_example_based_counting(
         )
         for bbox in bboxes_per_frame
     ]
+    _display_tool_trace(
+        countgd_example_based_counting.__name__,
+        payload,
+        detections[0],
+        cast(List[tuple[str, bytes]], files),
+    )
+
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     return [bbox.model_dump() for bbox in filtered_bboxes]
 
@@ -779,31 +876,13 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
     data: Dict[str, Any] = send_inference_request(
         payload, "image-to-text", files=files, v2=True
     )
-    return cast(str, data)
-
-
-def claude35_text_extraction(image: np.ndarray) -> str:
-    """'claude35_text_extraction' is a tool that can extract text from an image. It
-    returns the extracted text as a string and can be used as an alternative to OCR if
-    you do not need to know the exact bounding box of the text.
-
-    Parameters:
-        image (np.ndarray): The image to extract text from.
-
-    Returns:
-        str: The extracted text from the image.
-    """
-
-    lmm = AnthropicLMM()
-    buffer = io.BytesIO()
-    Image.fromarray(image).save(buffer, format="PNG")
-    image_bytes = buffer.getvalue()
-    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
-    text = lmm.generate(
-        "Extract and return any text you see in this image and nothing else. If you do not read any text respond with an empty string.",
-        [image_b64],
+    _display_tool_trace(
+        qwen2_vl_images_vqa.__name__,
+        payload,
+        cast(str, data),
+        cast(List[tuple[str, bytes]], files),
     )
-    return cast(str, text)
+    return cast(str, data)
 
 
 def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
@@ -837,7 +916,37 @@ def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     data: Dict[str, Any] = send_inference_request(
         payload, "image-to-text", files=files, v2=True
     )
+    _display_tool_trace(
+        qwen2_vl_video_vqa.__name__,
+        payload,
+        cast(str, data),
+        cast(List[tuple[str, bytes]], files),
+    )
     return cast(str, data)
+
+
+def claude35_text_extraction(image: np.ndarray) -> str:
+    """'claude35_text_extraction' is a tool that can extract text from an image. It
+    returns the extracted text as a string and can be used as an alternative to OCR if
+    you do not need to know the exact bounding box of the text.
+
+    Parameters:
+        image (np.ndarray): The image to extract text from.
+
+    Returns:
+        str: The extracted text from the image.
+    """
+
+    lmm = AnthropicLMM()
+    buffer = io.BytesIO()
+    Image.fromarray(image).save(buffer, format="PNG")
+    image_bytes = buffer.getvalue()
+    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+    text = lmm.generate(
+        "Extract and return any text you see in this image and nothing else. If you do not read any text respond with an empty string.",
+        [image_b64],
+    )
+    return cast(str, text)
 
 
 def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
@@ -903,36 +1012,6 @@ def gpt4o_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     return cast(str, resp)
 
 
-def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
-    """'git_vqa_v2' is a tool that can answer questions about the visual
-    contents of an image given a question and an image. It returns an answer to the
-    question
-
-    Parameters:
-        prompt (str): The question about the image
-        image (np.ndarray): The reference image used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> git_vqa_v2('What is the cat doing ?', image)
-        'drinking milk'
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "prompt": prompt,
-        "tool": "image_question_answering",
-        "function_name": "git_vqa_v2",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return answer["text"][0]  # type: ignore
-
-
 def video_temporal_localization(
     prompt: str,
     frames: List[np.ndarray],
@@ -976,6 +1055,12 @@ def video_temporal_localization(
     data = send_inference_request(
         payload, "video-temporal-localization", files=files, v2=True
     )
+    _display_tool_trace(
+        video_temporal_localization.__name__,
+        payload,
+        data,
+        cast(List[tuple[str, bytes]], files),
+    )
     return [cast(float, value) for value in data]
 
 
@@ -1006,6 +1091,12 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
     }
     resp_data: dict[str, Any] = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
+    _display_tool_trace(
+        vit_image_classification.__name__,
+        data,
+        resp_data,
+        image_b64,
+    )
     return resp_data
 
 
@@ -1037,6 +1128,12 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
         data, "nsfw-classification", v2=True
     )
     resp_data["score"] = round(resp_data["score"], 4)
+    _display_tool_trace(
+        vit_nsfw_classification.__name__,
+        data,
+        resp_data,
+        image_b64,
+    )
     return resp_data
 
 
@@ -1110,6 +1207,12 @@ def florence2_phrase_grounding(
         for bbox in bboxes
     ]
 
+    _display_tool_trace(
+        florence2_phrase_grounding.__name__,
+        payload,
+        detections[0],
+        cast(List[tuple[str, bytes]], files),
+    )
     return [bbox.model_dump() for bbox in bboxes_formatted]
 
 
@@ -1186,6 +1289,12 @@ def florence2_phrase_grounding_video(
             for bbox in frame_data
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
+    _display_tool_trace(
+        florence2_phrase_grounding_video.__name__,
+        payload,
+        detections,
+        cast(List[tuple[str, bytes]], files),
+    )
     return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
 
@@ -1233,6 +1342,12 @@ def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
                 "score": 1.0,
             }
         )
+    _display_tool_trace(
+        florence2_ocr.__name__,
+        {},
+        return_data,
+        image_b64,
+    )
     return return_data
 
 
@@ -1295,6 +1410,12 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
                 ),
             }
         )
+    _display_tool_trace(
+        detr_segmentation.__name__,
+        {},
+        return_data,
+        image_b64,
+    )
     return return_data
 
 
@@ -1364,6 +1485,12 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
 
     pos_img = send_inference_request(data, "pose-detector", v2=True)
     return_data = np.array(b64_to_pil(pos_img["data"]).convert("RGB"))
+    _display_tool_trace(
+        generate_pose_image.__name__,
+        {},
+        return_data,
+        image_b64,
+    )
     return return_data
 
 
@@ -1408,10 +1535,17 @@ def template_match(
     for i in range(len(answer["bboxes"])):
         return_data.append(
             {
+                "label": "match",
                 "score": round(answer["scores"][i], 2),
                 "bbox": normalize_bbox(answer["bboxes"][i], image_size),
             }
         )
+    _display_tool_trace(
+        template_match.__name__,
+        {"template_image": template_image_b64},
+        return_data,
+        image_b64,
+    )
     return return_data
 
 
@@ -1502,6 +1636,12 @@ def flux_image_inpainting(
     )
 
     output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
+    _display_tool_trace(
+        flux_image_inpainting.__name__,
+        payload,
+        output_image,
+        files,
+    )
     return output_image
 
 
@@ -1542,6 +1682,13 @@ def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any
         files=files,
         v2=True,
         metadata_payload={"function_name": "siglip_classification"},
+    )
+
+    _display_tool_trace(
+        siglip_classification.__name__,
+        payload,
+        response,
+        cast(List[Tuple[str, bytes]], files),
     )
 
     return response
