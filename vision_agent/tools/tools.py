@@ -2628,6 +2628,7 @@ def _plot_counting(
 
 class ODModels(str, Enum):
     COUNTGD = "countgd"
+    OWLV2 = "owlv2"
 
 
 def od_sam2_video_tracking(
@@ -2640,6 +2641,10 @@ def od_sam2_video_tracking(
 
     if od_model == ODModels.COUNTGD:
         detection_function = countgd_object_detection
+        function_name = "countgd_object_detection"
+    elif od_model == ODModels.OWLV2:
+        detection_function = owl_v2_image
+        function_name = "owl_v2_image"
     else:
         raise NotImplementedError(
             f"Object detection model '{od_model.value}' is not implemented."
@@ -2688,7 +2693,7 @@ def od_sam2_video_tracking(
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     payload = {"bboxes": json.dumps(output), "chunk_length": chunk_length}
-    metadata = {"function_name": "countgd_sam2_video_tracking"}
+    metadata = {"function_name": function_name}
 
     detections = send_task_inference_request(
         payload,
@@ -2753,6 +2758,55 @@ def countgd_sam2_video_tracking(
     )
 
 
+def owlv2_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+    fine_tune_id: Optional[str] = None,
+) -> List[List[Dict[str, Any]]]:
+    """'owlv2_sam2_video_tracking' is a tool that can segment multiple objects given a text
+    prompt such as category names or referring expressions. The categories in the text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores of 1.0.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_video_tracking("car, dinosaur", image)
+        [
+            {
+                'score': 1.0,
+                'label': 'dinosaur',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+
+    return od_sam2_video_tracking(
+        ODModels.OWLV2,
+        prompt=prompt,
+        frames=frames,
+        chunk_length=chunk_length,
+        fine_tune_id=fine_tune_id,
+    )
+
+
 FUNCTION_TOOLS = [
     owl_v2_image,
     owl_v2_video,
@@ -2775,7 +2829,6 @@ FUNCTION_TOOLS = [
     video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,
-    countgd_sam2_video_tracking,
 ]
 
 UTIL_TOOLS = [

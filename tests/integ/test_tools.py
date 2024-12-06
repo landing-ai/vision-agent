@@ -9,7 +9,6 @@ from vision_agent.tools import (
     countgd_example_based_counting,
     countgd_object_detection,
     countgd_sam2_object_detection,
-    countgd_sam2_video_tracking,
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
@@ -40,6 +39,10 @@ from vision_agent.tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
+)
+from vision_agent.tools.tools import (
+    countgd_sam2_video_tracking,
+    owlv2_sam2_video_tracking,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -633,6 +636,21 @@ def test_video_tracking_with_countgd():
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
     result = countgd_sam2_video_tracking(
+        prompt="coin",
+        frames=frames,
+    )
+
+    assert len(result) == 10
+    assert len([res["label"] for res in result[0]]) == 24
+    assert len([res["mask"] for res in result[0]]) == 24
+
+
+def test_video_tracking_with_owlv2():
+
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    result = owlv2_sam2_video_tracking(
         prompt="coin",
         frames=frames,
     )
