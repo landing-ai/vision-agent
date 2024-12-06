@@ -31,6 +31,7 @@ from .tools import (
     countgd_example_based_counting,
     countgd_object_detection,
     countgd_sam2_object_detection,
+    countgd_sam2_video_tracking,
     depth_anything_v2,
     detr_segmentation,
     dpt_hybrid_midas,
@@ -64,6 +65,7 @@ from .tools import (
     overlay_segmentation_masks,
     owl_v2_image,
     owl_v2_video,
+    owlv2_sam2_video_tracking,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     sam2,
@@ -75,7 +77,6 @@ from .tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
-    countgd_sam2_video_tracking,
 )
 
 __new_tools__ = [
