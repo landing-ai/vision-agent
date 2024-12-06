@@ -902,7 +902,7 @@ def countgd_example_based_counting(
             {
                 "label": e["label"],
                 "score": e["score"],
-                "bbox": denormalize_bbox(e["bbox"], image_size),  # type: ignore
+                "bbox": denormalize_bbox(e["bbox"], image_size),
             }
             for e in bboxes_formatted
         ],
