@@ -208,10 +208,6 @@ def _call_post(
     function_name: str = "unknown",
     is_form: bool = False,
 ) -> Any:
-    files_in_b64 = None
-    if files:
-        files_in_b64 = [(file[0], b64encode(file[1]).decode("utf-8")) for file in files]
-
     tool_call_trace = None
     try:
         if files is not None:
@@ -221,21 +217,22 @@ def _call_post(
         else:
             response = session.post(url, json=payload)
 
-        # make sure function_name is in the payload so we can display it
-        tool_call_trace_payload = (
-            payload
-            if "function_name" in payload
-            else {**payload, **{"function_name": function_name}}
-        )
-        tool_call_trace = ToolCallTrace(
-            endpoint_url=url,
-            request=tool_call_trace_payload,
-            response={},
-            error=None,
-            files=files_in_b64,
-        )
-
         if response.status_code != 200:
+            # Only send tool traces for errors, normal tool traces will be sent through
+            # the tool call. make sure function_name is in the payload so we can
+            # display it
+            tool_call_trace_payload = (
+                payload
+                if "function_name" in payload
+                else {**payload, **{"function_name": function_name}}
+            )
+            tool_call_trace = ToolCallTrace(
+                endpoint_url=url,
+                request=tool_call_trace_payload,
+                response={},
+                error=None,
+                files=None,
+            )
             tool_call_trace.error = Error(
                 name="RemoteToolCallFailed",
                 value=f"{response.status_code} - {response.text}",
@@ -247,7 +244,6 @@ def _call_post(
             )
 
         result = response.json()
-        tool_call_trace.response = result
         return result
     finally:
         if tool_call_trace is not None:
