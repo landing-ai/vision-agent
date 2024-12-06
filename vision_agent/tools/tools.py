@@ -97,12 +97,11 @@ def _display_tool_trace(
     response: Any,
     files: Union[List[Tuple[str, bytes]], str],
 ) -> None:
+    files_in_b64: List[Tuple[str, str]]
     if isinstance(files, str):
-        files_in_b64: List[Tuple[str, str]] = [("images", files)]
+        files_in_b64 = [("images", files)]
     else:
-        files_in_b64: List[Tuple[str, str]] = [
-            (file[0], b64encode(file[1]).decode("utf-8")) for file in files
-        ]
+        files_in_b64 = [(file[0], b64encode(file[1]).decode("utf-8")) for file in files]
 
     request["function_name"] = function_name
     tool_call_trace = ToolCallTrace(
@@ -200,7 +199,7 @@ def owl_v2_image(
         owl_v2_image.__name__,
         payload,
         detections[0],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return [bbox.model_dump() for bbox in bboxes_formatted]
 
@@ -293,7 +292,7 @@ def owl_v2_video(
         owl_v2_video.__name__,
         payload,
         detections[0],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
@@ -377,7 +376,7 @@ def florence2_sam2_image(
         florence2_sam2_image.__name__,
         payload,
         detections[0],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return return_data
 
@@ -472,7 +471,7 @@ def florence2_sam2_video_tracking(
         florence2_sam2_video_tracking.__name__,
         payload,
         detections[0],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return return_data
 
@@ -695,7 +694,7 @@ def countgd_object_detection(
             "model": "countgd",
         },
         bboxes,
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
 
     # TODO: remove this once we start to use the confidence on countgd
@@ -764,7 +763,7 @@ def countgd_sam2_object_detection(
             }
             for e in detections_with_masks
         ],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return detections_with_masks
 
@@ -835,7 +834,7 @@ def countgd_example_based_counting(
         countgd_example_based_counting.__name__,
         payload,
         detections[0],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
 
     filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
@@ -880,7 +879,7 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
         qwen2_vl_images_vqa.__name__,
         payload,
         cast(str, data),
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return cast(str, data)
 
@@ -920,7 +919,7 @@ def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         qwen2_vl_video_vqa.__name__,
         payload,
         cast(str, data),
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return cast(str, data)
 
@@ -1059,7 +1058,7 @@ def video_temporal_localization(
         video_temporal_localization.__name__,
         payload,
         data,
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return [cast(float, value) for value in data]
 
@@ -1211,7 +1210,7 @@ def florence2_phrase_grounding(
         florence2_phrase_grounding.__name__,
         payload,
         detections[0],
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return [bbox.model_dump() for bbox in bboxes_formatted]
 
@@ -1293,7 +1292,7 @@ def florence2_phrase_grounding_video(
         florence2_phrase_grounding_video.__name__,
         payload,
         detections,
-        cast(List[tuple[str, bytes]], files),
+        files,
     )
     return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
 
@@ -1688,9 +1687,8 @@ def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any
         siglip_classification.__name__,
         payload,
         response,
-        cast(List[Tuple[str, bytes]], files),
+        files,
     )
-
     return response
 
 

@@ -1,7 +1,6 @@
 import inspect
 import logging
 import os
-from base64 import b64encode
 from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
 
 import numpy as np
