@@ -25,7 +25,6 @@ from vision_agent.lmm.lmm import AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
     ToolCallTrace,
     add_bboxes_from_masks,
-    filter_bboxes_by_threshold,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
@@ -35,7 +34,7 @@ from vision_agent.tools.tool_utils import (
     send_task_inference_request,
     single_nms,
 )
-from vision_agent.tools.tools_types import JobStatus, ODResponseData
+from vision_agent.tools.tools_types import JobStatus
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -48,7 +47,6 @@ from vision_agent.utils.image_utils import (
     numpy_to_bytes,
     rle_decode,
     rle_decode_array,
-    rle_encode_array,
 )
 from vision_agent.utils.sim import Sim, load_cached_sim
 from vision_agent.utils.video import (
@@ -97,6 +95,11 @@ def _display_tool_trace(
     response: Any,
     files: Union[List[Tuple[str, bytes]], str],
 ) -> None:
+    # Sends data through IPython's display function so front-end can show them. We use
+    # a function here instead of a decarator becuase we do not want to re-calculate data
+    # such as video bytes, which can be slow. Since this is calculated inside the
+    # function we can't capture it with a decarator without adding it as a return value
+    # which would change the function signature and affect the agent.
     files_in_b64: List[Tuple[str, str]]
     if isinstance(files, str):
         files_in_b64 = [("images", files)]
@@ -106,6 +109,7 @@ def _display_tool_trace(
     request["function_name"] = function_name
     tool_call_trace = ToolCallTrace(
         endpoint_url="",
+        type="tool_func_call",
         request=request,
         response={"data": response},
         error=None,
@@ -187,11 +191,11 @@ def owl_v2_image(
     # get the first frame
     bboxes = detections[0]
     bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
         for bbox in bboxes
     ]
 
@@ -201,7 +205,7 @@ def owl_v2_image(
         detections[0],
         files,
     )
-    return [bbox.model_dump() for bbox in bboxes_formatted]
+    return bboxes_formatted
 
 
 def owl_v2_video(
@@ -280,11 +284,11 @@ def owl_v2_video(
     bboxes_formatted = []
     for frame_data in detections:
         bboxes_formatted_per_frame = [
-            ODResponseData(
-                label=bbox["label"],
-                bbox=normalize_bbox(bbox["bounding_box"], image_size),
-                score=round(bbox["score"], 2),
-            )
+            {
+                "label": bbox["label"],
+                "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+                "score": round(bbox["score"], 2),
+            }
             for bbox in frame_data
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
@@ -294,7 +298,7 @@ def owl_v2_video(
         detections[0],
         files,
     )
-    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
+    return bboxes_formatted
 
 
 def florence2_sam2_image(
@@ -463,7 +467,9 @@ def florence2_sam2_video_tracking(
         for detection in frame:
             mask = rle_decode_array(detection["mask"])
             label = str(detection["id"]) + ": " + detection["label"]
-            return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
+            return_frame_data.append(
+                {"label": label, "mask": mask, "score": 1.0, "rle": detection["mask"]}
+            )
         return_data.append(return_frame_data)
     return_data = add_bboxes_from_masks(return_data)
     return_data = nms(return_data, iou_threshold=0.95)
@@ -477,7 +483,7 @@ def florence2_sam2_video_tracking(
                     "label": e["label"],
                     "score": e["score"],
                     "bbox": denormalize_bbox(e["bbox"], frames[0].shape[:2]),
-                    "mask": rle_encode_array(e["mask"]),
+                    "mask": e["rle"],
                 }
                 for e in lst
             ]
@@ -485,6 +491,11 @@ def florence2_sam2_video_tracking(
         ],
         files,
     )
+    # We save the RLE for display purposes, re-calculting RLE can get very expensive.
+    # Deleted here because we are returning the numpy masks instead
+    for frame in return_data:
+        for obj in frame:
+            del obj["rle"]
     return return_data
 
 
@@ -544,9 +555,63 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
         ocr.__name__,
         {},
         data,
-        cast(List[tuple[str, bytes]], [("image", buffer_bytes)]),
+        cast(List[Tuple[str, bytes]], [("image", buffer_bytes)]),
     )
     return sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
+
+
+def _sam2(
+    image: np.ndarray,
+    detections: List[Dict[str, Any]],
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
+
+    files = [("images", image_bytes)]
+    payload = {
+        "model": "sam2",
+        "bboxes": json.dumps(
+            [
+                {
+                    "labels": [d["label"] for d in detections],
+                    "bboxes": [
+                        denormalize_bbox(d["bbox"], image_size) for d in detections
+                    ],
+                }
+            ]
+        ),
+    }
+
+    metadata = {"function_name": "sam2"}
+    pred_detections = send_task_inference_request(
+        payload, "sam2", files=files, metadata=metadata
+    )
+    frame = pred_detections[0]
+    return_data = []
+    display_data = []
+    for inp_detection, detection in zip(detections, frame):
+        mask = rle_decode_array(detection["mask"])
+        label = detection["label"]
+        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
+        return_data.append(
+            {
+                "label": label,
+                "bbox": bbox,
+                "mask": mask,
+                "score": inp_detection["score"],
+            }
+        )
+        display_data.append(
+            {
+                "label": label,
+                "bbox": detection["bounding_box"],
+                "mask": detection["mask"],
+                "score": inp_detection["score"],
+            }
+        )
+    return {"files": files, "return_data": return_data, "display_data": display_data}
 
 
 def sam2(
@@ -592,40 +657,69 @@ def sam2(
         ]
     """
     image_size = image.shape[:2]
-
-    files = [("images", numpy_to_bytes(image))]
-    payload = {
-        "model": "sam2",
-        "bboxes": json.dumps(
-            [
-                {
-                    "labels": [d["label"] for d in detections],
-                    "bboxes": [
-                        denormalize_bbox(d["bbox"], image_size) for d in detections
-                    ],
-                }
-            ]
-        ),
-    }
-    metadata = {"function_name": "sam2"}
-    pred_detections = send_task_inference_request(
-        payload, "sam2", files=files, metadata=metadata
+    ret = _sam2(image, detections, image_size)
+    _display_tool_trace(
+        sam2.__name__,
+        {},
+        ret["display_data"],
+        ret["files"],
     )
-    frame = pred_detections[0]
-    return_data = []
-    for inp_detection, detection in zip(detections, frame):
-        mask = rle_decode_array(detection["mask"])
-        label = detection["label"]
-        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
-        return_data.append(
-            {
-                "label": label,
-                "bbox": bbox,
-                "mask": mask,
-                "score": inp_detection["score"],
-            }
+
+    return ret["return_data"]  # type: ignore
+
+
+def _countgd_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float,
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
+
+    files = [("image", image_bytes)]
+    prompts = [p.strip() for p in prompt.split(", ")]
+
+    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
+        payload = {
+            "prompts": [prompt],
+            "confidence": box_threshold,  # still not being used in the API
+            "model": "countgd",
+        }
+        metadata = {"function_name": "countgd_counting"}
+
+        detections = send_task_inference_request(
+            payload, "text-to-object-detection", files=files, metadata=metadata
         )
-    return return_data
+        # get the first frame
+        return detections[0]  # type: ignore
+
+    bboxes = []
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
+        for future in as_completed(futures):
+            bboxes.extend(future.result())
+
+    return_data = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+
+    return_data = single_nms(return_data, iou_threshold=0.80)
+    display_data = [
+        {
+            "label": e["label"],
+            "score": e["score"],
+            "bbox": denormalize_bbox(e["bbox"], image_size),
+        }
+        for e in return_data
+    ]
+    return {"files": files, "return_data": return_data, "display_data": display_data}
 
 
 def countgd_object_detection(
@@ -666,61 +760,17 @@ def countgd_object_detection(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    prompts = [p.strip() for p in prompt.split(", ")]
-
-    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
-        payload = {
-            "prompts": [prompt],
-            "confidence": box_threshold,  # still not being used in the API
-            "model": "countgd",
-        }
-        metadata = {"function_name": "countgd_counting"}
-
-        detections = send_task_inference_request(
-            payload, "text-to-object-detection", files=files, metadata=metadata
-        )
-        # get the first frame
-        return detections[0]  # type: ignore
-
-    bboxes = []
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
-        for future in as_completed(futures):
-            bboxes.extend(future.result())
-
-    bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
-        for bbox in bboxes
-    ]
-
-    # TODO: remove this once we start to use the confidence on countgd
-    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return_data = [bbox.model_dump() for bbox in filtered_bboxes]
-    return_data = single_nms(return_data, iou_threshold=0.80)
+    ret = _countgd_object_detection(prompt, image, box_threshold, image_size)
     _display_tool_trace(
         countgd_object_detection.__name__,
         {
             "prompts": prompt,
             "confidence": box_threshold,
-            "model": "countgd",
         },
-        [
-            {
-                "label": e["label"],
-                "score": e["score"],
-                "bbox": denormalize_bbox(e["bbox"], image_size),
-            }
-            for e in return_data
-        ],
-        files,
+        ret["display_data"],
+        ret["files"],
     )
-    return return_data
+    return ret["return_data"]  # type: ignore
 
 
 def countgd_sam2_object_detection(
@@ -764,28 +814,23 @@ def countgd_sam2_object_detection(
             },
         ]
     """
-    detections = countgd_object_detection(prompt, image, box_threshold)
-    detections_with_masks = sam2(image, detections)
-    files = [("images", numpy_to_bytes(image))]
+
+    od_ret = _countgd_object_detection(prompt, image, box_threshold, image.shape[:2])
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+
     _display_tool_trace(
         countgd_sam2_object_detection.__name__,
         {
             "prompts": prompt,
-            "confidence": box_threshold,  # still not being used in the API
-            "model": "countgd_sam2",
+            "confidence": box_threshold,
         },
-        [
-            {
-                "label": e["label"],
-                "score": e["score"],
-                "bbox": e["bbox"],
-                "mask": rle_encode_array(e["mask"]),
-            }
-            for e in detections_with_masks
-        ],
-        files,
+        seg_ret["display_data"],
+        seg_ret["files"],
     )
-    return detections_with_masks
+
+    return seg_ret["return_data"]  # type: ignore
 
 
 def countgd_example_based_counting(
@@ -843,29 +888,28 @@ def countgd_example_based_counting(
     # get the first frame
     bboxes_per_frame = detections[0]
     bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
         for bbox in bboxes_per_frame
     ]
-    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
     _display_tool_trace(
         countgd_example_based_counting.__name__,
         payload,
         [
             {
-                "label": e.label,
-                "score": e.score,
-                "bbox": denormalize_bbox(e.bbox, image_size),  # type: ignore
+                "label": e["label"],
+                "score": e["score"],
+                "bbox": denormalize_bbox(e["bbox"], image_size),  # type: ignore
             }
-            for e in filtered_bboxes
+            for e in bboxes_formatted
         ],
         files,
     )
 
-    return [bbox.model_dump() for bbox in filtered_bboxes]
+    return bboxes_formatted
 
 
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
@@ -1225,11 +1269,11 @@ def florence2_phrase_grounding(
     # get the first frame
     bboxes = detections[0]
     bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
         for bbox in bboxes
     ]
 
@@ -1239,7 +1283,7 @@ def florence2_phrase_grounding(
         detections[0],
         files,
     )
-    return [bbox.model_dump() for bbox in bboxes_formatted]
+    return [bbox for bbox in bboxes_formatted]
 
 
 def florence2_phrase_grounding_video(
@@ -1307,11 +1351,11 @@ def florence2_phrase_grounding_video(
     bboxes_formatted = []
     for frame_data in detections:
         bboxes_formatted_per_frame = [
-            ODResponseData(
-                label=bbox["label"],
-                bbox=normalize_bbox(bbox["bounding_box"], image_size),
-                score=round(bbox["score"], 2),
-            )
+            {
+                "label": bbox["label"],
+                "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+                "score": round(bbox["score"], 2),
+            }
             for bbox in frame_data
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
@@ -1321,7 +1365,7 @@ def florence2_phrase_grounding_video(
         detections,
         files,
     )
-    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
+    return bboxes_formatted
 
 
 def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -1371,7 +1415,7 @@ def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
     _display_tool_trace(
         florence2_ocr.__name__,
         {},
-        return_data,
+        detections,
         image_b64,
     )
     return return_data
@@ -1480,6 +1524,12 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
         depth_map_np.max() - depth_map_np.min()
     )
     depth_map_np = (255 * depth_map_np).astype(np.uint8)
+    _display_tool_trace(
+        depth_anything_v2.__name__,
+        {},
+        depth_map,
+        image_b64,
+    )
     return depth_map_np
 
 
@@ -1514,7 +1564,7 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
     _display_tool_trace(
         generate_pose_image.__name__,
         {},
-        return_data,
+        pos_img,
         image_b64,
     )
     return return_data
