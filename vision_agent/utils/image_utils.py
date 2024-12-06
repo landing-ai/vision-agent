@@ -88,6 +88,22 @@ def rle_decode_array(rle: Dict[str, List[int]]) -> np.ndarray:
     return binary_mask
 
 
+def rle_encode_array(mask: np.ndarray) -> Dict[str, List[int]]:
+    r"""Run-length encode a binary mask.
+
+    Parameters:
+        mask: The binary mask to encode.
+    """
+    size = mask.shape[:2]
+    flattened = mask.ravel(order="F")
+
+    # Find where values change and compute run lengths
+    diffs = np.diff(np.concatenate([[1], flattened, [1]]))  # type: ignore
+    start_idx = np.where(diffs != 0)[0]
+    run_lengths = np.diff(start_idx)
+    return {"size": size, "counts": run_lengths.tolist()}  # type: ignore
+
+
 def b64_to_pil(b64_str: str) -> ImageType:
     r"""Convert a base64 string to a PIL Image.
 
