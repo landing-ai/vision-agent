@@ -27,6 +27,7 @@ _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
 
 class ToolCallTrace(BaseModel):
     endpoint_url: str
+    type: str
     request: MutableMapping[str, Any]
     response: MutableMapping[str, Any]
     error: Optional[Error]
@@ -221,7 +222,6 @@ def _call_post(
         else:
             response = session.post(url, json=payload)
 
-        # make sure function_name is in the payload so we can display it
         tool_call_trace_payload = (
             payload
             if "function_name" in payload
@@ -229,6 +229,7 @@ def _call_post(
         )
         tool_call_trace = ToolCallTrace(
             endpoint_url=url,
+            type="tool_call",
             request=tool_call_trace_payload,
             response={},
             error=None,
@@ -252,7 +253,6 @@ def _call_post(
     finally:
         if tool_call_trace is not None:
             trace = tool_call_trace.model_dump()
-            trace["type"] = "tool_call"
             display({MimeType.APPLICATION_JSON: trace}, raw=True)
 
 

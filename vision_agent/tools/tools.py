@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 import urllib.request
+from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from importlib import resources
@@ -14,6 +15,7 @@ from uuid import UUID
 import cv2
 import numpy as np
 import requests
+from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
@@ -21,8 +23,8 @@ from pytube import YouTube  # type: ignore
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
+    ToolCallTrace,
     add_bboxes_from_masks,
-    filter_bboxes_by_threshold,
     get_tool_descriptions,
     get_tool_documentation,
     get_tools_df,
@@ -32,7 +34,7 @@ from vision_agent.tools.tool_utils import (
     send_task_inference_request,
     single_nms,
 )
-from vision_agent.tools.tools_types import JobStatus, ODResponseData
+from vision_agent.tools.tools_types import JobStatus
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -41,7 +43,6 @@ from vision_agent.utils.image_utils import (
     convert_to_b64,
     denormalize_bbox,
     encode_image_bytes,
-    get_image_size,
     normalize_bbox,
     numpy_to_bytes,
     rle_decode,
@@ -88,66 +89,33 @@ def get_tool_recommender() -> Sim:
     return load_cached_sim(TOOLS_DF)
 
 
-def grounding_dino(
-    prompt: str,
-    image: np.ndarray,
-    box_threshold: float = 0.20,
-    iou_threshold: float = 0.20,
-    model_size: str = "large",
-) -> List[Dict[str, Any]]:
-    """'grounding_dino' is a tool that can detect and count multiple objects given a text
-    prompt such as category names or referring expressions. The categories in text prompt
-    are separated by commas or periods. It returns a list of bounding boxes with
-    normalized coordinates, label names and associated probability scores.
+def _display_tool_trace(
+    function_name: str,
+    request: Dict[str, Any],
+    response: Any,
+    files: Union[List[Tuple[str, bytes]], str],
+) -> None:
+    # Sends data through IPython's display function so front-end can show them. We use
+    # a function here instead of a decarator becuase we do not want to re-calculate data
+    # such as video bytes, which can be slow. Since this is calculated inside the
+    # function we can't capture it with a decarator without adding it as a return value
+    # which would change the function signature and affect the agent.
+    files_in_b64: List[Tuple[str, str]]
+    if isinstance(files, str):
+        files_in_b64 = [("images", files)]
+    else:
+        files_in_b64 = [(file[0], b64encode(file[1]).decode("utf-8")) for file in files]
 
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-        box_threshold (float, optional): The threshold for the box detection. Defaults
-            to 0.20.
-        iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.20.
-        model_size (str, optional): The size of the model to use.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
-            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-            top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box.
-
-    Example
-    -------
-        >>> grounding_dino("car. dinosaur", image)
-        [
-            {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
-        ]
-    """
-    image_size = image.shape[:2]
-    image_b64 = convert_to_b64(image)
-    if model_size not in ["large", "tiny"]:
-        raise ValueError("model_size must be either 'large' or 'tiny'")
-    request_data = {
-        "prompt": prompt,
-        "image": image_b64,
-        "tool": (
-            "visual_grounding" if model_size == "large" else "visual_grounding_tiny"
-        ),
-        "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "grounding_dino",
-    }
-    data: Dict[str, Any] = send_inference_request(request_data, "tools")
-    return_data = []
-    for i in range(len(data["bboxes"])):
-        return_data.append(
-            {
-                "score": round(data["scores"][i], 2),
-                "label": data["labels"][i],
-                "bbox": normalize_bbox(data["bboxes"][i], image_size),
-            }
-        )
-    return return_data
+    request["function_name"] = function_name
+    tool_call_trace = ToolCallTrace(
+        endpoint_url="",
+        type="tool_func_call",
+        request=request,
+        response={"data": response},
+        error=None,
+        files=files_in_b64,
+    )
+    display({MimeType.APPLICATION_JSON: tool_call_trace.model_dump()}, raw=True)
 
 
 def owl_v2_image(
@@ -223,14 +191,21 @@ def owl_v2_image(
     # get the first frame
     bboxes = detections[0]
     bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
         for bbox in bboxes
     ]
-    return [bbox.model_dump() for bbox in bboxes_formatted]
+
+    _display_tool_trace(
+        owl_v2_image.__name__,
+        payload,
+        detections[0],
+        files,
+    )
+    return bboxes_formatted
 
 
 def owl_v2_video(
@@ -309,81 +284,21 @@ def owl_v2_video(
     bboxes_formatted = []
     for frame_data in detections:
         bboxes_formatted_per_frame = [
-            ODResponseData(
-                label=bbox["label"],
-                bbox=normalize_bbox(bbox["bounding_box"], image_size),
-                score=round(bbox["score"], 2),
-            )
+            {
+                "label": bbox["label"],
+                "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+                "score": round(bbox["score"], 2),
+            }
             for bbox in frame_data
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
-    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
-
-
-def grounding_sam(
-    prompt: str,
-    image: np.ndarray,
-    box_threshold: float = 0.20,
-    iou_threshold: float = 0.20,
-) -> List[Dict[str, Any]]:
-    """'grounding_sam' is a tool that can segment multiple objects given a text prompt
-    such as category names or referring expressions. The categories in text prompt are
-    separated by commas or periods. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-        box_threshold (float, optional): The threshold for the box detection. Defaults
-            to 0.20.
-        iou_threshold (float, optional): The threshold for the Intersection over Union
-            (IoU). Defaults to 0.20.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
-
-    Example
-    -------
-        >>> grounding_sam("car. dinosaur", image)
-        [
-            {
-                'score': 0.99,
-                'label': 'dinosaur',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-        ]
-    """
-    image_size = image.shape[:2]
-    image_b64 = convert_to_b64(image)
-    request_data = {
-        "prompt": prompt,
-        "image": image_b64,
-        "tool": "visual_grounding_segment",
-        "kwargs": {"box_threshold": box_threshold, "iou_threshold": iou_threshold},
-        "function_name": "grounding_sam",
-    }
-    data: Dict[str, Any] = send_inference_request(request_data, "tools")
-    return_data = []
-    for i in range(len(data["bboxes"])):
-        return_data.append(
-            {
-                "score": round(data["scores"][i], 2),
-                "label": data["labels"][i],
-                "bbox": normalize_bbox(data["bboxes"][i], image_size),
-                "mask": rle_decode(mask_rle=data["masks"][i], shape=data["mask_shape"]),
-            }
-        )
-    return return_data
+    _display_tool_trace(
+        owl_v2_video.__name__,
+        payload,
+        detections[0],
+        files,
+    )
+    return bboxes_formatted
 
 
 def florence2_sam2_image(
@@ -460,6 +375,13 @@ def florence2_sam2_image(
         label = detection["label"]
         bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
         return_data.append({"label": label, "bbox": bbox, "mask": mask, "score": 1.0})
+
+    _display_tool_trace(
+        florence2_sam2_image.__name__,
+        payload,
+        detections[0],
+        files,
+    )
     return return_data
 
 
@@ -545,10 +467,36 @@ def florence2_sam2_video_tracking(
         for detection in frame:
             mask = rle_decode_array(detection["mask"])
             label = str(detection["id"]) + ": " + detection["label"]
-            return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
+            return_frame_data.append(
+                {"label": label, "mask": mask, "score": 1.0, "rle": detection["mask"]}
+            )
         return_data.append(return_frame_data)
     return_data = add_bboxes_from_masks(return_data)
-    return nms(return_data, iou_threshold=0.95)
+    return_data = nms(return_data, iou_threshold=0.95)
+
+    _display_tool_trace(
+        florence2_sam2_video_tracking.__name__,
+        payload,
+        [
+            [
+                {
+                    "label": e["label"],
+                    "score": e["score"],
+                    "bbox": denormalize_bbox(e["bbox"], frames[0].shape[:2]),
+                    "mask": e["rle"],
+                }
+                for e in lst
+            ]
+            for lst in return_data
+        ],
+        files,
+    )
+    # We save the RLE for display purposes, re-calculting RLE can get very expensive.
+    # Deleted here because we are returning the numpy masks instead
+    for frame in return_data:
+        for obj in frame:
+            del obj["rle"]
+    return return_data
 
 
 def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -603,162 +551,67 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
         box = normalize_bbox(box, image_size)
         output.append({"label": label, "bbox": box, "score": round(det["score"], 2)})
 
-    ocr_results = sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
-    return ocr_results
+    _display_tool_trace(
+        ocr.__name__,
+        {},
+        data,
+        cast(List[Tuple[str, bytes]], [("image", buffer_bytes)]),
+    )
+    return sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
 
 
-def loca_zero_shot_counting(image: np.ndarray) -> Dict[str, Any]:
-    """'loca_zero_shot_counting' is a tool that counts the dominant foreground object given
-    an image and no other information about the content. It returns only the count of
-    the objects in the image.
-
-    Parameters:
-        image (np.ndarray): The image that contains lot of instances of a single object
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visualization purposes.
-
-    Example
-    -------
-        >>> loca_zero_shot_counting(image)
-        {'count': 83,
-        'heat_map': array([[ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  1],
-            ...,
-            [ 0,  0,  0, ..., 30, 35, 41],
-            [ 0,  0,  0, ..., 41, 47, 53],
-            [ 0,  0,  0, ..., 53, 59, 64]], dtype=uint8)}
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "function_name": "loca_zero_shot_counting",
-    }
-    resp_data: dict[str, Any] = send_inference_request(data, "loca", v2=True)
-    resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
-    return resp_data
-
-
-def loca_visual_prompt_counting(
-    image: np.ndarray, visual_prompt: Dict[str, List[float]]
-) -> Dict[str, Any]:
-    """'loca_visual_prompt_counting' is a tool that counts the dominant foreground object
-    given an image and a visual prompt which is a bounding box describing the object.
-    It returns only the count of the objects in the image.
-
-    Parameters:
-        image (np.ndarray): The image that contains lot of instances of a single object
-            visual_prompt (Dict[str, List[float]]): Bounding box of the object in
-            format [xmin, ymin, xmax, ymax]. Only 1 bounding box can be provided.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the key 'count' and the count as a
-            value, e.g. {count: 12} and a heat map for visualization purposes.
-
-    Example
-    -------
-        >>> loca_visual_prompt_counting(image, {"bbox": [0.1, 0.1, 0.4, 0.42]})
-        {'count': 83,
-        'heat_map': array([[ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  0],
-            [ 0,  0,  0, ...,  0,  0,  1],
-            ...,
-            [ 0,  0,  0, ..., 30, 35, 41],
-            [ 0,  0,  0, ..., 41, 47, 53],
-            [ 0,  0,  0, ..., 53, 59, 64]], dtype=uint8)}
-    """
-
-    image_size = get_image_size(image)
-    bbox = visual_prompt["bbox"]
-    image_b64 = convert_to_b64(image)
-
-    data = {
-        "image": image_b64,
-        "bbox": list(map(int, denormalize_bbox(bbox, image_size))),
-        "function_name": "loca_visual_prompt_counting",
-    }
-    resp_data: dict[str, Any] = send_inference_request(data, "loca", v2=True)
-    resp_data["heat_map"] = np.array(resp_data["heat_map"][0]).astype(np.uint8)
-    return resp_data
-
-
-def countgd_object_detection(
-    prompt: str,
+def _sam2(
     image: np.ndarray,
-    box_threshold: float = 0.23,
-) -> List[Dict[str, Any]]:
-    """'countgd_object_detection' is a tool that can detect multiple instances of an
-    object given a text prompt. It is particularly useful when trying to detect and
-    count a large number of objects. You can optionally separate object names in the
-    prompt with commas. It returns a list of bounding boxes with normalized
-    coordinates, label names and associated confidence scores.
+    detections: List[Dict[str, Any]],
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
 
-    Parameters:
-        prompt (str): The object that needs to be counted.
-        image (np.ndarray): The image that contains multiple instances of the object.
-        box_threshold (float, optional): The threshold for detection. Defaults
-            to 0.23.
+    files = [("images", image_bytes)]
+    payload = {
+        "model": "sam2",
+        "bboxes": json.dumps(
+            [
+                {
+                    "labels": [d["label"] for d in detections],
+                    "bboxes": [
+                        denormalize_bbox(d["bbox"], image_size) for d in detections
+                    ],
+                }
+            ]
+        ),
+    }
 
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
-            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-            top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box.
-
-    Example
-    -------
-        >>> countgd_object_detection("flower", image)
-        [
-            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
-            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
-            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
-        ]
-    """
-    image_size = image.shape[:2]
-    if image_size[0] < 1 or image_size[1] < 1:
-        return []
-
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    prompts = [p.strip() for p in prompt.split(", ")]
-
-    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
-        payload = {
-            "prompts": [prompt],
-            "confidence": box_threshold,  # still not being used in the API
-            "model": "countgd",
-        }
-        metadata = {"function_name": "countgd_counting"}
-
-        detections = send_task_inference_request(
-            payload, "text-to-object-detection", files=files, metadata=metadata
+    metadata = {"function_name": "sam2"}
+    pred_detections = send_task_inference_request(
+        payload, "sam2", files=files, metadata=metadata
+    )
+    frame = pred_detections[0]
+    return_data = []
+    display_data = []
+    for inp_detection, detection in zip(detections, frame):
+        mask = rle_decode_array(detection["mask"])
+        label = detection["label"]
+        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
+        return_data.append(
+            {
+                "label": label,
+                "bbox": bbox,
+                "mask": mask,
+                "score": inp_detection["score"],
+            }
         )
-        # get the first frame
-        return detections[0]  # type: ignore
-
-    bboxes = []
-    with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
-        for future in as_completed(futures):
-            bboxes.extend(future.result())
-
-    bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
+        display_data.append(
+            {
+                "label": label,
+                "bbox": detection["bounding_box"],
+                "mask": detection["mask"],
+                "score": inp_detection["score"],
+            }
         )
-        for bbox in bboxes
-    ]
-    # TODO: remove this once we start to use the confidence on countgd
-    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return_data = [bbox.model_dump() for bbox in filtered_bboxes]
-    return single_nms(return_data, iou_threshold=0.80)
+    return {"files": files, "return_data": return_data, "display_data": display_data}
 
 
 def sam2(
@@ -804,40 +657,120 @@ def sam2(
         ]
     """
     image_size = image.shape[:2]
-
-    files = [("images", numpy_to_bytes(image))]
-    payload = {
-        "model": "sam2",
-        "bboxes": json.dumps(
-            [
-                {
-                    "labels": [d["label"] for d in detections],
-                    "bboxes": [
-                        denormalize_bbox(d["bbox"], image_size) for d in detections
-                    ],
-                }
-            ]
-        ),
-    }
-    metadata = {"function_name": "sam2"}
-    pred_detections = send_task_inference_request(
-        payload, "sam2", files=files, metadata=metadata
+    ret = _sam2(image, detections, image_size)
+    _display_tool_trace(
+        sam2.__name__,
+        {},
+        ret["display_data"],
+        ret["files"],
     )
-    frame = pred_detections[0]
-    return_data = []
-    for inp_detection, detection in zip(detections, frame):
-        mask = rle_decode_array(detection["mask"])
-        label = detection["label"]
-        bbox = normalize_bbox(detection["bounding_box"], detection["mask"]["size"])
-        return_data.append(
-            {
-                "label": label,
-                "bbox": bbox,
-                "mask": mask,
-                "score": inp_detection["score"],
-            }
+
+    return ret["return_data"]  # type: ignore
+
+
+def _countgd_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float,
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
+
+    files = [("image", image_bytes)]
+    prompts = [p.strip() for p in prompt.split(", ")]
+
+    def _run_countgd(prompt: str) -> List[Dict[str, Any]]:
+        payload = {
+            "prompts": [prompt],
+            "confidence": box_threshold,  # still not being used in the API
+            "model": "countgd",
+        }
+        metadata = {"function_name": "countgd_counting"}
+
+        detections = send_task_inference_request(
+            payload, "text-to-object-detection", files=files, metadata=metadata
         )
-    return return_data
+        # get the first frame
+        return detections[0]  # type: ignore
+
+    bboxes = []
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(_run_countgd, prompt) for prompt in prompts]
+        for future in as_completed(futures):
+            bboxes.extend(future.result())
+
+    return_data = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+
+    return_data = single_nms(return_data, iou_threshold=0.80)
+    display_data = [
+        {
+            "label": e["label"],
+            "score": e["score"],
+            "bbox": denormalize_bbox(e["bbox"], image_size),
+        }
+        for e in return_data
+    ]
+    return {"files": files, "return_data": return_data, "display_data": display_data}
+
+
+def countgd_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_object_detection' is a tool that can detect multiple instances of an
+    object given a text prompt. It is particularly useful when trying to detect and
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> countgd_object_detection("flower", image)
+        [
+            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
+        ]
+    """
+    image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
+
+    ret = _countgd_object_detection(prompt, image, box_threshold, image_size)
+    _display_tool_trace(
+        countgd_object_detection.__name__,
+        {
+            "prompts": prompt,
+            "confidence": box_threshold,
+        },
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
 
 
 def countgd_sam2_object_detection(
@@ -881,9 +814,23 @@ def countgd_sam2_object_detection(
             },
         ]
     """
-    detections = countgd_object_detection(prompt, image, box_threshold)
-    detections_with_masks = sam2(image, detections)
-    return detections_with_masks
+
+    od_ret = _countgd_object_detection(prompt, image, box_threshold, image.shape[:2])
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+
+    _display_tool_trace(
+        countgd_sam2_object_detection.__name__,
+        {
+            "prompts": prompt,
+            "confidence": box_threshold,
+        },
+        seg_ret["display_data"],
+        seg_ret["files"],
+    )
+
+    return seg_ret["return_data"]  # type: ignore
 
 
 def countgd_example_based_counting(
@@ -941,76 +888,28 @@ def countgd_example_based_counting(
     # get the first frame
     bboxes_per_frame = detections[0]
     bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
         for bbox in bboxes_per_frame
     ]
-    filtered_bboxes = filter_bboxes_by_threshold(bboxes_formatted, box_threshold)
-    return [bbox.model_dump() for bbox in filtered_bboxes]
-
-
-def florence2_roberta_vqa(prompt: str, image: np.ndarray) -> str:
-    """'florence2_roberta_vqa' is a tool that takes an image and analyzes
-    its contents, generates detailed captions and then tries to answer the given
-    question using the generated context. It returns text as an answer to the question.
-
-    Parameters:
-        prompt (str): The question about the image
-        image (np.ndarray): The reference image used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> florence2_roberta_vqa('What is the top left animal in this image?', image)
-        'white tiger'
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "question": prompt,
-        "function_name": "florence2_roberta_vqa",
-    }
-
-    answer = send_inference_request(data, "florence2-qa", v2=True)
-    return answer  # type: ignore
-
-
-def ixc25_image_vqa(prompt: str, image: np.ndarray) -> str:
-    """'ixc25_image_vqa' is a tool that can answer any questions about arbitrary images
-    including regular images or images of documents or presentations. It returns text
-    as an answer to the question.
-
-    Parameters:
-        prompt (str): The question about the image
-        image (np.ndarray): The reference image used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> ixc25_image_vqa('What is the cat doing?', image)
-        'drinking milk'
-    """
-    if image.shape[0] < 1 or image.shape[1] < 1:
-        raise ValueError(f"Image is empty, image shape: {image.shape}")
-
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    payload = {
-        "prompt": prompt,
-        "function_name": "ixc25_image_vqa",
-    }
-    data: Dict[str, Any] = send_inference_request(
-        payload, "internlm-xcomposer2", files=files, v2=True
+    _display_tool_trace(
+        countgd_example_based_counting.__name__,
+        payload,
+        [
+            {
+                "label": e["label"],
+                "score": e["score"],
+                "bbox": denormalize_bbox(e["bbox"], image_size),
+            }
+            for e in bboxes_formatted
+        ],
+        files,
     )
-    return cast(str, data["answer"])
+
+    return bboxes_formatted
 
 
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
@@ -1047,61 +946,13 @@ def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
     data: Dict[str, Any] = send_inference_request(
         payload, "image-to-text", files=files, v2=True
     )
+    _display_tool_trace(
+        qwen2_vl_images_vqa.__name__,
+        payload,
+        cast(str, data),
+        files,
+    )
     return cast(str, data)
-
-
-def claude35_text_extraction(image: np.ndarray) -> str:
-    """'claude35_text_extraction' is a tool that can extract text from an image. It
-    returns the extracted text as a string and can be used as an alternative to OCR if
-    you do not need to know the exact bounding box of the text.
-
-    Parameters:
-        image (np.ndarray): The image to extract text from.
-
-    Returns:
-        str: The extracted text from the image.
-    """
-
-    lmm = AnthropicLMM()
-    buffer = io.BytesIO()
-    Image.fromarray(image).save(buffer, format="PNG")
-    image_bytes = buffer.getvalue()
-    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
-    text = lmm.generate(
-        "Extract and return any text you see in this image and nothing else. If you do not read any text respond with an empty string.",
-        [image_b64],
-    )
-    return cast(str, text)
-
-
-def ixc25_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
-    """'ixc25_video_vqa' is a tool that can answer any questions about arbitrary videos
-    including regular videos or videos of documents or presentations. It returns text
-    as an answer to the question.
-
-    Parameters:
-        prompt (str): The question about the video
-        frames (List[np.ndarray]): The reference frames used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> ixc25_video_vqa('Which football player made the goal?', frames)
-        'Lionel Messi'
-    """
-
-    buffer_bytes = frames_to_bytes(frames)
-    files = [("video", buffer_bytes)]
-    payload = {
-        "prompt": prompt,
-        "function_name": "ixc25_video_vqa",
-    }
-    data: Dict[str, Any] = send_inference_request(
-        payload, "internlm-xcomposer2", files=files, v2=True
-    )
-    return cast(str, data["answer"])
 
 
 def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
@@ -1135,7 +986,37 @@ def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     data: Dict[str, Any] = send_inference_request(
         payload, "image-to-text", files=files, v2=True
     )
+    _display_tool_trace(
+        qwen2_vl_video_vqa.__name__,
+        payload,
+        cast(str, data),
+        files,
+    )
     return cast(str, data)
+
+
+def claude35_text_extraction(image: np.ndarray) -> str:
+    """'claude35_text_extraction' is a tool that can extract text from an image. It
+    returns the extracted text as a string and can be used as an alternative to OCR if
+    you do not need to know the exact bounding box of the text.
+
+    Parameters:
+        image (np.ndarray): The image to extract text from.
+
+    Returns:
+        str: The extracted text from the image.
+    """
+
+    lmm = AnthropicLMM()
+    buffer = io.BytesIO()
+    Image.fromarray(image).save(buffer, format="PNG")
+    image_bytes = buffer.getvalue()
+    image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+    text = lmm.generate(
+        "Extract and return any text you see in this image and nothing else. If you do not read any text respond with an empty string.",
+        [image_b64],
+    )
+    return cast(str, text)
 
 
 def gpt4o_image_vqa(prompt: str, image: np.ndarray) -> str:
@@ -1201,36 +1082,6 @@ def gpt4o_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     return cast(str, resp)
 
 
-def git_vqa_v2(prompt: str, image: np.ndarray) -> str:
-    """'git_vqa_v2' is a tool that can answer questions about the visual
-    contents of an image given a question and an image. It returns an answer to the
-    question
-
-    Parameters:
-        prompt (str): The question about the image
-        image (np.ndarray): The reference image used for the question
-
-    Returns:
-        str: A string which is the answer to the given prompt.
-
-    Example
-    -------
-        >>> git_vqa_v2('What is the cat doing ?', image)
-        'drinking milk'
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "prompt": prompt,
-        "tool": "image_question_answering",
-        "function_name": "git_vqa_v2",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return answer["text"][0]  # type: ignore
-
-
 def video_temporal_localization(
     prompt: str,
     frames: List[np.ndarray],
@@ -1274,41 +1125,13 @@ def video_temporal_localization(
     data = send_inference_request(
         payload, "video-temporal-localization", files=files, v2=True
     )
+    _display_tool_trace(
+        video_temporal_localization.__name__,
+        payload,
+        data,
+        files,
+    )
     return [cast(float, value) for value in data]
-
-
-def clip(image: np.ndarray, classes: List[str]) -> Dict[str, Any]:
-    """'clip' is a tool that can classify an image or a cropped detection given a list
-    of input classes or tags. It returns the same list of the input classes along with
-    their probability scores based on image content.
-
-    Parameters:
-        image (np.ndarray): The image to classify or tag
-        classes (List[str]): The list of classes or tags that is associated with the image
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
-            contains a list of given labels and other a list of scores.
-
-    Example
-    -------
-        >>> clip(image, ['dog', 'cat', 'bird'])
-        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
-    """
-
-    if image.shape[0] < 1 or image.shape[1] < 1:
-        return {"labels": [], "scores": []}
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "prompt": ",".join(classes),
-        "image": image_b64,
-        "tool": "closed_set_image_classification",
-        "function_name": "clip",
-    }
-    resp_data: dict[str, Any] = send_inference_request(data, "tools")
-    resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
-    return resp_data
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
@@ -1338,6 +1161,12 @@ def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
     }
     resp_data: dict[str, Any] = send_inference_request(data, "tools")
     resp_data["scores"] = [round(prob, 4) for prob in resp_data["scores"]]
+    _display_tool_trace(
+        vit_image_classification.__name__,
+        data,
+        resp_data,
+        image_b64,
+    )
     return resp_data
 
 
@@ -1369,63 +1198,13 @@ def vit_nsfw_classification(image: np.ndarray) -> Dict[str, Any]:
         data, "nsfw-classification", v2=True
     )
     resp_data["score"] = round(resp_data["score"], 4)
+    _display_tool_trace(
+        vit_nsfw_classification.__name__,
+        data,
+        resp_data,
+        image_b64,
+    )
     return resp_data
-
-
-def blip_image_caption(image: np.ndarray) -> str:
-    """'blip_image_caption' is a tool that can caption an image based on its contents. It
-    returns a text describing the image.
-
-    Parameters:
-        image (np.ndarray): The image to caption
-
-    Returns:
-       str: A string which is the caption for the given image.
-
-    Example
-    -------
-        >>> blip_image_caption(image)
-        'This image contains a cat sitting on a table with a bowl of milk.'
-    """
-
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "tool": "image_captioning",
-        "function_name": "blip_image_caption",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return answer["text"][0]  # type: ignore
-
-
-def florence2_image_caption(image: np.ndarray, detail_caption: bool = True) -> str:
-    """'florence2_image_caption' is a tool that can caption or describe an image based
-    on its contents. It returns a text describing the image.
-
-    Parameters:
-        image (np.ndarray): The image to caption
-        detail_caption (bool): If True, the caption will be as detailed as possible else
-            the caption will be a brief description.
-
-    Returns:
-       str: A string which is the caption for the given image.
-
-    Example
-    -------
-        >>> florence2_image_caption(image, False)
-        'This image contains a cat sitting on a table with a bowl of milk.'
-    """
-    image_b64 = convert_to_b64(image)
-    task = "<MORE_DETAILED_CAPTION>" if detail_caption else "<DETAILED_CAPTION>"
-    data = {
-        "image": image_b64,
-        "task": task,
-        "function_name": "florence2_image_caption",
-    }
-
-    answer = send_inference_request(data, "florence2", v2=True)
-    return answer[task]  # type: ignore
 
 
 def florence2_phrase_grounding(
@@ -1490,15 +1269,21 @@ def florence2_phrase_grounding(
     # get the first frame
     bboxes = detections[0]
     bboxes_formatted = [
-        ODResponseData(
-            label=bbox["label"],
-            bbox=normalize_bbox(bbox["bounding_box"], image_size),
-            score=round(bbox["score"], 2),
-        )
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
         for bbox in bboxes
     ]
 
-    return [bbox.model_dump() for bbox in bboxes_formatted]
+    _display_tool_trace(
+        florence2_phrase_grounding.__name__,
+        payload,
+        detections[0],
+        files,
+    )
+    return [bbox for bbox in bboxes_formatted]
 
 
 def florence2_phrase_grounding_video(
@@ -1566,15 +1351,21 @@ def florence2_phrase_grounding_video(
     bboxes_formatted = []
     for frame_data in detections:
         bboxes_formatted_per_frame = [
-            ODResponseData(
-                label=bbox["label"],
-                bbox=normalize_bbox(bbox["bounding_box"], image_size),
-                score=round(bbox["score"], 2),
-            )
+            {
+                "label": bbox["label"],
+                "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+                "score": round(bbox["score"], 2),
+            }
             for bbox in frame_data
         ]
         bboxes_formatted.append(bboxes_formatted_per_frame)
-    return [[bbox.model_dump() for bbox in frame] for frame in bboxes_formatted]
+    _display_tool_trace(
+        florence2_phrase_grounding_video.__name__,
+        payload,
+        detections,
+        files,
+    )
+    return bboxes_formatted
 
 
 def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
@@ -1621,6 +1412,12 @@ def florence2_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
                 "score": 1.0,
             }
         )
+    _display_tool_trace(
+        florence2_ocr.__name__,
+        {},
+        detections,
+        image_b64,
+    )
     return return_data
 
 
@@ -1683,6 +1480,12 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
                 ),
             }
         )
+    _display_tool_trace(
+        detr_segmentation.__name__,
+        {},
+        return_data,
+        image_b64,
+    )
     return return_data
 
 
@@ -1721,72 +1524,13 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
         depth_map_np.max() - depth_map_np.min()
     )
     depth_map_np = (255 * depth_map_np).astype(np.uint8)
+    _display_tool_trace(
+        depth_anything_v2.__name__,
+        {},
+        depth_map,
+        image_b64,
+    )
     return depth_map_np
-
-
-def generate_soft_edge_image(image: np.ndarray) -> np.ndarray:
-    """'generate_soft_edge_image' is a tool that runs Holistically Nested edge detection
-    to generate a soft edge image (HED) from a given RGB image. The returned image is
-    monochrome and represents object boundaries as soft white edges on black background
-
-    Parameters:
-        image (np.ndarray): The image to used to generate soft edge image
-
-    Returns:
-        np.ndarray: A soft edge image with pixel values ranging from 0 to 255.
-
-    Example
-    -------
-        >>> generate_soft_edge_image(image)
-        array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 20, 24, ..., 0, 100, 103],
-                ...,
-                [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
-    """
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "tool": "generate_hed",
-        "function_name": "generate_soft_edge_image",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("L"))
-    return return_data
-
-
-def dpt_hybrid_midas(image: np.ndarray) -> np.ndarray:
-    """'dpt_hybrid_midas' is a tool that generates a normal mapped from a given RGB
-    image. The returned RGB image is texture mapped image of the surface normals and the
-    RGB values represent the surface normals in the x, y, z directions.
-
-    Parameters:
-        image (np.ndarray): The image to used to generate normal image
-
-    Returns:
-        np.ndarray: A mapped normal image with RGB pixel values indicating surface
-        normals in x, y, z directions.
-
-    Example
-    -------
-        >>> dpt_hybrid_midas(image)
-        array([[0, 0, 0, ..., 0, 0, 0],
-                [0, 20, 24, ..., 0, 100, 103],
-                ...,
-                [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
-    """
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "tool": "generate_normal",
-        "function_name": "dpt_hybrid_midas",
-    }
-
-    answer = send_inference_request(data, "tools")
-    return_data = np.array(b64_to_pil(answer["masks"][0]).convert("RGB"))
-    return return_data
 
 
 def generate_pose_image(image: np.ndarray) -> np.ndarray:
@@ -1817,6 +1561,12 @@ def generate_pose_image(image: np.ndarray) -> np.ndarray:
 
     pos_img = send_inference_request(data, "pose-detector", v2=True)
     return_data = np.array(b64_to_pil(pos_img["data"]).convert("RGB"))
+    _display_tool_trace(
+        generate_pose_image.__name__,
+        {},
+        pos_img,
+        image_b64,
+    )
     return return_data
 
 
@@ -1861,11 +1611,162 @@ def template_match(
     for i in range(len(answer["bboxes"])):
         return_data.append(
             {
+                "label": "match",
                 "score": round(answer["scores"][i], 2),
                 "bbox": normalize_bbox(answer["bboxes"][i], image_size),
             }
         )
+    _display_tool_trace(
+        template_match.__name__,
+        {"template_image": template_image_b64},
+        return_data,
+        image_b64,
+    )
     return return_data
+
+
+def flux_image_inpainting(
+    prompt: str,
+    image: np.ndarray,
+    mask: np.ndarray,
+) -> np.ndarray:
+    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
+    given by mask, in the image, given image based on the text prompt and surrounding image context.
+    It can be used to edit regions of an image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the masked area. More detailed and specific prompts typically yield better results.
+        image (np.ndarray): The source image to be inpainted.
+            The image will serve as the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's,
+            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
+
+    Returns:
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = flux_image_inpainting(
+        ...     prompt="a modern black leather sofa with white pillows",
+        ...     image=image,
+        ...     mask=mask,
+        ... )
+        >>> save_image(result, "inpainted_room.png")
+    """
+
+    min_dim = 8
+
+    if any(dim < min_dim for dim in image.shape[:2] + mask.shape[:2]):
+        raise ValueError(f"Image and mask must be at least {min_dim}x{min_dim} pixels")
+
+    max_size = (512, 512)
+
+    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
+        new_size = (
+            int(image.shape[1] * scaling_factor),
+            int(image.shape[0] * scaling_factor),
+        )
+        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
+
+    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
+        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
+
+    if np.array_equal(mask, mask.astype(bool).astype(int)):
+        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
+    else:
+        raise ValueError("Mask should contain only binary values (0 or 1)")
+
+    image_file = numpy_to_bytes(image)
+    mask_file = numpy_to_bytes(mask)
+
+    files = [
+        ("image", image_file),
+        ("mask_image", mask_file),
+    ]
+
+    payload = {
+        "prompt": prompt,
+        "task": "inpainting",
+        "height": image.shape[0],
+        "width": image.shape[1],
+        "strength": 0.99,
+        "guidance_scale": 18,
+        "num_inference_steps": 20,
+        "seed": None,
+    }
+
+    response = send_inference_request(
+        payload=payload,
+        endpoint_name="flux1",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "flux_image_inpainting"},
+    )
+
+    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
+    _display_tool_trace(
+        flux_image_inpainting.__name__,
+        payload,
+        output_image,
+        files,
+    )
+    return output_image
+
+
+def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
+    """'siglip_classification' is a tool that can classify an image or a cropped detection given a list
+    of input labels or tags. It returns the same list of the input labels along with
+    their probability scores based on image content.
+
+    Parameters:
+        image (np.ndarray): The image to classify or tag
+        labels (List[str]): The list of labels or tags that is associated with the image
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
+            contains a list of given labels and other a list of scores.
+
+    Example
+    -------
+        >>> siglip_classification(image, ['dog', 'cat', 'bird'])
+        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
+    """
+
+    if image.shape[0] < 1 or image.shape[1] < 1:
+        return {"labels": [], "scores": []}
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "siglip",
+        "labels": labels,
+    }
+
+    response: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="classification",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "siglip_classification"},
+    )
+
+    _display_tool_trace(
+        siglip_classification.__name__,
+        payload,
+        response,
+        files,
+    )
+    return response
 
 
 def minimum_distance(
@@ -1975,138 +1876,6 @@ def closest_box_distance(
     horizontal_distance = np.max([0, x21 - x12, x11 - x22])
     vertical_distance = np.max([0, y21 - y12, y11 - y22])
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
-
-
-def flux_image_inpainting(
-    prompt: str,
-    image: np.ndarray,
-    mask: np.ndarray,
-) -> np.ndarray:
-    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding image context.
-    It can be used to edit regions of an image according to the prompt given.
-
-    Parameters:
-        prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield better results.
-        image (np.ndarray): The source image to be inpainted.
-            The image will serve as the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's,
-            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
-
-    Returns:
-        np.ndarray: The generated image(s) as a numpy array in RGB format with values
-            ranging from 0 to 255.
-
-    -------
-    Example:
-        >>> # Generate inpainting
-        >>> result = flux_image_inpainting(
-        ...     prompt="a modern black leather sofa with white pillows",
-        ...     image=image,
-        ...     mask=mask,
-        ... )
-        >>> save_image(result, "inpainted_room.png")
-    """
-
-    min_dim = 8
-
-    if any(dim < min_dim for dim in image.shape[:2] + mask.shape[:2]):
-        raise ValueError(f"Image and mask must be at least {min_dim}x{min_dim} pixels")
-
-    max_size = (512, 512)
-
-    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
-        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
-        new_size = (
-            int(image.shape[1] * scaling_factor),
-            int(image.shape[0] * scaling_factor),
-        )
-        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
-
-    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
-        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
-
-    if np.array_equal(mask, mask.astype(bool).astype(int)):
-        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
-    else:
-        raise ValueError("Mask should contain only binary values (0 or 1)")
-
-    image_file = numpy_to_bytes(image)
-    mask_file = numpy_to_bytes(mask)
-
-    files = [
-        ("image", image_file),
-        ("mask_image", mask_file),
-    ]
-
-    payload = {
-        "prompt": prompt,
-        "task": "inpainting",
-        "height": image.shape[0],
-        "width": image.shape[1],
-        "strength": 0.99,
-        "guidance_scale": 18,
-        "num_inference_steps": 20,
-        "seed": None,
-    }
-
-    response = send_inference_request(
-        payload=payload,
-        endpoint_name="flux1",
-        files=files,
-        v2=True,
-        metadata_payload={"function_name": "flux_image_inpainting"},
-    )
-
-    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
-    return output_image
-
-
-def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
-    """'siglip_classification' is a tool that can classify an image or a cropped detection given a list
-    of input labels or tags. It returns the same list of the input labels along with
-    their probability scores based on image content.
-
-    Parameters:
-        image (np.ndarray): The image to classify or tag
-        labels (List[str]): The list of labels or tags that is associated with the image
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
-            contains a list of given labels and other a list of scores.
-
-    Example
-    -------
-        >>> siglip_classification(image, ['dog', 'cat', 'bird'])
-        {"labels": ["dog", "cat", "bird"], "scores": [0.68, 0.30, 0.02]},
-    """
-
-    if image.shape[0] < 1 or image.shape[1] < 1:
-        return {"labels": [], "scores": []}
-
-    image_file = numpy_to_bytes(image)
-
-    files = [("image", image_file)]
-
-    payload = {
-        "model": "siglip",
-        "labels": labels,
-    }
-
-    response: dict[str, Any] = send_inference_request(
-        payload=payload,
-        endpoint_name="classification",
-        files=files,
-        v2=True,
-        metadata_payload={"function_name": "siglip_classification"},
-    )
-
-    return response
 
 
 # Utility and visualization functions
