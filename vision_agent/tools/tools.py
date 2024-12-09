@@ -2738,18 +2738,20 @@ def countgd_sam2_video_tracking(
 
     Example
     -------
-        >>> countgd_sam2_video_tracking("car, dinosaur", image)
+        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
         [
-            {
-                'score': 1.0,
-                'label': 'dinosaur',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
         ]
     """
 
@@ -2783,18 +2785,20 @@ def owlv2_sam2_video_tracking(
 
     Example
     -------
-        >>> countgd_sam2_video_tracking("car, dinosaur", image)
+        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
         [
-            {
-                'score': 1.0,
-                'label': 'dinosaur',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
         ]
     """
 
