@@ -2628,6 +2628,7 @@ def _plot_counting(
 
 class ODModels(str, Enum):
     COUNTGD = "countgd"
+    FLORENCE2 = "florence2"
     OWLV2 = "owlv2"
 
 
@@ -2639,12 +2640,21 @@ def od_sam2_video_tracking(
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
 
+    params = {
+        "prompt": prompt,
+    }
+
     if od_model == ODModels.COUNTGD:
         detection_function = countgd_object_detection
         function_name = "countgd_object_detection"
     elif od_model == ODModels.OWLV2:
         detection_function = owl_v2_image
         function_name = "owl_v2_image"
+        params["fine_tune_id"] = fine_tune_id
+    elif od_model == ODModels.FLORENCE2:
+        detection_function = florence2_sam2_image
+        function_name = "florence2_sam2_image"
+        params["fine_tune_id"] = fine_tune_id
     else:
         raise NotImplementedError(
             f"Object detection model '{od_model.value}' is not implemented."
@@ -2660,7 +2670,8 @@ def od_sam2_video_tracking(
         step = chunk_length  # Process frames with the specified step size
 
     for idx in range(0, len(frames), step):
-        results[idx] = detection_function(prompt=prompt, image=frames[idx])
+        params["image"] = frames[idx]
+        results[idx] = detection_function(**params)
 
     image_size = frames[0].shape[:2]
 

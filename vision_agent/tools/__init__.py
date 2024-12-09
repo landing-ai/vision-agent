@@ -60,6 +60,7 @@ from .tools import (
     loca_zero_shot_counting,
     minimum_distance,
     ocr,
+    od_sam2_video_tracking,
     overlay_bounding_boxes,
     overlay_heat_map,
     overlay_segmentation_masks,
