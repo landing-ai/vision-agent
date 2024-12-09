@@ -2722,7 +2722,7 @@ def countgd_sam2_video_tracking(
     """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
     prompt such as category names or referring expressions. The categories in the text
     prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores of 1.0.
+    mask file names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
@@ -2767,7 +2767,7 @@ def owlv2_sam2_video_tracking(
     """'owlv2_sam2_video_tracking' is a tool that can segment multiple objects given a text
     prompt such as category names or referring expressions. The categories in the text
     prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores of 1.0.
+    mask file names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
