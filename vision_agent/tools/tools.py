@@ -2640,26 +2640,6 @@ def od_sam2_video_tracking(
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
 
-    params = {
-        "prompt": prompt,
-    }
-
-    if od_model == ODModels.COUNTGD:
-        detection_function = countgd_object_detection
-        function_name = "countgd_object_detection"
-    elif od_model == ODModels.OWLV2:
-        detection_function = owl_v2_image
-        function_name = "owl_v2_image"
-        params["fine_tune_id"] = fine_tune_id
-    elif od_model == ODModels.FLORENCE2:
-        detection_function = florence2_sam2_image
-        function_name = "florence2_sam2_image"
-        params["fine_tune_id"] = fine_tune_id
-    else:
-        raise NotImplementedError(
-            f"Object detection model '{od_model.value}' is not implemented."
-        )
-
     results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
 
     if chunk_length is None:
@@ -2670,8 +2650,23 @@ def od_sam2_video_tracking(
         step = chunk_length  # Process frames with the specified step size
 
     for idx in range(0, len(frames), step):
-        params["image"] = frames[idx]
-        results[idx] = detection_function(**params)
+        if od_model == ODModels.COUNTGD:
+            results[idx] = countgd_object_detection(prompt=prompt, image=frames[idx])
+            function_name = "countgd_object_detection"
+        elif od_model == ODModels.OWLV2:
+            results[idx] = owl_v2_image(
+                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
+            )
+            function_name = "owl_v2_image"
+        elif od_model == ODModels.FLORENCE2:
+            results[idx] = florence2_sam2_image(
+                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
+            )
+            function_name = "florence2_sam2_image"
+        else:
+            raise NotImplementedError(
+                f"Object detection model '{od_model}' is not implemented."
+            )
 
     image_size = frames[0].shape[:2]
 
