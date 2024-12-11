@@ -1878,6 +1878,43 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
+def document_analysis(image: np.ndarray) -> Dict[str, Any]:
+    """'document_analysis' is a tool that can analyze a document image to extract
+    text, tables, and other information. It returns a dictionary containing the
+    extracted text, tables, and other information.
+
+    Parameters:
+        image (np.ndarray): The document image to analyze
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the extracted text, tables, and other
+            information.
+
+    Example
+    -------
+        >>> document_analysis(image)
+        {}
+    """
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "document-analysis",
+    }
+
+    response: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="document-analysis",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "document_analysis"},
+    )
+
+    return response
+
+
 # Utility and visualization functions
 
 
