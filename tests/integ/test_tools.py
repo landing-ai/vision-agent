@@ -9,6 +9,7 @@ from vision_agent.tools import (
     countgd_example_based_counting,
     depth_anything_v2,
     detr_segmentation,
+    document_analysis,
     florence2_ocr,
     florence2_phrase_grounding,
     florence2_phrase_grounding_video,

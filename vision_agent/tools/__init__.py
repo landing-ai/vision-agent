@@ -31,6 +31,7 @@ from .tools import (
     countgd_example_based_counting,
     depth_anything_v2,
     detr_segmentation,
+    document_analysis,
     extract_frames_and_timestamps,
     florence2_ocr,
     florence2_phrase_grounding,
