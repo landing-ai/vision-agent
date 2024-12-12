@@ -7,7 +7,6 @@ import re
 import sys
 import traceback
 import warnings
-import inspect
 from enum import Enum
 from pathlib import Path
 from time import sleep
@@ -29,37 +28,14 @@ from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
 from nbclient.util import run_sync
 from nbformat.v4 import new_code_cell
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.trace import Status, StatusCode
-from opentelemetry.trace.span import Span
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
+from opentelemetry.trace import get_tracer, Status, StatusCode, Span
 
 from vision_agent.utils.exceptions import (
     RemoteSandboxCreationError,
     RemoteSandboxExecutionError,
 )
-
-# Set up tracer provider
-provider = TracerProvider(resource=Resource.create({SERVICE_NAME: "vision-agent"}))
-tracer = trace.get_tracer_provider()
-
-# Configure OTLP HTTP exporter
-otlp_exporter = OTLPSpanExporter(
-    endpoint=os.getenv(
-        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://192.168.50.21:4318/v1/traces"
-    )
-)
-
-# Add BatchSpanProcessor with OTLP HTTP exporter
-provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-
-# Set the tracer provider
-trace.set_tracer_provider(provider)
 
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
@@ -622,39 +598,6 @@ Timeout: {self.timeout}"""
         sleep(1)
         self._new_kernel()
 
-    def _function_tracer(self, parent_span: Span):
-        """Creates a trace function to track function calls inside the cell."""
-        tracer = trace.get_tracer(__name__)
-
-        def trace_calls(frame, event, arg):
-            if event != "call":
-                return
-
-            # Get function details
-            func_name = frame.f_code.co_name
-            if func_name == "<module>":
-                return
-
-            # Get calling code
-            lines, start = inspect.getsourcelines(frame)
-
-            # Start span for function call
-            with tracer.start_span(
-                f"function_{func_name}", context=trace.set_span_in_context(parent_span)
-            ) as span:
-                span.set_attributes(
-                    {
-                        "function.name": func_name,
-                        "function.filename": frame.f_code.co_filename,
-                        "function.lineno": frame.f_lineno,
-                        "function.source": "".join(lines),
-                    }
-                )
-
-            return None
-
-        return trace_calls
-
     def _new_kernel(self) -> None:
         if self.nb_client.kc is None or not run_sync(self.nb_client.kc.is_alive)():  # type: ignore
             self.nb_client.create_kernel_manager()
@@ -691,22 +634,16 @@ Timeout: {self.timeout}"""
         self._new_kernel()
 
     def exec_cell(self, code: str) -> Execution:
-        tracer = trace.get_tracer(__name__)
+        tracer = get_tracer(__name__)
         with tracer.start_as_current_span("notebook_cell_execution") as span:
             try:
                 # Add code as span attribute
                 span.set_attribute("code", code)
                 span.set_attribute("cell_index", len(self.nb.cells))
 
-                # Create function tracer
-                # sys.settrace(self._function_tracer(span))
-
                 self.nb.cells.append(new_code_cell(code))
                 cell = self.nb.cells[-1]
                 self.nb_client.execute_cell(cell, len(self.nb.cells) - 1)
-
-                # Stop tracing
-                # sys.settrace(None)
 
                 result = _parse_local_code_interpreter_outputs(
                     self.nb.cells[-1].outputs
@@ -716,13 +653,19 @@ Timeout: {self.timeout}"""
             except CellTimeoutError as e:
                 run_sync(self.nb_client.km.interrupt_kernel)()  # type: ignore
                 sleep(1)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
                 traceback_raw = traceback.format_exc().splitlines()
                 return Execution.from_exception(e, traceback_raw)
             except DeadKernelError as e:
                 self.restart_kernel()
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
                 traceback_raw = traceback.format_exc().splitlines()
                 return Execution.from_exception(e, traceback_raw)
             except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
                 traceback_raw = traceback.format_exc().splitlines()
                 return Execution.from_exception(e, traceback_raw)
 
