@@ -30,7 +30,7 @@ from nbclient.util import run_sync
 from nbformat.v4 import new_code_cell
 from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
-from opentelemetry.trace import get_tracer, Status, StatusCode, Span
+from opentelemetry.trace import get_tracer, Status, StatusCode
 
 from vision_agent.utils.exceptions import (
     RemoteSandboxCreationError,
