@@ -1879,9 +1879,10 @@ def closest_box_distance(
 
 
 def document_analysis(image: np.ndarray) -> Dict[str, Any]:
-    """'document_analysis' is a tool that can analyze a document image to extract
-    text, tables, and other information. It returns a dictionary containing the
-    extracted text, tables, and other information.
+    """'document_analysis' is a document understanding tool that can handle and analyse various
+    types of document images with text, tables, pictures, charts and other information.
+    It returns a structured output containing the text, tables, pictures, charts and information
+    caption, summary, labels, bounding boxes avoiding information loss.
 
     Parameters:
         image (np.ndarray): The document image to analyze
@@ -1893,7 +1894,37 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
     Example
     -------
         >>> document_analysis(image)
-        {}
+        {'filename': None,
+         'pages': [{'bbox': [left, top, right, bottom],
+                    'chunks': [{'bbox': [left, top, right, bottom],
+                                'caption': 'TITLE',
+                                'label': 'page_header',
+                                'summary': 'The image contains a single word:\n'
+                                        '\n'
+                                        'TITLE\n'
+                                        '\n'
+                                        'The logo or brand name, '
+                                        'presented in a simple, bold, all-capital '
+                                        'letter font against a plain background.'},
+                                {'bbox': [left, top, right, bottom],
+                                 'caption': {'annotation': 'Cumulative Cloud CapEx Spending',
+                                    'data': [{'value': 200, 'year': '2024'},
+                                             {'value': 250, 'year': '2025'}],
+                                    'notes': 'Values for 2024 and 2025 are '
+                                             "estimates, indicated by 'E'",
+                                    'title': 'Total CapEx Spending',
+                                    'trend': 'Generally increasing over time',
+                                    'type': 'bar chart',
+                                    'unit': 'Billion USD',
+                                    'xAxis': 'Year',
+                                    'yAxis': 'Total CapEx Spending'},
+                                'label': 'picture',
+                        '       summary': 'This bar chart illustrates the trend of '
+                                   'Total CapEx (Capital Expenditure) Spending '
+                                   'over time, from 2024 to 2025.'},
+
+                    (...)
+
     """
 
     image_file = numpy_to_bytes(image)
