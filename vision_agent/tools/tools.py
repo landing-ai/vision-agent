@@ -1879,17 +1879,16 @@ def closest_box_distance(
 
 
 def document_analysis(image: np.ndarray) -> Dict[str, Any]:
-    """'document_analysis' is a document understanding tool that can handle and analyse various
-    types of document images with text, tables, pictures, charts and other information.
-    It returns a structured output containing the text, tables, pictures, charts and information
-    caption, summary, labels, bounding boxes avoiding information loss.
+    """'document_analysis' is an understanding tool that can handle various
+    types of document image layouts. It returns a structured output containing the text,
+    tables, pictures, charts and information caption, summary, labels, bounding boxes, etc
+    avoiding information loss.
 
     Parameters:
         image (np.ndarray): The document image to analyze
 
     Returns:
-        Dict[str, Any]: A dictionary containing the extracted text, tables, and other
-            information.
+        Dict[str, Any]: A dictionary containing the extracted information.
 
     Example
     -------
@@ -1900,8 +1899,7 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
                                 'label': 'page_header',
                                 'summary': 'The image contains a single word ...' },
                                {'bbox': [left_2, top_2, right_2, bottom_2],
-                                'caption': {'annotation': 'Cumulative Cloud CapEx Spending',
-                                    'data': [{'value': 200, 'year': '2024'},
+                                'caption': {'data': [{'value': 200, 'year': '2024' ...},
                                     'title': 'Total CapEx Spending',
                                     'type': 'bar chart',
                                     'unit': 'Billion USD',
@@ -1910,7 +1908,6 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
                                 'label': 'picture',
                                 'summary': 'This bar chart illustrates the trend of ...'},
                     ],
-        ...
     """
 
     image_file = numpy_to_bytes(image)
