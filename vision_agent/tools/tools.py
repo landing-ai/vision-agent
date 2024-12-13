@@ -1879,6 +1879,64 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
+def document_analysis(image: np.ndarray) -> Dict[str, Any]:
+    """'document_analysis' is an understanding tool that can handle various
+    types of document image layouts. It returns a structured output containing the text,
+    tables, pictures, charts and information caption, summary, labels, bounding boxes, etc
+    avoiding information loss.
+
+    Parameters:
+        image (np.ndarray): The document image to analyze
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the extracted information.
+
+    Example
+    -------
+        >>> document_analysis(image)
+        {'pages': [{'bbox': [left_0, top_0, right_0, bottom_0],
+                    'chunks': [{'bbox': [left_1, top_1, right_1, bottom_1],
+                                'caption': 'TITLE',
+                                'label': 'page_header',
+                                'summary': 'The image contains a single word ...' },
+                               {'bbox': [left_2, top_2, right_2, bottom_2],
+                                'caption': {'data': [{'value': 200, 'year': '2024' ...},
+                                    'title': 'Total CapEx Spending',
+                                    'type': 'bar chart',
+                                    'unit': 'Billion USD',
+                                    'xAxis': 'Year',
+                                    'yAxis': 'Total CapEx Spending'},
+                                'label': 'picture',
+                                'summary': 'This bar chart illustrates the trend of ...'},
+                    ],
+    """
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "document-analysis",
+    }
+
+    response: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="document-analysis",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "document_analysis"},
+    )
+
+    _display_tool_trace(
+        document_analysis.__name__,
+        payload,
+        response,
+        files,
+    )
+
+    return response
+
+
 # Utility and visualization functions
 
 
