@@ -1926,6 +1926,13 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
         metadata_payload={"function_name": "document_analysis"},
     )
 
+    _display_tool_trace(
+        document_analysis.__name__,
+        payload,
+        response,
+        files,
+    )
+
     return response
 
 
