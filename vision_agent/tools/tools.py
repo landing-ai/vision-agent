@@ -1894,37 +1894,23 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
     Example
     -------
         >>> document_analysis(image)
-        {'filename': None,
-         'pages': [{'bbox': [left, top, right, bottom],
-                    'chunks': [{'bbox': [left, top, right, bottom],
+        {'pages': [{'bbox': [left_0, top_0, right_0, bottom_0],
+                    'chunks': [{'bbox': [left_1, top_1, right_1, bottom_1],
                                 'caption': 'TITLE',
                                 'label': 'page_header',
-                                'summary': 'The image contains a single word:\n'
-                                        '\n'
-                                        'TITLE\n'
-                                        '\n'
-                                        'The logo or brand name, '
-                                        'presented in a simple, bold, all-capital '
-                                        'letter font against a plain background.'},
-                                {'bbox': [left, top, right, bottom],
-                                 'caption': {'annotation': 'Cumulative Cloud CapEx Spending',
+                                'summary': 'The image contains a single word ...' },
+                               {'bbox': [left_2, top_2, right_2, bottom_2],
+                                'caption': {'annotation': 'Cumulative Cloud CapEx Spending',
                                     'data': [{'value': 200, 'year': '2024'},
-                                             {'value': 250, 'year': '2025'}],
-                                    'notes': 'Values for 2024 and 2025 are '
-                                             "estimates, indicated by 'E'",
                                     'title': 'Total CapEx Spending',
-                                    'trend': 'Generally increasing over time',
                                     'type': 'bar chart',
                                     'unit': 'Billion USD',
                                     'xAxis': 'Year',
                                     'yAxis': 'Total CapEx Spending'},
                                 'label': 'picture',
-                        '       summary': 'This bar chart illustrates the trend of '
-                                   'Total CapEx (Capital Expenditure) Spending '
-                                   'over time, from 2024 to 2025.'},
-
-                    (...)
-
+                                'summary': 'This bar chart illustrates the trend of ...'},
+                    ],
+        ...
     """
 
     image_file = numpy_to_bytes(image)
