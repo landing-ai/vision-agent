@@ -106,9 +106,9 @@ def frames_to_bytes(
     return buffer_bytes
 
 
-# WARNING: this cache is cache is a little dangerous because if the underlying video
-# contents change but the filename remains the same it will return the old file contents
-# but for vision agent it's unlikely to change the file contents while keeping the
+# WARNING: This cache is a little dangerous because if the underlying video
+# contents change but the filename remains the same it will return the old file contents.
+# For vision agent it's unlikely to change the file contents while keeping the
 # same file name and the time savings are very large.
 @lru_cache(maxsize=8)
 def extract_frames_from_video(
