@@ -2608,6 +2608,8 @@ FUNCTION_TOOLS = [
     video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,
+    owlv2_sam2_video_tracking,
+    countgd_sam2_video_tracking,
 ]
 
 UTIL_TOOLS = [
