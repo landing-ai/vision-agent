@@ -143,7 +143,14 @@ def run_tool_testing(
     code = extract_tag(response, "code")  # type: ignore
     if code is None:
         raise ValueError(f"Could not extract code from response: {response}")
-    code = process_code(code)
+
+    # If there's a syntax error with the code, process_code can crash. Executing the
+    # code and then sending the error to the LLM should correct it.
+    try:
+        code = process_code(code)
+    except Exception as e:
+        _LOGGER.error(f"Error processing code: {e}")
+
     tool_output = code_interpreter.exec_isolation(DefaultImports.prepend_imports(code))
     tool_output_str = tool_output.text(include_results=False).strip()
 
