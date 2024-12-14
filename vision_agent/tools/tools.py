@@ -119,6 +119,120 @@ def _display_tool_trace(
     display({MimeType.APPLICATION_JSON: tool_call_trace.model_dump()}, raw=True)
 
 
+class ODModels(str, Enum):
+    COUNTGD = "countgd"
+    FLORENCE2 = "florence2"
+    OWLV2 = "owlv2"
+
+
+def _od_sam2_video_tracking(
+    od_model: ODModels,
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+    fine_tune_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
+
+    if chunk_length is None:
+        step = 1  # Process every frame
+    elif chunk_length <= 0:
+        raise ValueError("chunk_length must be a positive integer or None.")
+    else:
+        step = chunk_length  # Process frames with the specified step size
+
+    for idx in range(0, len(frames), step):
+        if od_model == ODModels.COUNTGD:
+            results[idx] = countgd_object_detection(prompt=prompt, image=frames[idx])
+            function_name = "countgd_object_detection"
+        elif od_model == ODModels.OWLV2:
+            results[idx] = owl_v2_image(
+                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
+            )
+            function_name = "owl_v2_image"
+        elif od_model == ODModels.FLORENCE2:
+            results[idx] = florence2_sam2_image(
+                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
+            )
+            function_name = "florence2_sam2_image"
+        else:
+            raise NotImplementedError(
+                f"Object detection model '{od_model}' is not implemented."
+            )
+
+    image_size = frames[0].shape[:2]
+
+    def _transform_detections(
+        input_list: List[Optional[List[Dict[str, Any]]]]
+    ) -> List[Optional[Dict[str, Any]]]:
+        output_list: List[Optional[Dict[str, Any]]] = []
+
+        for _, frame in enumerate(input_list):
+            if frame is not None:
+                labels = [detection["label"] for detection in frame]
+                bboxes = [
+                    denormalize_bbox(detection["bbox"], image_size)
+                    for detection in frame
+                ]
+
+                output_list.append(
+                    {
+                        "labels": labels,
+                        "bboxes": bboxes,
+                    }
+                )
+            else:
+                output_list.append(None)
+
+        return output_list
+
+    output = _transform_detections(results)
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {"bboxes": json.dumps(output), "chunk_length": chunk_length}
+    metadata = {"function_name": function_name}
+
+    detections = send_task_inference_request(
+        payload,
+        "sam2",
+        files=files,
+        metadata=metadata,
+    )
+
+    return_data = []
+    for frame in detections:
+        return_frame_data = []
+        for detection in frame:
+            mask = rle_decode_array(detection["mask"])
+            label = str(detection["id"]) + ": " + detection["label"]
+            return_frame_data.append(
+                {"label": label, "mask": mask, "score": 1.0, "rle": detection["mask"]}
+            )
+        return_data.append(return_frame_data)
+    return_data = add_bboxes_from_masks(return_data)
+    return_data = nms(return_data, iou_threshold=0.95)
+
+    # We save the RLE for display purposes, re-calculting RLE can get very expensive.
+    # Deleted here because we are returning the numpy masks instead
+    display_data = []
+    for frame in return_data:
+        display_frame_data = []
+        for obj in frame:
+            display_frame_data.append(
+                {
+                    "label": obj["label"],
+                    "score": obj["score"],
+                    "bbox": denormalize_bbox(obj["bbox"], image_size),
+                    "mask": obj["rle"],
+                }
+            )
+            del obj["rle"]
+        display_data.append(display_frame_data)
+
+    return {"files": files, "return_data": return_data, "display_data": detections}
+
+
 def owl_v2_image(
     prompt: str,
     image: np.ndarray,
@@ -300,6 +414,64 @@ def owl_v2_video(
         files,
     )
     return bboxes_formatted
+
+
+def owlv2_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+    fine_tune_id: Optional[str] = None,
+) -> List[List[Dict[str, Any]]]:
+    """'owlv2_sam2_video_tracking' is a tool that can segment multiple objects given a text
+    prompt such as category names or referring expressions. The categories in the text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
+        [
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    """
+
+    ret = _od_sam2_video_tracking(
+        ODModels.OWLV2,
+        prompt=prompt,
+        frames=frames,
+        chunk_length=chunk_length,
+        fine_tune_id=fine_tune_id,
+    )
+    _display_tool_trace(
+        owlv2_sam2_video_tracking.__name__,
+        {},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
 
 
 def florence2_sam2_image(
@@ -832,6 +1004,59 @@ def countgd_sam2_object_detection(
     )
 
     return seg_ret["return_data"]  # type: ignore
+
+
+def countgd_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+) -> List[List[Dict[str, Any]]]:
+    """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
+    prompt such as category names or referring expressions. The categories in the text
+    prompt are separated by commas. It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
+        [
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    """
+
+    ret = _od_sam2_video_tracking(
+        ODModels.COUNTGD, prompt=prompt, frames=frames, chunk_length=chunk_length
+    )
+    _display_tool_trace(
+        countgd_sam2_video_tracking.__name__,
+        {},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
 
 
 def countgd_example_based_counting(
@@ -2451,197 +2676,6 @@ def _plot_counting(
         )
 
     return image
-
-
-class ODModels(str, Enum):
-    COUNTGD = "countgd"
-    FLORENCE2 = "florence2"
-    OWLV2 = "owlv2"
-
-
-def od_sam2_video_tracking(
-    od_model: ODModels,
-    prompt: str,
-    frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
-    fine_tune_id: Optional[str] = None,
-) -> List[List[Dict[str, Any]]]:
-
-    results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
-
-    if chunk_length is None:
-        step = 1  # Process every frame
-    elif chunk_length <= 0:
-        raise ValueError("chunk_length must be a positive integer or None.")
-    else:
-        step = chunk_length  # Process frames with the specified step size
-
-    for idx in range(0, len(frames), step):
-        if od_model == ODModels.COUNTGD:
-            results[idx] = countgd_object_detection(prompt=prompt, image=frames[idx])
-            function_name = "countgd_object_detection"
-        elif od_model == ODModels.OWLV2:
-            results[idx] = owl_v2_image(
-                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
-            )
-            function_name = "owl_v2_image"
-        elif od_model == ODModels.FLORENCE2:
-            results[idx] = florence2_sam2_image(
-                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
-            )
-            function_name = "florence2_sam2_image"
-        else:
-            raise NotImplementedError(
-                f"Object detection model '{od_model}' is not implemented."
-            )
-
-    image_size = frames[0].shape[:2]
-
-    def _transform_detections(
-        input_list: List[Optional[List[Dict[str, Any]]]]
-    ) -> List[Optional[Dict[str, Any]]]:
-        output_list: List[Optional[Dict[str, Any]]] = []
-
-        for idx, frame in enumerate(input_list):
-            if frame is not None:
-                labels = [detection["label"] for detection in frame]
-                bboxes = [
-                    denormalize_bbox(detection["bbox"], image_size)
-                    for detection in frame
-                ]
-
-                output_list.append(
-                    {
-                        "labels": labels,
-                        "bboxes": bboxes,
-                    }
-                )
-            else:
-                output_list.append(None)
-
-        return output_list
-
-    output = _transform_detections(results)
-
-    buffer_bytes = frames_to_bytes(frames)
-    files = [("video", buffer_bytes)]
-    payload = {"bboxes": json.dumps(output), "chunk_length": chunk_length}
-    metadata = {"function_name": function_name}
-
-    detections = send_task_inference_request(
-        payload,
-        "sam2",
-        files=files,
-        metadata=metadata,
-    )
-
-    return_data = []
-    for frame in detections:
-        return_frame_data = []
-        for detection in frame:
-            mask = rle_decode_array(detection["mask"])
-            label = str(detection["id"]) + ": " + detection["label"]
-            return_frame_data.append({"label": label, "mask": mask, "score": 1.0})
-        return_data.append(return_frame_data)
-    return_data = add_bboxes_from_masks(return_data)
-    return nms(return_data, iou_threshold=0.95)
-
-
-def countgd_sam2_video_tracking(
-    prompt: str,
-    frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
-) -> List[List[Dict[str, Any]]]:
-    """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
-    prompt such as category names or referring expressions. The categories in the text
-    prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
-
-    Example
-    -------
-        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
-        [
-            [
-                {
-                    'label': '0: dinosaur',
-                    'bbox': [0.1, 0.11, 0.35, 0.4],
-                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                        [0, 0, 0, ..., 0, 0, 0],
-                        ...,
-                        [0, 0, 0, ..., 0, 0, 0],
-                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-                },
-            ],
-            ...
-        ]
-    """
-
-    return od_sam2_video_tracking(
-        ODModels.COUNTGD, prompt=prompt, frames=frames, chunk_length=chunk_length
-    )
-
-
-def owlv2_sam2_video_tracking(
-    prompt: str,
-    frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
-    fine_tune_id: Optional[str] = None,
-) -> List[List[Dict[str, Any]]]:
-    """'owlv2_sam2_video_tracking' is a tool that can segment multiple objects given a text
-    prompt such as category names or referring expressions. The categories in the text
-    prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
-
-    Example
-    -------
-        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
-        [
-            [
-                {
-                    'label': '0: dinosaur',
-                    'bbox': [0.1, 0.11, 0.35, 0.4],
-                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                        [0, 0, 0, ..., 0, 0, 0],
-                        ...,
-                        [0, 0, 0, ..., 0, 0, 0],
-                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-                },
-            ],
-            ...
-        ]
-    """
-
-    return od_sam2_video_tracking(
-        ODModels.OWLV2,
-        prompt=prompt,
-        frames=frames,
-        chunk_length=chunk_length,
-        fine_tune_id=fine_tune_id,
-    )
 
 
 FUNCTION_TOOLS = [

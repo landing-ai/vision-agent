@@ -18,7 +18,7 @@ from vision_agent.tools import (
     flux_image_inpainting,
     generate_pose_image,
     ocr,
-    od_sam2_video_tracking,
+    _od_sam2_video_tracking,
     owl_v2_image,
     owl_v2_video,
     owlv2_sam2_video_tracking,
@@ -511,7 +511,7 @@ def test_video_tracking_by_given_model():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
-    result = od_sam2_video_tracking(
+    result = _od_sam2_video_tracking(
         od_model="florence2",
         prompt="coin",
         frames=frames,
