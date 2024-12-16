@@ -33,6 +33,7 @@ from .tools import (
     depth_anything_v2,
     detr_segmentation,
     document_extraction,
+    document_qa,
     extract_frames_and_timestamps,
     florence2_ocr,
     florence2_phrase_grounding,

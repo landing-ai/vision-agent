@@ -2174,6 +2174,77 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
     return data
 
 
+def document_qa(
+    prompt: str,
+    image: np.ndarray,
+) -> str:
+    """'document_qa' is a tool that can answer any questions about arbitrary
+    images of documents or presentations. It answers by analyzing the contextual document data
+    and then using a model to answer specific questions. It returns text as an answer to the question.
+
+    Parameters:
+        prompt (str): The question to be answered about the document image
+        image (np.ndarray): The document image to analyze
+
+    Returns:
+        str: The answer to the question based on the document's context.
+
+    Example
+    -------
+        >>> document_qa(image, question)
+        'The answer to the question ...'
+    """
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "document-analysis",
+    }
+
+    data: dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="document-analysis",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "document_qa"},
+    )
+
+    def normalize(data: Any) -> Dict[str, Any]:
+        if isinstance(data, Dict):
+            if "bbox" in data:
+                data["bbox"] = normalize_bbox(data["bbox"], image.shape[:2])
+            for key in data:
+                data[key] = normalize(data[key])
+        elif isinstance(data, List):
+            for i in range(len(data)):
+                data[i] = normalize(data[i])
+        return data  # type: ignore
+
+    data = normalize(data)
+
+    prompt = f"""
+    Document Context:
+    {data}\n
+    Question: {prompt}\n    
+    Please provide a clear, concise answer using only the information from the document. If the answer is not definitively contained in the document, say "I cannot find the answer in the provided document."
+    """
+
+    lmm = AnthropicLMM()
+    llm_output = lmm.generate(prompt=prompt)
+    llm_output = cast(str, llm_output)
+
+    _display_tool_trace(
+        document_qa.__name__,
+        payload,
+        llm_output,
+        files,
+    )
+
+    return llm_output
+
+
 # Utility and visualization functions
 
 
