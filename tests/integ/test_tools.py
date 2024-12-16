@@ -18,7 +18,6 @@ from vision_agent.tools import (
     flux_image_inpainting,
     generate_pose_image,
     ocr,
-    _od_sam2_video_tracking,
     owl_v2_image,
     owl_v2_video,
     owlv2_sam2_video_tracking,

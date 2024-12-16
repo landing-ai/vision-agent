@@ -125,7 +125,7 @@ class ODModels(str, Enum):
     OWLV2 = "owlv2"
 
 
-def _od_sam2_video_tracking(
+def od_sam2_video_tracking(
     od_model: ODModels,
     prompt: str,
     frames: List[np.ndarray],
@@ -458,7 +458,7 @@ def owlv2_sam2_video_tracking(
         ]
     """
 
-    ret = _od_sam2_video_tracking(
+    ret = od_sam2_video_tracking(
         ODModels.OWLV2,
         prompt=prompt,
         frames=frames,
@@ -1047,7 +1047,7 @@ def countgd_sam2_video_tracking(
         ]
     """
 
-    ret = _od_sam2_video_tracking(
+    ret = od_sam2_video_tracking(
         ODModels.COUNTGD, prompt=prompt, frames=frames, chunk_length=chunk_length
     )
     _display_tool_trace(
