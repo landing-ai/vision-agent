@@ -2227,7 +2227,7 @@ def document_qa(
     prompt = f"""
     Document Context:
     {data}\n
-    Question: {prompt}\n    
+    Question: {prompt}\n
     Please provide a clear, concise answer using only the information from the document. If the answer is not definitively contained in the document, say "I cannot find the answer in the provided document."
     """
 
