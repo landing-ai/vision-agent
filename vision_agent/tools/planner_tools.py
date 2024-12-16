@@ -174,6 +174,7 @@ def run_tool_testing(
             DefaultImports.prepend_imports(code)
         )
         tool_output_str = tool_output.text(include_results=False).strip()
+        count += 1
 
     return code, tool_docs_str, tool_output
 
