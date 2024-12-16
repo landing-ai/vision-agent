@@ -32,7 +32,7 @@ from .tools import (
     countgd_sam2_video_tracking,
     depth_anything_v2,
     detr_segmentation,
-    document_analysis,
+    document_extraction,
     extract_frames_and_timestamps,
     florence2_ocr,
     florence2_phrase_grounding,
