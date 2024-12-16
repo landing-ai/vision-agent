@@ -2167,7 +2167,7 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
         elif isinstance(data, List):
             for i in range(len(data)):
                 data[i] = normalize(data[i])
-        return data
+        return data  # type: ignore
 
     data = normalize(data)
 
