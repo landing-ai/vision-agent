@@ -2104,11 +2104,11 @@ def closest_box_distance(
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
 
 
-def document_analysis(image: np.ndarray) -> Dict[str, Any]:
-    """'document_analysis' is an understanding tool that can handle various
-    types of document image layouts. It returns a structured output containing the text,
-    tables, pictures, charts and information caption, summary, labels, bounding boxes, etc
-    avoiding information loss.
+def document_extraction(image: np.ndarray) -> Dict[str, Any]:
+    """'document_extraction' is a tool that can extract structured information out of
+    documents with different layouts. It returns the extracted data in a structured
+    hierarchical format containing text, tables, pictures, charts, and other
+    information.
 
     Parameters:
         image (np.ndarray): The document image to analyze
@@ -2119,20 +2119,18 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
     Example
     -------
         >>> document_analysis(image)
-        {'pages': [{'bbox': [left_0, top_0, right_0, bottom_0],
-                    'chunks': [{'bbox': [left_1, top_1, right_1, bottom_1],
-                                'caption': 'TITLE',
+        {'pages':
+            [{'bbox': [0, 0, 1.0, 1.0],
+                    'chunks': [{'bbox': [0.8, 0.1, 1.0, 0.2],
                                 'label': 'page_header',
-                                'summary': 'The image contains a single word ...' },
-                               {'bbox': [left_2, top_2, right_2, bottom_2],
-                                'caption': {'data': [{'value': 200, 'year': '2024' ...},
-                                    'title': 'Total CapEx Spending',
-                                    'type': 'bar chart',
-                                    'unit': 'Billion USD',
-                                    'xAxis': 'Year',
-                                    'yAxis': 'Total CapEx Spending'},
-                                'label': 'picture',
-                                'summary': 'This bar chart illustrates the trend of ...'},
+                                'order': 75
+                                'caption': 'Annual Report 2024',
+                                'summary': 'This annual report summarizes ...' },
+                               {'bbox': [0.2, 0.9, 0.9, 1.0],
+                                'label': table',
+                                'order': 1119,
+                                'caption': [{'Column 1': 'Value 1', 'Column 2': 'Value 2'},
+                                'summary': 'This table illustrates a trend of ...'},
                     ],
     """
 
@@ -2144,7 +2142,7 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
         "model": "document-analysis",
     }
 
-    response: dict[str, Any] = send_inference_request(
+    data: Dict[str, Any] = send_inference_request(
         payload=payload,
         endpoint_name="document-analysis",
         files=files,
@@ -2152,14 +2150,28 @@ def document_analysis(image: np.ndarray) -> Dict[str, Any]:
         metadata_payload={"function_name": "document_analysis"},
     )
 
+    # don't display normalized bboxes
     _display_tool_trace(
-        document_analysis.__name__,
+        document_extraction.__name__,
         payload,
-        response,
+        data,
         files,
     )
 
-    return response
+    def normalize(data: Any) -> Dict[str, Any]:
+        if isinstance(data, Dict):
+            if "bbox" in data:
+                data["bbox"] = normalize_bbox(data["bbox"], image.shape[:2])
+            for key in data:
+                data[key] = normalize(data[key])
+        elif isinstance(data, List):
+            for i in range(len(data)):
+                data[i] = normalize(data[i])
+        return data
+
+    data = normalize(data)
+
+    return data
 
 
 # Utility and visualization functions
@@ -2697,6 +2709,7 @@ FUNCTION_TOOLS = [
     minimum_distance,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    document_extraction,
     video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,
