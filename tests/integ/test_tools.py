@@ -516,6 +516,7 @@ def test_video_tracking_by_given_model():
         prompt="coin",
         frames=frames,
     )
+    result = result["return_data"]
 
     assert len(result) == 10
     assert len([res["label"] for res in result[0]]) == 24
