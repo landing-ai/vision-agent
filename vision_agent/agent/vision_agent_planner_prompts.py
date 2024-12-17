@@ -73,7 +73,7 @@ f2s2_out = florence2_sam2_image("person", image)
 # strip out the masks from the output becuase they don't provide useful information when printed
 f2s2_out = [{{k: v for k, v in o.items() if k != "mask"}} for o in f2s2_out]
 
-cgd_out = countgd_object_detection(image)
+cgd_out = countgd_object_detection("person", image)
 
 final_out = {{"owl_v2_image": owl_v2_out, "florence2_sam2_image": f2s2, "countgd_object_detection": cgd_out}}
 print(final_out)
