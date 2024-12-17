@@ -644,11 +644,8 @@ class OllamaVisionAgentCoder(VisionAgentCoder):
     """VisionAgentCoder that uses Ollama models for planning, coding, testing.
 
     Pre-requisites:
-    1. Run ollama pull llama3.1 for the LLM
+    1. Run ollama pull llama3.2-vision for the LMM
     2. Run ollama pull mxbai-embed-large for the embedding similarity model
-
-    Technically you should use a VLM such as llava but llava is not able to handle the
-    context length and crashes.
 
     Example
     -------
@@ -674,17 +671,17 @@ class OllamaVisionAgentCoder(VisionAgentCoder):
                 else planner
             ),
             coder=(
-                OllamaLMM(model_name="llama3.1", temperature=0.0)
+                OllamaLMM(model_name="llama3.2-vision", temperature=0.0)
                 if coder is None
                 else coder
             ),
             tester=(
-                OllamaLMM(model_name="llama3.1", temperature=0.0)
+                OllamaLMM(model_name="llama3.2-vision", temperature=0.0)
                 if tester is None
                 else tester
             ),
             debugger=(
-                OllamaLMM(model_name="llama3.1", temperature=0.0)
+                OllamaLMM(model_name="llama3.2-vision", temperature=0.0)
                 if debugger is None
                 else debugger
             ),
