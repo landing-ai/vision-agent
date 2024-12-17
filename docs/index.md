@@ -1,7 +1,15 @@
+<div align="center">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_light.svg?raw=true">
+        <source media="(prefers-color-scheme: light)" srcset="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_dark.svg?raw=true">
+        <img alt="VisionAgent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_light.svg?raw=true">
+    </picture>
+
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
 ![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
 [![PyPI version](https://badge.fury.io/py/vision-agent.svg)](https://badge.fury.io/py/vision-agent)
 ![version](https://img.shields.io/pypi/pyversions/vision-agent)
+</div>
 
 VisionAgent is a library that helps you utilize agent frameworks to generate code to
 solve your vision task. Check out our discord for updates and roadmaps!
@@ -20,10 +28,18 @@ solve your vision task. Check out our discord for updates and roadmaps!
 The fastest way to test out VisionAgent is to use our web application. You can find it
 [here](https://va.landing.ai/).
 
+### Local Jupyter Notebook
+You can also run VisionAgent in a local Jupyter Notebook.  Here are some examples of using VisionAgent:
 
-### Installation
+1. [Counting cans in an image](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks/counting_cans.ipynb)
+
+Check out the [notebooks](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks) folder for more examples.
+
+
+### Get Started
 To get started with the python library, you can install it using pip:
 
+#### Installation and Setup
 ```bash
 pip install vision-agent
 ```
@@ -32,11 +48,17 @@ Ensure you have both an Anthropic key and an OpenAI API key and set in your envi
 variables (if you are using Azure OpenAI please see the Azure setup section):
 
 ```bash
-export ANTHROPIC_API_KEY="your-api-key" # needed for VisionAgent and VisionAgentCoder
-export OPENAI_API_KEY="your-api-key" # needed for ToolRecommender
+export ANTHROPIC_API_KEY="your-api-key"
+export OPENAI_API_KEY="your-api-key"
 ```
 
-### Basic Usage
+---
+**NOTE**
+You must have both Anthropic and OpenAI API keys set in your environment variables to
+use VisionAgent. If you don't have an Anthropic key you can use Ollama as a backend.
+---
+
+#### Chatting with VisionAgent
 To get started you can just import the `VisionAgent` and start chatting with it:
 ```python
 >>> from vision_agent.agent import VisionAgent
@@ -51,6 +73,40 @@ To get started you can just import the `VisionAgent` and start chatting with it:
 The chat messages are similar to `OpenAI`'s format with `role` and `content` keys but
 in addition to those you can add `media` which is a list of media files that can either
 be images or video files.
+
+#### Getting Code from VisionAgent
+You can also use `VisionAgentCoder` to generate code for you:
+
+```python
+>>> from vision_agent.agent import VisionAgentCoder
+>>> agent = VisionAgentCoder(verbosity=2)
+>>> code = agent("Count the number of people in this image", media="people.jpg")
+```
+
+#### Don't have Anthropic/OpenAI API keys?
+You can use `OllamaVisionAgentCoder` which uses Ollama as the backend. To get started
+pull the models:
+
+```bash
+ollama pull llama3.2-vision
+ollama pull mxbai-embed-large
+```
+
+Then you can use it just like you would use `VisionAgentCoder`:
+
+```python
+>>> from vision_agent.agent import OllamaVisionAgentCoder
+>>> agent = OllamaVisionAgentCoder(verbosity=2)
+>>> code = agent("Count the number of people in this image", media="people.jpg")
+```
+
+---
+**NOTE**
+Smaller open source models like Llama 3.1 8B will not work well with VisionAgent. You
+will encounter many coding errors because it generates incorrect code or JSON decoding
+errors because it generates incorrect JSON. We recommend using larger models or
+Anthropic/OpenAI models.
+---
 
 ## Documentation
 
@@ -385,15 +441,14 @@ Usage is the same as `VisionAgentCoder`:
 `OllamaVisionAgentCoder` uses Ollama. To get started you must download a few models:
 
 ```bash
-ollama pull llama3.1
+ollama pull llama3.2-vision
 ollama pull mxbai-embed-large
 ```
 
-`llama3.1` is used for the `OllamaLMM` for `OllamaVisionAgentCoder`. Normally we would
-use an actual LMM such as `llava` but `llava` cannot handle the long context lengths
-required by the agent. Since `llama3.1` cannot handle images you may see some
-performance degredation. `mxbai-embed-large` is the embedding model used to look up
-tools. You can use it just like you would use `VisionAgentCoder`:
+`llama3.2-vision` is used for the `OllamaLMM` for `OllamaVisionAgentCoder`. Becuase
+`llama3.2-vision` is a smaller model you **WILL see performance degredation** compared to
+using Anthropic or OpenAI models. `mxbai-embed-large` is the embedding model used to
+look up tools. You can use it just like you would use `VisionAgentCoder`:
 
 ```python
 >>> import vision_agent as va
@@ -454,3 +509,12 @@ agent = va.agent.AzureVisionAgentCoder()
 Failure to have sufficient API credits may result in limited or no functionality for
 the features that rely on the OpenAI API. For more details on managing your API usage
 and credits, please refer to the OpenAI API documentation.
+
+
+******************************************************************************************************************************
+
+## Troubleshooting
+
+### 1. Encounter `ModuleNotFoundError` when VisionAgent generating code
+
+If you keep seeing a `ModuleNotFoundError` when VisionAgent generating code and seeing VisionAgent got stuck and could not install the missing dependencies, you can manually add the missing dependencies into your Python environment by: `pip install <missing_package_name>`. And then try generating code again.

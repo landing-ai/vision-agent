@@ -58,6 +58,11 @@ class Sim:
         """
         self.df = df
         self.client = OpenAI(api_key=api_key)
+        self.emb_call = (
+            lambda x: self.client.embeddings.create(input=x, model=model)
+            .data[0]
+            .embedding
+        )
         self.model = model
         if "embs" not in df.columns and sim_key is None:
             raise ValueError("key is required if no column 'embs' is present.")
@@ -65,11 +70,7 @@ class Sim:
         if sim_key is not None:
             self.df["embs"] = self.df[sim_key].apply(
                 lambda x: get_embedding(
-                    lambda text: self.client.embeddings.create(
-                        input=text, model=self.model
-                    )
-                    .data[0]
-                    .embedding,
+                    self.emb_call,
                     x,
                 )
             )
@@ -126,9 +127,7 @@ class Sim:
         """
 
         embedding = get_embedding(
-            lambda text: self.client.embeddings.create(input=text, model=self.model)
-            .data[0]
-            .embedding,
+            self.emb_call,
             query,
         )
         self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))

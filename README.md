@@ -36,9 +36,10 @@ You can also run VisionAgent in a local Jupyter Notebook.  Here are some example
 Check out the [notebooks](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks) folder for more examples.
 
 
-### Installation
+### Get Started
 To get started with the python library, you can install it using pip:
 
+#### Installation and Setup
 ```bash
 pip install vision-agent
 ```
@@ -47,11 +48,17 @@ Ensure you have both an Anthropic key and an OpenAI API key and set in your envi
 variables (if you are using Azure OpenAI please see the Azure setup section):
 
 ```bash
-export ANTHROPIC_API_KEY="your-api-key" # needed for VisionAgent and VisionAgentCoder
-export OPENAI_API_KEY="your-api-key" # needed for ToolRecommender
+export ANTHROPIC_API_KEY="your-api-key"
+export OPENAI_API_KEY="your-api-key"
 ```
 
-### Basic Usage
+---
+**NOTE**
+You must have both Anthropic and OpenAI API keys set in your environment variables to
+use VisionAgent. If you don't have an Anthropic key you can use Ollama as a backend.
+---
+
+#### Chatting with VisionAgent
 To get started you can just import the `VisionAgent` and start chatting with it:
 ```python
 >>> from vision_agent.agent import VisionAgent
@@ -66,6 +73,40 @@ To get started you can just import the `VisionAgent` and start chatting with it:
 The chat messages are similar to `OpenAI`'s format with `role` and `content` keys but
 in addition to those you can add `media` which is a list of media files that can either
 be images or video files.
+
+#### Getting Code from VisionAgent
+You can also use `VisionAgentCoder` to generate code for you:
+
+```python
+>>> from vision_agent.agent import VisionAgentCoder
+>>> agent = VisionAgentCoder(verbosity=2)
+>>> code = agent("Count the number of people in this image", media="people.jpg")
+```
+
+#### Don't have Anthropic/OpenAI API keys?
+You can use `OllamaVisionAgentCoder` which uses Ollama as the backend. To get started
+pull the models:
+
+```bash
+ollama pull llama3.2-vision
+ollama pull mxbai-embed-large
+```
+
+Then you can use it just like you would use `VisionAgentCoder`:
+
+```python
+>>> from vision_agent.agent import OllamaVisionAgentCoder
+>>> agent = OllamaVisionAgentCoder(verbosity=2)
+>>> code = agent("Count the number of people in this image", media="people.jpg")
+```
+
+---
+**NOTE**
+Smaller open source models like Llama 3.1 8B will not work well with VisionAgent. You
+will encounter many coding errors because it generates incorrect code or JSON decoding
+errors because it generates incorrect JSON. We recommend using larger models or
+Anthropic/OpenAI models.
+---
 
 ## Documentation
 
@@ -400,15 +441,14 @@ Usage is the same as `VisionAgentCoder`:
 `OllamaVisionAgentCoder` uses Ollama. To get started you must download a few models:
 
 ```bash
-ollama pull llama3.1
+ollama pull llama3.2-vision
 ollama pull mxbai-embed-large
 ```
 
-`llama3.1` is used for the `OllamaLMM` for `OllamaVisionAgentCoder`. Normally we would
-use an actual LMM such as `llava` but `llava` cannot handle the long context lengths
-required by the agent. Since `llama3.1` cannot handle images you may see some
-performance degredation. `mxbai-embed-large` is the embedding model used to look up
-tools. You can use it just like you would use `VisionAgentCoder`:
+`llama3.2-vision` is used for the `OllamaLMM` for `OllamaVisionAgentCoder`. Becuase
+`llama3.2-vision` is a smaller model you **WILL see performance degredation** compared to
+using Anthropic or OpenAI models. `mxbai-embed-large` is the embedding model used to
+look up tools. You can use it just like you would use `VisionAgentCoder`:
 
 ```python
 >>> import vision_agent as va
