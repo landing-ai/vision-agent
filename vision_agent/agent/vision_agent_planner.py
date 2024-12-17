@@ -532,7 +532,7 @@ class OllamaVisionAgentPlanner(VisionAgentPlanner):
     ) -> None:
         super().__init__(
             planner=(
-                OllamaLMM(model_name="llama3.1", temperature=0.0)
+                OllamaLMM(model_name="llama3.2-vision", temperature=0.0)
                 if planner is None
                 else planner
             ),

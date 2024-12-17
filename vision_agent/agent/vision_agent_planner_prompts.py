@@ -62,10 +62,10 @@ plan2:
 - Count the number of detected objects labeled as 'person'.
 plan3:
 - Load the image from the provided file path 'image.jpg'.
-- Use the 'countgd_counting' tool to count the dominant foreground object, which in this case is people.
+- Use the 'countgd_object_detection' tool to count the dominant foreground object, which in this case is people.
 
 ```python
-from vision_agent.tools import load_image, owl_v2_image, florence2_sam2_image, countgd_counting
+from vision_agent.tools import load_image, owl_v2_image, florence2_sam2_image, countgd_object_detection
 image = load_image("image.jpg")
 owl_v2_out = owl_v2_image("person", image)
 
@@ -73,9 +73,9 @@ f2s2_out = florence2_sam2_image("person", image)
 # strip out the masks from the output becuase they don't provide useful information when printed
 f2s2_out = [{{k: v for k, v in o.items() if k != "mask"}} for o in f2s2_out]
 
-cgd_out = countgd_counting(image)
+cgd_out = countgd_object_detection("person", image)
 
-final_out = {{"owl_v2_image": owl_v2_out, "florence2_sam2_image": f2s2, "countgd_counting": cgd_out}}
+final_out = {{"owl_v2_image": owl_v2_out, "florence2_sam2_image": f2s2, "countgd_object_detection": cgd_out}}
 print(final_out)
 --- END EXAMPLE1 ---
 

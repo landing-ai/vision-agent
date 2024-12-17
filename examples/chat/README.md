@@ -1,5 +1,6 @@
 # Example App
-This is an example applicaiton to demonstrate how to run VisionAgent locally.
+This is an example applicaiton to demonstrate how to run VisionAgentV2 locally. This
+only works with the V2 version of VisionAgent.
 
 
 # Quick Start
