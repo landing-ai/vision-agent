@@ -47,6 +47,7 @@ av = "^11.0.0"
 libcst = "^1.5.0"
 matplotlib = "^3.9.2"
 scikit-learn = "^1.5.2"
+opentelemetry-api = "^1.29.0"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"

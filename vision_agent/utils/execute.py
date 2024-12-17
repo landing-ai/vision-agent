@@ -30,6 +30,8 @@ from nbclient.util import run_sync
 from nbformat.v4 import new_code_cell
 from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
+from opentelemetry.trace import get_tracer, Status, StatusCode, SpanKind
+from opentelemetry.context import get_current
 
 from vision_agent.utils.exceptions import (
     RemoteSandboxCreationError,
@@ -633,23 +635,44 @@ Timeout: {self.timeout}"""
         self._new_kernel()
 
     def exec_cell(self, code: str) -> Execution:
-        try:
-            self.nb.cells.append(new_code_cell(code))
-            cell = self.nb.cells[-1]
-            self.nb_client.execute_cell(cell, len(self.nb.cells) - 1)
-            return _parse_local_code_interpreter_outputs(self.nb.cells[-1].outputs)
-        except CellTimeoutError as e:
-            run_sync(self.nb_client.km.interrupt_kernel)()  # type: ignore
-            sleep(1)
-            traceback_raw = traceback.format_exc().splitlines()
-            return Execution.from_exception(e, traceback_raw)
-        except DeadKernelError as e:
-            self.restart_kernel()
-            traceback_raw = traceback.format_exc().splitlines()
-            return Execution.from_exception(e, traceback_raw)
-        except Exception as e:
-            traceback_raw = traceback.format_exc().splitlines()
-            return Execution.from_exception(e, traceback_raw)
+        # track the exec_cell with opentelemetry trace
+        tracer = get_tracer(__name__)
+        context = get_current()
+        with tracer.start_as_current_span(
+            "notebook_cell_execution", kind=SpanKind.INTERNAL, context=context
+        ) as span:
+            try:
+                # Add code as span attribute
+                span.set_attribute("code", code)
+                span.set_attribute("cell_index", len(self.nb.cells))
+
+                self.nb.cells.append(new_code_cell(code))
+                cell = self.nb.cells[-1]
+                self.nb_client.execute_cell(cell, len(self.nb.cells) - 1)
+
+                result = _parse_local_code_interpreter_outputs(
+                    self.nb.cells[-1].outputs
+                )
+                span.set_status(Status(StatusCode.OK))
+                return result
+            except CellTimeoutError as e:
+                run_sync(self.nb_client.km.interrupt_kernel)()  # type: ignore
+                sleep(1)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                traceback_raw = traceback.format_exc().splitlines()
+                return Execution.from_exception(e, traceback_raw)
+            except DeadKernelError as e:
+                self.restart_kernel()
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                traceback_raw = traceback.format_exc().splitlines()
+                return Execution.from_exception(e, traceback_raw)
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                traceback_raw = traceback.format_exc().splitlines()
+                return Execution.from_exception(e, traceback_raw)
 
     def upload_file(self, file_path: Union[str, Path]) -> Path:
         with open(file_path, "rb") as f:
