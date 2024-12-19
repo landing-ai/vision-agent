@@ -132,91 +132,275 @@ def od_sam2_video_tracking(
     chunk_length: Optional[int] = 10,
     fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    results: List[Optional[List[Dict[str, Any]]]] = [None] * len(frames)
+    SEGMENT_SIZE = 50
+    OVERLAP = 1  # Number of overlapping frames between segments
 
-    if chunk_length is None:
-        step = 1  # Process every frame
-    elif chunk_length <= 0:
-        raise ValueError("chunk_length must be a positive integer or None.")
-    else:
-        step = chunk_length  # Process frames with the specified step size
-
-    for idx in range(0, len(frames), step):
-        if od_model == ODModels.COUNTGD:
-            results[idx] = countgd_object_detection(prompt=prompt, image=frames[idx])
-            function_name = "countgd_object_detection"
-        elif od_model == ODModels.OWLV2:
-            results[idx] = owl_v2_image(
-                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
-            )
-            function_name = "owl_v2_image"
-        elif od_model == ODModels.FLORENCE2:
-            results[idx] = florence2_sam2_image(
-                prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
-            )
-            function_name = "florence2_sam2_image"
-        else:
-            raise NotImplementedError(
-                f"Object detection model '{od_model}' is not implemented."
-            )
-
+    _LOGGER.debug("Starting video tracking with %d frames.", len(frames))
     image_size = frames[0].shape[:2]
 
-    def _transform_detections(
-        input_list: List[Optional[List[Dict[str, Any]]]]
-    ) -> List[Optional[Dict[str, Any]]]:
-        output_list: List[Optional[Dict[str, Any]]] = []
-
-        for _, frame in enumerate(input_list):
-            if frame is not None:
-                labels = [detection["label"] for detection in frame]
-                bboxes = [
-                    denormalize_bbox(detection["bbox"], image_size)
-                    for detection in frame
-                ]
-
-                output_list.append(
-                    {
-                        "labels": labels,
-                        "bboxes": bboxes,
-                    }
+    def _split_frames_into_segments(
+        frames: List[np.ndarray], segment_size: int, overlap: int
+    ) -> List[List[np.ndarray]]:
+        _LOGGER.debug(
+            "Splitting frames into segments of %d frames with %d frame overlap.",
+            segment_size,
+            overlap,
+        )
+        segments = []
+        start = 0
+        segment_count = 0
+        while start < len(frames):
+            end = start + segment_size
+            if end > len(frames):
+                end = len(frames)
+            if start != 0:
+                # Include the last frame of the previous segment
+                segment = frames[start - overlap : end]
+                _LOGGER.debug(
+                    "Segment %d: frames %d to %d (including overlap).",
+                    segment_count + 1,
+                    start - overlap,
+                    end - 1,
                 )
             else:
-                output_list.append(None)
+                segment = frames[start:end]
+                _LOGGER.debug(
+                    "Segment %d: frames %d to %d.",
+                    segment_count + 1,
+                    start,
+                    end - 1,
+                )
+            segments.append(segment)
+            start += segment_size
+            segment_count += 1
+        _LOGGER.debug("Total segments created: %d.", segment_count)
+        return segments
 
-        return output_list
+    def _process_segment(
+        segment_frames: List[np.ndarray],
+        od_model: ODModels,
+        prompt: str,
+        fine_tune_id: Optional[str],
+        segment_index: int,
+    ) -> Optional[List[Dict[str, Any]]]:
+        _LOGGER.debug(
+            "Processing segment %d with %d frames.",
+            segment_index + 1,
+            len(segment_frames),
+        )
+        # Initialize results for the segment
+        segment_results: List[Optional[List[Dict[str, Any]]]] = [None] * len(
+            segment_frames
+        )
 
-    output = _transform_detections(results)
+        # Determine processing step based on chunk_length
+        if chunk_length is None:
+            step = 1  # Process every frame
+            _LOGGER.debug("Chunk length is None. Processing every frame.")
+        elif chunk_length <= 0:
+            _LOGGER.debug("Invalid chunk_length: %d. Raising ValueError.", chunk_length)
+            raise ValueError("chunk_length must be a positive integer or None.")
+        else:
+            step = chunk_length  # Process frames with the specified step size
+            _LOGGER.debug("Processing frames with step size: %d.", step)
 
-    buffer_bytes = frames_to_bytes(frames)
-    files = [("video", buffer_bytes)]
-    payload = {"bboxes": json.dumps(output), "chunk_length": chunk_length}
-    metadata = {"function_name": function_name}
+        function_name = ""
 
-    detections = send_task_inference_request(
-        payload,
-        "sam2",
-        files=files,
-        metadata=metadata,
-    )
+        for idx in range(0, len(segment_frames), step):
+            frame_number = idx
+            if od_model == ODModels.COUNTGD:
+                _LOGGER.debug(
+                    "Segment %d: Applying COUNTGD object detection on frame %d.",
+                    segment_index + 1,
+                    frame_number,
+                )
+                segment_results[idx] = countgd_object_detection(
+                    prompt=prompt, image=segment_frames[idx]
+                )
+                function_name = "countgd_object_detection"
+            elif od_model == ODModels.OWLV2:
+                _LOGGER.debug(
+                    "Segment %d: Applying OWLV2 object detection on frame %d.",
+                    segment_index + 1,
+                    frame_number,
+                )
+                segment_results[idx] = owl_v2_image(
+                    prompt=prompt, image=segment_frames[idx], fine_tune_id=fine_tune_id
+                )
+                function_name = "owl_v2_image"
+            elif od_model == ODModels.FLORENCE2:
+                _LOGGER.debug(
+                    "Segment %d: Applying FLORENCE2 object detection on frame %d.",
+                    segment_index + 1,
+                    frame_number,
+                )
+                segment_results[idx] = florence2_sam2_image(
+                    prompt=prompt, image=segment_frames[idx], fine_tune_id=fine_tune_id
+                )
+                function_name = "florence2_sam2_image"
+            else:
+                _LOGGER.debug(
+                    "Segment %d: Object detection model '%s' is not implemented.",
+                    segment_index + 1,
+                    od_model,
+                )
+                raise NotImplementedError(
+                    f"Object detection model '{od_model}' is not implemented."
+                )
 
+        # Transform detections
+        def _transform_detections(
+            input_list: List[Optional[List[Dict[str, Any]]]]
+        ) -> List[Optional[Dict[str, Any]]]:
+            _LOGGER.debug("Transforming detections for segment %d.", segment_index + 1)
+            output_list: List[Optional[Dict[str, Any]]] = []
+            for frame_idx, frame in enumerate(input_list):
+                if frame is not None:
+                    labels = [detection["label"] for detection in frame]
+                    bboxes = [
+                        denormalize_bbox(detection["bbox"], image_size)
+                        for detection in frame
+                    ]
+
+                    output_list.append(
+                        {
+                            "labels": labels,
+                            "bboxes": bboxes,
+                        }
+                    )
+                else:
+                    output_list.append(None)
+            return output_list
+
+        transformed_detections = _transform_detections(segment_results)
+        _LOGGER.debug("Transformed detections for segment %d.", segment_index + 1)
+
+        # Prepare payload for inference request
+        buffer_bytes = frames_to_bytes(segment_frames)
+        files = [("video", buffer_bytes)]
+        payload = {
+            "bboxes": json.dumps(transformed_detections),
+            "chunk_length": chunk_length,
+        }
+        metadata = {"function_name": function_name}
+        _LOGGER.debug(
+            "Segment %d: Sending inference request with payload size %d bytes.",
+            segment_index + 1,
+            len(buffer_bytes),
+        )
+
+        # Send inference request
+        segment_detections = send_task_inference_request(
+            payload,
+            "sam2",
+            files=files,
+            metadata=metadata,
+        )
+        _LOGGER.debug("Segment %d: Inference request completed.", segment_index + 1)
+
+        return segment_detections
+
+    def merge_segments(
+        detections_per_segment: List[Any], segment_size: int
+    ) -> List[Any]:
+        _LOGGER.debug("Merging %d segments.", len(detections_per_segment))
+
+        def _update_reference_predictions(
+            last_predictions: list[Any],
+            new_predictions: list[Any],
+            objects_count: int,
+            iou_threshold: float = 0.8,
+        ) -> tuple[list[Any], int]:
+
+            def calculate_mask_iou(mask1, mask2) -> float:
+                # Ensure the masks are binary
+                mask1 = mask1.astype(bool)
+                mask2 = mask2.astype(bool)
+
+                # Calculate the intersection and union
+                intersection = np.sum(np.logical_and(mask1, mask2))
+                union = np.sum(np.logical_or(mask1, mask2))
+
+                # Calculate the IoU
+                iou = intersection / union if union != 0 else 0
+                return iou
+
+            new_annotation_predictions: list[Any] = []
+            for idx, new_prediction in enumerate(new_predictions):
+                new_ann_id: int = 0
+                for last_prediction in last_predictions:
+                    iou = calculate_mask_iou(
+                        new_prediction["mask"],
+                        last_prediction["mask"],
+                    )
+                    if iou > iou_threshold:
+                        new_ann_id = last_prediction.id
+                        break
+
+                if not new_ann_id:
+                    objects_count += 1
+                    new_ann_id = objects_count
+                    new_predictions[idx].id = new_ann_id
+                    new_annotation_predictions.append(new_predictions[idx])
+
+            updated_predictions = last_predictions + new_annotation_predictions
+            return (updated_predictions, objects_count)
+
+        for idx in range(0, len(detections_per_segment) - 1):
+            merged_result, a = _update_reference_predictions(
+                detections_per_segment[idx][-1],
+                detections_per_segment[idx + 1],
+                segment_size,
+            )
+        _LOGGER.debug("Merging completed successfully.")
+        return merged_result
+
+    # Split frames into segments with overlap
+    segments = _split_frames_into_segments(frames, SEGMENT_SIZE, OVERLAP)
+
+    # Process each segment and collect detections
+    detections_per_segment: List[Any] = []
+    for segment_index, segment in enumerate(segments):
+        _LOGGER.debug("Starting processing for segment %d.", segment_index + 1)
+        segment_detections = _process_segment(
+            segment_frames=segment,
+            od_model=od_model,
+            prompt=prompt,
+            fine_tune_id=fine_tune_id,
+            segment_index=segment_index,
+        )
+        detections_per_segment.append(segment_detections)
+        _LOGGER.debug("Finished processing for segment %d.", segment_index + 1)
+
+    # Merge all segment detections into a unified result
+    _LOGGER.debug("All segments processed. Starting to merge detections.")
+    merged_detections = merge_segments(detections_per_segment, SEGMENT_SIZE)
+
+    # Post-processing of merged detections
+    _LOGGER.debug("Starting post-processing of merged detections.")
     return_data = []
-    for frame in detections:
+    for frame_idx, frame in enumerate(merged_detections):
         return_frame_data = []
         for detection in frame:
             mask = rle_decode_array(detection["mask"])
-            label = str(detection["id"]) + ": " + detection["label"]
+            label = f"{detection['id']}: {detection['label']}"
             return_frame_data.append(
                 {"label": label, "mask": mask, "score": 1.0, "rle": detection["mask"]}
             )
         return_data.append(return_frame_data)
-    return_data = add_bboxes_from_masks(return_data)
-    return_data = nms(return_data, iou_threshold=0.95)
+    _LOGGER.debug("Post-processing of merged detections completed.")
 
-    # We save the RLE for display purposes, re-calculting RLE can get very expensive.
+    return_data = add_bboxes_from_masks(return_data)
+    _LOGGER.debug("Added bounding boxes from masks.")
+
+    return_data = nms(return_data, iou_threshold=0.95)
+    _LOGGER.debug("Applied Non-Maximum Suppression (NMS) with IoU threshold 0.95.")
+
+    # We save the RLE for display purposes, re-calculating RLE can get very expensive.
     # Deleted here because we are returning the numpy masks instead
+    _LOGGER.debug("Preparing display data without RLE masks for efficiency.")
     display_data = []
-    for frame in return_data:
+    for frame_idx, frame in enumerate(return_data):
         display_frame_data = []
         for obj in frame:
             display_frame_data.append(
@@ -229,8 +413,21 @@ def od_sam2_video_tracking(
             )
             del obj["rle"]
         display_data.append(display_frame_data)
+    _LOGGER.debug("Display data prepared successfully.")
 
-    return {"files": files, "return_data": return_data, "display_data": detections}
+    # Prepare the files payload (optional: may need adjustment based on segments)
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    _LOGGER.debug(
+        "Final payload prepared with %d bytes of video data.", len(buffer_bytes)
+    )
+
+    _LOGGER.debug("Video tracking completed successfully.")
+    return {
+        "files": files,
+        "return_data": return_data,
+        "display_data": display_data,  # Changed from detections to display_data
+    }
 
 
 def owl_v2_image(
