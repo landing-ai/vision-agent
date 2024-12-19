@@ -460,19 +460,37 @@ desc,doc,name
     -------
         >>> document_analysis(image)
         {'pages':
-            [{'bbox': [0, 0, 1700, 2200],
-                    'chunks': [{'bbox': [1371, 75, 1503, 112],
+            [{'bbox': [0, 0, 1.0, 1.0],
+                    'chunks': [{'bbox': [0.8, 0.1, 1.0, 0.2],
                                 'label': 'page_header',
                                 'order': 75
                                 'caption': 'Annual Report 2024',
                                 'summary': 'This annual report summarizes ...' },
-                               {'bbox': [201, 1119, 1497, 1647],
+                               {'bbox': [0.2, 0.9, 0.9, 1.0],
                                 'label': table',
                                 'order': 1119,
                                 'caption': [{'Column 1': 'Value 1', 'Column 2': 'Value 2'},
                                 'summary': 'This table illustrates a trend of ...'},
                     ],
     ",document_extraction
+"'document_qa' is a tool that can answer any questions about arbitrary documents, presentations, or tables. It's very useful for document QA tasks, you can ask it a specific question or ask it to return a JSON object answering multiple questions about the document.","document_qa(prompt: str, image: numpy.ndarray) -> str:
+'document_qa' is a tool that can answer any questions about arbitrary documents,
+    presentations, or tables. It's very useful for document QA tasks, you can ask it a
+    specific question or ask it to return a JSON object answering multiple questions
+    about the document.
+
+    Parameters:
+        prompt (str): The question to be answered about the document image.
+        image (np.ndarray): The document image to analyze.
+
+    Returns:
+        str: The answer to the question based on the document's context.
+
+    Example
+    -------
+        >>> document_qa(image, question)
+        'The answer to the question ...'
+    ",document_qa
 'video_temporal_localization' will run qwen2vl on each chunk_length_frames value selected for the video. It can detect multiple objects independently per chunk_length_frames given a text prompt such as a referring expression but does not track objects across frames. It returns a list of floats with a value of 1.0 if the objects are found in a given chunk_length_frames of the video.,"video_temporal_localization(prompt: str, frames: List[numpy.ndarray], model: str = 'qwen2vl', chunk_length_frames: Optional[int] = 2) -> List[float]:
 'video_temporal_localization' will run qwen2vl on each chunk_length_frames
     value selected for the video. It can detect multiple objects independently per
