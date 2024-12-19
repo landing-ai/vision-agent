@@ -12,6 +12,13 @@ import requests
 from openai import AzureOpenAI, OpenAI
 from scipy.spatial.distance import cosine  # type: ignore
 
+from vision_agent.tools.tools import TOOLS_DF, stella_embeddings
+
+
+@lru_cache(maxsize=1)
+def get_tool_recommender() -> "Sim":
+    return load_cached_sim(TOOLS_DF)
+
 
 @lru_cache(maxsize=512)
 def get_embedding(
@@ -27,13 +34,13 @@ def load_cached_sim(
     cached_dir_full_path = str(resources.files("vision_agent") / cached_dir)
     if os.path.exists(cached_dir_full_path):
         if tools_df is not None:
-            if Sim.check_load(cached_dir_full_path, tools_df):
+            if StellaSim.check_load(cached_dir_full_path, tools_df):
                 # don't pass sim_key to loaded Sim object or else it will re-calculate embeddings
-                return Sim.load(cached_dir_full_path)
+                return StellaSim.load(cached_dir_full_path)
     if os.path.exists(cached_dir_full_path):
         shutil.rmtree(cached_dir_full_path)
 
-    sim = Sim(tools_df, sim_key=sim_key)
+    sim = StellaSim(tools_df, sim_key=sim_key)
     sim.save(cached_dir_full_path)
     return sim
 
@@ -212,6 +219,38 @@ class OllamaSim(Sim):
             self.df["embs"] = self.df[sim_key].apply(
                 lambda x: get_embedding(emb_call, x)
             )
+
+
+class StellaSim(Sim):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        sim_key: Optional[str] = None,
+    ) -> None:
+        self.df = df
+
+        def emb_call(text: List[str]) -> np.ndarray:
+            return stella_embeddings(text)[0]
+
+        self.emb_call = emb_call
+
+        if "embs" not in df.columns and sim_key is None:
+            raise ValueError("key is required if no column 'embs' is present.")
+
+        if sim_key is not None:
+            self.df["embs"] = self.df[sim_key].apply(
+                lambda x: get_embedding(emb_call, x)
+            )
+
+    @staticmethod
+    def load(
+        load_dir: Union[str, Path],
+    ) -> "StellaSim":
+        load_dir = Path(load_dir)
+        df = pd.read_csv(load_dir / "df.csv")
+        embs = np.load(load_dir / "embs.npy")
+        df["embs"] = list(embs)
+        return StellaSim(df)
 
 
 def merge_sim(sim1: Sim, sim2: Sim) -> Sim:
