@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 from rich.console import Console
 from rich.markup import escape
 
-import vision_agent.tools as T
+import vision_agent.tools.tools as T
 from vision_agent.agent import AgentCoder, AgentPlanner
 from vision_agent.agent.agent_utils import (
     DefaultImports,
@@ -34,7 +34,7 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.sim import Sim
+from vision_agent.utils.sim import Sim, get_tool_recommender
 
 _CONSOLE = Console()
 
@@ -316,7 +316,7 @@ class VisionAgentCoderV2(AgentCoder):
             elif isinstance(tool_recommender, Sim):
                 self.tool_recommender = tool_recommender
         else:
-            self.tool_recommender = T.get_tool_recommender()
+            self.tool_recommender = get_tool_recommender()
 
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime

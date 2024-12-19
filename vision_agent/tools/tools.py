@@ -2252,7 +2252,7 @@ def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
         metadata_payload={"function_name": "get_embeddings"},
         is_form=True,
     )
-    return [d["embedding"] for d in data]
+    return [d["embedding"] for d in data]  # type: ignore
 
 
 # Utility and visualization functions

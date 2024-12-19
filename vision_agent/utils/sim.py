@@ -229,8 +229,8 @@ class StellaSim(Sim):
     ) -> None:
         self.df = df
 
-        def emb_call(text: List[str]) -> np.ndarray:
-            return stella_embeddings(text)[0]
+        def emb_call(text: List[str]) -> List[float]:
+            return stella_embeddings(text)[0]  # type: ignore
 
         self.emb_call = emb_call
 
@@ -245,6 +245,8 @@ class StellaSim(Sim):
     @staticmethod
     def load(
         load_dir: Union[str, Path],
+        api_key: Optional[str] = None,
+        model: str = "stella1.5b",
     ) -> "StellaSim":
         load_dir = Path(load_dir)
         df = pd.read_csv(load_dir / "df.csv")
