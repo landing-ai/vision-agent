@@ -28,10 +28,10 @@ from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
 from nbclient.util import run_sync
 from nbformat.v4 import new_code_cell
+from opentelemetry.context import get_current
+from opentelemetry.trace import SpanKind, Status, StatusCode, get_tracer
 from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
-from opentelemetry.trace import get_tracer, Status, StatusCode, SpanKind
-from opentelemetry.context import get_current
 
 from vision_agent.utils.exceptions import (
     RemoteSandboxCreationError,
