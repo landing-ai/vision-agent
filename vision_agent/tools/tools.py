@@ -403,7 +403,7 @@ def owl_v2_video(
     _display_tool_trace(
         owl_v2_video.__name__,
         payload,
-        detections[0],
+        detections,
         files,
     )
     return bboxes_formatted
