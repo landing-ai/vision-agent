@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as ImageType
 
-from vision_agent.utils import extract_frames_from_video
+from vision_agent.utils.video import extract_frames_from_video
 
 COLORS = [
     (158, 218, 229),
