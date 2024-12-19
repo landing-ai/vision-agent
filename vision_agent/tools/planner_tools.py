@@ -32,6 +32,7 @@ from vision_agent.utils.execute import (
     MimeType,
 )
 from vision_agent.utils.image_utils import convert_to_b64
+from vision_agent.utils.sim import get_tool_recommender
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
 
@@ -116,13 +117,11 @@ def run_tool_testing(
     query = lmm.generate(CATEGORIZE_TOOL_REQUEST.format(task=task))
     category = extract_tag(query, "category")  # type: ignore
     if category is None:
-        category = task
+        query = task
     else:
-        category = (
-            f"I need models from the {category.strip()} category of tools. {task}"
-        )
+        query = f"{category.strip()}. {task}"
 
-    tool_docs = T.get_tool_recommender().top_k(category, k=10, thresh=0.2)
+    tool_docs = get_tool_recommender().top_k(query, k=5, thresh=0.3)
     if exclude_tools is not None and len(exclude_tools) > 0:
         cleaned_tool_docs = []
         for tool_doc in tool_docs:
