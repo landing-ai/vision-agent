@@ -7,7 +7,6 @@ import urllib.request
 from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
-from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -49,7 +48,6 @@ from vision_agent.utils.image_utils import (
     rle_decode,
     rle_decode_array,
 )
-from vision_agent.utils.sim import Sim, load_cached_sim
 from vision_agent.utils.video import (
     extract_frames_from_video,
     frames_to_bytes,
@@ -83,11 +81,6 @@ COLORS = [
 _API_KEY = "land_sk_WVYwP00xA3iXely2vuar6YUDZ3MJT9yLX6oW5noUkwICzYLiDV"
 _OCR_URL = "https://app.landing.ai/ocr/v1/detect-text"
 _LOGGER = logging.getLogger(__name__)
-
-
-@lru_cache(maxsize=1)
-def get_tool_recommender() -> Sim:
-    return load_cached_sim(TOOLS_DF)
 
 
 def _display_tool_trace(
@@ -2433,13 +2426,14 @@ def document_qa(
     prompt: str,
     image: np.ndarray,
 ) -> str:
-    """'document_qa' is a tool that can answer any questions about arbitrary
-    images of documents or presentations. It answers by analyzing the contextual document data
-    and then using a model to answer specific questions. It returns text as an answer to the question.
+    """'document_qa' is a tool that can answer any questions about arbitrary documents,
+    presentations, or tables. It's very useful for document QA tasks, you can ask it a
+    specific question or ask it to return a JSON object answering multiple questions
+    about the document.
 
     Parameters:
-        prompt (str): The question to be answered about the document image
-        image (np.ndarray): The document image to analyze
+        prompt (str): The question to be answered about the document image.
+        image (np.ndarray): The document image to analyze.
 
     Returns:
         str: The answer to the question based on the document's context.
@@ -2458,7 +2452,7 @@ def document_qa(
         "model": "document-analysis",
     }
 
-    data: dict[str, Any] = send_inference_request(
+    data: Dict[str, Any] = send_inference_request(
         payload=payload,
         endpoint_name="document-analysis",
         files=files,
@@ -2480,10 +2474,10 @@ def document_qa(
     data = normalize(data)
 
     prompt = f"""
-    Document Context:
-    {data}\n
-    Question: {prompt}\n
-    Please provide a clear, concise answer using only the information from the document. If the answer is not definitively contained in the document, say "I cannot find the answer in the provided document."
+Document Context:
+{data}\n
+Question: {prompt}\n
+Answer the question directly using only the information from the document, do not answer with any additional text besides the answer. If the answer is not definitively contained in the document, say "I cannot find the answer in the provided document."
     """
 
     lmm = AnthropicLMM()
@@ -2498,6 +2492,22 @@ def document_qa(
     )
 
     return llm_output
+
+
+def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
+    payload = {
+        "input": prompts,
+        "model": "stella1.5b",
+    }
+
+    data: Dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="embeddings",
+        v2=True,
+        metadata_payload={"function_name": "get_embeddings"},
+        is_form=True,
+    )
+    return [d["embedding"] for d in data]  # type: ignore
 
 
 # Utility and visualization functions
@@ -3036,6 +3046,7 @@ FUNCTION_TOOLS = [
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     document_extraction,
+    document_qa,
     video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,

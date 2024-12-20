@@ -440,16 +440,17 @@ PICK_PLAN = """
 """
 
 CATEGORIZE_TOOL_REQUEST = """
-You are given a task: {task} from the user. Your task is to extract the type of category this task belongs to, it can be one or more of the following:
+You are given a task: "{task}" from the user. You must extract the type of category this task belongs to, it can be one or more of the following:
 - "object detection and counting" - detecting objects or counting objects from a text prompt in an image or video.
 - "classification" - classifying objects in an image given a text prompt.
 - "segmentation" - segmenting objects in an image or video given a text prompt.
 - "OCR" - extracting text from an image.
 - "VQA" - answering questions about an image or video, can also be used for text extraction.
+- "DocQA" - answering questions about a document or extracting information from a document.
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
 
-Return the category or categories (comma separated) inside tags <category># your categories here</category>.
+Return the category or categories (comma separated) inside tags <category># your categories here</category>. If you are unsure about a task, it is better to include more categories than less.
 """
 
 TEST_TOOLS = """
@@ -473,7 +474,7 @@ TEST_TOOLS = """
 {examples}
 
 **Instructions**:
-1. List all the tools under **Tools** and the user request. Write a program to load the media and call every tool in parallel and print it's output along with other relevant information.
+1. List all the tools under **Tools** and the user request. Write a program to load the media and call the most relevant tools in parallel and print it's output along with other relevant information.
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
 4. Print this final dictionary.

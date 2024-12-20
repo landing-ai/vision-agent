@@ -44,18 +44,15 @@ To get started with the python library, you can install it using pip:
 pip install vision-agent
 ```
 
-Ensure you have both an Anthropic key and an OpenAI API key and set in your environment
-variables (if you are using Azure OpenAI please see the Azure setup section):
-
 ```bash
 export ANTHROPIC_API_KEY="your-api-key"
-export OPENAI_API_KEY="your-api-key"
 ```
 
 ---
 **NOTE**
-You must have both Anthropic and OpenAI API keys set in your environment variables to
-use VisionAgent. If you don't have an Anthropic key you can use Ollama as a backend.
+You must have the Anthropic API key set in your environment variables to use
+VisionAgent. If you don't have an Anthropic key you can use another provider like
+OpenAI or Ollama.
 ---
 
 #### Chatting with VisionAgent
@@ -116,8 +113,7 @@ Anthropic/OpenAI models.
 ### Chatting and Message Formats
 `VisionAgent` is an agent that can chat with you and call other tools or agents to
 write vision code for you. You can interact with it like you would ChatGPT or any other
-chatbot. The agent uses Clause-3.5 for it's LMM and OpenAI for embeddings for searching
-for tools.
+chatbot. The agent uses Clause-3.5 for it's LMM.
 
 The message format is:
 ```json
