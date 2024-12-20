@@ -301,59 +301,117 @@ def od_sam2_video_tracking(
         return segment_detections
 
     def merge_segments(
-        detections_per_segment: List[Any], segment_size: int
+        detections_per_segment: List[Any],
     ) -> List[Any]:
         _LOGGER.debug("Merging %d segments.", len(detections_per_segment))
 
-        def _update_reference_predictions(
-            last_predictions: list[Any],
-            new_predictions: list[Any],
-            objects_count: int,
-            iou_threshold: float = 0.8,
-        ) -> tuple[list[Any], int]:
+        def _calculate_mask_iou(mask1, mask2) -> float:
+            # Ensure the masks are binary
+            mask1 = mask1.astype(bool)
+            mask2 = mask2.astype(bool)
 
-            def calculate_mask_iou(mask1, mask2) -> float:
-                # Ensure the masks are binary
-                mask1 = mask1.astype(bool)
-                mask2 = mask2.astype(bool)
+            # Calculate the intersection and union
+            intersection = np.sum(np.logical_and(mask1, mask2))
+            union = np.sum(np.logical_or(mask1, mask2))
 
-                # Calculate the intersection and union
-                intersection = np.sum(np.logical_and(mask1, mask2))
-                union = np.sum(np.logical_or(mask1, mask2))
+            # Calculate the IoU
+            iou = intersection / union if union != 0 else 0
+            return iou
 
-                # Calculate the IoU
-                iou = intersection / union if union != 0 else 0
-                return iou
+        def _match_by_iou(first_param: List[Dict], second_param: List[Dict], iou_threshold: float = 0.8) -> (
+        List[Dict], Dict[int, int]):
+            """
+            Match items in `second_param` with items in `first_param` using IoU and update their `id`s.
+            Returns a combined list of unique items and a mapping of old IDs to new IDs.
 
-            new_annotation_predictions: list[Any] = []
-            for idx, new_prediction in enumerate(new_predictions):
-                new_ann_id: int = 0
-                for last_prediction in last_predictions:
-                    iou = calculate_mask_iou(
-                        new_prediction["mask"],
-                        last_prediction["mask"],
-                    )
+            Args:
+                first_param (List[Dict]): List of existing items.
+                second_param (List[Dict]): List of new items to match.
+                iou_threshold (float): Threshold for IoU to consider a match.
+
+            Returns:
+                Tuple[List[Dict], Dict[int, int]]: Combined list and ID mapping (old -> new).
+            """
+            # Track the highest existing id
+            max_id = max((item['id'] for item in first_param), default=0)
+
+            # Decode masks in first_param and second_param
+            for item in first_param:
+                item['decoded_mask'] = rle_decode_array(item['mask'])
+
+            for item in second_param:
+                item['decoded_mask'] = rle_decode_array(item['mask'])
+
+            # Track matched new items and id mappings
+            matched_new_item_indices = set()
+            id_mapping = {}  # Map old ID -> new ID
+
+            # Match items based on IoU
+            for new_index, new_item in enumerate(second_param):
+                matched_id = None
+
+                for existing_item in first_param:
+                    # Calculate IoU
+                    iou = _calculate_mask_iou(existing_item['decoded_mask'], new_item['decoded_mask'])
+
                     if iou > iou_threshold:
-                        new_ann_id = last_prediction.id
+                        matched_id = existing_item['id']
+                        matched_new_item_indices.add(new_index)
+                        id_mapping[new_item['id']] = matched_id  # Track ID change
                         break
 
-                if not new_ann_id:
-                    objects_count += 1
-                    new_ann_id = objects_count
-                    new_predictions[idx].id = new_ann_id
-                    new_annotation_predictions.append(new_predictions[idx])
+                if matched_id:
+                    new_item['id'] = matched_id
+                else:
+                    max_id += 1
+                    id_mapping[new_item['id']] = max_id  # Assign new ID
+                    new_item['id'] = max_id
 
-            updated_predictions = last_predictions + new_annotation_predictions
-            return (updated_predictions, objects_count)
+            # Remove the temporary decoded_mask field
+            for item in first_param:
+                del item['decoded_mask']
+
+            for item in second_param:
+                del item['decoded_mask']
+
+            # Combine only unmatched new items with the first_param
+            unmatched_items = [item for i, item in enumerate(second_param) if i not in matched_new_item_indices]
+            combined_list = first_param + unmatched_items
+
+            return combined_list, id_mapping
+
+        def update_ids(detections, id_mapping):
+            for inner_list in detections:  # Handle each sublist
+                for detection in inner_list:  # Handle each detection in the sublist
+                    if detection['id'] in id_mapping:
+                        detection['id'] = id_mapping[detection['id']]
+                    else:
+                        # Assign new sequential IDs if the ID is not tracked
+                        max_new_id = max(id_mapping.values(), default=0)
+                        detection['id'] = max_new_id + 1
+                        id_mapping[detection['id']] = detection['id']  # Ensure mapping remains consistent
+
+        def convert_to_2d(detections_per_segment):
+            result = []
+            for i, segment in enumerate(detections_per_segment):
+                if i == 0:
+                    # Keep the first segment as-is
+                    result.extend(segment)
+                else:
+                    # Skip the first item of this segment
+                    result.extend(segment[1:])
+            return result
 
         for idx in range(0, len(detections_per_segment) - 1):
-            merged_result, a = _update_reference_predictions(
+            combined_detection, id_mapping = _match_by_iou(
                 detections_per_segment[idx][-1],
-                detections_per_segment[idx + 1],
-                segment_size,
+                detections_per_segment[idx + 1][0]
             )
-        _LOGGER.debug("Merging completed successfully.")
-        return merged_result
+            update_ids(detections_per_segment[idx + 1], id_mapping)
+
+        return convert_to_2d(detections_per_segment)
+
+
 
     # Split frames into segments with overlap
     segments = _split_frames_into_segments(frames, SEGMENT_SIZE, OVERLAP)
@@ -374,7 +432,7 @@ def od_sam2_video_tracking(
 
     # Merge all segment detections into a unified result
     _LOGGER.debug("All segments processed. Starting to merge detections.")
-    merged_detections = merge_segments(detections_per_segment, SEGMENT_SIZE)
+    merged_detections = merge_segments(detections_per_segment)
 
     # Post-processing of merged detections
     _LOGGER.debug("Starting post-processing of merged detections.")
