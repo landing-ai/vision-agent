@@ -291,7 +291,7 @@ def od_sam2_video_tracking(
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
-    payload = {"bboxes": json.dumps(output), "chunk_length": chunk_length}
+    payload = {"bboxes": json.dumps(output), "chunk_length_frames": chunk_length}
     metadata = {"function_name": function_name}
 
     detections = send_task_inference_request(
