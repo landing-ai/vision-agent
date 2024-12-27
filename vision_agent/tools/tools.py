@@ -250,7 +250,7 @@ def od_sam2_video_tracking(
             results[idx] = owlv2_object_detection(
                 prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
             )
-            function_name = "owl_v2_object_detection"
+            function_name = "owlv2_object_detection"
         elif od_model == ODModels.FLORENCE2:
             results[idx] = florence2_object_detection(
                 prompt=prompt, image=frames[idx], fine_tune_id=fine_tune_id
@@ -354,7 +354,7 @@ def _owlv2_object_detection(
         "confidence": box_threshold,
         "model": "owlv2",
     }
-    metadata = {"function_name": "owl_v2_object_detection"}
+    metadata = {"function_name": "owlv2_object_detection"}
 
     if fine_tune_id is not None:
         landing_api = LandingPublicAPI()
@@ -431,7 +431,7 @@ def owlv2_object_detection(
 
     Example
     -------
-        >>> owl_v2_object_detection("car, dinosaur", image)
+        >>> owlv2_object_detection("car, dinosaur", image)
         [
             {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -532,6 +532,8 @@ def owlv2_sam2_video_tracking(
     Parameters:
         prompt (str): The prompt to ground to the image.
         image (np.ndarray): The image to ground the prompt to.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
@@ -1091,6 +1093,8 @@ def countgd_sam2_video_tracking(
     Parameters:
         prompt (str): The prompt to ground to the image.
         image (np.ndarray): The image to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+            new objects.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
@@ -2101,22 +2105,6 @@ def closest_box_distance(
     horizontal_distance = np.max([0, x21 - x12, x11 - x22])
     vertical_distance = np.max([0, y21 - y12, y11 - y22])
     return cast(float, np.sqrt(horizontal_distance**2 + vertical_distance**2))
-
-
-def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
-    payload = {
-        "input": prompts,
-        "model": "stella1.5b",
-    }
-
-    data: Dict[str, Any] = send_inference_request(
-        payload=payload,
-        endpoint_name="embeddings",
-        v2=True,
-        metadata_payload={"function_name": "stella_embeddings"},
-        is_form=True,
-    )
-    return [d["embedding"] for d in data]  # type: ignore
 
 
 # Utility and visualization functions

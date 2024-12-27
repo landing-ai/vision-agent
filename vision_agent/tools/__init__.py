@@ -59,7 +59,6 @@ from .tools import (
     save_json,
     save_video,
     siglip_classification,
-    stella_embeddings,
     template_match,
     video_temporal_localization,
     vit_image_classification,
