@@ -332,20 +332,6 @@ def od_sam2_video_tracking(
             for item in second_param:
                 item["decoded_mask"] = rle_decode_array(item["mask"])\
 
-            _LOGGER.debug("starting visuzalixing")
-            from datetime import datetime
-            now = datetime.now()
-            filename = now.strftime("%Y-%m-%d_%H-%M-%S")
-
-            viz = overlay_segmentation_masks(frames[49], first_param)
-            _LOGGER.debug("finished overlaying first image")
-            save_image(viz, f"left_{filename}.jpg")
-            viz = overlay_segmentation_masks(frames[49], second_param)
-            _LOGGER.debug("finished overlaying second image")
-            save_image(viz, f"right_{filename}.jpg")
-
-            _LOGGER.debug("end visuzalixing")
-
             matched_new_item_indices = set()
             id_mapping = {}
 
