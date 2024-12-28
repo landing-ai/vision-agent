@@ -14,7 +14,6 @@ from scipy.spatial.distance import cosine  # type: ignore
 
 from vision_agent.tools.tool_utils import (
     _LND_API_KEY,
-    _call_post,
     _create_requests_session,
     _LND_API_URL_v2,
 )
@@ -66,7 +65,7 @@ def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
     )
     response = session.post(url, data=payload).json()
     data = response["data"]
-    return [np.array(d["embedding"]) for d in data]  # type: ignore
+    return [np.array(d["embedding"]) for d in data]
 
 
 class Sim:
