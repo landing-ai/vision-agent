@@ -367,7 +367,7 @@ desc,doc,name
                                 'caption': 'Annual Report 2024',
                                 'summary': 'This annual report summarizes ...' },
                                {'bbox': [0.2, 0.9, 0.9, 1.0],
-                                'label': table',
+                                'label': 'table',
                                 'order': 1119,
                                 'caption': [{'Column 1': 'Value 1', 'Column 2': 'Value 2'},
                                 'summary': 'This table illustrates a trend of ...'},

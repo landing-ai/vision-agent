@@ -584,7 +584,7 @@ def process_owlv2_sam2_video_tracking(frames):
         results = f"Encountered error when executing process_owlv2_sam2_video_tracking: {str(e)}"
     return results
 
-def process_florence2_sam2_video_tacking(frames):
+def process_florence2_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
         results = florence2_sam2_video_tracking("person", frames, chunk_length=1)

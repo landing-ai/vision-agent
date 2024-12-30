@@ -388,7 +388,7 @@ def _owlv2_object_detection(
         }
         for bbox in bboxes
     ]
-    diplsay_data = [
+    display_data = [
         {
             "label": bbox["label"],
             "bbox": bbox["bounding_box"],
@@ -399,7 +399,7 @@ def _owlv2_object_detection(
     return {
         "files": files,
         "return_data": bboxes_formatted,
-        "display_data": diplsay_data,
+        "display_data": display_data,
     }
 
 
@@ -1406,7 +1406,7 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
                                 'caption': 'Annual Report 2024',
                                 'summary': 'This annual report summarizes ...' },
                                {'bbox': [0.2, 0.9, 0.9, 1.0],
-                                'label': table',
+                                'label': 'table',
                                 'order': 1119,
                                 'caption': [{'Column 1': 'Value 1', 'Column 2': 'Value 2'},
                                 'summary': 'This table illustrates a trend of ...'},
