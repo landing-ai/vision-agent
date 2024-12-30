@@ -330,11 +330,11 @@ get_tool_for_task('Identify if there is tape on the boxes', crops[:3])
 
 OBSERVATION:
 [get_tool_for_task output]
-owl_v2_image performed best as it specifically detected multiple instances of tape with localized bounding boxes, which matches what's visible in the images.
+owlv2_object_detection performed best as it specifically detected multiple instances of tape with localized bounding boxes, which matches what's visible in the images.
 
-'owl_v2_image' is a tool that can detect and count multiple objects given a text
-prompt such as category names or referring expressions on images. The categories in
-text prompt are separated by commas. It returns a list of bounding boxes with
+'owlv2_object_detection' is a tool that can detect and count multiple objects given a
+text prompt such as category names or referring expressions on images. The categories
+in text prompt are separated by commas. It returns a list of bounding boxes with
 normalized coordinates, label names and associated probability scores.
 
 Parameters:
@@ -354,7 +354,7 @@ Returns:
 
 Example
 -------
-    >>> owl_v2_image("car, dinosaur", image)
+    >>> owlv2_object_detection("car, dinosaur", image)
     [
         {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
         {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -375,7 +375,7 @@ for frame, frame_predictions in zip(frames, track_predictions):
             int(obj["bbox"][0] * width) : int(obj["bbox"][2] * width),
             :,
         ]
-        detections = owl_v2_image("tape", crop)
+        detections = owlv2_object_detection("tape", crop)
         obj_to_info[obj["label"]].extend(detections)
 
 
@@ -441,7 +441,8 @@ PICK_PLAN = """
 
 CATEGORIZE_TOOL_REQUEST = """
 You are given a task: "{task}" from the user. You must extract the type of category this task belongs to, it can be one or more of the following:
-- "object detection and counting" - detecting objects or counting objects from a text prompt in an image or video.
+- "object detection and counting" - detecting objects or counting objects from a text prompt in an image.
+- "instance segmentation" - segmenting objects in an image given a text prompt.
 - "classification" - classifying objects in an image given a text prompt.
 - "segmentation" - segmenting objects in an image or video given a text prompt.
 - "OCR" - extracting text from an image.
@@ -477,8 +478,9 @@ TEST_TOOLS = """
 1. List all the tools under **Tools** and the user request. Write a program to load the media and call the most relevant tools in parallel and print it's output along with other relevant information.
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
-4. Print this final dictionary.
-5. Output your code in the following format wrapped in <code> tags:
+4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results when evaluating the tool.
+5. Print this final dictionary.
+6. Output your code in the following format wrapped in <code> tags:
 <code>
 # Your code here
 </code>
@@ -494,17 +496,17 @@ Count the number of pedestrians across all the images.
 
 <code>
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import load_image, owl_v2_image, florence2_phrase_grounding, countgd_object_detection
+from vision_agent.tools import load_image, owlv2_object_detection, florence2_object_detection, countgd_object_detection
 
 # process functions in a try catch so that if it fails it doesn't cause `as_completed` to hang
-def process_owl_v2(image_paths):
+def process_owlv2(image_paths):
     try:
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(owl_v2_image("person", image))
+            results.extend(owlv2_object_detection("person", image))
     except Exception as e:
-        results = f"Encountered error when executing process_owl_v2: {str(e)}"
+        results = f"Encountered error when executing process_owlv2: {str(e)}"
     return results
 
 def process_florence2(image_paths):
@@ -512,7 +514,7 @@ def process_florence2(image_paths):
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(florence2_phrase_grounding("person", image))
+            results.extend(florence2_object_detection("person", image))
     except Exception as e:
         results = f"Encountered error when executing process_florence2: {str(e)}"
     return results
@@ -531,7 +533,7 @@ image_paths = ["image1.jpg", "image2.jpg", "image3.jpg", "image4.jpg"]
 
 with ThreadPoolExecutor() as executor:
     futures = {{
-        executor.submit(process_owl_v2, image_paths): "owl_v2_image",
+        executor.submit(process_owlv2, image_paths): "owlv2_object_detection",
         executor.submit(process_florence2, image_paths): "florence2_phrase_grounding",
         executor.submit(process_countgd, image_paths): "countgd_object_detection",
     }}
@@ -557,7 +559,7 @@ Count the number of people in the video.
 <code>
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import extract_frames_and_timestamps, owl_v2_video, florence2_sam2_video_tracking
+from vision_agent.tools import extract_frames_and_timestamps, owlv2_sam2_video_tracking, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames_and_timestamps("video.mp4", 1)
@@ -574,16 +576,18 @@ def remove_arrays(o):
     else:
         return o
 
-def process_owl_v2_video(frames):
+def process_owlv2_sam2_video_tracking(frames):
     try:
-        results = owl_v2_video("person", frames)
+        # run with chunk_length=1 to ensure best results
+        results = owlv2_sam2_video_tracking("person", frames, chunk_length=1)
     except Exception as e:
-        results = f"Encountered error when executing process_owl_v2_video: {str(e)}"
+        results = f"Encountered error when executing process_owlv2_sam2_video_tracking: {str(e)}"
     return results
 
-def process_florence2_sam2(frames):
+def process_florence2_sam2_video_tracking(frames):
     try:
-        results = florence2_sam2_video_tracking("person", frames)
+        # run with chunk_length=1 to ensure best results
+        results = florence2_sam2_video_tracking("person", frames, chunk_length=1)
     except Exception as e:
         results = f"Encountered error when executing process_florence2_sam2: {str(e)}"
     return results
@@ -591,8 +595,8 @@ def process_florence2_sam2(frames):
 
 with ThreadPoolExecutor() as executor:
     futures = {{
-        executor.submit(process_owl_v2_video, frames): "owl_v2_video",
-        executor.submit(process_florence2_sam2, frames): "florence2_sam2_video_tracking",
+        executor.submit(process_owlv2_sam2_video_tracking, frames): "owlv2_sam2_video_tracking",
+        executor.submit(process_florence2_sam2_video_tracking, frames): "florence2_sam2_video_tracking",
     }}
     final_results = {{}}
     for future in as_completed(futures):
@@ -686,6 +690,7 @@ FINALIZE_PLAN = """
 3. Include ALL relevant python code in your plan to accomplish the user request.
 4. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
 5. Do not include {excluded_tools} tools in your instructions.
+6. Add final instructions for visualizing the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and saving it to a file with `save_file` or `save_video`.
 6. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
 
 <json>
