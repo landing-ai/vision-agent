@@ -12,7 +12,12 @@ import requests
 from openai import AzureOpenAI, OpenAI
 from scipy.spatial.distance import cosine  # type: ignore
 
-from vision_agent.tools.tools import TOOLS_DF, stella_embeddings
+from vision_agent.tools.tool_utils import (
+    _LND_API_KEY,
+    _create_requests_session,
+    _LND_API_URL_v2,
+)
+from vision_agent.tools.tools import TOOLS_DF
 
 
 @lru_cache(maxsize=1)
@@ -43,6 +48,24 @@ def load_cached_sim(
     sim = StellaSim(tools_df, sim_key=sim_key)
     sim.save(cached_dir_full_path)
     return sim
+
+
+def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
+    # implement stella here so we don't display embeddings which can be costly
+    payload = {
+        "input": prompts,
+        "model": "stella1.5b",
+    }
+    url = f"{_LND_API_URL_v2}/embeddings"
+    headers = {"apikey": _LND_API_KEY}
+    session = _create_requests_session(
+        url=url,
+        num_retry=3,
+        headers=headers,
+    )
+    response = session.post(url, data=payload).json()
+    data = response["data"]
+    return [np.array(d["embedding"]) for d in data]
 
 
 class Sim:

@@ -4,23 +4,22 @@ from PIL import Image
 
 from vision_agent.tools import (
     closest_mask_distance,
-    countgd_example_based_counting,
     countgd_object_detection,
-    countgd_sam2_object_detection,
+    countgd_sam2_instance_segmentation,
     countgd_sam2_video_tracking,
+    countgd_visual_prompt_object_detection,
     depth_anything_v2,
     detr_segmentation,
+    florence2_object_detection,
     florence2_ocr,
-    florence2_phrase_grounding,
-    florence2_phrase_grounding_video,
-    florence2_sam2_image,
+    florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
     flux_image_inpainting,
     generate_pose_image,
     ocr,
     od_sam2_video_tracking,
-    owl_v2_image,
-    owl_v2_video,
+    owlv2_object_detection,
+    owlv2_sam2_instance_segmentation,
     owlv2_sam2_video_tracking,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
@@ -34,9 +33,9 @@ from vision_agent.tools import (
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
 
 
-def test_owl_v2_image():
+def test_owlv2_object_detection():
     img = ski.data.coins()
-    result = owl_v2_image(
+    result = owlv2_object_detection(
         prompt="coin",
         image=img,
     )
@@ -45,17 +44,28 @@ def test_owl_v2_image():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
-def test_owl_v2_image_empty():
-    result = owl_v2_image(
+def test_owlv2_sam2_instance_segmentation():
+    img = ski.data.coins()
+    result = owlv2_sam2_instance_segmentation(
+        prompt="coin",
+        image=img,
+    )
+    assert 24 <= len(result) <= 26
+    assert "mask" in result[0]
+    assert [res["label"] for res in result] == ["coin"] * len(result)
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
+
+def test_owlv2_object_detection_empty():
+    result = owlv2_object_detection(
         prompt="coin",
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
     assert result == []
 
 
-def test_owl_v2_fine_tune_id():
+def test_owlv2_fine_tune_id():
     img = ski.data.coins()
-    result = owl_v2_image(
+    result = owlv2_object_detection(
         prompt="coin",
         image=img,
         fine_tune_id=FINE_TUNE_ID,
@@ -70,7 +80,7 @@ def test_owl_v2_video():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
-    result = owl_v2_video(
+    result = owlv2_sam2_video_tracking(
         prompt="coin",
         frames=frames,
     )
@@ -80,12 +90,12 @@ def test_owl_v2_video():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
 
-def test_owl_v2_video_fine_tune_id():
+def test_owlv2_sam2_video_tracking_fine_tune_id():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
     # this calls a fine-tuned florence2 model which is going to be worse at this task
-    result = owl_v2_video(
+    result = owlv2_sam2_video_tracking(
         prompt="coin",
         frames=frames,
         fine_tune_id=FINE_TUNE_ID,
@@ -96,9 +106,9 @@ def test_owl_v2_video_fine_tune_id():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
 
-def test_florence2_phrase_grounding():
+def test_florence2_object_detection():
     img = ski.data.coins()
-    result = florence2_phrase_grounding(
+    result = florence2_object_detection(
         image=img,
         prompt="coin",
     )
@@ -108,8 +118,8 @@ def test_florence2_phrase_grounding():
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
 
-def test_florence2_phrase_grounding_empty():
-    result = florence2_phrase_grounding(
+def test_florence2_object_detection_empty():
+    result = florence2_object_detection(
         image=np.zeros((0, 0, 3)).astype(np.uint8),
         prompt="coin",
     )
@@ -118,7 +128,7 @@ def test_florence2_phrase_grounding_empty():
 
 def test_florence2_phrase_grounding_fine_tune_id():
     img = ski.data.coins()
-    result = florence2_phrase_grounding(
+    result = florence2_object_detection(
         prompt="coin",
         image=img,
         fine_tune_id=FINE_TUNE_ID,
@@ -133,29 +143,13 @@ def test_florence2_phrase_grounding_video():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
-    result = florence2_phrase_grounding_video(
+    result = florence2_sam2_video_tracking(
         prompt="coin",
         frames=frames,
     )
     assert len(result) == 10
     assert 2 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
-
-
-def test_florence2_phrase_grounding_video_fine_tune_id():
-    frames = [
-        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
-    ]
-    # this calls a fine-tuned florence2 model which is going to be worse at this task
-    result = florence2_phrase_grounding_video(
-        prompt="coin",
-        frames=frames,
-        fine_tune_id=FINE_TUNE_ID,
-    )
-    assert len(result) == 10
-    assert 12 <= len([res["label"] for res in result[0]]) <= 26
-    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
-
 
 def test_template_match():
     img = ski.data.coins()
@@ -166,9 +160,9 @@ def test_template_match():
     assert len(result) == 2
 
 
-def test_florence2_sam2_image():
+def test_florence2_sam2_instance_segmentation():
     img = ski.data.coins()
-    result = florence2_sam2_image(
+    result = florence2_sam2_instance_segmentation(
         prompt="coin",
         image=img,
     )
@@ -177,9 +171,9 @@ def test_florence2_sam2_image():
     assert len([res["mask"] for res in result]) == 24
 
 
-def test_florence2_sam2_image_fine_tune_id():
+def test_florence2_sam2_instance_segmentation_fine_tune_id():
     img = ski.data.coins()
-    result = florence2_sam2_image(
+    result = florence2_sam2_instance_segmentation(
         prompt="coin",
         image=img,
         fine_tune_id=FINE_TUNE_ID,
@@ -190,15 +184,15 @@ def test_florence2_sam2_image_fine_tune_id():
     assert len([res["mask"] for res in result]) == len(result)
 
 
-def test_florence2_sam2_image_empty():
-    result = florence2_sam2_image(
+def test_florence2_sam2_instance_segmentation_empty():
+    result = florence2_sam2_instance_segmentation(
         prompt="coin",
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
     assert result == []
 
 
-def test_florence2_sam2_video():
+def test_florence2_sam2_video_tracking():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
@@ -211,7 +205,7 @@ def test_florence2_sam2_video():
     assert len([res["mask"] for res in result[0]]) == 24
 
 
-def test_florence2_sam2_video_fine_tune_id():
+def test_florence2_sam2_video_tracking_fine_tune_id():
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
@@ -368,9 +362,9 @@ def test_generate_pose():
     assert result.shape == img.shape + (3,)
 
 
-def test_countgd_sam2_object_detection():
+def test_countgd_sam2_instance_segmentation():
     img = ski.data.coins()
-    result = countgd_sam2_object_detection(image=img, prompt="coin")
+    result = countgd_sam2_instance_segmentation(image=img, prompt="coin")
     assert len(result) == 24
     assert "mask" in result[0]
     assert [res["label"] for res in result] == ["coin"] * 24
@@ -391,9 +385,9 @@ def test_countgd_object_detection_empty():
     assert result == []
 
 
-def test_countgd_example_based_counting():
+def test_countgd_visual_prompt_object_detection():
     img = ski.data.coins()
-    result = countgd_example_based_counting(
+    result = countgd_visual_prompt_object_detection(
         visual_prompts=[[85, 106, 122, 145]],
         image=img,
     )
@@ -401,8 +395,8 @@ def test_countgd_example_based_counting():
     assert [res["label"] for res in result] == ["object"] * 24
 
 
-def test_countgd_example_based_counting_empty():
-    result = countgd_example_based_counting(
+def test_countgd_visual_prompt_object_detection_empty():
+    result = countgd_visual_prompt_object_detection(
         visual_prompts=[[85, 106, 122, 145]],
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
@@ -477,7 +471,6 @@ def test_flux_image_inpainting_resizing_big_image():
 
 
 def test_video_tracking_with_countgd():
-
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
@@ -492,7 +485,6 @@ def test_video_tracking_with_countgd():
 
 
 def test_video_tracking_with_owlv2():
-
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
@@ -507,7 +499,6 @@ def test_video_tracking_with_owlv2():
 
 
 def test_video_tracking_by_given_model():
-
     frames = [
         np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
     ]
