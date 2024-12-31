@@ -7,8 +7,8 @@ import numpy as np
 
 from vision_agent.tools import (
     countgd_object_detection,
-    florence2_sam2_image,
-    owl_v2_image,
+    florence2_object_detection,
+    owlv2_object_detection,
 )
 from vision_agent.tools.tool_utils import (
     add_bboxes_from_masks,
@@ -139,20 +139,20 @@ def process_segment(
                 segment_index + 1,
                 frame_number,
             )
-            segment_results[idx] = owl_v2_image(
+            segment_results[idx] = owlv2_object_detection(
                 prompt=prompt, image=segment_frames[idx], fine_tune_id=fine_tune_id
             )
-            function_name = "owl_v2_image"
+            function_name = "owlv2_object_detection"
         elif od_model == ODModels.FLORENCE2:
             _LOGGER.debug(
                 "Segment %d: Applying FLORENCE2 object detection on frame %d.",
                 segment_index + 1,
                 frame_number,
             )
-            segment_results[idx] = florence2_sam2_image(
+            segment_results[idx] = florence2_object_detection(
                 prompt=prompt, image=segment_frames[idx], fine_tune_id=fine_tune_id
             )
-            function_name = "florence2_sam2_image"
+            function_name = "florence2_object_detection"
         else:
             _LOGGER.debug(
                 "Segment %d: Object detection model '%s' is not implemented.",
