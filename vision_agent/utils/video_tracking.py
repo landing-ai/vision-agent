@@ -5,11 +5,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from vision_agent.tools import (
-    countgd_object_detection,
-    florence2_object_detection,
-    owlv2_object_detection,
-)
 from vision_agent.tools.tool_utils import (
     add_bboxes_from_masks,
     nms,
@@ -86,6 +81,7 @@ def process_segment(
     chunk_length: Optional[int],
     image_size: Tuple[int, int],
     segment_index: int,
+    object_detection_tool,
 ) -> Optional[List[Dict[str, Any]]]:
     """
     Processes a segment of frames with the specified object detection model.
@@ -123,45 +119,9 @@ def process_segment(
 
     for idx in range(0, len(segment_frames), step):
         frame_number = idx
-        if od_model == ODModels.COUNTGD:
-            _LOGGER.debug(
-                "Segment %d: Applying COUNTGD object detection on frame %d.",
-                segment_index + 1,
-                frame_number,
-            )
-            segment_results[idx] = countgd_object_detection(
-                prompt=prompt, image=segment_frames[idx]
-            )
-            function_name = "countgd_object_detection"
-        elif od_model == ODModels.OWLV2:
-            _LOGGER.debug(
-                "Segment %d: Applying OWLV2 object detection on frame %d.",
-                segment_index + 1,
-                frame_number,
-            )
-            segment_results[idx] = owlv2_object_detection(
-                prompt=prompt, image=segment_frames[idx], fine_tune_id=fine_tune_id
-            )
-            function_name = "owlv2_object_detection"
-        elif od_model == ODModels.FLORENCE2:
-            _LOGGER.debug(
-                "Segment %d: Applying FLORENCE2 object detection on frame %d.",
-                segment_index + 1,
-                frame_number,
-            )
-            segment_results[idx] = florence2_object_detection(
-                prompt=prompt, image=segment_frames[idx], fine_tune_id=fine_tune_id
-            )
-            function_name = "florence2_object_detection"
-        else:
-            _LOGGER.debug(
-                "Segment %d: Object detection model '%s' is not implemented.",
-                segment_index + 1,
-                od_model,
-            )
-            raise NotImplementedError(
-                f"Object detection model '{od_model}' is not implemented."
-            )
+        segment_results[idx], function_name = object_detection_tool(
+            od_model, prompt, segment_index, frame_number, fine_tune_id, segment_frames
+        )
 
     transformed_detections = transform_detections(
         segment_results, image_size, segment_index

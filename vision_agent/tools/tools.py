@@ -248,6 +248,79 @@ def od_sam2_video_tracking(
     # Split frames into segments with overlap
     segments = split_frames_into_segments(frames, SEGMENT_SIZE, OVERLAP)
 
+    def _apply_object_detection(
+        od_model: ODModels,
+        prompt: str,
+        segment_index: int,
+        frame_number: int,
+        fine_tune_id: str = None,
+        segment_frames: list = None,
+    ) -> tuple:
+        """
+        Applies the specified object detection model to the given image.
+        It is an inner method to avoid circular importing issues.
+
+        Args:
+            od_model: The object detection model to use.
+            prompt: The prompt for the object detection model.
+            segment_index: The index of the current segment.
+            frame_number: The number of the current frame.
+            fine_tune_id: Optional fine-tune ID for the model.
+            segment_frames: List of frames for the current segment.
+
+        Returns:
+            A tuple containing the object detection results and the name of the function used.
+        """
+
+        if od_model == ODModels.COUNTGD:
+            _LOGGER.debug(
+                "Segment %d: Applying COUNTGD object detection on frame %d.",
+                segment_index + 1,
+                frame_number,
+            )
+            segment_results = countgd_object_detection(
+                prompt=prompt, image=segment_frames[frame_number]
+            )
+            function_name = "countgd_object_detection"
+
+        elif od_model == ODModels.OWLV2:
+            _LOGGER.debug(
+                "Segment %d: Applying OWLV2 object detection on frame %d.",
+                segment_index + 1,
+                frame_number,
+            )
+            segment_results = owlv2_object_detection(
+                prompt=prompt,
+                image=segment_frames[frame_number],
+                fine_tune_id=fine_tune_id,
+            )
+            function_name = "owlv2_object_detection"
+
+        elif od_model == ODModels.FLORENCE2:
+            _LOGGER.debug(
+                "Segment %d: Applying FLORENCE2 object detection on frame %d.",
+                segment_index + 1,
+                frame_number,
+            )
+            segment_results = florence2_object_detection(
+                prompt=prompt,
+                image=segment_frames[frame_number],
+                fine_tune_id=fine_tune_id,
+            )
+            function_name = "florence2_object_detection"
+
+        else:
+            _LOGGER.debug(
+                "Segment %d: Object detection model '%s' is not implemented.",
+                segment_index + 1,
+                od_model,
+            )
+            raise NotImplementedError(
+                f"Object detection model '{od_model}' is not implemented."
+            )
+
+        return segment_results, function_name
+
     # Process each segment and collect detections
     detections_per_segment: List[Any] = []
     for segment_index, segment in enumerate(segments):
@@ -260,6 +333,7 @@ def od_sam2_video_tracking(
             chunk_length=chunk_length,
             image_size=image_size,
             segment_index=segment_index,
+            object_detection_tool=_apply_object_detection,
         )
         detections_per_segment.append(segment_detections)
         _LOGGER.debug("Finished processing for segment %d.", segment_index + 1)
