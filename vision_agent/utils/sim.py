@@ -133,6 +133,9 @@ class Sim:
         df: pd.DataFrame,
     ) -> bool:
         load_dir = Path(load_dir)
+        if not Path(load_dir / "df.csv").exists() or Path(load_dir / "embs.npy").exists():
+            return False
+
         df_load = pd.read_csv(load_dir / "df.csv")
         if platform.system() == "Windows":
             df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\r", ""))
