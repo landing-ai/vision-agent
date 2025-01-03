@@ -515,24 +515,29 @@ def owlv2_sam2_video_tracking(
     chunk_length: Optional[int] = 10,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
-    """'owlv2_sam2_video_tracking' is a tool that can segment multiple objects given a text
-    prompt such as category names or referring expressions. The categories in the text
-    prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
+    """'owlv2_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as category names or referring
+    expressions. The categories in the text prompt are separated by commas. It returns
+    a list of bounding boxes, label names, masks and associated probability scores and
+    is useful for tracking and counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run owlv2 to find
+            new objects.
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
             fine-tuned model ID here to use it.
 
     Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
 
     Example
     -------
@@ -742,11 +747,11 @@ def florence2_sam2_video_tracking(
     chunk_length: Optional[int] = 10,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
-    """'florence2_sam2_video_tracking' is a tool that can segment and track multiple
-    entities in a video given a text prompt such as category names or referring
-    expressions. You can optionally separate the categories in the text with commas. It
-    can find new objects every 'chunk_length' frames and is useful for tracking and
-    counting without duplicating counts and always outputs scores of 1.0.
+    """'florence2_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as category names or referring
+    expressions. The categories in the text prompt are separated by commas. It returns
+    a list of bounding boxes, label names, masks and associated probability scores and
+    is useful for tracking and counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the video.
@@ -758,10 +763,13 @@ def florence2_sam2_video_tracking(
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
-        label, segment mask and bounding boxes. The outer list represents each frame
-        and the inner list is the entities per frame. The label contains the object ID
-        followed by the label name. The objects are only identified in the first framed
-        and tracked throughout the video.
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
 
     Example
     -------
@@ -1076,24 +1084,27 @@ def countgd_sam2_video_tracking(
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 10,
 ) -> List[List[Dict[str, Any]]]:
-    """'countgd_sam2_video_tracking' is a tool that can segment multiple objects given a text
-    prompt such as category names or referring expressions. The categories in the text
-    prompt are separated by commas. It returns a list of bounding boxes, label names,
-    mask file names and associated probability scores.
+    """'countgd_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as category names or referring
+    expressions. The categories in the text prompt are separated by commas. It returns
+    a list of bounding boxes, label names, masks and associated probability scores and
+    is useful for tracking and counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run countgd to find
             new objects.
 
     Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
 
     Example
     -------
