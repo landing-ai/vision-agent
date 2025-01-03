@@ -445,43 +445,6 @@ desc,doc,name
         >>> qwen2_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'
     ",qwen2_vl_video_vqa
-"'detr_segmentation' is a tool that can segment common objects in an image without any text prompt. It returns a list of detected objects as labels, their regions as masks and their scores.","detr_segmentation(image: numpy.ndarray) -> List[Dict[str, Any]]:
-'detr_segmentation' is a tool that can segment common objects in an
-    image without any text prompt. It returns a list of detected objects
-    as labels, their regions as masks and their scores.
-
-    Parameters:
-        image (np.ndarray): The image used to segment things and objects
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label
-            and mask of the detected objects. The mask is binary 2D numpy array where 1
-            indicates the object and 0 indicates the background.
-
-    Example
-    -------
-        >>> detr_segmentation(image)
-        [
-            {
-                'score': 0.45,
-                'label': 'window',
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-            {
-                'score': 0.70,
-                'label': 'bird',
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-        ]
-    ",detr_segmentation
 'depth_anything_v2' is a tool that runs depth_anythingv2 model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intesities with pixel values ranging from 0 to 255.,"depth_anything_v2(image: numpy.ndarray) -> numpy.ndarray:
 'depth_anything_v2' is a tool that runs depth_anythingv2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
@@ -522,22 +485,6 @@ desc,doc,name
                 [10, 11, 15, ..., 202, 202, 205],
                 [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
     ",generate_pose_image
-'vit_image_classification' is a tool that can classify an image. It returns a list of classes and their probability scores based on image content.,"vit_image_classification(image: numpy.ndarray) -> Dict[str, Any]:
-'vit_image_classification' is a tool that can classify an image. It returns a
-    list of classes and their probability scores based on image content.
-
-    Parameters:
-        image (np.ndarray): The image to classify or tag
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the labels and scores. One dictionary
-            contains a list of labels and other a list of scores.
-
-    Example
-    -------
-        >>> vit_image_classification(image)
-        {""labels"": [""leopard"", ""lemur, otter"", ""bird""], ""scores"": [0.68, 0.30, 0.02]},
-    ",vit_image_classification
 'vit_nsfw_classification' is a tool that can classify an image as 'nsfw' or 'normal'. It returns the predicted label and their probability scores based on image content.,"vit_nsfw_classification(image: numpy.ndarray) -> Dict[str, Any]:
 'vit_nsfw_classification' is a tool that can classify an image as 'nsfw' or 'normal'.
     It returns the predicted label and their probability scores based on image content.
