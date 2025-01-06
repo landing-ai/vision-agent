@@ -82,7 +82,7 @@ def process_segment(
     image_size: Tuple[int, ...],
     segment_index: int,
     object_detection_tool: Callable,
-) -> Optional[List[Dict[str, Any]]]:
+) -> Any:
     """
     Processes a segment of frames with the specified object detection model.
 
@@ -97,7 +97,7 @@ def process_segment(
         object_detection_tool (Callable): Object detection tool to use.
 
     Returns:
-        Optional[List[Dict[str, Any]]]: Detections for the segment.
+       Any: Detections for the segment.
     """
     _LOGGER.debug(
         "Processing segment %d with %d frames.",
@@ -154,7 +154,7 @@ def process_segment(
 
 def transform_detections(
     input_list: List[Optional[List[Dict[str, Any]]]],
-    image_size: Tuple[int, int],
+    image_size: Tuple[int, ...],
     segment_index: int,
 ) -> List[Optional[Dict[str, Any]]]:
     """
