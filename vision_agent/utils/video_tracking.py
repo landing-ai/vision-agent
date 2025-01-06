@@ -187,6 +187,102 @@ def transform_detections(
     return output_list
 
 
+def _calculate_mask_iou(mask1: np.ndarray, mask2: np.ndarray) -> float:
+    _LOGGER.debug("Calculating IoU between two masks.")
+    mask1 = mask1.astype(bool)
+    mask2 = mask2.astype(bool)
+
+    intersection = np.sum(np.logical_and(mask1, mask2))
+    union = np.sum(np.logical_or(mask1, mask2))
+
+    iou = intersection / union if union != 0 else 0
+    _LOGGER.debug("Calculated IoU: %.4f", iou)
+    return iou
+
+
+def _match_by_iou(
+    first_param: List[Dict],
+    second_param: List[Dict],
+    iou_threshold: float = 0.8,
+) -> Tuple[List[Dict], Dict[int, int]]:
+
+    _LOGGER.debug(
+        "Matching items between two lists with IoU threshold %.2f.",
+        iou_threshold,
+    )
+
+    max_id = max((item["id"] for item in first_param), default=0)
+    _LOGGER.debug("Max ID in first_param: %d", max_id)
+
+    for item in first_param:
+        item["decoded_mask"] = rle_decode_array(item["mask"])
+    for item in second_param:
+        item["decoded_mask"] = rle_decode_array(item["mask"])
+
+    matched_new_item_indices = set()
+    id_mapping = {}
+
+    for new_index, new_item in enumerate(second_param):
+        _LOGGER.warning("Processing new item with ID %d.", new_item["id"])
+        matched_id = None
+
+        for existing_item in first_param:
+            iou = _calculate_mask_iou(
+                existing_item["decoded_mask"], new_item["decoded_mask"]
+            )
+            if iou > iou_threshold:
+                matched_id = existing_item["id"]
+                matched_new_item_indices.add(new_index)
+                id_mapping[new_item["id"]] = matched_id
+                _LOGGER.warning(
+                    "Matched new item ID %d with existing item ID %d (IoU: %.4f).",
+                    new_item["id"],
+                    matched_id,
+                    iou,
+                )
+                break
+
+        if matched_id:
+            new_item["id"] = matched_id
+        else:
+            max_id += 1
+            id_mapping[new_item["id"]] = max_id
+            new_item["id"] = max_id
+            _LOGGER.warning("Assigned new ID %d to unmatched item.", max_id)
+
+    unmatched_items = [
+        item for i, item in enumerate(second_param) if i not in matched_new_item_indices
+    ]
+    combined_list = first_param + unmatched_items
+
+    _LOGGER.debug("Combined list size after matching: %d", len(combined_list))
+    return combined_list, id_mapping
+
+
+def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]):
+    _LOGGER.warning("Updating IDs in detections using the ID mapping.")
+    for detection in detections:
+        if detection["id"] in id_mapping:
+            detection["id"] = id_mapping[detection["id"]]
+        else:
+            max_new_id = max(id_mapping.values(), default=0)
+            detection["id"] = max_new_id + 1
+            id_mapping[detection["id"]] = detection["id"]
+            _LOGGER.warning("Assigned new sequential ID %d.", detection["id"])
+
+
+def _convert_to_2d(detections_per_segment: List[Any]) -> List[Any]:
+    _LOGGER.debug("Converting detections per segment into a 2D list.")
+    result = []
+    for i, segment in enumerate(detections_per_segment):
+        if i == 0:
+            result.extend(segment)
+        else:
+            result.extend(segment[1:])
+    _LOGGER.debug("Converted list size: %d", len(result))
+    return result
+
+
 def merge_segments(
     detections_per_segment: List[Any], frames: List[np.ndarray]
 ) -> List[Any]:
@@ -204,109 +300,15 @@ def merge_segments(
         "Starting merge_segments with %d segments.", len(detections_per_segment)
     )
 
-    def calculate_mask_iou(mask1: np.ndarray, mask2: np.ndarray) -> float:
-        _LOGGER.debug("Calculating IoU between two masks.")
-        mask1 = mask1.astype(bool)
-        mask2 = mask2.astype(bool)
-
-        intersection = np.sum(np.logical_and(mask1, mask2))
-        union = np.sum(np.logical_or(mask1, mask2))
-
-        iou = intersection / union if union != 0 else 0
-        _LOGGER.debug("Calculated IoU: %.4f", iou)
-        return iou
-
-    def match_by_iou(
-        first_param: List[Dict],
-        second_param: List[Dict],
-        iou_threshold: float = 0.8,
-    ) -> Tuple[List[Dict], Dict[int, int]]:
-
-        _LOGGER.debug(
-            "Matching items between two lists with IoU threshold %.2f.",
-            iou_threshold,
-        )
-
-        max_id = max((item["id"] for item in first_param), default=0)
-        _LOGGER.debug("Max ID in first_param: %d", max_id)
-
-        for item in first_param:
-            item["decoded_mask"] = rle_decode_array(item["mask"])
-        for item in second_param:
-            item["decoded_mask"] = rle_decode_array(item["mask"])
-
-        matched_new_item_indices = set()
-        id_mapping = {}
-
-        for new_index, new_item in enumerate(second_param):
-            _LOGGER.warning("Processing new item with ID %d.", new_item["id"])
-            matched_id = None
-
-            for existing_item in first_param:
-                iou = calculate_mask_iou(
-                    existing_item["decoded_mask"], new_item["decoded_mask"]
-                )
-                if iou > iou_threshold:
-                    matched_id = existing_item["id"]
-                    matched_new_item_indices.add(new_index)
-                    id_mapping[new_item["id"]] = matched_id
-                    _LOGGER.warning(
-                        "Matched new item ID %d with existing item ID %d (IoU: %.4f).",
-                        new_item["id"],
-                        matched_id,
-                        iou,
-                    )
-                    break
-
-            if matched_id:
-                new_item["id"] = matched_id
-            else:
-                max_id += 1
-                id_mapping[new_item["id"]] = max_id
-                new_item["id"] = max_id
-                _LOGGER.warning("Assigned new ID %d to unmatched item.", max_id)
-
-        unmatched_items = [
-            item
-            for i, item in enumerate(second_param)
-            if i not in matched_new_item_indices
-        ]
-        combined_list = first_param + unmatched_items
-
-        _LOGGER.debug("Combined list size after matching: %d", len(combined_list))
-        return combined_list, id_mapping
-
-    def update_ids(detections: List[Dict], id_mapping: Dict[int, int]):
-        _LOGGER.warning("Updating IDs in detections using the ID mapping.")
-        for detection in detections:
-            if detection["id"] in id_mapping:
-                detection["id"] = id_mapping[detection["id"]]
-            else:
-                max_new_id = max(id_mapping.values(), default=0)
-                detection["id"] = max_new_id + 1
-                id_mapping[detection["id"]] = detection["id"]
-                _LOGGER.warning("Assigned new sequential ID %d.", detection["id"])
-
-    def convert_to_2d(detections_per_segment: List[Any]) -> List[Any]:
-        _LOGGER.debug("Converting detections per segment into a 2D list.")
-        result = []
-        for i, segment in enumerate(detections_per_segment):
-            if i == 0:
-                result.extend(segment)
-            else:
-                result.extend(segment[1:])
-        _LOGGER.debug("Converted list size: %d", len(result))
-        return result
-
     for idx in range(len(detections_per_segment) - 1):
         _LOGGER.debug("Processing segment pair: %d and %d.", idx, idx + 1)
 
-        combined_detection, id_mapping = match_by_iou(
+        combined_detection, id_mapping = _match_by_iou(
             detections_per_segment[idx][-1], detections_per_segment[idx + 1][0]
         )
-        update_ids(detections_per_segment[idx + 1], id_mapping)
+        _update_ids(detections_per_segment[idx + 1], id_mapping)
 
-    merged_result = convert_to_2d(detections_per_segment)
+    merged_result = _convert_to_2d(detections_per_segment)
     _LOGGER.debug(
         "Finished merging segments. Total items in result: %d", len(merged_result)
     )
