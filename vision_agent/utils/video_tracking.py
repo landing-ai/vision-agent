@@ -224,7 +224,7 @@ def _match_by_iou(
     id_mapping = {}
 
     for new_index, new_item in enumerate(second_param):
-        _LOGGER.warning("Processing new item with ID %d.", new_item["id"])
+        _LOGGER.debug("Processing new item with ID %d.", new_item["id"])
         matched_id = None
 
         for existing_item in first_param:
@@ -235,7 +235,7 @@ def _match_by_iou(
                 matched_id = existing_item["id"]
                 matched_new_item_indices.add(new_index)
                 id_mapping[new_item["id"]] = matched_id
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Matched new item ID %d with existing item ID %d (IoU: %.4f).",
                     new_item["id"],
                     matched_id,
@@ -249,7 +249,7 @@ def _match_by_iou(
             max_id += 1
             id_mapping[new_item["id"]] = max_id
             new_item["id"] = max_id
-            _LOGGER.warning("Assigned new ID %d to unmatched item.", max_id)
+            _LOGGER.debug("Assigned new ID %d to unmatched item.", max_id)
 
     unmatched_items = [
         item for i, item in enumerate(second_param) if i not in matched_new_item_indices
