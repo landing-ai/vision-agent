@@ -132,7 +132,7 @@ def process_segment(
     files = [("video", buffer_bytes)]
     payload = {
         "bboxes": json.dumps(transformed_detections),
-        "chunk_length": chunk_length,
+        "chunk_length_frames": chunk_length,
     }
     metadata = {"function_name": function_name}
     _LOGGER.debug(
