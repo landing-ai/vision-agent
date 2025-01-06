@@ -338,14 +338,8 @@ def od_sam2_video_tracking(
         detections_per_segment.append(segment_detections)
         _LOGGER.debug("Finished processing for segment %d.", segment_index + 1)
 
-    # Merge all segment detections into a unified result
-    _LOGGER.debug("All segments processed. Starting to merge detections.")
     merged_detections = merge_segments(detections_per_segment, frames)
-
-    # Post-processing of merged detections
-    _LOGGER.debug("Starting post-processing of merged detections.")
     post_processed = post_process(merged_detections, frames, image_size)
-    _LOGGER.debug("Post-processing completed.")
 
     # Prepare the files payload (optional: may need adjustment based on segments)
     buffer_bytes = frames_to_bytes(frames)
@@ -354,7 +348,6 @@ def od_sam2_video_tracking(
         "Final payload prepared with %d bytes of video data.", len(buffer_bytes)
     )
 
-    _LOGGER.debug("Video tracking completed successfully.")
     return {
         "files": files,
         "return_data": post_processed["return_data"],

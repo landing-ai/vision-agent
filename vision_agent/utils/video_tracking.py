@@ -1,7 +1,7 @@
 import json
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -81,7 +81,7 @@ def process_segment(
     chunk_length: Optional[int],
     image_size: Tuple[int, int],
     segment_index: int,
-    object_detection_tool,
+    object_detection_tool: Callable,
 ) -> Optional[List[Dict[str, Any]]]:
     """
     Processes a segment of frames with the specified object detection model.
@@ -94,6 +94,7 @@ def process_segment(
         chunk_length (Optional[int]): Chunk length for processing.
         image_size (Tuple[int, int]): Size of the images.
         segment_index (int): Index of the segment.
+        object_detection_tool (Callable): Object detection tool to use.
 
     Returns:
         Optional[List[Dict[str, Any]]]: Detections for the segment.
@@ -260,26 +261,25 @@ def _match_by_iou(
 
 
 def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]):
-    _LOGGER.warning("Updating IDs in detections using the ID mapping.")
-    for detection in detections:
-        if detection["id"] in id_mapping:
-            detection["id"] = id_mapping[detection["id"]]
-        else:
-            max_new_id = max(id_mapping.values(), default=0)
-            detection["id"] = max_new_id + 1
-            id_mapping[detection["id"]] = detection["id"]
-            _LOGGER.warning("Assigned new sequential ID %d.", detection["id"])
+    _LOGGER.debug("Updating IDs in detections using the ID mapping.")
+    for inner_list in detections:
+        for detection in inner_list:
+            if detection["id"] in id_mapping:
+                detection["id"] = id_mapping[detection["id"]]
+            else:
+                max_new_id = max(id_mapping.values(), default=0)
+                detection["id"] = max_new_id + 1
+                id_mapping[detection["id"]] = detection["id"]
+                _LOGGER.debug("Assigned new sequential ID %d.", detection["id"])
 
 
 def _convert_to_2d(detections_per_segment: List[Any]) -> List[Any]:
-    _LOGGER.debug("Converting detections per segment into a 2D list.")
     result = []
     for i, segment in enumerate(detections_per_segment):
         if i == 0:
             result.extend(segment)
         else:
             result.extend(segment[1:])
-    _LOGGER.debug("Converted list size: %d", len(result))
     return result
 
 
