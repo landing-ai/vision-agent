@@ -13,7 +13,6 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from vision_agent.tools.tools_types import BoundingBoxes
-from vision_agent.utils import should_report_tool_traces
 from vision_agent.utils.exceptions import RemoteToolCallFailed
 from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.image_utils import normalize_bbox
@@ -24,6 +23,10 @@ _LND_API_KEY = os.environ.get("LANDINGAI_API_KEY", LandingaiAPIKey().api_key)
 _LND_BASE_URL = os.environ.get("LANDINGAI_URL", "https://api.landing.ai")
 _LND_API_URL = f"{_LND_BASE_URL}/v1/agent/model"
 _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
+
+
+def should_report_tool_traces() -> bool:
+    return bool(os.environ.get("REPORT_TOOL_TRACES", False))
 
 
 class ToolCallTrace(BaseModel):

@@ -32,10 +32,10 @@ from vision_agent.tools.tool_utils import (
     nms,
     send_inference_request,
     send_task_inference_request,
+    should_report_tool_traces,
     single_nms,
 )
 from vision_agent.tools.tools_types import JobStatus
-from vision_agent.utils import should_report_tool_traces
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
