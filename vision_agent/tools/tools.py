@@ -6,7 +6,6 @@ import tempfile
 import urllib.request
 from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from enum import Enum
 from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
