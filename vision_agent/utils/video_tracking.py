@@ -196,7 +196,11 @@ def _calculate_mask_iou(mask1: np.ndarray, mask2: np.ndarray) -> float:
     intersection = np.sum(np.logical_and(mask1, mask2))
     union = np.sum(np.logical_or(mask1, mask2))
 
-    iou = intersection / union if union != 0 else 0
+    if union == 0:
+        iou = 0.0
+    else:
+        iou = intersection / union
+
     _LOGGER.debug("Calculated IoU: %.4f", iou)
     return iou
 
@@ -260,7 +264,7 @@ def _match_by_iou(
     return combined_list, id_mapping
 
 
-def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]):
+def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]) -> None:
     _LOGGER.debug("Updating IDs in detections using the ID mapping.")
     for inner_list in detections:
         for detection in inner_list:
