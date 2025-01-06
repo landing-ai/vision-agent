@@ -11,4 +11,4 @@ from .sim import AzureSim, OllamaSim, Sim, load_sim, merge_sim
 
 
 def should_report_tool_traces() -> bool:
-    return os.environ.get("REPORT_TOOL_TRACES", False)
+    return bool(os.environ.get("REPORT_TOOL_TRACES", False))
