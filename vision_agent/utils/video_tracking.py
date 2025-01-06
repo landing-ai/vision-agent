@@ -328,7 +328,6 @@ def post_process(
     Returns:
         Dict[str, Any]: Post-processed data including return_data and display_data.
     """
-    _LOGGER.debug("Starting post-processing of merged detections.")
     return_data = []
     for frame_idx, frame in enumerate(merged_detections):
         return_frame_data = []
@@ -339,22 +338,9 @@ def post_process(
                 {"label": label, "mask": mask, "score": 1.0, "rle": detection["mask"]}
             )
         return_data.append(return_frame_data)
-    _LOGGER.debug("Post-processing of merged detections completed.")
 
     return_data = add_bboxes_from_masks(return_data)
-    _LOGGER.debug("Added bounding boxes from masks.")
-
     return_data = nms(return_data, iou_threshold=0.95)
-    _LOGGER.debug("Applied Non-Maximum Suppression (NMS) with IoU threshold 0.95.")
-
-    # Prepare the files payload (optional: may need adjustment based on segments)
-    buffer_bytes = frames_to_bytes(frames)
-    files = [("video", buffer_bytes)]
-    _LOGGER.debug(
-        "Final payload prepared with %d bytes of video data.", len(buffer_bytes)
-    )
-
-    _LOGGER.debug("Post-processing completed successfully.")
     return {
         "return_data": return_data,
         "display_data": [],  # Assuming display_data is handled elsewhere
