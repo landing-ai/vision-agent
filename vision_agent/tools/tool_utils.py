@@ -13,6 +13,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from vision_agent.tools.tools_types import BoundingBoxes
+from vision_agent.utils import should_report_tool_traces
 from vision_agent.utils.exceptions import RemoteToolCallFailed
 from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.image_utils import normalize_bbox
@@ -251,7 +252,7 @@ def _call_post(
         tool_call_trace.response = result
         return result
     finally:
-        if tool_call_trace is not None:
+        if tool_call_trace is not None and should_report_tool_traces():
             trace = tool_call_trace.model_dump()
             display({MimeType.APPLICATION_JSON: trace}, raw=True)
 
