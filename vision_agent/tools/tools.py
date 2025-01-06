@@ -242,7 +242,7 @@ def od_sam2_video_tracking(
     # Split frames into segments with overlap
     segments = split_frames_into_segments(frames, SEGMENT_SIZE, OVERLAP)
 
-    def _apply_object_detection(
+    def _apply_object_detection(  # inner method to avoid circular importing issues.
         od_model: ODModels,
         prompt: str,
         segment_index: int,
@@ -252,7 +252,6 @@ def od_sam2_video_tracking(
     ) -> tuple:
         """
         Applies the specified object detection model to the given image.
-        It is an inner method to avoid circular importing issues.
 
         Args:
             od_model: The object detection model to use.
@@ -335,7 +334,6 @@ def od_sam2_video_tracking(
     merged_detections = merge_segments(detections_per_segment, frames)
     post_processed = post_process(merged_detections)
 
-    # Prepare the files payload (optional: may need adjustment based on segments)
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
     _LOGGER.debug(

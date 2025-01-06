@@ -17,10 +17,10 @@ _LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-class ODModels(Enum):
+class ODModels(str, Enum):
     COUNTGD = "countgd"
-    OWLV2 = "owlv2"
     FLORENCE2 = "florence2"
+    OWLV2 = "owlv2"
 
 
 def split_frames_into_segments(
