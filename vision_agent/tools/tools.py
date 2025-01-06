@@ -54,6 +54,7 @@ from vision_agent.utils.video import (
     video_writer,
 )
 from vision_agent.utils.video_tracking import (
+    ODModels,
     merge_segments,
     post_process,
     process_segment,
@@ -226,12 +227,6 @@ def sam2(
     return ret["return_data"]  # type: ignore
 
 
-class ODModels(str, Enum):
-    COUNTGD = "countgd"
-    FLORENCE2 = "florence2"
-    OWLV2 = "owlv2"
-
-
 def od_sam2_video_tracking(
     od_model: ODModels,
     prompt: str,
@@ -253,8 +248,8 @@ def od_sam2_video_tracking(
         prompt: str,
         segment_index: int,
         frame_number: int,
-        fine_tune_id: str = None,
-        segment_frames: list = None,
+        fine_tune_id: str,
+        segment_frames: list,
     ) -> tuple:
         """
         Applies the specified object detection model to the given image.
@@ -339,7 +334,7 @@ def od_sam2_video_tracking(
         _LOGGER.debug("Finished processing for segment %d.", segment_index + 1)
 
     merged_detections = merge_segments(detections_per_segment, frames)
-    post_processed = post_process(merged_detections, frames, image_size)
+    post_processed = post_process(merged_detections)
 
     # Prepare the files payload (optional: may need adjustment based on segments)
     buffer_bytes = frames_to_bytes(frames)

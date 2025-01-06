@@ -79,7 +79,7 @@ def process_segment(
     prompt: str,
     fine_tune_id: Optional[str],
     chunk_length: Optional[int],
-    image_size: Tuple[int, int],
+    image_size: Tuple[int, ...],
     segment_index: int,
     object_detection_tool: Callable,
 ) -> Optional[List[Dict[str, Any]]]:
@@ -316,9 +316,7 @@ def merge_segments(
     return merged_result
 
 
-def post_process(
-    merged_detections: List[Any], frames: List[np.ndarray], image_size: Tuple[int, int]
-) -> Dict[str, Any]:
+def post_process(merged_detections: List[Any]) -> Dict[str, Any]:
     """
     Performs post-processing on merged detections, including NMS and preparing display data.
 
