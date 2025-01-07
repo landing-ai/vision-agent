@@ -275,7 +275,12 @@ def post_process(
             mask = rle_decode_array(detection["mask"])
             label = f"{detection['id']}: {detection['label']}"
             return_frame_data.append(
-                {"label": label, "mask": mask, "score": 1.0, "rle": detection["mask"]}
+                {
+                    "label": label,
+                    "mask": mask,
+                    "rle": detection["mask"],
+                    "score": 1.0,
+                }
             )
         return_data.append(return_frame_data)
 
@@ -291,9 +296,8 @@ def post_process(
             display_frame_data.append(
                 {
                     "label": obj["label"],
-                    "score": obj["score"],
                     "bbox": denormalize_bbox(obj["bbox"], image_size),
-                    "mask": obj["rle"],
+                    "rle": obj["rle"],
                 }
             )
             del obj["rle"]
