@@ -25,6 +25,10 @@ _LND_API_URL = f"{_LND_BASE_URL}/v1/agent/model"
 _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
 
 
+def should_report_tool_traces() -> bool:
+    return bool(os.environ.get("REPORT_TOOL_TRACES", False))
+
+
 class ToolCallTrace(BaseModel):
     endpoint_url: str
     type: str
@@ -251,7 +255,7 @@ def _call_post(
         tool_call_trace.response = result
         return result
     finally:
-        if tool_call_trace is not None:
+        if tool_call_trace is not None and should_report_tool_traces():
             trace = tool_call_trace.model_dump()
             display({MimeType.APPLICATION_JSON: trace}, raw=True)
 
