@@ -308,7 +308,7 @@ def od_sam2_video_tracking(
         )
         detections_per_segment.append(segment_detections)
 
-    merged_detections = merge_segments(detections_per_segment, frames)
+    merged_detections = merge_segments(detections_per_segment)
     post_processed = post_process(merged_detections, image_size)
 
     buffer_bytes = frames_to_bytes(frames)

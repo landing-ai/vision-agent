@@ -173,11 +173,6 @@ def _match_by_iou(
 ) -> Tuple[List[Dict], Dict[int, int]]:
     max_id = max((item["id"] for item in first_param), default=0)
 
-    for item in first_param:
-        item["decoded_mask"] = rle_decode_array(item["mask"])
-    for item in second_param:
-        item["decoded_mask"] = rle_decode_array(item["mask"])
-
     matched_new_item_indices = set()
     id_mapping = {}
 
@@ -230,24 +225,27 @@ def _convert_to_2d(detections_per_segment: List[Any]) -> List[Any]:
     return result
 
 
-def merge_segments(
-    detections_per_segment: List[Any], frames: List[np.ndarray]
-) -> List[Any]:
+def merge_segments(detections_per_segment: List[Any]) -> List[Any]:
     """
     Merges detections from all segments into a unified result.
 
     Args:
         detections_per_segment (List[Any]): List of detections per segment.
-        frames (List[np.ndarray]): List of all frames.
 
     Returns:
         List[Any]: Merged detections.
     """
-    for idx in range(len(detections_per_segment) - 1):
+    for segment in detections_per_segment:
+        for detection in segment:
+            for item in detection:
+                item["decoded_mask"] = rle_decode_array(item["mask"])
+
+    for segment_idx in range(len(detections_per_segment) - 1):
         combined_detection, id_mapping = _match_by_iou(
-            detections_per_segment[idx][-1], detections_per_segment[idx + 1][0]
+            detections_per_segment[segment_idx][-1],
+            detections_per_segment[segment_idx + 1][0],
         )
-        _update_ids(detections_per_segment[idx + 1], id_mapping)
+        _update_ids(detections_per_segment[segment_idx + 1], id_mapping)
 
     merged_result = _convert_to_2d(detections_per_segment)
 
@@ -272,16 +270,16 @@ def post_process(
     for frame_idx, frame in enumerate(merged_detections):
         return_frame_data = []
         for detection in frame:
-            mask = rle_decode_array(detection["mask"])
             label = f"{detection['id']}: {detection['label']}"
             return_frame_data.append(
                 {
                     "label": label,
-                    "mask": mask,
+                    "mask": detection["decoded_mask"],
                     "rle": detection["mask"],
                     "score": 1.0,
                 }
             )
+            del detection["decoded_mask"]
         return_data.append(return_frame_data)
 
     return_data = add_bboxes_from_masks(return_data)
