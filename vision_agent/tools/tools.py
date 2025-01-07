@@ -506,7 +506,7 @@ def owlv2_sam2_instance_segmentation(
     )
 
     _display_tool_trace(
-        countgd_sam2_instance_segmentation.__name__,
+        owlv2_sam2_instance_segmentation.__name__,
         {
             "prompts": prompt,
             "confidence": box_threshold,
