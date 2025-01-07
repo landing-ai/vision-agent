@@ -1,5 +1,4 @@
 import json
-import logging
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -12,9 +11,6 @@ from vision_agent.tools.tool_utils import (
 )
 from vision_agent.utils.image_utils import denormalize_bbox, rle_decode_array
 from vision_agent.utils.video import frames_to_bytes
-
-_LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 class ODModels(str, Enum):
@@ -37,11 +33,6 @@ def split_frames_into_segments(
     Returns:
         List[List[np.ndarray]]: List of frame segments.
     """
-    _LOGGER.debug(
-        "Splitting frames into segments of %d frames with %d frame overlap.",
-        segment_size,
-        overlap,
-    )
     segments = []
     start = 0
     segment_count = 0
@@ -52,24 +43,11 @@ def split_frames_into_segments(
         if start != 0:
             # Include the last frame of the previous segment
             segment = frames[start - overlap : end]
-            _LOGGER.debug(
-                "Segment %d: frames %d to %d (including overlap).",
-                segment_count + 1,
-                start - overlap,
-                end - 1,
-            )
         else:
             segment = frames[start:end]
-            _LOGGER.debug(
-                "Segment %d: frames %d to %d.",
-                segment_count + 1,
-                start,
-                end - 1,
-            )
         segments.append(segment)
         start += segment_size
         segment_count += 1
-    _LOGGER.debug("Total segments created: %d.", segment_count)
     return segments
 
 
@@ -99,22 +77,14 @@ def process_segment(
     Returns:
        Any: Detections for the segment.
     """
-    _LOGGER.debug(
-        "Processing segment %d with %d frames.",
-        segment_index + 1,
-        len(segment_frames),
-    )
     segment_results: List[Optional[List[Dict[str, Any]]]] = [None] * len(segment_frames)
 
     if chunk_length is None:
         step = 1
-        _LOGGER.debug("Chunk length is None. Processing every frame.")
     elif chunk_length <= 0:
-        _LOGGER.debug("Invalid chunk_length: %d. Raising ValueError.", chunk_length)
         raise ValueError("chunk_length must be a positive integer or None.")
     else:
         step = chunk_length
-        _LOGGER.debug("Processing frames with step size: %d.", step)
 
     function_name = ""
 
@@ -135,11 +105,6 @@ def process_segment(
         "chunk_length_frames": chunk_length,
     }
     metadata = {"function_name": function_name}
-    _LOGGER.debug(
-        "Segment %d: Sending inference request with payload size %d bytes.",
-        segment_index + 1,
-        len(buffer_bytes),
-    )
 
     segment_detections = send_task_inference_request(
         payload,
@@ -147,7 +112,6 @@ def process_segment(
         files=files,
         metadata=metadata,
     )
-    _LOGGER.debug("Segment %d: Inference request completed.", segment_index + 1)
 
     return segment_detections
 
@@ -168,7 +132,6 @@ def transform_detections(
     Returns:
         List[Optional[Dict[str, Any]]]: Transformed detections.
     """
-    _LOGGER.debug("Transforming detections for segment %d.", segment_index + 1)
     output_list: List[Optional[Dict[str, Any]]] = []
     for frame_idx, frame in enumerate(input_list):
         if frame is not None:
@@ -189,7 +152,6 @@ def transform_detections(
 
 
 def _calculate_mask_iou(mask1: np.ndarray, mask2: np.ndarray) -> float:
-    _LOGGER.debug("Calculating IoU between two masks.")
     mask1 = mask1.astype(bool)
     mask2 = mask2.astype(bool)
 
@@ -201,7 +163,6 @@ def _calculate_mask_iou(mask1: np.ndarray, mask2: np.ndarray) -> float:
     else:
         iou = intersection / union
 
-    _LOGGER.debug("Calculated IoU: %.4f", iou)
     return iou
 
 
@@ -210,14 +171,7 @@ def _match_by_iou(
     second_param: List[Dict],
     iou_threshold: float = 0.8,
 ) -> Tuple[List[Dict], Dict[int, int]]:
-
-    _LOGGER.debug(
-        "Matching items between two lists with IoU threshold %.2f.",
-        iou_threshold,
-    )
-
     max_id = max((item["id"] for item in first_param), default=0)
-    _LOGGER.debug("Max ID in first_param: %d", max_id)
 
     for item in first_param:
         item["decoded_mask"] = rle_decode_array(item["mask"])
@@ -228,7 +182,6 @@ def _match_by_iou(
     id_mapping = {}
 
     for new_index, new_item in enumerate(second_param):
-        _LOGGER.debug("Processing new item with ID %d.", new_item["id"])
         matched_id = None
 
         for existing_item in first_param:
@@ -239,12 +192,6 @@ def _match_by_iou(
                 matched_id = existing_item["id"]
                 matched_new_item_indices.add(new_index)
                 id_mapping[new_item["id"]] = matched_id
-                _LOGGER.debug(
-                    "Matched new item ID %d with existing item ID %d (IoU: %.4f).",
-                    new_item["id"],
-                    matched_id,
-                    iou,
-                )
                 break
 
         if matched_id:
@@ -253,19 +200,16 @@ def _match_by_iou(
             max_id += 1
             id_mapping[new_item["id"]] = max_id
             new_item["id"] = max_id
-            _LOGGER.debug("Assigned new ID %d to unmatched item.", max_id)
 
     unmatched_items = [
         item for i, item in enumerate(second_param) if i not in matched_new_item_indices
     ]
     combined_list = first_param + unmatched_items
 
-    _LOGGER.debug("Combined list size after matching: %d", len(combined_list))
     return combined_list, id_mapping
 
 
 def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]) -> None:
-    _LOGGER.debug("Updating IDs in detections using the ID mapping.")
     for inner_list in detections:
         for detection in inner_list:
             if detection["id"] in id_mapping:
@@ -274,7 +218,6 @@ def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]) -> None:
                 max_new_id = max(id_mapping.values(), default=0)
                 detection["id"] = max_new_id + 1
                 id_mapping[detection["id"]] = detection["id"]
-                _LOGGER.debug("Assigned new sequential ID %d.", detection["id"])
 
 
 def _convert_to_2d(detections_per_segment: List[Any]) -> List[Any]:
@@ -300,22 +243,13 @@ def merge_segments(
     Returns:
         List[Any]: Merged detections.
     """
-    _LOGGER.debug(
-        "Starting merge_segments with %d segments.", len(detections_per_segment)
-    )
-
     for idx in range(len(detections_per_segment) - 1):
-        _LOGGER.debug("Processing segment pair: %d and %d.", idx, idx + 1)
-
         combined_detection, id_mapping = _match_by_iou(
             detections_per_segment[idx][-1], detections_per_segment[idx + 1][0]
         )
         _update_ids(detections_per_segment[idx + 1], id_mapping)
 
     merged_result = _convert_to_2d(detections_per_segment)
-    _LOGGER.debug(
-        "Finished merging segments. Total items in result: %d", len(merged_result)
-    )
 
     return merged_result
 
@@ -326,8 +260,6 @@ def post_process(merged_detections: List[Any]) -> Dict[str, Any]:
 
     Args:
         merged_detections (List[Any]): Merged detections from all segments.
-        frames (List[np.ndarray]): List of all frames.
-        image_size (Tuple[int, int]): Size of the images.
 
     Returns:
         Dict[str, Any]: Post-processed data including return_data and display_data.

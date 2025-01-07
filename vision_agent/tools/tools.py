@@ -236,7 +236,6 @@ def od_sam2_video_tracking(
     SEGMENT_SIZE = 50
     OVERLAP = 1  # Number of overlapping frames between segments
 
-    _LOGGER.debug("Starting video tracking with %d frames.", len(frames))
     image_size = frames[0].shape[:2]
 
     # Split frames into segments with overlap
@@ -266,22 +265,12 @@ def od_sam2_video_tracking(
         """
 
         if od_model == ODModels.COUNTGD:
-            _LOGGER.debug(
-                "Segment %d: Applying COUNTGD object detection on frame %d.",
-                segment_index + 1,
-                frame_number,
-            )
             segment_results = countgd_object_detection(
                 prompt=prompt, image=segment_frames[frame_number]
             )
             function_name = "countgd_object_detection"
 
         elif od_model == ODModels.OWLV2:
-            _LOGGER.debug(
-                "Segment %d: Applying OWLV2 object detection on frame %d.",
-                segment_index + 1,
-                frame_number,
-            )
             segment_results = owlv2_object_detection(
                 prompt=prompt,
                 image=segment_frames[frame_number],
@@ -290,11 +279,6 @@ def od_sam2_video_tracking(
             function_name = "owlv2_object_detection"
 
         elif od_model == ODModels.FLORENCE2:
-            _LOGGER.debug(
-                "Segment %d: Applying FLORENCE2 object detection on frame %d.",
-                segment_index + 1,
-                frame_number,
-            )
             segment_results = florence2_object_detection(
                 prompt=prompt,
                 image=segment_frames[frame_number],
@@ -303,11 +287,6 @@ def od_sam2_video_tracking(
             function_name = "florence2_object_detection"
 
         else:
-            _LOGGER.debug(
-                "Segment %d: Object detection model '%s' is not implemented.",
-                segment_index + 1,
-                od_model,
-            )
             raise NotImplementedError(
                 f"Object detection model '{od_model}' is not implemented."
             )
@@ -317,7 +296,6 @@ def od_sam2_video_tracking(
     # Process each segment and collect detections
     detections_per_segment: List[Any] = []
     for segment_index, segment in enumerate(segments):
-        _LOGGER.debug("Starting processing for segment %d.", segment_index + 1)
         segment_detections = process_segment(
             segment_frames=segment,
             od_model=od_model,
@@ -329,16 +307,12 @@ def od_sam2_video_tracking(
             object_detection_tool=_apply_object_detection,
         )
         detections_per_segment.append(segment_detections)
-        _LOGGER.debug("Finished processing for segment %d.", segment_index + 1)
 
     merged_detections = merge_segments(detections_per_segment, frames)
     post_processed = post_process(merged_detections)
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
-    _LOGGER.debug(
-        "Final payload prepared with %d bytes of video data.", len(buffer_bytes)
-    )
 
     return {
         "files": files,
