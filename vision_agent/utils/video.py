@@ -98,7 +98,7 @@ def frames_to_bytes(
     if isinstance(fps, str):
         # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
+    with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as temp_file:
         video_writer(frames, fps, temp_file.name)
 
         with open(temp_file.name, "rb") as f:

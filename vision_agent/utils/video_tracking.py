@@ -295,7 +295,8 @@ def post_process(
                 {
                     "label": obj["label"],
                     "bbox": denormalize_bbox(obj["bbox"], image_size),
-                    "rle": obj["rle"],
+                    "mask": obj["rle"],
+                    "score": obj["score"],
                 }
             )
             del obj["rle"]
