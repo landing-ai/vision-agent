@@ -254,12 +254,16 @@ def merge_segments(
     return merged_result
 
 
-def post_process(merged_detections: List[Any]) -> Dict[str, Any]:
+def post_process(
+    merged_detections: List[Any],
+    image_size: Tuple[int, ...],
+) -> Dict[str, Any]:
     """
     Performs post-processing on merged detections, including NMS and preparing display data.
 
     Args:
         merged_detections (List[Any]): Merged detections from all segments.
+        image_size (Tuple[int, int]): Size of the images.
 
     Returns:
         Dict[str, Any]: Post-processed data including return_data and display_data.
@@ -277,7 +281,22 @@ def post_process(merged_detections: List[Any]) -> Dict[str, Any]:
 
     return_data = add_bboxes_from_masks(return_data)
     return_data = nms(return_data, iou_threshold=0.95)
-    return {
-        "return_data": return_data,
-        "display_data": [],  # Assuming display_data is handled elsewhere
-    }
+
+    # We save the RLE for display purposes, re-calculting RLE can get very expensive.
+    # Deleted here because we are returning the numpy masks instead
+    display_data = []
+    for frame in return_data:
+        display_frame_data = []
+        for obj in frame:
+            display_frame_data.append(
+                {
+                    "label": obj["label"],
+                    "score": obj["score"],
+                    "bbox": denormalize_bbox(obj["bbox"], image_size),
+                    "mask": obj["rle"],
+                }
+            )
+            del obj["rle"]
+        display_data.append(display_frame_data)
+
+    return {"return_data": return_data, "display_data": display_data}
