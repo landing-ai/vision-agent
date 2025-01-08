@@ -1,7 +1,7 @@
 import copy
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, cast, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent, AgentCoder, VisionAgentCoderV2
 from vision_agent.agent.agent_utils import (
@@ -61,7 +61,7 @@ def extract_conversation_for_generate_code(
 
     # only keep the last <final_code> and <final_test>
     final_code = None
-    extracted_chat_strip_code = []
+    extracted_chat_strip_code: List[AgentMessage] = []
     for chat_i in reversed(extracted_chat):
         if "<final_code>" in chat_i.content and final_code is None:
             extracted_chat_strip_code = [chat_i] + extracted_chat_strip_code
