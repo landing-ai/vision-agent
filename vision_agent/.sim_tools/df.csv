@@ -599,7 +599,7 @@ desc,doc,name
         >>> closest_distance(det1, det2, image_size)
         141.42
     ",minimum_distance
-"'extract_frames_and_timestamps' extracts frames and timestamps from a video which can be a file path, url or youtube link, returns a list of dictionaries with keys ""frame"" and ""timestamp"" where ""frame"" is a numpy array and ""timestamp"" is the relative time in seconds where the frame was captured. The frame is a numpy array.","extract_frames_and_timestamps(video_uri: Union[str, pathlib.Path], fps: float = 1) -> List[Dict[str, Union[numpy.ndarray, float]]]:
+"'extract_frames_and_timestamps' extracts frames and timestamps from a video which can be a file path, url or youtube link, returns a list of dictionaries with keys ""frame"" and ""timestamp"" where ""frame"" is a numpy array and ""timestamp"" is the relative time in seconds where the frame was captured. The frame is a numpy array.","extract_frames_and_timestamps(video_uri: Union[str, pathlib.Path], fps: float = 5) -> List[Dict[str, Union[numpy.ndarray, float]]]:
 'extract_frames_and_timestamps' extracts frames and timestamps from a video
     which can be a file path, url or youtube link, returns a list of dictionaries
     with keys ""frame"" and ""timestamp"" where ""frame"" is a numpy array and ""timestamp"" is
@@ -609,7 +609,7 @@ desc,doc,name
     Parameters:
         video_uri (Union[str, Path]): The path to the video file, url or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
-            to 1.
+            to 5.
 
     Returns:
         List[Dict[str, Union[np.ndarray, float]]]: A list of dictionaries containing the
