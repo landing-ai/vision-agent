@@ -1206,6 +1206,81 @@ def countgd_visual_prompt_object_detection(
     return bboxes_formatted
 
 
+def finetuned_object_detection(
+    deployment_id: str,
+    image: np.ndarray,
+    box_threshold: float = 0.1,
+) -> List[Dict[str, Any]]:
+    """'finetuned_object_detection' is a tool that can detect instances of an
+    object given a deployment_id of a previously finetuned object detection model.
+    It is particularly useful when trying to detect objects that are not well detected by generalist models.
+    It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
+
+    Parameters:
+        deployment_id (str): The id of the finetuned model.
+        image (np.ndarray): The image that contains instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.1.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> finetuned_object_detection("abcd1234-5678efg", image)
+        [
+            {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
+            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
+        ]
+    """
+    image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
+
+    files = [("image", numpy_to_bytes(image))]
+    payload = {
+        "deployment_id": deployment_id,
+        "confidence": box_threshold,
+    }
+    detections: Dict[str, Any] = send_inference_request(
+        payload, "object-detection", files=files, v2=True
+    )
+    print("detections: ", detections)
+
+    bboxes = detections["data"][0]
+    bboxes_formatted = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": bbox["score"],
+        }
+        for bbox in bboxes
+    ]
+    display_data = [
+        {
+            "label": bbox["label"],
+            "bbox": bbox["bounding_box"],
+            "score": bbox["score"],
+        }
+        for bbox in bboxes
+    ]
+
+    _display_tool_trace(
+        finetuned_object_detection.__name__,
+        payload,
+        display_data,
+        files,
+    )
+    return bboxes_formatted
+
+
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
     """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary
     images including regular images or images of documents or presentations. It can be
