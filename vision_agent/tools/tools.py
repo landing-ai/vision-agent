@@ -1249,7 +1249,7 @@ def finetuned_object_detection(
         "deployment_id": deployment_id,
         "confidence": box_threshold,
     }
-    detections: Dict[str, Any] = send_inference_request(
+    detections: list[list[dict[str, Any]]] = send_inference_request(
         payload, "object-detection", files=files, v2=True
     )
 
