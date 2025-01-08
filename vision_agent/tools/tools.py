@@ -1252,9 +1252,8 @@ def finetuned_object_detection(
     detections: Dict[str, Any] = send_inference_request(
         payload, "object-detection", files=files, v2=True
     )
-    print("detections: ", detections)
 
-    bboxes = detections["data"][0]
+    bboxes = detections[0]
     bboxes_formatted = [
         {
             "label": bbox["label"],
@@ -2720,6 +2719,7 @@ FUNCTION_TOOLS = [
     flux_image_inpainting,
     siglip_classification,
     minimum_distance,
+    finetuned_object_detection,
 ]
 
 UTIL_TOOLS = [
