@@ -2113,7 +2113,7 @@ def closest_box_distance(
 
 
 def extract_frames_and_timestamps(
-    video_uri: Union[str, Path], fps: float = 1
+    video_uri: Union[str, Path], fps: float = 5
 ) -> List[Dict[str, Union[np.ndarray, float]]]:
     """'extract_frames_and_timestamps' extracts frames and timestamps from a video
     which can be a file path, url or youtube link, returns a list of dictionaries
@@ -2124,7 +2124,7 @@ def extract_frames_and_timestamps(
     Parameters:
         video_uri (Union[str, Path]): The path to the video file, url or youtube link
         fps (float, optional): The frame rate per second to extract the frames. Defaults
-            to 1.
+            to 5.
 
     Returns:
         List[Dict[str, Union[np.ndarray, float]]]: A list of dictionaries containing the
