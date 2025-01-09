@@ -1544,7 +1544,7 @@ def video_temporal_localization(
         prompt (str): The question about the video
         frames (List[np.ndarray]): The reference frames used for the question
         model (str): The model to use for the inference. Valid values are
-            'qwen2vl', 'gpt4o', 'internlm-xcomposer'
+            'qwen2vl', 'gpt4o'.
         chunk_length_frames (Optional[int]): length of each chunk in frames
 
     Returns:
