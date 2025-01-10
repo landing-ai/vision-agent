@@ -135,7 +135,7 @@ class Sim:
         load_dir = Path(load_dir)
         if (
             not Path(load_dir / "df.csv").exists()
-            or Path(load_dir / "embs.npy").exists()
+            or not Path(load_dir / "embs.npy").exists()
         ):
             return False
 
