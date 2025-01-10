@@ -290,6 +290,13 @@ def od_sam2_video_tracking(
             )
             function_name = "florence2_object_detection"
 
+        elif od_model == ODModels.CUSTOM:
+            segment_results = custom_object_detection(
+                deployment_id=fine_tune_id,
+                image=segment_frames[frame_number],
+            )
+            function_name = "custom_object_detection"
+
         else:
             raise NotImplementedError(
                 f"Object detection model '{od_model}' is not implemented."
@@ -1235,9 +1242,9 @@ def custom_object_detection(
         >>> custom_object_detection("abcd1234-5678efg", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
-            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52},
-            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58},
+            {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5]},
+            {'score': 0.78, 'label': 'flower', 'bbox': [0.3, 0.35, 0.48, 0.52]},
+            {'score': 0.98, 'label': 'flower', 'bbox': [0.44, 0.24, 0.49, 0.58]},
         ]
     """
     image_size = image.shape[:2]
@@ -1249,7 +1256,7 @@ def custom_object_detection(
         "deployment_id": deployment_id,
         "confidence": box_threshold,
     }
-    detections: list[list[dict[str, Any]]] = send_inference_request(
+    detections: List[List[Dict[str, Any]]] = send_inference_request(
         payload, "custom-object-detection", files=files, v2=True
     )
 
@@ -1278,6 +1285,61 @@ def custom_object_detection(
         files,
     )
     return bboxes_formatted
+
+
+def custom_od_sam2_video_tracking(
+    deployment_id: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 10,
+) -> List[List[Dict[str, Any]]]:
+    """'custom_od_sam2_video_tracking' is a tool that can segment multiple objects given a
+    custom model with predefined category names.
+    It returns a list of bounding boxes, label names,
+    mask file names and associated probability scores.
+
+    Parameters:
+        deployment_id (str): The id of the deployed custom model.
+        image (np.ndarray): The image to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+            new objects.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> custom_od_sam2_video_tracking("abcd1234-5678efg", frames)
+        [
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    """
+
+    ret = od_sam2_video_tracking(
+        ODModels.CUSTOM, prompt="", frames=frames, chunk_length=chunk_length, fine_tune_id=deployment_id
+    )
+    _display_tool_trace(
+        custom_od_sam2_video_tracking.__name__,
+        {},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
 
 
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:

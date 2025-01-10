@@ -17,6 +17,7 @@ class ODModels(str, Enum):
     COUNTGD = "countgd"
     FLORENCE2 = "florence2"
     OWLV2 = "owlv2"
+    CUSTOM = "custom"
 
 
 def split_frames_into_segments(

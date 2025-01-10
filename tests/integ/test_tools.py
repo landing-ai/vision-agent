@@ -522,4 +522,4 @@ def test_finetuned_object_detection_empty():
         deployment_id="5015ec65-b99b-4d62-bef1-fb6acb87bb9c",
         image=img,
     )
-    assert len(result[0]) == 0 # no coin objects detected on the finetuned model
+    assert len(result) == 0 # no coin objects detected on the finetuned model
