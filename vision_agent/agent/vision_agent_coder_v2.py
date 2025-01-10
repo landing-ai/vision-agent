@@ -204,7 +204,7 @@ def write_and_test_code(
     )
     try:
         code = strip_function_calls(code)
-    except Exception as _:
+    except Exception:
         # the code may be malformatted, this will fail in the exec call and the agent
         # will attempt to debug it
         pass
