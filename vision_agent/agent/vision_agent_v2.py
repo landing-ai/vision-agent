@@ -1,13 +1,14 @@
 import copy
 import json
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent, AgentCoder, VisionAgentCoderV2
 from vision_agent.agent.agent_utils import (
     add_media_to_chat,
     convert_message_to_agentmessage,
     extract_tag,
+    format_conversation,
 )
 from vision_agent.agent.types import (
     AgentMessage,
@@ -20,19 +21,6 @@ from vision_agent.agent.vision_agent_prompts_v2 import CONVERSATION
 from vision_agent.lmm import LMM, AnthropicLMM
 from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
-
-
-def format_conversation(chat: List[AgentMessage]) -> str:
-    chat = copy.deepcopy(chat)
-    prompt = ""
-    for chat_i in chat:
-        if chat_i.role == "user":
-            prompt += f"USER: {chat_i.content}\n\n"
-        elif chat_i.role == "observation" or chat_i.role == "coder":
-            prompt += f"OBSERVATION: {chat_i.content}\n\n"
-        elif chat_i.role == "conversation":
-            prompt += f"AGENT: {chat_i.content}\n\n"
-    return prompt
 
 
 def run_conversation(agent: LMM, chat: List[AgentMessage]) -> str:
@@ -55,23 +43,39 @@ def check_for_interaction(chat: List[AgentMessage]) -> bool:
 
 def extract_conversation_for_generate_code(
     chat: List[AgentMessage],
-) -> List[AgentMessage]:
+) -> Tuple[List[AgentMessage], Optional[str]]:
     chat = copy.deepcopy(chat)
 
     # if we are in the middle of an interaction, return all the intermediate planning
     # steps
     if check_for_interaction(chat):
-        return chat
+        return chat, None
 
     extracted_chat = []
     for chat_i in chat:
         if chat_i.role == "user":
             extracted_chat.append(chat_i)
         elif chat_i.role == "coder":
-            if "<final_code>" in chat_i.content and "<final_test>" in chat_i.content:
+            if "<final_code>" in chat_i.content:
                 extracted_chat.append(chat_i)
 
-    return extracted_chat
+    # only keep the last <final_code> and <final_test>
+    final_code = None
+    extracted_chat_strip_code: List[AgentMessage] = []
+    for chat_i in reversed(extracted_chat):
+        if "<final_code>" in chat_i.content and final_code is None:
+            extracted_chat_strip_code = [chat_i] + extracted_chat_strip_code
+            final_code = extract_tag(chat_i.content, "final_code")
+            if final_code is not None:
+                test_code = extract_tag(chat_i.content, "final_test")
+                final_code += "\n" + test_code if test_code is not None else ""
+
+        if "<final_code>" in chat_i.content and final_code is not None:
+            continue
+
+        extracted_chat_strip_code = [chat_i] + extracted_chat_strip_code
+
+    return extracted_chat_strip_code[-5:], final_code
 
 
 def maybe_run_action(
@@ -81,7 +85,7 @@ def maybe_run_action(
     code_interpreter: Optional[CodeInterpreter] = None,
 ) -> Optional[List[AgentMessage]]:
     if action == "generate_or_edit_vision_code":
-        extracted_chat = extract_conversation_for_generate_code(chat)
+        extracted_chat, _ = extract_conversation_for_generate_code(chat)
         # there's an issue here because coder.generate_code will send it's code_context
         # to the outside user via it's update_callback, but we don't necessarily have
         # access to that update_callback here, so we re-create the message using
@@ -101,11 +105,15 @@ def maybe_run_action(
                 )
             ]
     elif action == "edit_code":
-        extracted_chat = extract_conversation_for_generate_code(chat)
+        extracted_chat, final_code = extract_conversation_for_generate_code(chat)
         plan_context = PlanContext(
             plan="Edit the latest code observed in the fewest steps possible according to the user's feedback.",
-            instructions=[],
-            code="",
+            instructions=[
+                chat_i.content
+                for chat_i in extracted_chat
+                if chat_i.role == "user" and "<final_code>" not in chat_i.content
+            ],
+            code=final_code if final_code is not None else "",
         )
         context = coder.generate_code_from_plan(
             extracted_chat, plan_context, code_interpreter=code_interpreter

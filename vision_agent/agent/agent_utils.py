@@ -153,6 +153,19 @@ def format_plan_v2(plan: PlanContext) -> str:
     return plan_str
 
 
+def format_conversation(chat: List[AgentMessage]) -> str:
+    chat = copy.deepcopy(chat)
+    prompt = ""
+    for chat_i in chat:
+        if chat_i.role == "user":
+            prompt += f"USER: {chat_i.content}\n\n"
+        elif chat_i.role == "observation" or chat_i.role == "coder":
+            prompt += f"OBSERVATION: {chat_i.content}\n\n"
+        elif chat_i.role == "conversation":
+            prompt += f"AGENT: {chat_i.content}\n\n"
+    return prompt
+
+
 def format_plans(plans: Dict[str, Any]) -> str:
     plan_str = ""
     for k, v in plans.items():

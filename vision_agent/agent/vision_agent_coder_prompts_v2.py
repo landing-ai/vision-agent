@@ -65,7 +65,7 @@ This is the documentation for the functions you have access to. You may call any
 7. DO NOT assert the output value, run the code and assert only the output format or data structure.
 8. DO NOT use try except block to handle the error, let the error be raised if the code is incorrect.
 9. DO NOT import the testing function as it will available in the testing environment.
-10. Print the output of the function that is being tested.
+10. Print the output of the function that is being tested and ensure it is not empty.
 11. Use the output of the function that is being tested as the return value of the testing function.
 12. Run the testing function in the end and don't assign a variable to its output.
 13. Output your test code using <code> tags:
