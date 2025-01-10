@@ -23,7 +23,7 @@ from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
 
 
-def extract_conversation_for_generate_code(
+def extract_conversation(
     chat: List[AgentMessage],
 ) -> Tuple[List[AgentMessage], Optional[str]]:
     chat = copy.deepcopy(chat)
@@ -61,7 +61,7 @@ def extract_conversation_for_generate_code(
 
 
 def run_conversation(agent: LMM, chat: List[AgentMessage]) -> str:
-    extracted_chat, _ = extract_conversation_for_generate_code(chat)
+    extracted_chat, _ = extract_conversation(chat)
     extracted_chat = extracted_chat[-10:]
 
     conv = format_conversation(chat)
@@ -86,7 +86,7 @@ def maybe_run_action(
     chat: List[AgentMessage],
     code_interpreter: Optional[CodeInterpreter] = None,
 ) -> Optional[List[AgentMessage]]:
-    extracted_chat, final_code = extract_conversation_for_generate_code(chat)
+    extracted_chat, final_code = extract_conversation(chat)
     # only keep last 5 messages to keep context recent and not overwhelm LLM
     extracted_chat = extracted_chat[-5:]
     if action == "generate_or_edit_vision_code":
