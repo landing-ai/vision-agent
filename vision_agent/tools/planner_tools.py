@@ -193,8 +193,10 @@ def get_tool_for_task(
         - Depth and pose estimation
         - Video object tracking
 
-    Wait until the documentation is printed to use the function so you know what the
-    input and output signatures are.
+    Only ask for one type of task at a time, for example a task needing to identify
+    text is one OCR task while needing to identify non-text objects is an OD task. Wait
+    until the documentation is printed to use the function so you know what the input
+    and output signatures are.
 
     Parameters:
         task: str: The task to accomplish.

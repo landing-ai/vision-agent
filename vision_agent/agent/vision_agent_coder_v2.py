@@ -202,7 +202,12 @@ def write_and_test_code(
         tool_docs=tool_docs,
         plan=plan,
     )
-    code = strip_function_calls(code)
+    try:
+        code = strip_function_calls(code)
+    except Exception:
+        # the code may be malformatted, this will fail in the exec call and the agent
+        # will attempt to debug it
+        pass
     test = write_test(
         tester=tester,
         chat=chat,

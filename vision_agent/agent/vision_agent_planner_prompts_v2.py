@@ -136,8 +136,9 @@ Tool Documentation:
 countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
     'countgd_object_detection' is a tool that can detect multiple instances of an
     object given a text prompt. It is particularly useful when trying to detect and
-    count a large number of objects. It returns a list of bounding boxes with
-    normalized coordinates, label names and associated confidence scores.
+    count a large number of objects. You can optionally separate object names in the
+    prompt with commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
 
     Parameters:
         prompt (str): The object that needs to be counted.
@@ -272,40 +273,47 @@ OBSERVATION:
 [get_tool_for_task output]
 For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: florence2_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor.
 
-'florence2_sam2_video_tracking' is a tool that can segment and track multiple
-entities in a video given a text prompt such as category names or referring
-expressions. You can optionally separate the categories in the text with commas. It
-can find new objects every 'chunk_length' frames and is useful for tracking and
-counting without duplicating counts and always outputs scores of 1.0.
+Tool Documentation:
+def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 10) -> List[List[Dict[str, Any]]]:
+    'florence2_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as category names or referring
+    expressions. The categories in the text prompt are separated by commas. It returns
+    a list of bounding boxes, label names, masks and associated probability scores and
+    is useful for tracking and counting without duplicating counts.
 
-Parameters:
-    prompt (str): The prompt to ground to the video.
-    frames (List[np.ndarray]): The list of frames to ground the prompt to.
-    chunk_length (Optional[int]): The number of frames to re-run florence2 to find
-        new objects.
+    Parameters:
+        prompt (str): The prompt to ground to the video.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+            new objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
 
-Returns:
-    List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
-    label,segment mask and bounding boxes. The outer list represents each frame and
-    the inner list is the entities per frame. The label contains the object ID
-    followed by the label name. The objects are only identified in the first framed
-    and tracked throughout the video.
+    Returns:
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
 
-Example
--------
-    >>> florence2_sam2_video("car, dinosaur", frames)
-    [
+    Example
+    -------
+        >>> florence2_sam2_video_tracking("car, dinosaur", frames)
         [
-            {
-                'label': '0: dinosaur',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-        ],
-        ...
-    ]
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
 [end of get_tool_for_task output]
 <count>8</count>
 
@@ -691,7 +699,8 @@ FINALIZE_PLAN = """
 4. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
 5. Do not include {excluded_tools} tools in your instructions.
 6. Add final instructions for visualizing the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and saving it to a file with `save_file` or `save_video`.
-6. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
+7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
+8. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
 
 <json>
 {{
