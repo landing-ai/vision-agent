@@ -1206,12 +1206,12 @@ def countgd_visual_prompt_object_detection(
     return bboxes_formatted
 
 
-def finetuned_object_detection(
+def custom_object_detection(
     deployment_id: str,
     image: np.ndarray,
     box_threshold: float = 0.1,
 ) -> List[Dict[str, Any]]:
-    """'finetuned_object_detection' is a tool that can detect instances of an
+    """'custom_object_detection' is a tool that can detect instances of an
     object given a deployment_id of a previously finetuned object detection model.
     It is particularly useful when trying to detect objects that are not well detected by generalist models.
     It returns a list of bounding boxes with normalized
@@ -1232,7 +1232,7 @@ def finetuned_object_detection(
 
     Example
     -------
-        >>> finetuned_object_detection("abcd1234-5678efg", image)
+        >>> custom_object_detection("abcd1234-5678efg", image)
         [
             {'score': 0.49, 'label': 'flower', 'bbox': [0.1, 0.11, 0.35, 0.4]},
             {'score': 0.68, 'label': 'flower', 'bbox': [0.2, 0.21, 0.45, 0.5},
@@ -1250,7 +1250,7 @@ def finetuned_object_detection(
         "confidence": box_threshold,
     }
     detections: list[list[dict[str, Any]]] = send_inference_request(
-        payload, "object-detection", files=files, v2=True
+        payload, "custom-object-detection", files=files, v2=True
     )
 
     bboxes = detections[0]
@@ -1272,7 +1272,7 @@ def finetuned_object_detection(
     ]
 
     _display_tool_trace(
-        finetuned_object_detection.__name__,
+        custom_object_detection.__name__,
         payload,
         display_data,
         files,
@@ -2719,7 +2719,6 @@ FUNCTION_TOOLS = [
     flux_image_inpainting,
     siglip_classification,
     minimum_distance,
-    finetuned_object_detection,
 ]
 
 UTIL_TOOLS = [

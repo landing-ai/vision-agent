@@ -28,7 +28,7 @@ from vision_agent.tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
-    finetuned_object_detection,
+    custom_object_detection,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -518,7 +518,7 @@ def test_video_tracking_by_given_model():
 def test_finetuned_object_detection_empty():
     img = ski.data.coins()
 
-    result = finetuned_object_detection(
+    result = custom_object_detection(
         deployment_id="5015ec65-b99b-4d62-bef1-fb6acb87bb9c",
         image=img,
     )
