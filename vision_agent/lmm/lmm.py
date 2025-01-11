@@ -59,7 +59,8 @@ class OpenAILMM(LMM):
 
         self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
-        if "max_tokens" not in kwargs:
+        # o1 does not use max_tokens
+        if "max_tokens" not in kwargs and not model_name.startswith("o1"):
             kwargs["max_tokens"] = max_tokens
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
