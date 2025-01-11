@@ -56,6 +56,7 @@ def test_owlv2_sam2_instance_segmentation():
     assert [res["label"] for res in result] == ["coin"] * len(result)
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
 
+
 def test_owlv2_object_detection_empty():
     result = owlv2_object_detection(
         prompt="coin",
@@ -151,6 +152,7 @@ def test_florence2_phrase_grounding_video():
     assert len(result) == 10
     assert 2 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
+
 
 def test_template_match():
     img = ski.data.coins()
@@ -522,4 +524,4 @@ def test_finetuned_object_detection_empty():
         deployment_id="5015ec65-b99b-4d62-bef1-fb6acb87bb9c",
         image=img,
     )
-    assert len(result) == 0 # no coin objects detected on the finetuned model
+    assert len(result) == 0  # no coin objects detected on the finetuned model

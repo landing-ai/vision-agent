@@ -1331,7 +1331,11 @@ def custom_od_sam2_video_tracking(
     """
 
     ret = od_sam2_video_tracking(
-        ODModels.CUSTOM, prompt="", frames=frames, chunk_length=chunk_length, fine_tune_id=deployment_id
+        ODModels.CUSTOM,
+        prompt="",
+        frames=frames,
+        chunk_length=chunk_length,
+        fine_tune_id=deployment_id,
     )
     _display_tool_trace(
         custom_od_sam2_video_tracking.__name__,
