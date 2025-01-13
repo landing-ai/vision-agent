@@ -55,27 +55,27 @@ This is the documentation for the functions you have access to. You may call any
 --- EXAMPLE1 ---
 plan1:
 - Load the image from the provided file path 'image.jpg'.
-- Use the 'owl_v2_image' tool with the prompt 'person' to detect and count the number of people in the image.
+- Use the 'owlv2_object_detection' tool with the prompt 'person' to detect and count the number of people in the image.
 plan2:
 - Load the image from the provided file path 'image.jpg'.
-- Use the 'florence2_sam2_image' tool with the prompt 'person' to detect and count the number of people in the image.
+- Use the 'florence2_sam2_instance_segmentation' tool with the prompt 'person' to detect and count the number of people in the image.
 - Count the number of detected objects labeled as 'person'.
 plan3:
 - Load the image from the provided file path 'image.jpg'.
 - Use the 'countgd_object_detection' tool to count the dominant foreground object, which in this case is people.
 
 ```python
-from vision_agent.tools import load_image, owl_v2_image, florence2_sam2_image, countgd_object_detection
+from vision_agent.tools import load_image, owlv2_object_detection, florence2_sam2_instance_segmentation, countgd_object_detection
 image = load_image("image.jpg")
-owl_v2_out = owl_v2_image("person", image)
+owl_v2_out = owlv2_object_detection("person", image)
 
-f2s2_out = florence2_sam2_image("person", image)
+f2s2_out = florence2_sam2_instance_segmentation("person", image)
 # strip out the masks from the output becuase they don't provide useful information when printed
 f2s2_out = [{{k: v for k, v in o.items() if k != "mask"}} for o in f2s2_out]
 
 cgd_out = countgd_object_detection("person", image)
 
-final_out = {{"owl_v2_image": owl_v2_out, "florence2_sam2_image": f2s2, "countgd_object_detection": cgd_out}}
+final_out = {{"owlv2_object_detection": owl_v2_out, "florence2_sam2_instance_segmentation": f2s2, "countgd_object_detection": cgd_out}}
 print(final_out)
 --- END EXAMPLE1 ---
 

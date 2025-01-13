@@ -72,9 +72,10 @@ markdown_extensions:
   - pymdownx.details
 
 nav:
-  - Quick start: index.md
+  - VisionAgent: index.md
   - APIs:
       - vision_agent.agent: api/agent.md
       - vision_agent.tools: api/tools.md
       - vision_agent.lmm: api/lmm.md
       - vision_agent.utils: api/utils.md
+  - VisionAgent (Old): index_old.md

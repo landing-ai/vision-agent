@@ -291,10 +291,9 @@ class VisionAgent(Agent):
             verbosity (int): The verbosity level of the agent.
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
-            code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
-                it can be one of: None, "local" or "e2b". If None, it will read from
-                the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
-                object is provided it will use that.
+            code_sandbox_runtime (Optional[str]): For string values it can be one of:
+                None, "local" or "e2b". If None, it will read from the environment
+                variable "CODE_SANDBOX_RUNTIME".
         """
 
         self.agent = AnthropicLMM(temperature=0.0) if agent is None else agent
