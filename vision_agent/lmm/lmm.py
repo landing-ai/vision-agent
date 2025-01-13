@@ -50,6 +50,7 @@ class OpenAILMM(LMM):
         api_key: Optional[str] = None,
         max_tokens: int = 4096,
         json_mode: bool = False,
+        image_detail: str = "low",
         **kwargs: Any,
     ):
         if not api_key:
@@ -59,6 +60,7 @@ class OpenAILMM(LMM):
 
         self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
+        self.image_detail = image_detail
         # o1 does not use max_tokens
         if "max_tokens" not in kwargs and not model_name.startswith("o1"):
             kwargs["max_tokens"] = max_tokens
@@ -107,7 +109,7 @@ class OpenAILMM(LMM):
                                     or encoded_media.startswith("data:image/")
                                     else f"data:image/png;base64,{encoded_media}"
                                 ),
-                                "detail": "low",
+                                "detail": self.image_detail,
                             },
                         },
                     )
@@ -187,6 +189,7 @@ class AzureOpenAILMM(OpenAILMM):
         azure_endpoint: Optional[str] = None,
         max_tokens: int = 4096,
         json_mode: bool = False,
+        image_detail: str = "low",
         **kwargs: Any,
     ):
         if not api_key:
@@ -209,6 +212,7 @@ class AzureOpenAILMM(OpenAILMM):
             azure_endpoint=azure_endpoint,
         )
         self.model_name = model_name
+        self.image_detail = image_detail
 
         if "max_tokens" not in kwargs:
             kwargs["max_tokens"] = max_tokens
@@ -371,9 +375,11 @@ class AnthropicLMM(LMM):
         api_key: Optional[str] = None,
         model_name: str = "claude-3-5-sonnet-20240620",
         max_tokens: int = 4096,
+        image_size: int = 768,
         **kwargs: Any,
     ):
         self.client = anthropic.Anthropic(api_key=api_key)
+        self.image_size = image_size
         self.model_name = model_name
         if "max_tokens" not in kwargs:
             kwargs["max_tokens"] = max_tokens
@@ -400,7 +406,7 @@ class AnthropicLMM(LMM):
             ]
             if "media" in msg:
                 for media_path in msg["media"]:
-                    encoded_media = encode_media(media_path, resize=768)
+                    encoded_media = encode_media(media_path, resize=self.image_size)
                     if encoded_media.startswith("data:image/png;base64,"):
                         encoded_media = encoded_media[len("data:image/png;base64,") :]
                     content.append(
