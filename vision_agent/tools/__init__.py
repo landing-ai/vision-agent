@@ -63,6 +63,7 @@ from .tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
+    custom_object_detection,
 )
 
 __new_tools__ = [
