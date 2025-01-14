@@ -28,6 +28,7 @@ from vision_agent.tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
+    custom_object_detection,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -54,6 +55,7 @@ def test_owlv2_sam2_instance_segmentation():
     assert "mask" in result[0]
     assert [res["label"] for res in result] == ["coin"] * len(result)
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
+
 
 def test_owlv2_object_detection_empty():
     result = owlv2_object_detection(
@@ -150,6 +152,7 @@ def test_florence2_phrase_grounding_video():
     assert len(result) == 10
     assert 2 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
+
 
 def test_template_match():
     img = ski.data.coins()
@@ -512,3 +515,13 @@ def test_video_tracking_by_given_model():
     assert len(result) == 10
     assert len([res["label"] for res in result[0]]) == 24
     assert len([res["mask"] for res in result[0]]) == 24
+
+
+def test_finetuned_object_detection_empty():
+    img = ski.data.coins()
+
+    result = custom_object_detection(
+        deployment_id="5015ec65-b99b-4d62-bef1-fb6acb87bb9c",
+        image=img,
+    )
+    assert len(result) == 0  # no coin objects detected on the finetuned model
