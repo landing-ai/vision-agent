@@ -72,8 +72,7 @@ def send_inference_request(
 
     response = _call_post(url, payload, session, files, function_name, is_form)
 
-    # TODO: consider making the response schema the same between below two sources
-    return response if "TOOL_ENDPOINT_AUTH" in os.environ else response["data"]
+    return response["data"]
 
 
 def send_task_inference_request(
