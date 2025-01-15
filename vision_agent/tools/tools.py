@@ -296,7 +296,7 @@ def od_sam2_video_tracking(
                 image=segment_frames[frame_number],
                 fine_tune_id=fine_tune_id,
             )
-            function_name = "florence2_object_detection"
+            function_name = "agentic_object_detection"
 
         elif od_model == ODModels.CUSTOM:
             segment_results = custom_object_detection(
