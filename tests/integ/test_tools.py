@@ -29,6 +29,9 @@ from vision_agent.tools import (
     vit_image_classification,
     vit_nsfw_classification,
     custom_object_detection,
+    agentic_object_detection,
+    agentic_sam2_instance_segmentation,
+    agentic_sam2_video_tracking,
 )
 
 FINE_TUNE_ID = "65ebba4a-88b7-419f-9046-0750e30250da"
@@ -98,6 +101,80 @@ def test_owlv2_sam2_video_tracking_fine_tune_id():
     ]
     # this calls a fine-tuned florence2 model which is going to be worse at this task
     result = owlv2_sam2_video_tracking(
+        prompt="coin",
+        frames=frames,
+        fine_tune_id=FINE_TUNE_ID,
+    )
+
+    assert len(result) == 10
+    assert 12 <= len([res["label"] for res in result[0]]) <= 26
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
+
+
+def test_agentic_object_detection():
+    img = ski.data.coins()
+    result = agentic_object_detection(
+        prompt="coin",
+        image=img,
+    )
+    assert 24 <= len(result) <= 26
+    assert [res["label"] for res in result] == ["coin"] * len(result)
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
+
+
+def test_agentic_sam2_instance_segmentation():
+    img = ski.data.coins()
+    result = agentic_sam2_instance_segmentation(
+        prompt="coin",
+        image=img,
+    )
+    assert 24 <= len(result) <= 26
+    assert "mask" in result[0]
+    assert [res["label"] for res in result] == ["coin"] * len(result)
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
+
+
+def test_agentic_object_detection_empty():
+    result = agentic_object_detection(
+        prompt="coin",
+        image=np.zeros((0, 0, 3)).astype(np.uint8),
+    )
+    assert result == []
+
+
+def test_agentic_fine_tune_id():
+    img = ski.data.coins()
+    result = agentic_object_detection(
+        prompt="coin",
+        image=img,
+        fine_tune_id=FINE_TUNE_ID,
+    )
+    # this calls a fine-tuned florence2 model which is going to be worse at this task
+    assert 13 <= len(result) <= 26
+    assert [res["label"] for res in result] == ["coin"] * len(result)
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result])
+
+
+def test_agentic_video():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    result = agentic_sam2_video_tracking(
+        prompt="coin",
+        frames=frames,
+    )
+
+    assert len(result) == 10
+    assert 24 <= len([res["label"] for res in result[0]]) <= 26
+    assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
+
+
+def test_agentic_sam2_video_tracking_fine_tune_id():
+    frames = [
+        np.array(Image.fromarray(ski.data.coins()).convert("RGB")) for _ in range(10)
+    ]
+    # this calls a fine-tuned florence2 model which is going to be worse at this task
+    result = agentic_sam2_video_tracking(
         prompt="coin",
         frames=frames,
         fine_tune_id=FINE_TUNE_ID,
