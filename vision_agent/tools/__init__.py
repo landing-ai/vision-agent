@@ -64,6 +64,9 @@ from .tools import (
     vit_image_classification,
     vit_nsfw_classification,
     custom_object_detection,
+    agentic_object_detection,
+    agentic_sam2_instance_segmentation,
+    agentic_sam2_video_tracking,
 )
 
 __new_tools__ = [
