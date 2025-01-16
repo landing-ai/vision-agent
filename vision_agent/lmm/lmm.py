@@ -50,6 +50,7 @@ class OpenAILMM(LMM):
         api_key: Optional[str] = None,
         max_tokens: int = 4096,
         json_mode: bool = False,
+        image_size: int = 768,
         image_detail: str = "low",
         **kwargs: Any,
     ):
@@ -60,6 +61,7 @@ class OpenAILMM(LMM):
 
         self.client = OpenAI(api_key=api_key)
         self.model_name = model_name
+        self.image_size = image_size
         self.image_detail = image_detail
         # o1 does not use max_tokens
         if "max_tokens" not in kwargs and not model_name.startswith("o1"):
@@ -97,7 +99,13 @@ class OpenAILMM(LMM):
             fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
             if "media" in c:
                 for media in c["media"]:
-                    encoded_media = encode_media(cast(str, media))
+                    resize = kwargs["resize"] if "resize" in kwargs else self.image_size
+                    image_detail = (
+                        kwargs["image_detail"]
+                        if "image_detail" in kwargs
+                        else self.image_detail
+                    )
+                    encoded_media = encode_media(cast(str, media), resize=resize)
 
                     fixed_c["content"].append(  # type: ignore
                         {
@@ -109,7 +117,7 @@ class OpenAILMM(LMM):
                                     or encoded_media.startswith("data:image/")
                                     else f"data:image/png;base64,{encoded_media}"
                                 ),
-                                "detail": self.image_detail,
+                                "detail": image_detail,
                             },
                         },
                     )
@@ -147,7 +155,13 @@ class OpenAILMM(LMM):
         ]
         if media and len(media) > 0:
             for m in media:
-                encoded_media = encode_media(m)
+                resize = kwargs["resize"] if "resize" in kwargs else None
+                image_detail = (
+                    kwargs["image_detail"]
+                    if "image_detail" in kwargs
+                    else self.image_detail
+                )
+                encoded_media = encode_media(m, resize=resize)
                 message[0]["content"].append(
                     {
                         "type": "image_url",
@@ -158,7 +172,7 @@ class OpenAILMM(LMM):
                                 or encoded_media.startswith("data:image/")
                                 else f"data:image/png;base64,{encoded_media}"
                             ),
-                            "detail": "low",
+                            "detail": image_detail,
                         },
                     },
                 )
@@ -230,6 +244,7 @@ class OllamaLMM(LMM):
         base_url: Optional[str] = "http://localhost:11434/api",
         json_mode: bool = False,
         num_ctx: int = 128_000,
+        image_size: int = 768,
         **kwargs: Any,
     ):
         """Initializes the Ollama LMM. kwargs are passed as 'options' to the model.
@@ -246,6 +261,7 @@ class OllamaLMM(LMM):
 
         self.url = base_url
         self.model_name = model_name
+        self.image_size = image_size
         self.kwargs = {"options": kwargs}
 
         if json_mode:
@@ -278,8 +294,9 @@ class OllamaLMM(LMM):
         fixed_chat = []
         for message in chat:
             if "media" in message:
+                resize = kwargs["resize"] if "resize" in kwargs else self.image_size
                 message["images"] = [
-                    encode_media(cast(str, m)) for m in message["media"]
+                    encode_media(cast(str, m), resize=resize) for m in message["media"]
                 ]
                 del message["media"]
             fixed_chat.append(message)
@@ -333,7 +350,8 @@ class OllamaLMM(LMM):
 
         if media and len(media) > 0:
             for m in media:
-                data["images"].append(encode_media(m))
+                resize = kwargs["resize"] if "resize" in kwargs else self.image_size
+                data["images"].append(encode_media(m), resize=resize)
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
@@ -406,7 +424,8 @@ class AnthropicLMM(LMM):
             ]
             if "media" in msg:
                 for media_path in msg["media"]:
-                    encoded_media = encode_media(media_path, resize=self.image_size)
+                    resize = kwargs["resize"] if "resize" in kwargs else self.image_size
+                    encoded_media = encode_media(media_path, resize=resize)
                     if encoded_media.startswith("data:image/png;base64,"):
                         encoded_media = encoded_media[len("data:image/png;base64,") :]
                     content.append(
@@ -455,7 +474,8 @@ class AnthropicLMM(LMM):
         ]
         if media:
             for m in media:
-                encoded_media = encode_media(m, resize=768)
+                resize = kwargs["resize"] if "resize" in kwargs else self.image_size
+                encoded_media = encode_media(m, resize=resize)
                 if encoded_media.startswith("data:image/png;base64,"):
                     encoded_media = encoded_media[len("data:image/png;base64,") :]
                 content.append(
@@ -493,3 +513,30 @@ class AnthropicLMM(LMM):
             return f()
         else:
             return cast(str, response.content[0].text)
+
+
+class GoogleLMM(OpenAILMM):
+    r"""An LMM class for the Google LMMs."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model_name: str = "gemini-2.0-flash-exp",
+        max_tokens: int = 4096,
+        image_detail: str = "low",
+        image_size: int = 768,
+        **kwargs: Any,
+    ):
+        base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        if not api_key:
+            api_key = os.environ.get("GEMINI_API_KEY")
+
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
+
+        self.model_name = model_name
+        self.image_size = image_size
+        self.image_detail = image_detail
+
+        if "max_tokens" not in kwargs:
+            kwargs["max_tokens"] = max_tokens
+        self.kwargs = kwargs
