@@ -18,9 +18,12 @@ from vision_agent.agent.types import (
 )
 from vision_agent.agent.vision_agent_coder_v2 import format_code_context
 from vision_agent.agent.vision_agent_prompts_v2 import CONVERSATION
-from vision_agent.lmm import LMM, AnthropicLMM
+from vision_agent.configs import Config
+from vision_agent.lmm import LMM
 from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
+
+CONFIG = Config()
 
 
 def extract_conversation(
@@ -161,14 +164,7 @@ class VisionAgentV2(Agent):
                 that will send back intermediate conversation messages.
         """
 
-        self.agent = (
-            agent
-            if agent is not None
-            else AnthropicLMM(
-                model_name="claude-3-5-sonnet-20241022",
-                temperature=0.0,
-            )
-        )
+        self.agent = agent if agent is not None else CONFIG.create_agent()
         self.coder = (
             coder
             if coder is not None

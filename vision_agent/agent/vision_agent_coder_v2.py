@@ -26,7 +26,8 @@ from vision_agent.agent.types import (
 )
 from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
 from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
-from vision_agent.lmm import LMM, AnthropicLMM
+from vision_agent.configs import Config
+from vision_agent.lmm import LMM
 from vision_agent.lmm.types import Message
 from vision_agent.tools.meta_tools import get_diff
 from vision_agent.utils.execute import (
@@ -36,6 +37,7 @@ from vision_agent.utils.execute import (
 )
 from vision_agent.utils.sim import Sim, get_tool_recommender
 
+CONFIG = Config()
 _CONSOLE = Console()
 
 
@@ -300,21 +302,9 @@ class VisionAgentCoderV2(AgentCoder):
             )
         )
 
-        self.coder = (
-            coder
-            if coder is not None
-            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
-        )
-        self.tester = (
-            tester
-            if tester is not None
-            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
-        )
-        self.debugger = (
-            debugger
-            if debugger is not None
-            else AnthropicLMM(model_name="claude-3-5-sonnet-20241022", temperature=0.0)
-        )
+        self.coder = coder if coder is not None else CONFIG.create_coder()
+        self.tester = tester if tester is not None else CONFIG.create_tester()
+        self.debugger = debugger if debugger is not None else CONFIG.create_debugger()
         if tool_recommender is not None:
             if isinstance(tool_recommender, str):
                 self.tool_recommender = Sim.load(tool_recommender)
