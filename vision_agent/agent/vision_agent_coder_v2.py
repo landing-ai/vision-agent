@@ -187,23 +187,17 @@ def debug_code(
     return code, test, debug_info
 
 
-def write_and_test_code(
-    coder: LMM,
+def test_code(
     tester: LMM,
     debugger: LMM,
     chat: List[AgentMessage],
     plan: str,
+    code: str,
     tool_docs: str,
     code_interpreter: CodeInterpreter,
     media_list: List[Union[str, Path]],
     verbose: bool,
 ) -> CodeContext:
-    code = write_code(
-        coder=coder,
-        chat=chat,
-        tool_docs=tool_docs,
-        plan=plan,
-    )
     try:
         code = strip_function_calls(code)
     except Exception:
@@ -256,6 +250,36 @@ def write_and_test_code(
         test=f"{DefaultImports.to_code_string()}\n{test}",
         success=result.success,
         test_result=result,
+    )
+
+
+def write_and_test_code(
+    coder: LMM,
+    tester: LMM,
+    debugger: LMM,
+    chat: List[AgentMessage],
+    plan: str,
+    tool_docs: str,
+    code_interpreter: CodeInterpreter,
+    media_list: List[Union[str, Path]],
+    verbose: bool,
+) -> CodeContext:
+    code = write_code(
+        coder=coder,
+        chat=chat,
+        tool_docs=tool_docs,
+        plan=plan,
+    )
+    return test_code(
+        tester,
+        debugger,
+        chat,
+        plan,
+        code,
+        tool_docs,
+        code_interpreter,
+        media_list,
+        verbose,
     )
 
 
@@ -430,12 +454,13 @@ class VisionAgentCoderV2(AgentCoder):
         ) as code_interpreter:
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
             tool_docs = retrieve_tools(plan_context.instructions, self.tool_recommender)
-            code_context = write_and_test_code(
-                coder=self.coder,
+
+            code_context = test_code(
                 tester=self.tester,
                 debugger=self.debugger,
                 chat=int_chat,
                 plan=format_plan_v2(plan_context),
+                code=plan_context.code,
                 tool_docs=tool_docs,
                 code_interpreter=code_interpreter,
                 media_list=media_list,
