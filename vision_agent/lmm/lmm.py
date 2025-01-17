@@ -351,7 +351,7 @@ class OllamaLMM(LMM):
         if media and len(media) > 0:
             for m in media:
                 resize = kwargs["resize"] if "resize" in kwargs else self.image_size
-                data["images"].append(encode_media(m), resize=resize)
+                data["images"].append(encode_media(m, resize=resize))
 
         tmp_kwargs = self.kwargs | kwargs
         data.update(tmp_kwargs)
