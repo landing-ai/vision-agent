@@ -10,12 +10,7 @@ from IPython.display import display
 from PIL import Image
 
 import vision_agent.tools as T
-from vision_agent.agent.agent_utils import (
-    DefaultImports,
-    extract_code,
-    extract_json,
-    extract_tag,
-)
+from vision_agent.agent.agent_utils import DefaultImports, extract_json, extract_tag
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     CATEGORIZE_TOOL_REQUEST,
     FINALIZE_PLAN,
@@ -36,6 +31,9 @@ from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.sim import get_tool_recommender
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
+TOOL_LOAD_DOCS = T.get_tool_documentation(
+    [T.load_image, T.extract_frames_and_timestamps]
+)
 
 CONFIG = Config()
 _LOGGER = logging.getLogger(__name__)
@@ -179,6 +177,7 @@ def run_tool_testing(
                 cleaned_tool_docs.append(tool_doc)
         tool_docs = cleaned_tool_docs
     tool_docs_str = "\n".join([e["doc"] for e in tool_docs])
+    tool_docs_str += "\n" + TOOL_LOAD_DOCS  # type: ignore
 
     prompt = TEST_TOOLS.format(
         tool_docs=tool_docs_str,
@@ -217,8 +216,15 @@ def run_tool_testing(
             examples=EXAMPLES,
             media=str(image_paths),
         )
-        code = extract_code(lmm.generate(prompt, media=image_paths))  # type: ignore
-        code = process_code(code)
+        response = cast(str, lmm.generate(prompt, media=image_paths))
+        code = extract_tag(response, "code")
+        if code is None:
+            code = response
+
+        try:
+            code = process_code(code)
+        except Exception as e:
+            _LOGGER.error(f"Error processing code: {e}")
         tool_output = code_interpreter.exec_isolation(
             DefaultImports.prepend_imports(code)
         )
