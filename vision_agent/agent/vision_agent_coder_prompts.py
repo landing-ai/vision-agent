@@ -44,22 +44,22 @@ Can you write a program to check if each person is wearing a helmet? First detec
 
 ## Subtasks
 
-This plan uses the owl_v2_image tool to detect both people and helmets in a single pass, which should be efficient and accurate. We can then compare the detections to determine if each person is wearing a helmet.
--Use owl_v2_image with prompt 'person, helmet' to detect both people and helmets in the image
+This plan uses the owlv2_object_detection tool to detect both people and helmets in a single pass, which should be efficient and accurate. We can then compare the detections to determine if each person is wearing a helmet.
+-Use owlv2_object_detection with prompt 'person, helmet' to detect both people and helmets in the image
 -Process the detections to match helmets with people based on bounding box proximity
 -Count people with and without helmets based on the matching results
 -Return a dictionary with the counts
 
 
 **Tool Tests and Outputs**:
-After examining the image, I can see 4 workers in total, with 3 wearing yellow safety helmets and 1 not wearing a helmet. Plan 1 using owl_v2_image seems to be the most accurate in detecting both people and helmets. However, it needs some modifications to improve accuracy. We should increase the confidence threshold to 0.15 to filter out the lowest confidence box, and implement logic to associate helmets with people based on their bounding box positions. Plan 2 and Plan 3 seem less reliable given the tool outputs, as they either failed to distinguish between people with and without helmets or misclassified all workers as not wearing helmets.
+After examining the image, I can see 4 workers in total, with 3 wearing yellow safety helmets and 1 not wearing a helmet. Plan 1 using owlv2_object_detection seems to be the most accurate in detecting both people and helmets. However, it needs some modifications to improve accuracy. We should increase the confidence threshold to 0.15 to filter out the lowest confidence box, and implement logic to associate helmets with people based on their bounding box positions. Plan 2 and Plan 3 seem less reliable given the tool outputs, as they either failed to distinguish between people with and without helmets or misclassified all workers as not wearing helmets.
 
 **Tool Output Thoughts**:
 ```python
 ...
 ```
 ----- stdout -----
-Plan 1 - owl_v2_image:
+Plan 1 - owlv2_object_detection:
 
 [{{'label': 'helmet', 'score': 0.15, 'bbox': [0.85, 0.41, 0.87, 0.45]}}, {{'label': 'helmet', 'score': 0.3, 'bbox': [0.8, 0.43, 0.81, 0.46]}}, {{'label': 'helmet', 'score': 0.31, 'bbox': [0.85, 0.45, 0.86, 0.46]}}, {{'label': 'person', 'score': 0.31, 'bbox': [0.84, 0.45, 0.88, 0.58]}}, {{'label': 'person', 'score': 0.31, 'bbox': [0.78, 0.43, 0.82, 0.57]}}, {{'label': 'helmet', 'score': 0.33, 'bbox': [0.3, 0.65, 0.32, 0.67]}}, {{'label': 'person', 'score': 0.29, 'bbox': [0.28, 0.65, 0.36, 0.84]}}, {{'label': 'helmet', 'score': 0.29, 'bbox': [0.13, 0.82, 0.15, 0.85]}}, {{'label': 'person', 'score': 0.3, 'bbox': [0.1, 0.82, 0.24, 1.0]}}]
 
@@ -67,12 +67,12 @@ Plan 1 - owl_v2_image:
 
 **Input Code Snippet**:
 ```python
-from vision_agent.tools import load_image, owl_v2_image
+from vision_agent.tools import load_image, owlv2_object_detection
 
 def check_helmets(image_path):
     image = load_image(image_path)
     # Detect people and helmets, filter out the lowest confidence helmet score of 0.15
-    detections = owl_v2_image("person, helmet", image, box_threshold=0.15)
+    detections = owlv2_object_detection("person, helmet", image, box_threshold=0.15)
     height, width = image.shape[:2]
 
     # Separate people and helmets

@@ -595,14 +595,14 @@ def owlv2_sam2_video_tracking(
 def florence2_object_detection(
     prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """'florence2_object_detection' is a tool that can detect multiple
-    objects given a text prompt which can be object names or caption. You
-    can optionally separate the object names in the text with commas. It returns a list
-    of bounding boxes with normalized coordinates, label names and associated
-    confidence scores of 1.0.
+    """'florence2_object_detection' is a tool that can detect multiple objects given a
+    text prompt which can be object names or caption. You can optionally separate the
+    object names in the text with commas. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated confidence scores of 1.0.
 
     Parameters:
-        prompt (str): The prompt to ground to the image.
+        prompt (str): The prompt to ground to the image. Use exclusive categories that
+            do not overlap such as 'person, car' and NOT 'person, athlete'.
         image (np.ndarray): The image to used to detect objects
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
             fine-tuned model ID here to use it.
@@ -681,7 +681,8 @@ def florence2_sam2_instance_segmentation(
     1.0.
 
     Parameters:
-        prompt (str): The prompt to ground to the image.
+        prompt (str): The prompt to ground to the image. Use exclusive categories that
+            do not overlap such as 'person, car' and NOT 'person, athlete'.
         image (np.ndarray): The image to ground the prompt to.
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
             fine-tuned model ID here to use it.
@@ -769,7 +770,8 @@ def florence2_sam2_video_tracking(
     is useful for tracking and counting without duplicating counts.
 
     Parameters:
-        prompt (str): The prompt to ground to the video.
+        prompt (str): The prompt to ground to the image. Use exclusive categories that
+            do not overlap such as 'person, car' and NOT 'person, athlete'.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run florence2 to find
             new objects.
