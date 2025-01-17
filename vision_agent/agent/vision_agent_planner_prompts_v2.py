@@ -130,7 +130,7 @@ In these aerial images, I can see approximately 5-6 pedestrians walking in vario
 [end of claude35_vqa_output]
 
 [get_tool_for_task output]
-After examining the image, I can see it's an aerial view of a busy urban intersection with multiple lanes of traffic. There are numerous cars visible, each likely containing at least one person (the driver). While it's difficult to count exact individuals, I can estimate based on the number of vehicles. The countgd_object_detection tool is the best choice for this task as it can detect and count multiple instances of an object given a text prompt. I will use this tool to count the number of pedestrians in the image.
+After examining the image, I can see it's an aerial view of a busy urban intersection with multiple lanes of traffic. There are numerous cars visible, each likely containing at least one person (the driver). While it's difficult to count exact individuals, I can estimate based on the number of vehicles. The countgd_object_detection tool is the best choice for this task as it can detect and count multiple instances of an object given a text prompt. I will use this tool with the prompt 'pedistrian' to count the number of pedestrians in the image.
 
 Tool Documentation:
 countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float = 0.23) -> List[Dict[str, Any]]:
@@ -162,7 +162,7 @@ countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float
 [end of get_tool_for_task output]
 <count>8</count>
 
-AGENT: <thinking>I need to now merge the boxes from all regions and count the unique pedestrians.</thinking>
+AGENT: <thinking>I need to now merge the boxes from all region and use the countgd_object_detection tool with the prompt 'pedestrian' as suggested by get_tool_for_task.</thinking>
 <execute_python>
 def translate_ofset(bbox, offset_x, offset_y):
     return (bbox[0] + offset_x, bbox[1] + offset_y, bbox[2] + offset_x, bbox[3] + offset_y)
@@ -271,7 +271,7 @@ get_tool_for_task('Identify and track the boxes in the video', frames[:5])
 
 OBSERVATION:
 [get_tool_for_task output]
-For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: florence2_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor.
+For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: florence2_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor and using the prompt 'box'.
 
 Tool Documentation:
 def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 10) -> List[List[Dict[str, Any]]]:
@@ -317,7 +317,7 @@ def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_l
 [end of get_tool_for_task output]
 <count>8</count>
 
-AGENT: <thinking>Now that I have the tool for tracking I need to find a tool to identify if there is tape on each of the boxes.</thinking>
+AGENT: <thinking>Now that I have the tool and prompt for tracking I need to find a tool to identify if there is tape on each of the boxes.</thinking>
 <execute_python>
 track_predictions = florence2_sam2_video_tracking("box", frames)
 
@@ -338,7 +338,7 @@ get_tool_for_task('Identify if there is tape on the boxes', crops[:3])
 
 OBSERVATION:
 [get_tool_for_task output]
-owlv2_object_detection performed best as it specifically detected multiple instances of tape with localized bounding boxes, which matches what's visible in the images.
+owlv2_object_detection performed best with the prompt 'tape', as it specifically detected multiple instances of tape with localized bounding boxes, which matches what's visible in the images.
 
 'owlv2_object_detection' is a tool that can detect and count multiple objects given a
 text prompt such as category names or referring expressions on images. The categories
@@ -370,7 +370,7 @@ Example
 [end of get_tool_for_task output]
 <count>7</count>
 
-AGENT: <thinking>Now that I have the tools for tracking and identifying tape on the boxes, I will use them to accomplish the user's request.</thinking>
+AGENT: <thinking>Now that I have the tools for tracking and identifying 'tape' on the boxes, I will use them to accomplish the user's request.</thinking>
 <execute_python>
 obj_to_info = {{}}
 for frame, frame_predictions in zip(frames, track_predictions):
@@ -487,8 +487,9 @@ TEST_TOOLS = """
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
 4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results when evaluating the tool.
-5. Print this final dictionary.
-6. Output your code in the following format wrapped in <code> tags:
+5. Use mutually exclusive categories for prompts such as 'person, car' and not 'person, athlete' to avoid over counting.
+6. Print this final dictionary.
+7. Output your code in the following format wrapped in <code> tags:
 <code>
 # Your code here
 </code>
@@ -649,41 +650,6 @@ PICK_TOOL = """
 </json>
 """
 
-PICK_TOOL_V2 = """
-**Role**: You are an expert evaluator that can understand user requests and evaluate the output of different tools.
-
-**Task**: You are given the output of different tools for a user request along with the image. You must evaluate the output and determine the best tool for the user request.
-
-**User Request**:
-{user_request}
-
-**Tools**: This is the documentation of all the functions that were tested.
-{tool_docs}
-
-**Testing Code and Tool Output**:
-{context}
-
-**Previous Attempt**: This is the code and output of the previous attempt, if it is empty then there was no previous attempt.
-{previous_attempts}
-
-**Instructions**:
-1. Re-read the user request, plans, tool outputs and examine the image.
-2. Given the user request, try to solve the problem yourself.
-3. Pick which tool output best matches your solution first and the user request, then consider other factors like box size, etc. DO NOT worry about low confidence scores if the output is correct.
-4. DO NOT modify confidence thresholds unless the tool output is completely wrong.
-5. Remember for videos that in order to count objects a video some sort of tracking is needed, or else you will overcount the objects.
-6. Assign each tool a score from 0 to 10 based on how well it solves the user request. A score of 8+ means the tool output matches your solution and the tool is the best choice, 5-7 means the tool output is okay but needs some modifications, less than 5 means the tool output is bad and the tool should not be used. Return the the following JSON format inside <json> tags using the exact tool name as the key and the score as the value:
-<json>
-{{
-    "predicted_answer": str # the answer you would expect from the best plan
-    "thoughts": str # your thought process for choosing the best tool over other tools and any modifications you madeas well as the prompt you used with the tool.
-    "first tool": int # the score for the first tool
-    "second tool": int # the score for the second tool
-    ...
-}}
-</json>
-"""
-
 FINALIZE_PLAN = """
 **Role**: You are an expert AI model that can understand the user request and construct plans to accomplish it.
 
@@ -693,13 +659,13 @@ FINALIZE_PLAN = """
 {planning}
 
 **Instructions**:
-1. Read the chain of thoughts and python executions.
-2. Summarize the plan that the planning agent found.
-3. Include ALL relevant python code in your plan to accomplish the user request.
-4. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
-5. Do not include {excluded_tools} tools in your instructions.
-6. Add final instructions for visualizing the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and saving it to a file with `save_file` or `save_video`.
-7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
+1. Summarize the plan that the planning agent found.
+2. Write a single function that solves the problem based on what the planner found.
+3. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
+4. Do not include {excluded_tools} tools in your instructions.
+5. Add final instructions for visualizing the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and saving it to a file with `save_image` or `save_video`.
+6. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
+7. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
 8. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
 
 <json>
