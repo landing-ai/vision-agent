@@ -31,7 +31,7 @@ class Config(BaseModel):
     summarizer_kwargs: dict = Field(
         default_factory=lambda: {
             "model_name": "o1",
-            "temperature": 1.0,
+            "temperature": 1.0,  # o1 has fixed temperature
             "image_size": 768,
         }
     )
@@ -81,7 +81,7 @@ class Config(BaseModel):
     tool_tester_kwargs: dict = Field(
         default_factory=lambda: {
             "model_name": "claude-3-5-sonnet-20241022",
-            "temperature": 1.0,
+            "temperature": 0.0,
             "image_size": 768,
         }
     )
@@ -111,7 +111,7 @@ class Config(BaseModel):
     vqa_kwargs: dict = Field(
         default_factory=lambda: {
             "model_name": "claude-3-5-sonnet-20241022",
-            "temperature": 1.0,
+            "temperature": 0.0,
             "image_size": 768,
         }
     )
