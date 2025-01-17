@@ -218,8 +218,8 @@ def execute_code_action(
             f"[bold cyan]Code Execution Output ({end - start:.2f}s):[/bold cyan] [yellow]{escape(obs)}[/yellow]"
         )
 
-    count = 1
-    while not execution.success and count <= 3:
+    count = 0
+    while not execution.success and count < 3:
         prompt = FIX_BUG.format(chat_history=get_planning(chat), code=code, error=obs)
         response = cast(str, model.chat([{"role": "user", "content": prompt}]))
         new_code = extract_tag(response, "code")
@@ -513,6 +513,7 @@ class VisionAgentPlannerV2(AgentPlanner):
                 code = extract_tag(response, "execute_python")
                 finalize_plan = extract_tag(response, "finalize_plan")
                 finished = finalize_plan is not None
+                self.update_callback({"role": "planner_update", "content": response})
 
                 if self.verbose:
                     _CONSOLE.print(

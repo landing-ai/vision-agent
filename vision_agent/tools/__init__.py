@@ -23,6 +23,9 @@ from .tools import (
     TOOLS_INFO,
     UTIL_TOOLS,
     UTILITIES_DOCSTRING,
+    agentic_object_detection,
+    agentic_sam2_instance_segmentation,
+    agentic_sam2_video_tracking,
     claude35_text_extraction,
     closest_box_distance,
     closest_mask_distance,
@@ -30,6 +33,7 @@ from .tools import (
     countgd_sam2_instance_segmentation,
     countgd_sam2_video_tracking,
     countgd_visual_prompt_object_detection,
+    custom_object_detection,
     depth_anything_v2,
     detr_segmentation,
     document_extraction,
@@ -63,10 +67,6 @@ from .tools import (
     video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
-    custom_object_detection,
-    agentic_object_detection,
-    agentic_sam2_instance_segmentation,
-    agentic_sam2_video_tracking,
 )
 
 __new_tools__ = [
