@@ -333,7 +333,7 @@ def strip_function_calls(  # noqa: C901
         def __init__(self, exclusions: List[str]):
             # Store exclusions to skip removing certain function calls
             self.exclusions = exclusions
-            self.in_function_or_class = []
+            self.in_function_or_class: List[bool] = []
 
         def visit_FunctionDef(self, node: cst.FunctionDef) -> Optional[bool]:
             self.in_function_or_class.append(True)

@@ -68,7 +68,7 @@ def run_multi_judge(
         previous_attempts=error_message,
     )
 
-    def run_judge():
+    def run_judge() -> Tuple[Optional[Callable], str, str]:
         response = tool_chooser.generate(prompt, media=image_paths, temperature=1.0)
         tool_choice_context = extract_tag(response, "json")  # type: ignore
         tool_choice_context_dict = extract_json(tool_choice_context)  # type: ignore
@@ -84,7 +84,7 @@ def run_multi_judge(
             responses.append(future.result())
 
     responses = [r for r in responses if r[0] is not None]
-    counts = {}
+    counts: Dict[str, int] = {}
     for tool, tool_thoughts, tool_docstring in responses:
         if tool is not None:
             counts[tool.__name__] = counts.get(tool.__name__, 0) + 1
