@@ -314,18 +314,29 @@ def od_sam2_video_tracking(
 
     # Process each segment and collect detections
     detections_per_segment: List[Any] = []
-    for segment_index, segment in enumerate(segments):
-        segment_detections = process_segment(
-            segment_frames=segment,
-            od_model=od_model,
-            prompt=prompt,
-            fine_tune_id=fine_tune_id,
-            chunk_length=chunk_length,
-            image_size=image_size,
-            segment_index=segment_index,
-            object_detection_tool=_apply_object_detection,
-        )
-        detections_per_segment.append(segment_detections)
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(
+                process_segment,
+                segment_frames=segment,
+                od_model=od_model,
+                prompt=prompt,
+                fine_tune_id=fine_tune_id,
+                chunk_length=chunk_length,
+                image_size=image_size,
+                segment_index=segment_index,
+                object_detection_tool=_apply_object_detection,
+            ): segment_index
+            for segment_index, segment in enumerate(segments)
+        }
+
+        for future in as_completed(futures):
+            segment_index = futures[future]
+            detections_per_segment.append((segment_index, future.result()))
+
+    detections_per_segment = [
+        x[1] for x in sorted(detections_per_segment, key=lambda x: x[0])
+    ]
 
     merged_detections = merge_segments(detections_per_segment)
     post_processed = post_process(merged_detections, image_size)
