@@ -10,13 +10,14 @@ pip install vision-agent
 
 ```bash
 export ANTHROPIC_API_KEY="your-api-key"
+export OPENAI_API_KEY="your-api-key"
 ```
 
 ---
 **NOTE**
-You must have the Anthropic API key set in your environment variables to use
-VisionAgent. If you don't have an Anthropic key you can use another provider like
-OpenAI or Ollama.
+We found using both Anthropic Claude-3.5 and OpenAI o1 to be provide the best performance
+for VisionAgent. If you want to use a different LLM provider or only one, see
+'Using Other LLM Providers' below.
 ---
 
 ## Documentation
@@ -83,10 +84,12 @@ viz = T.overlay_segmentation_masks(frames, tracks)
 T.save_video(viz, "people_detected.mp4")
 ```
 
-## Support
-Currently `VisionAgentV2` only support Anthropic as a provider. You can checkout our
-older version of `VisionAgent` which supports additional providers such as `OpenAI`,
-`Ollama` and `AzureOpenAI`.
+## Using Other LLM Providers
+You can use other LLM providers by changing `config.py` in the `vision_agent/configs`
+directory. For example to change to Anthropic simply just run:
+```bash
+cp vision_agent/configs/anthropic_config.py vision_agent/configs/config.py
+```
 
 **NOTE**
 VisionAgent moves fast and we are constantly updating and changing the library. If you
