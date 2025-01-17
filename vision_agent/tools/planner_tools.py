@@ -1,7 +1,7 @@
 import inspect
 import logging
-import shutil
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import libcst as cst
@@ -24,6 +24,7 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     TEST_TOOLS_EXAMPLE1,
     TEST_TOOLS_EXAMPLE2,
 )
+from vision_agent.configs import Config
 from vision_agent.lmm import LMM, AnthropicLMM
 from vision_agent.utils.execute import (
     CodeInterpreter,
@@ -36,6 +37,7 @@ from vision_agent.utils.sim import get_tool_recommender
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
 
+CONFIG = Config()
 _LOGGER = logging.getLogger(__name__)
 EXAMPLES = f"\n{TEST_TOOLS_EXAMPLE1}\n{TEST_TOOLS_EXAMPLE2}\n"
 
@@ -48,6 +50,54 @@ def format_tool_output(tool_thoughts: str, tool_docstring: str) -> str:
         f"Tool Documentation:\n{tool_docstring}\n[end of get_tool_for_task output]\n"
     )
     return return_str
+
+
+def run_multi_judge(
+    tool_chooser: LMM,
+    tool_docs_str: str,
+    task: str,
+    code: str,
+    tool_output_str: str,
+    image_paths: List[str],
+) -> Tuple[Optional[Callable], str, str]:
+    error_message = ""
+    prompt = PICK_TOOL.format(
+        tool_docs=tool_docs_str,
+        user_request=task,
+        context=f"<code>\n{code}\n</code>\n<tool_output>\n{tool_output_str}\n</tool_output>",
+        previous_attempts=error_message,
+    )
+
+    def run_judge():
+        response = tool_chooser.generate(prompt, media=image_paths, temperature=1.0)
+        tool_choice_context = extract_tag(response, "json")  # type: ignore
+        tool_choice_context_dict = extract_json(tool_choice_context)  # type: ignore
+        tool, tool_thoughts, tool_docstring, _ = extract_tool_info(
+            tool_choice_context_dict
+        )
+        return tool, tool_thoughts, tool_docstring
+
+    responses = []
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(run_judge) for _ in range(3)]
+        for future in as_completed(futures):
+            responses.append(future.result())
+
+    responses = [r for r in responses if r[0] is not None]
+    counts = {}
+    for tool, tool_thoughts, tool_docstring in responses:
+        if tool is not None:
+            counts[tool.__name__] = counts.get(tool.__name__, 0) + 1
+            if counts[tool.__name__] >= 2:
+                return tool, tool_thoughts, tool_docstring
+
+    if len(responses) == 0:
+        return (
+            None,
+            "No tool could be found, please try again with a different prompt or image",
+            "",
+        )
+    return responses[0]
 
 
 def extract_tool_info(
@@ -212,7 +262,8 @@ def get_tool_for_task(
     --------
         >>> get_tool_for_task("Give me an OCR model that can find 'hot chocolate' in the image", [image])
     """
-    lmm = AnthropicLMM()
+    tool_tester = CONFIG.create_tool_tester()
+    tool_chooser = CONFIG.create_tool_chooser()
 
     with (
         tempfile.TemporaryDirectory() as tmpdirname,
@@ -225,44 +276,13 @@ def get_tool_for_task(
             image_paths.append(image_path)
 
         code, tool_docs_str, tool_output = run_tool_testing(
-            task, image_paths, lmm, exclude_tools, code_interpreter
+            task, image_paths, tool_tester, exclude_tools, code_interpreter
         )
         tool_output_str = tool_output.text(include_results=False).strip()
 
-        error_message = ""
-        prompt = PICK_TOOL.format(
-            tool_docs=tool_docs_str,
-            user_request=task,
-            context=f"<code>\n{code}\n</code>\n<tool_output>\n{tool_output_str}\n</tool_output>",
-            previous_attempts=error_message,
+        _, tool_thoughts, tool_docstring = run_multi_judge(
+            tool_chooser, tool_docs_str, task, code, tool_output_str, image_paths
         )
-
-        response = lmm.generate(prompt, media=image_paths)
-        tool_choice_context = extract_tag(response, "json")  # type: ignore
-        tool_choice_context_dict = extract_json(tool_choice_context)  # type: ignore
-
-        tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
-            tool_choice_context_dict
-        )
-
-        count = 1
-        while tool is None and count <= 3:
-            prompt = PICK_TOOL.format(
-                tool_docs=tool_docs_str,
-                user_request=task,
-                context=f"<code>\n{code}\n</code>\n<tool_output>\n{tool_output_str}\n</tool_output>",
-                previous_attempts=error_message,
-            )
-            tool_choice_context_dict = extract_json(
-                lmm.generate(prompt, media=image_paths)  # type: ignore
-            )
-            tool, tool_thoughts, tool_docstring, error_message = extract_tool_info(
-                tool_choice_context_dict
-            )
-        try:
-            shutil.rmtree(tmpdirname)
-        except Exception as e:
-            _LOGGER.error(f"Error removing temp directory: {e}")
 
     print(format_tool_output(tool_thoughts, tool_docstring))
 
@@ -277,7 +297,7 @@ def get_tool_for_task_human_reviewer(
     task: str, images: List[np.ndarray], exclude_tools: Optional[List[str]] = None
 ) -> None:
     # NOTE: this will have the same documentation as get_tool_for_task
-    lmm = AnthropicLMM()
+    tool_tester = CONFIG.create_tool_tester()
 
     with (
         tempfile.TemporaryDirectory() as tmpdirname,
@@ -298,7 +318,7 @@ def get_tool_for_task_human_reviewer(
         _, _, tool_output = run_tool_testing(
             task,
             image_paths,
-            lmm,
+            tool_tester,
             exclude_tools,
             code_interpreter,
             process_code=lambda x: replace_box_threshold(x, tools, 0.05),
@@ -349,7 +369,7 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
         medias: List[np.ndarray]: The images to ask the question about, it could also
             be frames from a video. You can send up to 5 frames from a video.
     """
-    lmm = AnthropicLMM()
+    vqa = CONFIG.create_vqa()
     if isinstance(medias, np.ndarray):
         medias = [medias]
     if isinstance(medias, list) and len(medias) > 5:
@@ -358,7 +378,7 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
         "data:image/png;base64," + convert_to_b64(media) for media in medias
     ]
 
-    response = cast(str, lmm.generate(prompt, media=all_media_b64))
+    response = cast(str, vqa.generate(prompt, media=all_media_b64))
     print(f"[claude35_vqa output]\n{response}\n[end of claude35_vqa output]")
 
 
