@@ -31,7 +31,7 @@ from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.sim import get_tool_recommender
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
-TOOL_LOAD_DOCS = T.get_tool_documentation(
+LOAD_TOOLS_DOCSTRING = T.get_tool_documentation(
     [T.load_image, T.extract_frames_and_timestamps]
 )
 
@@ -177,7 +177,7 @@ def run_tool_testing(
                 cleaned_tool_docs.append(tool_doc)
         tool_docs = cleaned_tool_docs
     tool_docs_str = "\n".join([e["doc"] for e in tool_docs])
-    tool_docs_str += "\n" + TOOL_LOAD_DOCS  # type: ignore
+    tool_docs_str += "\n" + LOAD_TOOLS_DOCSTRING  # type: ignore
 
     prompt = TEST_TOOLS.format(
         tool_docs=tool_docs_str,
