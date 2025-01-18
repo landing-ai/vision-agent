@@ -270,9 +270,25 @@ def create_hil_response(
                 except Exception:
                     continue
 
+    # There's a chance that the same tool is called multiple times with the same inputs
+    # in the interaction. We want to remove duplicates to avoid redundancy by picking
+    # the last occurrence of the tool.
+    cleaned_content = []
+    seen_content = set()
+    for c in reversed(content):
+        if "request" in c and "function_name" in c["request"] and "files" in c:
+            key = (c["request"]["function_name"], hash(c["files"]))
+            if key in seen_content:
+                continue
+
+            seen_content.add(key)
+            cleaned_content.append(c)
+        else:
+            cleaned_content.append(c)
+
     return AgentMessage(
         role="interaction",
-        content="<interaction>" + json.dumps(content) + "</interaction>",
+        content="<interaction>" + json.dumps(cleaned_content) + "</interaction>",
         media=None,
     )
 
