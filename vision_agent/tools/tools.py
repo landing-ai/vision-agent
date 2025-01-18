@@ -222,7 +222,7 @@ def sam2(
     ret = _sam2(image, detections, image_size)
     _display_tool_trace(
         sam2.__name__,
-        {},
+        {"detections": detections},
         ret["display_data"],
         ret["files"],
     )
@@ -401,7 +401,7 @@ def _owlv2_object_detection(
         {
             "label": bbox["label"],
             "bbox": normalize_bbox(bbox["bounding_box"], image_size),
-            "score": bbox["score"],
+            "score": round(bbox["score"], 2),
         }
         for bbox in bboxes
     ]
@@ -409,7 +409,7 @@ def _owlv2_object_detection(
         {
             "label": bbox["label"],
             "bbox": bbox["bounding_box"],
-            "score": bbox["score"],
+            "score": round(bbox["score"], 2),
         }
         for bbox in bboxes
     ]
@@ -593,7 +593,7 @@ def owlv2_sam2_video_tracking(
     )
     _display_tool_trace(
         owlv2_sam2_video_tracking.__name__,
-        {},
+        {"prompt": prompt, "chunk_length": chunk_length},
         ret["display_data"],
         ret["files"],
     )
@@ -2161,7 +2161,7 @@ def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any
     return response
 
 
-# agentic od tools
+# Agentic OD Tools
 
 
 def _agentic_object_detection(
