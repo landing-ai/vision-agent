@@ -177,7 +177,7 @@ def run_tool_testing(
                 cleaned_tool_docs.append(tool_doc)
         tool_docs = cleaned_tool_docs
     tool_docs_str = "\n".join([e["doc"] for e in tool_docs])
-    tool_docs_str += "\n" + LOAD_TOOLS_DOCSTRING  # type: ignore
+    tool_docs_str += "\n" + LOAD_TOOLS_DOCSTRING
 
     prompt = TEST_TOOLS.format(
         tool_docs=tool_docs_str,
