@@ -2657,7 +2657,7 @@ def save_image(image: np.ndarray, file_path: str) -> None:
 
 
 def save_video(
-    frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 1
+    frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 5
 ) -> str:
     """'save_video' is a utility function that saves a list of frames as a mp4 video file on disk.
 
