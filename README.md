@@ -26,12 +26,7 @@ export ANTHROPIC_API_KEY="your-api-key"
 export OPENAI_API_KEY="your-api-key"
 ```
 
----
-**NOTE**
-We found using both Anthropic Claude-3.5 and OpenAI o1 to be provide the best performance
-for VisionAgent. If you want to use a different LLM provider or only one, see
-'Using Other LLM Providers' below.
----
+> **_NOTE:_** We found using both Anthropic Claude-3.5 and OpenAI o1 to be provide the best performance for VisionAgent. If you want to use a different LLM provider or only one, see 'Using Other LLM Providers' below.
 
 ## Documentation
 
@@ -104,7 +99,4 @@ directory. For example to change to Anthropic simply just run:
 cp vision_agent/configs/anthropic_config.py vision_agent/configs/config.py
 ```
 
-**NOTE**
-VisionAgent moves fast and we are constantly updating and changing the library. If you
-have any questions or need help, please reach out to us on our discord channel.
----
+> **_NOTE:_** VisionAgent moves fast and we are constantly updating and changing the library. If you have any questions or need help, please reach out to us on our discord channel.
