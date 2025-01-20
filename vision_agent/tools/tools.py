@@ -1692,7 +1692,7 @@ def video_temporal_localization(
     prompt: str,
     frames: List[np.ndarray],
     model: str = "qwen2vl",
-    chunk_length_frames: Optional[int] = 2,
+    chunk_length_frames: int = 2,
 ) -> List[float]:
     """'video_temporal_localization' will run qwen2vl on each chunk_length_frames
     value selected for the video. It can detect multiple objects independently per
@@ -1706,7 +1706,7 @@ def video_temporal_localization(
         frames (List[np.ndarray]): The reference frames used for the question
         model (str): The model to use for the inference. Valid values are
             'qwen2vl', 'gpt4o'.
-        chunk_length_frames (Optional[int]): length of each chunk in frames
+        chunk_length_frames (int): length of each chunk in frames
 
     Returns:
         List[float]: A list of floats with a value of 1.0 if the objects to be found
@@ -1725,8 +1725,7 @@ def video_temporal_localization(
         "model": model,
         "function_name": "video_temporal_localization",
     }
-    if chunk_length_frames is not None:
-        payload["chunk_length_frames"] = chunk_length_frames
+    payload["chunk_length_frames"] = chunk_length_frames
 
     data = send_inference_request(
         payload, "video-temporal-localization", files=files, v2=True
@@ -1737,7 +1736,13 @@ def video_temporal_localization(
         data,
         files,
     )
-    return [cast(float, value) for value in data]
+    chunked_data = [cast(float, value) for value in data]
+
+    full_data = []
+    for value in chunked_data:
+        full_data.extend([value] * chunk_length_frames)
+
+    return full_data[:len(frames)]
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
