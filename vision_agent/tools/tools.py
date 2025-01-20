@@ -1742,7 +1742,7 @@ def video_temporal_localization(
     for value in chunked_data:
         full_data.extend([value] * chunk_length_frames)
 
-    return full_data[:len(frames)]
+    return full_data[: len(frames)]
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
