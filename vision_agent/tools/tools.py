@@ -1727,22 +1727,46 @@ def video_temporal_localization(
     }
     payload["chunk_length_frames"] = chunk_length_frames
 
-    data = send_inference_request(
-        payload, "video-temporal-localization", files=files, v2=True
-    )
+    segments = split_frames_into_segments(frames, segment_size=50, overlap=0)
+
+    def _apply_temporal_localization(
+        segment: List[np.ndarray],
+    ) -> List[float]:
+        segment_buffer_bytes = [("video", frames_to_bytes(segment))]
+        data = send_inference_request(
+            payload, "video-temporal-localization", files=segment_buffer_bytes, v2=True
+        )
+        chunked_data = [cast(float, value) for value in data]
+
+        full_data = []
+        for value in chunked_data:
+            full_data.extend([value] * chunk_length_frames)
+
+        return full_data[: len(segment)]
+
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(_apply_temporal_localization, segment): segment_index
+            for segment_index, segment in enumerate(segments)
+        }
+
+        localization_per_segment = []
+        for future in as_completed(futures):
+            segment_index = futures[future]
+            localization_per_segment.append((segment_index, future.result()))
+
+    localization_per_segment = [
+        x[1] for x in sorted(localization_per_segment, key=lambda x: x[0])
+    ]
+    localization_per_segment = [e for o in localization_per_segment for e in o]
+
     _display_tool_trace(
         video_temporal_localization.__name__,
         payload,
-        data,
+        localization_per_segment,
         files,
     )
-    chunked_data = [cast(float, value) for value in data]
-
-    full_data = []
-    for value in chunked_data:
-        full_data.extend([value] * chunk_length_frames)
-
-    return full_data[: len(frames)]
+    return localization_per_segment
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
