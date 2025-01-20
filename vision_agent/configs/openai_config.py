@@ -98,7 +98,7 @@ class Config(BaseModel):
     tool_chooser_kwargs: dict = Field(
         default_factory=lambda: {
             "model_name": "gpt-4o-2024-08-06",
-            "temperature": 0.0,
+            "temperature": 1.0,
             "image_size": 768,
             "image_detail": "low",
         }
@@ -109,7 +109,7 @@ class Config(BaseModel):
     suggester_kwargs: dict = Field(
         default_factory=lambda: {
             "model_name": "gpt-4o-2024-08-06",
-            "temperature": 0.0,
+            "temperature": 1.0,
             "image_size": 768,
             "image_detail": "low",
         }

@@ -33,6 +33,7 @@ class AgentMessage(BaseModel):
         Literal["interaction_response"],
         Literal["conversation"],
         Literal["planner"],
+        Literal["planner_update"],
         Literal["coder"],
     ]
     content: str
