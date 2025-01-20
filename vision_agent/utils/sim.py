@@ -98,10 +98,12 @@ class Sim:
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
-            self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(
-                    self.emb_call,
-                    x,
+            self.df = self.df.assign(
+                embs=self.df[sim_key].apply(
+                    lambda x: get_embedding(
+                        self.emb_call,
+                        x,
+                    )
                 )
             )
 
@@ -141,7 +143,9 @@ class Sim:
 
         df_load = pd.read_csv(load_dir / "df.csv")
         if platform.system() == "Windows":
-            df_load["doc"] = df_load["doc"].apply(lambda x: x.replace("\r", ""))
+            df_load = df_load.assign(
+                doc=df_load.doc.apply(lambda x: x.replace("\r", ""))
+            )
         return df.equals(df_load)  # type: ignore
 
     @lru_cache(maxsize=256)
@@ -166,7 +170,9 @@ class Sim:
             self.emb_call,
             query,
         )
-        self.df["sim"] = self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
+        self.df = self.df.assign(
+            sim=self.df.embs.apply(lambda x: 1 - cosine(x, embedding))
+        )
         res = self.df.sort_values("sim", ascending=False).head(k)
         if thresh is not None:
             res = res[res.sim > thresh]
@@ -214,8 +220,13 @@ class AzureSim(Sim):
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
-            self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(self.emb_call, x)
+            self.df = self.df.assign(
+                embs=self.df[sim_key].apply(
+                    lambda x: get_embedding(
+                        self.emb_call,
+                        x,
+                    )
+                )
             )
 
 
@@ -245,8 +256,13 @@ class OllamaSim(Sim):
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
-            self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(emb_call, x)
+            self.df = self.df.assign(
+                embs=self.df[sim_key].apply(
+                    lambda x: get_embedding(
+                        self.emb_call,
+                        x,
+                    )
+                )
             )
 
 
@@ -267,8 +283,13 @@ class StellaSim(Sim):
             raise ValueError("key is required if no column 'embs' is present.")
 
         if sim_key is not None:
-            self.df["embs"] = self.df[sim_key].apply(
-                lambda x: get_embedding(emb_call, x)
+            self.df = self.df.assign(
+                embs=self.df[sim_key].apply(
+                    lambda x: get_embedding(
+                        self.emb_call,
+                        x,
+                    )
+                )
             )
 
     @staticmethod
