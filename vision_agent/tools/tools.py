@@ -2028,16 +2028,18 @@ def flux_image_inpainting(
     mask: np.ndarray,
 ) -> np.ndarray:
     """'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding image context.
-    It can be used to edit regions of an image according to the prompt given.
+    given by mask, in the image, given image based on the text prompt and surrounding
+    image context. It can be used to edit regions of an image according to the prompt
+    given.
 
     Parameters:
         prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield better results.
-        image (np.ndarray): The source image to be inpainted.
-            The image will serve as the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's,
-            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
+            in the masked area. More detailed and specific prompts typically yield
+            better results.
+        image (np.ndarray): The source image to be inpainted. The image will serve as
+            the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's, where 1 indicates
+            areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
         np.ndarray: The generated image(s) as a numpy array in RGB format with values
