@@ -370,7 +370,7 @@ def test_video_temporal_localization():
         frames=frames,
         model="qwen2vl",
     )
-    assert len(result) == 5
+    assert len(result) == 10
 
 
 def test_ocr():

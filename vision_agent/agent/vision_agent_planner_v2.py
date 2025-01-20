@@ -513,6 +513,7 @@ class VisionAgentPlannerV2(AgentPlanner):
                 code = extract_tag(response, "execute_python")
                 finalize_plan = extract_tag(response, "finalize_plan")
                 finished = finalize_plan is not None
+                self.update_callback({"role": "planner_update", "content": response})
 
                 if self.verbose:
                     _CONSOLE.print(

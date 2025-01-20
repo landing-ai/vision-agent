@@ -318,6 +318,9 @@ def single_nms(
 def nms(
     all_preds: List[List[Dict[str, Any]]], iou_threshold: float
 ) -> List[List[Dict[str, Any]]]:
+    if not isinstance(all_preds[0], List):
+        all_preds = [all_preds]
+
     return_preds = []
     for frame_preds in all_preds:
         frame_preds = single_nms(frame_preds, iou_threshold)
