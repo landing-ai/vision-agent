@@ -459,6 +459,7 @@ You are given a task: "{task}" from the user. You must extract the type of categ
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
 - "temporal localization" - localizing the time period an event occurs in a video.
+- "inpainting" - filling in masked parts of an image.
 
 Return the category or categories (comma separated) inside tags <category># your categories here</category>. If you are unsure about a task, it is better to include more categories than less.
 """
