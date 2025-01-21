@@ -1756,9 +1756,9 @@ def video_temporal_localization(
             localization_per_segment.append((segment_index, future.result()))
 
     localization_per_segment = [
-        x[1] for x in sorted(localization_per_segment, key=lambda x: x[0])
+        x[1] for x in sorted(localization_per_segment, key=lambda x: x[0])  # type: ignore
     ]
-    localization_per_segment = [e for o in localization_per_segment for e in o]
+    localizations = cast(List[float], [e for o in localization_per_segment for e in o])
 
     _display_tool_trace(
         video_temporal_localization.__name__,
@@ -1766,7 +1766,7 @@ def video_temporal_localization(
         localization_per_segment,
         files,
     )
-    return localization_per_segment
+    return localizations
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
