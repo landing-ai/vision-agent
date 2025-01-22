@@ -234,16 +234,24 @@ def od_sam2_video_tracking(
     od_model: ODModels,
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 50,
     fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    SEGMENT_SIZE = 50
-    OVERLAP = 1  # Number of overlapping frames between segments
+    chunk_length = 50 if chunk_length is None else chunk_length
+    segment_size = chunk_length
+    # Number of overlapping frames between segments
+    overlap = 1
+    # chunk_length needs to be segment_size + 1 or else on the last segment it will
+    # run the OD model again and merging will not work
+    chunk_length = chunk_length + 1
+
+    if len(frames) == 0 or not isinstance(frames, List):
+        return {"files": [], "return_data": [], "display_data": []}
 
     image_size = frames[0].shape[:2]
 
     # Split frames into segments with overlap
-    segments = split_frames_into_segments(frames, SEGMENT_SIZE, OVERLAP)
+    segments = split_frames_into_segments(frames, segment_size, overlap)
 
     def _apply_object_detection(  # inner method to avoid circular importing issues.
         od_model: ODModels,
@@ -538,7 +546,7 @@ def owlv2_sam2_instance_segmentation(
 def owlv2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'owlv2_sam2_video_tracking' is a tool that can track and segment multiple
@@ -771,7 +779,7 @@ def florence2_sam2_instance_segmentation(
 def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can track and segment multiple
@@ -1110,7 +1118,7 @@ def countgd_sam2_instance_segmentation(
 def countgd_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
 ) -> List[List[Dict[str, Any]]]:
     """'countgd_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
@@ -2791,7 +2799,15 @@ def overlay_bounding_boxes(
             "Number of unique labels exceeds the number of available colors. Some labels may have the same color."
         )
 
-    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(labels)}
+    use_tracking_label = False
+    if all([":" in label for label in labels]):
+        unique_labels = set([label.split(":")[1].strip() for label in labels])
+        use_tracking_label = True
+        colors = {
+            label: COLORS[i % len(COLORS)] for i, label in enumerate(unique_labels)
+        }
+    else:
+        colors = {label: COLORS[i % len(COLORS)] for i, label in enumerate(labels)}
 
     frame_out = []
     for i, frame in enumerate(medias_int):
@@ -2802,7 +2818,7 @@ def overlay_bounding_boxes(
 
         # if more than 50 boxes use small boxes to indicate objects else use regular boxes
         if len(bboxes) > 50:
-            pil_image = _plot_counting(pil_image, bboxes, color)
+            pil_image = _plot_counting(pil_image, bboxes, colors, use_tracking_label)
         else:
             width, height = pil_image.size
             fontsize = max(12, int(min(width, height) / 40))
@@ -2817,18 +2833,20 @@ def overlay_bounding_boxes(
             )
 
             for elt in bboxes:
+                if use_tracking_label:
+                    color = colors[elt["label"].split(":")[1].strip()]
+                else:
+                    color = colors[elt["label"]]
                 label = elt["label"]
                 box = elt["bbox"]
                 scores = elt["score"]
 
                 # denormalize the box if it is normalized
                 box = denormalize_bbox(box, (height, width))
-                draw.rectangle(box, outline=color[label], width=4)
+                draw.rectangle(box, outline=color, width=4)
                 text = f"{label}: {scores:.2f}"
                 text_box = draw.textbbox((box[0], box[1]), text=text, font=font)
-                draw.rectangle(
-                    (box[0], box[1], text_box[2], text_box[3]), fill=color[label]
-                )
+                draw.rectangle((box[0], box[1], text_box[2], text_box[3]), fill=color)
                 draw.text((box[0], box[1]), text, fill="black", font=font)
 
         frame_out.append(np.array(pil_image))
@@ -2911,7 +2929,16 @@ def overlay_segmentation_masks(
     for mask_i in masks_int:
         for mask_j in mask_i:
             labels.add(mask_j["label"])
-    color = {label: COLORS[i % len(COLORS)] for i, label in enumerate(labels)}
+
+    use_tracking_label = False
+    if all([":" in label for label in labels]):
+        use_tracking_label = True
+        unique_labels = set([label.split(":")[1].strip() for label in labels])
+        colors = {
+            label: COLORS[i % len(COLORS)] for i, label in enumerate(unique_labels)
+        }
+    else:
+        colors = {label: COLORS[i % len(COLORS)] for i, label in enumerate(labels)}
 
     width, height = Image.fromarray(medias_int[0]).size
     fontsize = max(12, int(min(width, height) / 40))
@@ -2925,12 +2952,16 @@ def overlay_segmentation_masks(
         pil_image = Image.fromarray(frame.astype(np.uint8)).convert("RGBA")
         for elt in masks_int[i]:
             mask = elt["mask"]
+            if use_tracking_label:
+                color = colors[elt["label"].split(":")[1].strip()]
+            else:
+                color = colors[elt["label"]]
             label = elt["label"]
             tracking_lbl = elt.get(secondary_label_key, None)
 
             # Create semi-transparent mask overlay
             np_mask = np.zeros((pil_image.size[1], pil_image.size[0], 4))
-            np_mask[mask > 0, :] = color[label] + (255 * 0.7,)
+            np_mask[mask > 0, :] = color + (255 * 0.7,)
             mask_img = Image.fromarray(np_mask.astype(np.uint8))
             pil_image = Image.alpha_composite(pil_image, mask_img)
 
@@ -2942,7 +2973,7 @@ def overlay_segmentation_masks(
             border_mask = np.zeros(
                 (pil_image.size[1], pil_image.size[0], 4), dtype=np.uint8
             )
-            cv2.drawContours(border_mask, contours, -1, color[label] + (255,), 8)
+            cv2.drawContours(border_mask, contours, -1, color + (255,), 8)
             border_img = Image.fromarray(border_mask)
             pil_image = Image.alpha_composite(pil_image, border_img)
 
@@ -2957,7 +2988,7 @@ def overlay_segmentation_masks(
                 )
                 if x != 0 and y != 0:
                     text_box = draw.textbbox((x, y), text=text, font=font)
-                    draw.rectangle((x, y, text_box[2], text_box[3]), fill=color[label])
+                    draw.rectangle((x, y, text_box[2], text_box[3]), fill=color)
                     draw.text((x, y), text, fill="black", font=font)
         frame_out.append(np.array(pil_image))
     return_frame = frame_out[0] if len(frame_out) == 1 else frame_out
@@ -3014,6 +3045,7 @@ def _plot_counting(
     image: Image.Image,
     bboxes: List[Dict[str, Any]],
     colors: Dict[str, Tuple[int, int, int]],
+    use_tracking_label: bool = False,
 ) -> Image.Image:
     width, height = image.size
     fontsize = max(12, int(min(width, height) / 40))
@@ -3023,7 +3055,12 @@ def _plot_counting(
         fontsize,
     )
     for i, elt in enumerate(bboxes, 1):
-        label = f"{i}"
+        if use_tracking_label:
+            label = elt["label"].split(":")[0]
+            color = colors[elt["label"].split(":")[1].strip()]
+        else:
+            label = f"{i}"
+            color = colors[elt["label"]]
         box = elt["bbox"]
 
         # denormalize the box if it is normalized
@@ -3044,7 +3081,7 @@ def _plot_counting(
         text_y1 = cy + text_height / 2
 
         # Draw the rectangle encapsulating the text
-        draw.rectangle((text_x0, text_y0, text_x1, text_y1), fill=colors[elt["label"]])
+        draw.rectangle((text_x0, text_y0, text_x1, text_y1), fill=color)
 
         # Draw the text at the center of the bounding box
         draw.text(
