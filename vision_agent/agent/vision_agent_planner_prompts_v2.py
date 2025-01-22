@@ -653,7 +653,7 @@ PICK_TOOL = """
 """
 
 FINALIZE_PLAN = """
-**Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agnet to write a program to accomplish the user request.
+**Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agent to write a program to accomplish the user request.
 
 **Documentation**: You can use these tools to help you visualize or save the output:
 {tool_desc}
