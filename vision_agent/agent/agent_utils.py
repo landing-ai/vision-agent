@@ -148,8 +148,10 @@ def format_plan_v2(plan: PlanContext) -> str:
     plan_str += "Instructions:\n"
     for v in plan.instructions:
         plan_str += f"    - {v}\n"
-    plan_str += "Code:\n"
-    plan_str += plan.code
+
+    if plan.code:
+        plan_str += "Code:\n"
+        plan_str += plan.code
     return plan_str
 
 

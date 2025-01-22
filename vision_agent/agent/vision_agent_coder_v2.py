@@ -425,6 +425,8 @@ class VisionAgentCoderV2(AgentCoder):
             chat (List[AgentMessage]): The input to the agent. This should be a list of
                 AgentMessage objects.
             plan_context (PlanContext): The plan context that was previously generated.
+                If plan_context.code is not provided, then the code will be generated
+                from the chat messages.
             code_interpreter (Optional[CodeInterpreter]): The code interpreter to use.
 
         Returns:
@@ -455,12 +457,24 @@ class VisionAgentCoderV2(AgentCoder):
             int_chat, _, media_list = add_media_to_chat(chat, code_interpreter)
             tool_docs = retrieve_tools(plan_context.instructions, self.tool_recommender)
 
+            # If code is not provided from the plan_context then generate it, else use
+            # the provided code and start with testing
+            if not plan_context.code.strip():
+                code = write_code(
+                    coder=self.coder,
+                    chat=int_chat,
+                    tool_docs=tool_docs,
+                    plan=format_plan_v2(plan_context),
+                )
+            else:
+                code = plan_context.code
+
             code_context = test_code(
                 tester=self.tester,
                 debugger=self.debugger,
                 chat=int_chat,
                 plan=format_plan_v2(plan_context),
-                code=plan_context.code,
+                code=code,
                 tool_docs=tool_docs,
                 code_interpreter=code_interpreter,
                 media_list=media_list,

@@ -1727,22 +1727,46 @@ def video_temporal_localization(
     }
     payload["chunk_length_frames"] = chunk_length_frames
 
-    data = send_inference_request(
-        payload, "video-temporal-localization", files=files, v2=True
-    )
+    segments = split_frames_into_segments(frames, segment_size=50, overlap=0)
+
+    def _apply_temporal_localization(
+        segment: List[np.ndarray],
+    ) -> List[float]:
+        segment_buffer_bytes = [("video", frames_to_bytes(segment))]
+        data = send_inference_request(
+            payload, "video-temporal-localization", files=segment_buffer_bytes, v2=True
+        )
+        chunked_data = [cast(float, value) for value in data]
+
+        full_data = []
+        for value in chunked_data:
+            full_data.extend([value] * chunk_length_frames)
+
+        return full_data[: len(segment)]
+
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(_apply_temporal_localization, segment): segment_index
+            for segment_index, segment in enumerate(segments)
+        }
+
+        localization_per_segment = []
+        for future in as_completed(futures):
+            segment_index = futures[future]
+            localization_per_segment.append((segment_index, future.result()))
+
+    localization_per_segment = [
+        x[1] for x in sorted(localization_per_segment, key=lambda x: x[0])  # type: ignore
+    ]
+    localizations = cast(List[float], [e for o in localization_per_segment for e in o])
+
     _display_tool_trace(
         video_temporal_localization.__name__,
         payload,
-        data,
+        localization_per_segment,
         files,
     )
-    chunked_data = [cast(float, value) for value in data]
-
-    full_data = []
-    for value in chunked_data:
-        full_data.extend([value] * chunk_length_frames)
-
-    return full_data[: len(frames)]
+    return localizations
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
@@ -2028,16 +2052,18 @@ def flux_image_inpainting(
     mask: np.ndarray,
 ) -> np.ndarray:
     """'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding image context.
-    It can be used to edit regions of an image according to the prompt given.
+    given by mask, in the image, given image based on the text prompt and surrounding
+    image context. It can be used to edit regions of an image according to the prompt
+    given.
 
     Parameters:
         prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield better results.
-        image (np.ndarray): The source image to be inpainted.
-            The image will serve as the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's,
-            where 1 indicates areas to be inpainted and 0 indicates areas to be preserved.
+            in the masked area. More detailed and specific prompts typically yield
+            better results.
+        image (np.ndarray): The source image to be inpainted. The image will serve as
+            the base context for the inpainting process.
+        mask (np.ndarray): A binary mask image with 0's and 1's, where 1 indicates
+            areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
         np.ndarray: The generated image(s) as a numpy array in RGB format with values

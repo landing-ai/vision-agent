@@ -6,7 +6,7 @@ FEEDBACK = """
 
 
 CODE = """
-**Role**: You are an expoert software programmer.
+**Role**: You are an expert software programmer.
 
 **Task**: You are given a plan by a planning agent that solves a vision problem posed by the user. You are also given code snippets that the planning agent used to solve the task. Your job is to organize the code so that it can be easily called by the user to solve the task.
 

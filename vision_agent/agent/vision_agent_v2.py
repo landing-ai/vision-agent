@@ -112,14 +112,17 @@ def maybe_run_action(
                 )
             ]
     elif action == "edit_code":
+        # We don't want to pass code in plan_context.code so the coder will generate
+        # new code from plan_context.plan
         plan_context = PlanContext(
-            plan="Edit the latest code observed in the fewest steps possible according to the user's feedback.",
+            plan="Edit the latest code observed in the fewest steps possible according to the user's feedback."
+            + ("<code>\n" + final_code + "\n</code>" if final_code is not None else ""),
             instructions=[
                 chat_i.content
                 for chat_i in extracted_chat
                 if chat_i.role == "user" and "<final_code>" not in chat_i.content
             ],
-            code=final_code if final_code is not None else "",
+            code="",
         )
         context = coder.generate_code_from_plan(
             extracted_chat, plan_context, code_interpreter=code_interpreter
