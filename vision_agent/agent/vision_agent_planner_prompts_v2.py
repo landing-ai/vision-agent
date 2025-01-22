@@ -458,6 +458,8 @@ You are given a task: "{task}" from the user. You must extract the type of categ
 - "DocQA" - answering questions about a document or extracting information from a document.
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
+- "temporal localization" - localizing the time period an event occurs in a video.
+- "inpainting" - filling in masked parts of an image.
 
 Return the category or categories (comma separated) inside tags <category># your categories here</category>. If you are unsure about a task, it is better to include more categories than less.
 """
@@ -651,22 +653,24 @@ PICK_TOOL = """
 """
 
 FINALIZE_PLAN = """
-**Role**: You are an expert AI model that can understand the user request and construct plans to accomplish it.
+**Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agent to write a program to accomplish the user request.
 
-**Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agnet to write a program to accomplish the user request.
+**Documentation**: You can use these tools to help you visualize or save the output:
+{tool_desc}
 
 **Planning**: Here is chain of thoughts, executions and observations from the planning agent:
 {planning}
 
 **Instructions**:
 1. Summarize the plan that the planning agent found.
-2. Write a single function that solves the problem based on what the planner found.
-3. Specifically call out the tools used and the order in which they were used. Only include tools obtained from calling `get_tool_for_task`.
+2. Write a single function that solves the problem based on what the planner found and only returns the final solution.
+3. Only use tools obtained from calling `get_tool_for_task`.
 4. Do not include {excluded_tools} tools in your instructions.
-5. Add final instructions for visualizing the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and saving it to a file with `save_image` or `save_video`.
-6. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
-7. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
-8. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
+5. Ensure the function is well documented and easy to understand.
+6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and save it to a file with `save_image` or `save_video`.
+7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
+8. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
+9. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
 
 <json>
 {{

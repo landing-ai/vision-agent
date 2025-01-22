@@ -326,6 +326,7 @@ def create_finalize_plan(
         return [], PlanContext(plan="", instructions=[], code="")
 
     prompt = FINALIZE_PLAN.format(
+        tool_desc=UTIL_DOCSTRING,
         planning=get_planning(chat),
         excluded_tools=str([t.__name__ for t in pt.PLANNER_TOOLS]),
     )

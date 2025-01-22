@@ -2,7 +2,7 @@ import inspect
 import logging
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Dict, List, Optional, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import libcst as cst
 import numpy as np
@@ -235,7 +235,9 @@ def run_tool_testing(
 
 
 def get_tool_for_task(
-    task: str, images: List[np.ndarray], exclude_tools: Optional[List[str]] = None
+    task: str,
+    images: Union[Dict[str, List[np.ndarray]], List[np.ndarray]],
+    exclude_tools: Optional[List[str]] = None,
 ) -> None:
     """Given a task and one or more images this function will find a tool to accomplish
     the jobs. It prints the tool documentation and thoughts on why it chose the tool.
@@ -248,6 +250,8 @@ def get_tool_for_task(
         - VQA
         - Depth and pose estimation
         - Video object tracking
+        - Video temporal localization (action recognition)
+        - Image inpainting
 
     Only ask for one type of task at a time, for example a task needing to identify
     text is one OCR task while needing to identify non-text objects is an OD task. Wait
@@ -256,7 +260,8 @@ def get_tool_for_task(
 
     Parameters:
         task: str: The task to accomplish.
-        images: List[np.ndarray]: The images to use for the task.
+        images: Union[Dict[str, List[np.ndarray]], List[np.ndarray]]: The images to use
+            for the task. If a key is provided, it is used as the file name.
         exclude_tools: Optional[List[str]]: A list of tool names to exclude from the
             recommendations. This is helpful if you are calling get_tool_for_task twice
             and do not want the same tool recommended.
@@ -266,20 +271,29 @@ def get_tool_for_task(
 
     Examples
     --------
-        >>> get_tool_for_task("Give me an OCR model that can find 'hot chocolate' in the image", [image])
+        >>> get_tool_for_task(
+        >>>     "Give me an OCR model that can find 'hot chocolate' in the image",
+        >>>     {"image": [image]})
+        >>> get_tool_for_taks(
+        >>>     "I need a tool that can paint a background for this image and maks",
+        >>>     {"image": [image], "mask": [mask]})
     """
     tool_tester = CONFIG.create_tool_tester()
     tool_chooser = CONFIG.create_tool_chooser()
+
+    if isinstance(images, list):
+        images = {"image": images}
 
     with (
         tempfile.TemporaryDirectory() as tmpdirname,
         CodeInterpreterFactory.new_instance() as code_interpreter,
     ):
         image_paths = []
-        for i, image in enumerate(images[:3]):
-            image_path = f"{tmpdirname}/image_{i}.png"
-            Image.fromarray(image).save(image_path)
-            image_paths.append(image_path)
+        for k in images.keys():
+            for i, image in enumerate(images[k]):
+                image_path = f"{tmpdirname}/{k}_{i}.png"
+                Image.fromarray(image).save(image_path)
+                image_paths.append(image_path)
 
         code, tool_docs_str, tool_output = run_tool_testing(
             task, image_paths, tool_tester, exclude_tools, code_interpreter
@@ -300,20 +314,26 @@ def get_tool_documentation(tool_name: str) -> str:
 
 
 def get_tool_for_task_human_reviewer(
-    task: str, images: List[np.ndarray], exclude_tools: Optional[List[str]] = None
+    task: str,
+    images: Union[Dict[str, List[np.ndarray]], List[np.ndarray]],
+    exclude_tools: Optional[List[str]] = None,
 ) -> None:
     # NOTE: this will have the same documentation as get_tool_for_task
     tool_tester = CONFIG.create_tool_tester()
+
+    if isinstance(images, list):
+        images = {"image": images}
 
     with (
         tempfile.TemporaryDirectory() as tmpdirname,
         CodeInterpreterFactory.new_instance() as code_interpreter,
     ):
         image_paths = []
-        for i, image in enumerate(images[:3]):
-            image_path = f"{tmpdirname}/image_{i}.png"
-            Image.fromarray(image).save(image_path)
-            image_paths.append(image_path)
+        for k in images.keys():
+            for i, image in enumerate(images[k]):
+                image_path = f"{tmpdirname}/{k}_{i}.png"
+                Image.fromarray(image).save(image_path)
+                image_paths.append(image_path)
 
         tools = [
             t.__name__
