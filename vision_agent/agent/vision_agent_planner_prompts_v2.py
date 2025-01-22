@@ -274,7 +274,7 @@ OBSERVATION:
 For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: florence2_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor and using the prompt 'box'.
 
 Tool Documentation:
-def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 10) -> List[List[Dict[str, Any]]]:
+def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
     'florence2_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
     expressions. The categories in the text prompt are separated by commas. It returns
@@ -488,7 +488,7 @@ TEST_TOOLS = """
 1. List all the tools under **Tools** and the user request. Write a program to load the media and call the most relevant tools in parallel and print it's output along with other relevant information.
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
-4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results when evaluating the tool.
+4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results only for evaluating the tool.
 5. Use mutually exclusive categories for prompts such as 'person, car' and not 'person, athlete' to avoid over counting.
 6. Print this final dictionary.
 7. Output your code in the following format wrapped in <code> tags:
@@ -655,7 +655,7 @@ PICK_TOOL = """
 FINALIZE_PLAN = """
 **Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agent to write a program to accomplish the user request.
 
-**Documentation**: You can use these tools to help you visualize or save the output:
+**Documentation**: You can use these tools to help you visualize or save the output (they are imported `from vision_agent.tools imoprt *`):
 {tool_desc}
 
 **Planning**: Here is chain of thoughts, executions and observations from the planning agent:
