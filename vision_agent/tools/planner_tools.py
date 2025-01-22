@@ -250,6 +250,7 @@ def get_tool_for_task(
         - VQA
         - Depth and pose estimation
         - Video object tracking
+        - Video temporal localization (action recognition)
         - Image inpainting
 
     Only ask for one type of task at a time, for example a task needing to identify
