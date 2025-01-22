@@ -160,7 +160,7 @@ def format_conversation(chat: List[AgentMessage]) -> str:
     prompt = ""
     for chat_i in chat:
         if chat_i.role == "user" or chat_i.role == "coder":
-            if "<final_code>" in chat_i.role:
+            if "<final_code>" in chat_i.content:
                 prompt += f"OBSERVATION: {chat_i.content}\n\n"
             elif chat_i.role == "user":
                 prompt += f"USER: {chat_i.content}\n\n"
