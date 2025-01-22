@@ -50,7 +50,7 @@ From this aerial view of a busy urban street, it's difficult to clearly see or c
 [suggestion 0]
 The image is very large and the items you need to detect are small.
 
-Step 1: You should start by splitting the image into sections and runing the detection algorithm on each section:
+Step 1: You should start by splitting the image into overlapping sections and runing the detection algorithm on each section:
 
 def subdivide_image(image):
     height, width, _ = image.shape
@@ -66,41 +66,96 @@ def subdivide_image(image):
 
 get_tool_for_task('<your prompt here>', subdivide_image(image))
 
-Step 2: Once you have the detections from each subdivided image, you will need to merge them back together to remove overlapping predictions:
+Step 2: Once you have the detections from each subdivided image, you will need to merge them back together to remove overlapping predictions, be sure to tranlate the offset back to the original image:
 
-def translate_ofset(bbox, offset_x, offset_y):
-    return (bbox[0] + offset_x, bbox[1] + offset_y, bbox[2] + offset_x, bbox[3] + offset_y)
+def bounding_box_match(b1: List[float], b2: List[float], iou_threshold: float = 0.1) -> bool:
+    # Calculate intersection coordinates
+    x1 = max(b1[0], b2[0])
+    y1 = max(b1[1], b2[1])
+    x2 = min(b1[2], b2[2])
+    y2 = min(b1[3], b2[3])
 
-def bounding_boxes_overlap(bbox1, bbox2):
-    if bbox1[2] < bbox2[0] or bbox2[0] > bbox1[2]:
-        return False
-    if bbox1[3] < bbox2[1] or bbox2[3] > bbox1[3]:
-        return False
-    return True
+    # Calculate intersection area
+    if x2 < x1 or y2 < y1:
+        return False  # No overlap
 
-def merge_bounding_boxes(bbox1, bbox2):
-    x_min = min(bbox1[0], bbox2[0])
-    y_min = min(bbox1[1], bbox2[1])
-    x_max = max(bbox1[2], bbox2[2])
-    y_max = max(bbox1[3], bbox2[3])
-    return (x_min, y_min, x_max, y_max)
+    intersection = (x2 - x1) * (y2 - y1)
 
-def merge_bounding_box_list(bboxes):
-    merged_bboxes = []
-    while bboxes:
-        bbox = bboxes.pop()
-        overlap_found = False
-        for i, other_bbox in enumerate(merged_bboxes):
-            if bounding_boxes_overlap(bbox, other_bbox):
-                merged_bboxes[i] = merge_bounding_boxes(bbox, other_bbox)
-                overlap_found = True
+    # Calculate union area
+    area1 = (b1[2] - b1[0]) * (b1[3] - b1[1])
+    area2 = (b2[2] - b2[0]) * (b2[3] - b2[1])
+    union = area1 + area2 - intersection
+
+    # Calculate IoU
+    iou = intersection / union if union > 0 else 0
+
+    return iou >= iou_threshold
+
+def merge_bounding_box_list(detections):
+    merged_detections = []
+    for detection in detections:
+        matching_box = None
+        for i, other in enumerate(merged_detections):
+            if bounding_box_match(detection["bbox"], other["bbox"]):
+                matching_box = i
                 break
-        if not overlap_found:
-          p
-          merged_bboxes.append(bbox)
-    return merged_bboxes
 
-detection = merge_bounding_box_list(detection_from_subdivided_images)
+        if matching_box is not None:
+            # Keep the box with higher confidence score
+            if detection["score"] > merged_detections[matching_box]["score"]:
+                merged_detections[matching_box] = detection
+        else:
+            merged_detections.append(detection)
+
+def sub_image_to_original(elt, sub_image_position, original_size):
+    offset_x, offset_y = sub_image_position
+    return {
+        "label": elt["label"],
+        "score": elt["score"],
+        "bbox": [
+            (elt["bbox"][0] + offset_x) / original_size[1],
+            (elt["bbox"][1] + offset_y) / original_size[0],
+            (elt["bbox"][2] + offset_x) / original_size[1],
+            (elt["bbox"][3] + offset_y) / original_size[0],
+        ],
+    }
+
+def normalized_to_unnormalized(elt, image_size):
+    return {
+        "label": elt["label"],
+        "score": elt["score"],
+        "bbox": [
+            elt["bbox"][0] * image_size[1],
+            elt["bbox"][1] * image_size[0],
+            elt["bbox"][2] * image_size[1],
+            elt["bbox"][3] * image_size[0],
+        ],
+    }
+
+height, width, _ = image.shape
+mid_width = width // 2
+mid_height = height // 2
+
+detection_from_subdivided_images = []
+for i, sub_image in enumerate(subdivided_images):
+    detections = <your detection function here>("pedestrian", sub_image)
+    unnorm_detections = [
+        normalized_to_unnormalized(
+            detection, (sub_image.shape[0], sub_image.shape[1])
+        )
+        for detection in detections
+    ]
+    offset_x = i % 2 * (mid_width - int(mid_width * 0.1))
+    offset_y = i // 2 * (mid_height - int(mid_height * 0.1))
+    offset_detections = [
+        sub_image_to_original(
+            unnorm_detection, (offset_x, offset_y), (height, width)
+        )
+        for unnorm_detection in unnorm_detections
+    ]
+    detection_from_subdivided_images.extend(offset_detections)
+
+detections = merge_bounding_box_list(detection_from_subdivided_images)
 [end of suggestion 0]
 [end of suggestion]
 <count>9</count>
@@ -164,36 +219,44 @@ countgd_object_detection(prompt: str, image: numpy.ndarray, box_threshold: float
 
 AGENT: <thinking>I need to now merge the boxes from all region and use the countgd_object_detection tool with the prompt 'pedestrian' as suggested by get_tool_for_task.</thinking>
 <execute_python>
-def translate_ofset(bbox, offset_x, offset_y):
-    return (bbox[0] + offset_x, bbox[1] + offset_y, bbox[2] + offset_x, bbox[3] + offset_y)
+def bounding_box_match(b1: List[float], b2: List[float], iou_threshold: float = 0.1) -> bool:
+    # Calculate intersection coordinates
+    x1 = max(b1[0], b2[0])
+    y1 = max(b1[1], b2[1])
+    x2 = min(b1[2], b2[2])
+    y2 = min(b1[3], b2[3])
 
-def bounding_boxes_overlap(bbox1, bbox2):
-    if bbox1[2] < bbox2[0] or bbox2[0] > bbox1[2]:
-        return False
-    if bbox1[3] < bbox2[1] or bbox2[3] > bbox1[3]:
-        return False
-    return True
+    # Calculate intersection area
+    if x2 < x1 or y2 < y1:
+        return False  # No overlap
 
-def merge_bounding_boxes(bbox1, bbox2):
-    x_min = min(bbox1[0], bbox2[0])
-    y_min = min(bbox1[1], bbox2[1])
-    x_max = max(bbox1[2], bbox2[2])
-    y_max = max(bbox1[3], bbox2[3])
-    return (x_min, y_min, x_max, y_max)
+    intersection = (x2 - x1) * (y2 - y1)
 
-def merge_bounding_box_list(bboxes):
-    merged_bboxes = []
-    while bboxes:
-        bbox = bboxes.pop()
-        overlap_found = False
-        for i, other_bbox in enumerate(merged_bboxes):
-            if bounding_boxes_overlap(bbox, other_bbox):
-                merged_bboxes[i] = merge_bounding_boxes(bbox, other_bbox)
-                overlap_found = True
+    # Calculate union area
+    area1 = (b1[2] - b1[0]) * (b1[3] - b1[1])
+    area2 = (b2[2] - b2[0]) * (b2[3] - b2[1])
+    union = area1 + area2 - intersection
+
+    # Calculate IoU
+    iou = intersection / union if union > 0 else 0
+
+    return iou >= iou_threshold
+
+def merge_bounding_box_list(detections):
+    merged_detections = []
+    for detection in detections:
+        matching_box = None
+        for i, other in enumerate(merged_detections):
+            if bounding_box_match(detection["bbox"], other["bbox"]):
+                matching_box = i
                 break
-        if not overlap_found:
-            merged_bboxes.append(bbox)
-    return merged_bboxes
+
+        if matching_box is not None:
+            # Keep the box with higher confidence score
+            if detection["score"] > merged_detections[matching_box]["score"]:
+                merged_detections[matching_box] = detection
+        else:
+            merged_detections.append(detection)
 
 detections = []
 for region in subdivide_image(image):
