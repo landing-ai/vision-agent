@@ -27,7 +27,7 @@ CONFIG = Config()
 
 
 def extract_conversation(
-    chat: List[AgentMessage],
+    chat: List[AgentMessage], include_conv: bool = False
 ) -> Tuple[List[AgentMessage], Optional[str]]:
     chat = copy.deepcopy(chat)
 
@@ -43,6 +43,8 @@ def extract_conversation(
         elif chat_i.role == "coder":
             if "<final_code>" in chat_i.content:
                 extracted_chat.append(chat_i)
+        elif include_conv and chat_i.role == "conversation":
+            extracted_chat.append(chat_i)
 
     # only keep the last <final_code> and <final_test>
     final_code = None
@@ -64,10 +66,9 @@ def extract_conversation(
 
 
 def run_conversation(agent: LMM, chat: List[AgentMessage]) -> str:
-    extracted_chat, _ = extract_conversation(chat)
-    extracted_chat = extracted_chat[-10:]
+    extracted_chat, _ = extract_conversation(chat, include_conv=True)
 
-    conv = format_conversation(chat)
+    conv = format_conversation(extracted_chat)
     prompt = CONVERSATION.format(
         conversation=conv,
     )
@@ -263,7 +264,7 @@ class VisionAgentV2(Agent):
                 # do not append updated_chat to return_chat becuase the observation
                 # from running the action will have already been added via the callbacks
                 obs_response_context = run_conversation(
-                    self.agent, return_chat + updated_chat
+                    self.agent, int_chat + return_chat + updated_chat
                 )
                 return_chat.append(
                     AgentMessage(role="conversation", content=obs_response_context)
