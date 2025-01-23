@@ -514,30 +514,6 @@ desc,doc,name
         >>> vit_nsfw_classification(image)
         {""label"": ""normal"", ""scores"": 0.68},
     ",vit_nsfw_classification
-'video_temporal_localization' will run qwen2vl on each chunk_length_frames value selected for the video. It can detect multiple objects independently per chunk_length_frames given a text prompt such as a referring expression but does not track objects across frames. It returns a list of floats with a value of 1.0 if the objects are found in a given chunk_length_frames of the video.,"video_temporal_localization(prompt: str, frames: List[numpy.ndarray], model: str = 'qwen2vl', chunk_length_frames: int = 2) -> List[float]:
-'video_temporal_localization' will run qwen2vl on each chunk_length_frames
-    value selected for the video. It can detect multiple objects independently per
-    chunk_length_frames given a text prompt such as a referring expression
-    but does not track objects across frames.
-    It returns a list of floats with a value of 1.0 if the objects are found in a given
-    chunk_length_frames of the video.
-
-    Parameters:
-        prompt (str): The question about the video
-        frames (List[np.ndarray]): The reference frames used for the question
-        model (str): The model to use for the inference. Valid values are
-            'qwen2vl', 'gpt4o'.
-        chunk_length_frames (int): length of each chunk in frames
-
-    Returns:
-        List[float]: A list of floats with a value of 1.0 if the objects to be found
-            are present in the chunk_length_frames of the video.
-
-    Example
-    -------
-        >>> video_temporal_localization('Did a goal happened?', frames)
-        [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
-    ",video_temporal_localization
 "'flux_image_inpainting' performs image inpainting to fill the masked regions, given by mask, in the image, given image based on the text prompt and surrounding image context. It can be used to edit regions of an image according to the prompt given.","flux_image_inpainting(prompt: str, image: numpy.ndarray, mask: numpy.ndarray) -> numpy.ndarray:
 'flux_image_inpainting' performs image inpainting to fill the masked regions,
     given by mask, in the image, given image based on the text prompt and surrounding

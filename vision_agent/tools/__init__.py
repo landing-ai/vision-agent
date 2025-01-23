@@ -23,6 +23,7 @@ from .tools import (
     TOOLS_INFO,
     UTIL_TOOLS,
     UTILITIES_DOCSTRING,
+    activity_recognition,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
     agentic_sam2_video_tracking,
@@ -64,7 +65,6 @@ from .tools import (
     save_video,
     siglip_classification,
     template_match,
-    video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
 )

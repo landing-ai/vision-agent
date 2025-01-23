@@ -20,7 +20,7 @@ from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm.lmm import AnthropicLMM
+from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.tools.tool_utils import (
     ToolCallTrace,
     add_bboxes_from_masks,
@@ -1696,50 +1696,86 @@ Answer the question directly using only the information from the document, do no
     return llm_output
 
 
-def video_temporal_localization(
+def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
-    model: str = "qwen2vl",
-    chunk_length_frames: int = 2,
+    model="gpt-4o",
+    chunk_length_frames: int = 25,
 ) -> List[float]:
-    """'video_temporal_localization' will run qwen2vl on each chunk_length_frames
-    value selected for the video. It can detect multiple objects independently per
-    chunk_length_frames given a text prompt such as a referring expression
-    but does not track objects across frames.
-    It returns a list of floats with a value of 1.0 if the objects are found in a given
-    chunk_length_frames of the video.
+    """'activity_recognition' is a tool that can recognize activities in a video given a
+    text prompt. It can be used to identify where specific activities or actions
+    happen in a video and returns a list of 0s and 1s to indicate the activity.
 
     Parameters:
         prompt (str): The question about the video
         frames (List[np.ndarray]): The reference frames used for the question
         model (str): The model to use for the inference. Valid values are
-            'qwen2vl', 'gpt4o'.
+            'claude-35', 'gpt-4o', 'qwen2vl'.
         chunk_length_frames (int): length of each chunk in frames
 
     Returns:
-        List[float]: A list of floats with a value of 1.0 if the objects to be found
-            are present in the chunk_length_frames of the video.
+        List[float]: A list of floats with a value of 1.0 if the activity is detected in
+            the chunk_length_frames of the video.
 
     Example
     -------
-        >>> video_temporal_localization('Did a goal happened?', frames)
+        >>> activity_recognition('Did a goal happened?', frames)
         [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
     """
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
-    payload: Dict[str, Any] = {
-        "prompt": prompt,
-        "model": model,
-        "function_name": "video_temporal_localization",
-    }
-    payload["chunk_length_frames"] = chunk_length_frames
 
-    segments = split_frames_into_segments(frames, segment_size=50, overlap=0)
+    segments = split_frames_into_segments(
+        frames, segment_size=chunk_length_frames, overlap=0
+    )
 
-    def _apply_temporal_localization(
+    def _sammple(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
+        sample_indices = np.linspace(0, len(frames) - 1, sample_size, dtype=int)
+        sampled_frames = []
+
+        for i, frame in enumerate(frames):
+            if i in sample_indices:
+                sampled_frames.append(frame)
+            if len(sampled_frames) >= sample_size:
+                break
+        return sampled_frames
+
+    prompt = f"""You are helping a user do activity recognition. The user wants to identify whether "{prompt}" has occurred in the frames provided. Please respond with a simple "yes" or "no" based on the frames provided. If you are unsure, respond with "I am unsure"."""
+
+    def _lmm_activity_recognition(
+        lmm: LMM,
         segment: List[np.ndarray],
     ) -> List[float]:
+        return_value = []
+        frames = _sammple(segment, 10)
+        media = []
+        for frame in frames:
+            buffer = io.BytesIO()
+            image_pil = Image.fromarray(frame)
+            if image_pil.size[0] > 768:
+                image_pil.thumbnail((768, 768))
+            image_pil.save(buffer, format="PNG")
+            image_bytes = buffer.getvalue()
+            image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+            media.append(image_b64)
+
+        response = cast(str, lmm.generate(prompt, media))
+        if "yes" in response.lower():
+            return_value.extend([1.0] * len(segment))
+        else:
+            return_value.extend([0.0] * len(segment))
+        return return_value
+
+    def _qwen2vl_activity_reconition(
+        segment: List[np.ndarray],
+    ) -> List[float]:
+        payload: Dict[str, Any] = {
+            "prompt": prompt,
+            "model": model,
+            "function_name": "video_temporal_localization",
+        }
+        payload["chunk_length_frames"] = chunk_length_frames
         segment_buffer_bytes = [("video", frames_to_bytes(segment))]
         data = send_inference_request(
             payload, "video-temporal-localization", files=segment_buffer_bytes, v2=True
@@ -1752,29 +1788,39 @@ def video_temporal_localization(
 
         return full_data[: len(segment)]
 
+    if model == "claude-35":
+        _apply_activity_recognition = lambda x: _lmm_activity_recognition(
+            AnthropicLMM(), x
+        )
+    elif model == "gpt-4o":
+        _apply_activity_recognition = lambda x: _lmm_activity_recognition(
+            OpenAILMM(), x
+        )
+    elif model == "qwen2vl":
+        _apply_activity_recognition = _qwen2vl_activity_reconition
+    else:
+        raise ValueError(f"Invalid model: {model}")
+
     with ThreadPoolExecutor() as executor:
         futures = {
-            executor.submit(_apply_temporal_localization, segment): segment_index
+            executor.submit(_apply_activity_recognition, segment): segment_index  # type: ignore
             for segment_index, segment in enumerate(segments)
         }
 
-        localization_per_segment = []
+        return_values = []
         for future in as_completed(futures):
             segment_index = futures[future]
-            localization_per_segment.append((segment_index, future.result()))
-
-    localization_per_segment = [
-        x[1] for x in sorted(localization_per_segment, key=lambda x: x[0])  # type: ignore
-    ]
-    localizations = cast(List[float], [e for o in localization_per_segment for e in o])
+            return_values.append((segment_index, future.result()))
+    return_values = [x[1] for x in sorted(return_values, key=lambda x: x[0])]
+    return_values = cast(List[float], [e for o in return_values for e in o])
 
     _display_tool_trace(
-        video_temporal_localization.__name__,
-        payload,
-        localization_per_segment,
+        activity_recognition.__name__,
+        {"prompt": prompt, "model": model},
+        return_values,
         files,
     )
-    return localizations
+    return return_values
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
@@ -3115,7 +3161,6 @@ FUNCTION_TOOLS = [
     depth_anything_v2,
     generate_pose_image,
     vit_nsfw_classification,
-    video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,
     minimum_distance,
