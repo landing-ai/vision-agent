@@ -449,12 +449,12 @@ PICK_PLAN = """
 
 CATEGORIZE_TOOL_REQUEST = """
 You are given a task: "{task}" from the user. You must extract the type of category this task belongs to, it can be one or more of the following:
+- "VQA" - answering questions about an image or video, can be used for ANY task that does not require localization.
 - "object detection and counting" - detecting objects or counting objects from a text prompt in an image.
 - "instance segmentation" - segmenting objects in an image given a text prompt.
 - "classification" - classifying objects in an image given a text prompt.
 - "segmentation" - segmenting objects in an image or video given a text prompt.
 - "OCR" - extracting text from an image.
-- "VQA" - answering questions about an image or video, can also be used for text extraction.
 - "DocQA" - answering questions about a document or extracting information from a document.
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
@@ -489,7 +489,7 @@ TEST_TOOLS = """
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
 4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results only for evaluating the tool.
-5. Use mutually exclusive categories for prompts such as 'person, car' and not 'person, athlete' to avoid over counting.
+5. Use mutually exclusive categories for prompts such as 'person, car' and DO NOT use overlapping categories like 'person, athlete' or 'soda can, coke can'.
 6. Print this final dictionary.
 7. Output your code in the following format wrapped in <code> tags:
 <code>
