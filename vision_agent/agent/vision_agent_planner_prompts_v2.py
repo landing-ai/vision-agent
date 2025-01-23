@@ -271,23 +271,21 @@ get_tool_for_task('Identify and track the boxes in the video', frames[:5])
 
 OBSERVATION:
 [get_tool_for_task output]
-For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: florence2_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor and using the prompt 'box'.
+For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: countgd_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor and using the prompt 'box'.
 
 Tool Documentation:
-def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
-    'florence2_sam2_video_tracking' is a tool that can track and segment multiple
+def countgd_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
+    'countgd_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
     expressions. The categories in the text prompt are separated by commas. It returns
     a list of bounding boxes, label names, masks and associated probability scores and
     is useful for tracking and counting without duplicating counts.
 
     Parameters:
-        prompt (str): The prompt to ground to the video.
+        prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
-        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+        chunk_length (Optional[int]): The number of frames to re-run countgd to find
             new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
@@ -301,7 +299,7 @@ def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_l
 
     Example
     -------
-        >>> florence2_sam2_video_tracking("car, dinosaur", frames)
+        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
         [
             [
                 {
@@ -319,7 +317,7 @@ def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_l
 
 AGENT: <thinking>Now that I have the tool and prompt for tracking I need to find a tool to identify if there is tape on each of the boxes.</thinking>
 <execute_python>
-track_predictions = florence2_sam2_video_tracking("box", frames)
+track_predictions = countgd_sam2_video_tracking("box", frames)
 
 # only use first 5 frames to reduce processing time
 crops = []
@@ -507,7 +505,7 @@ Count the number of pedestrians across all the images.
 
 <code>
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import load_image, owlv2_object_detection, florence2_object_detection, countgd_object_detection
+from vision_agent.tools import load_image, owlv2_object_detection, agetic_object_detection, countgd_object_detection
 
 # process functions in a try catch so that if it fails it doesn't cause `as_completed` to hang
 def process_owlv2(image_paths):
@@ -520,14 +518,14 @@ def process_owlv2(image_paths):
         results = f"Encountered error when executing process_owlv2: {str(e)}"
     return results
 
-def process_florence2(image_paths):
+def process_agentic(image_paths):
     try:
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(florence2_object_detection("person", image))
+            results.extend(agentic_object_detection("person", image))
     except Exception as e:
-        results = f"Encountered error when executing process_florence2: {str(e)}"
+        results = f"Encountered error when executing process_agentic: {str(e)}"
     return results
 
 def process_countgd(image_paths):
@@ -545,7 +543,7 @@ image_paths = ["image1.jpg", "image2.jpg", "image3.jpg", "image4.jpg"]
 with ThreadPoolExecutor() as executor:
     futures = {{
         executor.submit(process_owlv2, image_paths): "owlv2_object_detection",
-        executor.submit(process_florence2, image_paths): "florence2_phrase_grounding",
+        executor.submit(agentic_object_detection, image_paths): "agentic_object_detection",
         executor.submit(process_countgd, image_paths): "countgd_object_detection",
     }}
 
@@ -570,7 +568,7 @@ Count the number of people in the video.
 <code>
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import extract_frames_and_timestamps, owlv2_sam2_video_tracking, florence2_sam2_video_tracking
+from vision_agent.tools import extract_frames_and_timestamps, owlv2_sam2_video_tracking, countgd_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames_and_timestamps("video.mp4", 1)
@@ -595,19 +593,19 @@ def process_owlv2_sam2_video_tracking(frames):
         results = f"Encountered error when executing process_owlv2_sam2_video_tracking: {str(e)}"
     return results
 
-def process_florence2_sam2_video_tracking(frames):
+def process_countgd_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
-        results = florence2_sam2_video_tracking("person", frames, chunk_length=1)
+        results = countgd_sam2_video_tracking("person", frames, chunk_length=1)
     except Exception as e:
-        results = f"Encountered error when executing process_florence2_sam2: {str(e)}"
+        results = f"Encountered error when executing process_countgd: {str(e)}"
     return results
 
 
 with ThreadPoolExecutor() as executor:
     futures = {{
         executor.submit(process_owlv2_sam2_video_tracking, frames): "owlv2_sam2_video_tracking",
-        executor.submit(process_florence2_sam2_video_tracking, frames): "florence2_sam2_video_tracking",
+        executor.submit(process_countgd_sam2_video_tracking, frames): "countgd_sam2_video_tracking",
     }}
     final_results = {{}}
     for future in as_completed(futures):
