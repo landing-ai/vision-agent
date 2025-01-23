@@ -1468,7 +1468,8 @@ def agentic_object_detection(
     associated probability scores.
 
     Parameters:
-        prompt (str): The prompt to ground to the image.
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with no commas or periods.
         image (np.ndarray): The image to ground the prompt to.
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
             fine-tuned model ID here to use it.
@@ -1482,10 +1483,10 @@ def agentic_object_detection(
 
     Example
     -------
-        >>> agentic_object_detection("car", image)
+        >>> agentic_object_detection("a red car", image)
         [
-            {'score': 0.99, 'label': 'car', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 0.99, 'label': 'a red car', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.98, 'label': 'a red car', 'bbox': [0.2, 0.21, 0.45, 0.5},
         ]
     """
 
@@ -1516,7 +1517,8 @@ def agentic_sam2_instance_segmentation(
     names, masks and associated probability scores.
 
     Parameters:
-        prompt (str): The object that needs to be counted.
+        prompt (str): The object that needs to be counted, only supports a single
+            prompt with no commas or periods.
         image (np.ndarray): The image that contains multiple instances of the object.
 
     Returns:
@@ -1529,11 +1531,11 @@ def agentic_sam2_instance_segmentation(
 
     Example
     -------
-        >>> agentic_sam2_instance_segmentation("flower", image)
+        >>> agentic_sam2_instance_segmentation("a large blue flower", image)
         [
             {
                 'score': 0.49,
-                'label': 'flower',
+                'label': 'a large blue flower',
                 'bbox': [0.1, 0.11, 0.35, 0.4],
                 'mask': array([[0, 0, 0, ..., 0, 0, 0],
                     [0, 0, 0, ..., 0, 0, 0],
@@ -1575,7 +1577,8 @@ def agentic_sam2_video_tracking(
     duplicating counts.
 
     Parameters:
-        prompt (str): The prompt to ground to the image.
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with  no commas or periods.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
             to find new objects.
@@ -1594,11 +1597,11 @@ def agentic_sam2_video_tracking(
 
     Example
     -------
-        >>> agentic_sam2_video_tracking("dinosaur", frames)
+        >>> agentic_sam2_video_tracking("a runner with yellow shoes", frames)
         [
             [
                 {
-                    'label': '0: dinosaur',
+                    'label': '0: a runner with yellow shoes',
                     'bbox': [0.1, 0.11, 0.35, 0.4],
                     'mask': array([[0, 0, 0, ..., 0, 0, 0],
                         [0, 0, 0, ..., 0, 0, 0],
