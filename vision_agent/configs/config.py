@@ -97,10 +97,10 @@ class Config(BaseModel):
     )
 
     # for suggestions module
-    suggester: Type[LMM] = Field(default=AnthropicLMM)
+    suggester: Type[LMM] = Field(default=OpenAILMM)
     suggester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "o1",
             "temperature": 1.0,
             "image_size": 768,
         }
