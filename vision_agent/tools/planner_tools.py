@@ -153,6 +153,40 @@ def replace_box_threshold(code: str, functions: List[str], box_threshold: float)
     return new_tree.code
 
 
+def retrieve_tool_docs(lmm: LMM, task: str, exclude_tools: Optional[List[str]]) -> str:
+    query = cast(str, lmm.generate(CATEGORIZE_TOOL_REQUEST.format(task=task)))
+    categories_str = extract_tag(query, "category")
+    if categories_str is None:
+        categories = []
+    else:
+        categories = [e.strip() for e in categories_str.split(",")]
+
+    explanation = query.split("<category>")[0].strip()
+    if "</category>" in query:
+        explanation += " " + query.split("</category>")[1].strip()
+        explanation = explanation.strip()
+
+    sim = get_tool_recommender()
+
+    all_tool_docs = []
+    all_tool_doc_names = set()
+    exclude_tools = [] if exclude_tools is None else exclude_tools
+    for category in categories:
+        tool_docs = sim.top_k(category, k=3, thresh=0.3)
+
+        for tool_doc in tool_docs:
+            if (
+                tool_doc["name"] not in all_tool_doc_names
+                and tool_doc["name"] not in exclude_tools
+            ):
+                all_tool_docs.append(tool_doc)
+                all_tool_doc_names.add(tool_doc["name"])
+
+    tool_docs_str = explanation + "\n\n" + "\n".join([e["doc"] for e in all_tool_docs])
+    tool_docs_str += "\n" + LOAD_TOOLS_DOCSTRING
+    return tool_docs_str
+
+
 def run_tool_testing(
     task: str,
     image_paths: List[str],
@@ -162,22 +196,8 @@ def run_tool_testing(
     process_code: Callable[[str], str] = lambda x: x,
 ) -> tuple[str, str, Execution]:
     """Helper function to generate and run tool testing code."""
-    query = lmm.generate(CATEGORIZE_TOOL_REQUEST.format(task=task))
-    category = extract_tag(query, "category")  # type: ignore
-    if category is None:
-        query = task
-    else:
-        query = f"{category.strip()}. {task}"
 
-    tool_docs = get_tool_recommender().top_k(query, k=5, thresh=0.3)
-    if exclude_tools is not None and len(exclude_tools) > 0:
-        cleaned_tool_docs = []
-        for tool_doc in tool_docs:
-            if not tool_doc["name"] in exclude_tools:
-                cleaned_tool_docs.append(tool_doc)
-        tool_docs = cleaned_tool_docs
-    tool_docs_str = "\n".join([e["doc"] for e in tool_docs])
-    tool_docs_str += "\n" + LOAD_TOOLS_DOCSTRING
+    tool_docs_str = retrieve_tool_docs(lmm, task, exclude_tools)
 
     prompt = TEST_TOOLS.format(
         tool_docs=tool_docs_str,
