@@ -449,7 +449,7 @@ PICK_PLAN = """
 
 CATEGORIZE_TOOL_REQUEST = """
 You are given a task: "{task}" from the user. You must extract the type of category this task belongs to, it can be one or more of the following:
-- "VQA" - answering questions about an image or video, can be used for ANY task that does not require localization.
+- "VQA" - answering questions about an image or video, can be used for most tasks, should generally be included.
 - "object detection and counting" - detecting objects or counting objects from a text prompt in an image.
 - "instance segmentation" - segmenting objects in an image given a text prompt.
 - "classification" - classifying objects in an image given a text prompt.
