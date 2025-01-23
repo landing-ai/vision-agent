@@ -1943,7 +1943,7 @@ Answer the question directly using only the information from the document, do no
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
-    model="gpt-4o",
+    model="qwen2vl",
     chunk_length_frames: int = 25,
 ) -> List[float]:
     """'activity_recognition' is a tool that can recognize activities in a video given a
@@ -3157,15 +3157,16 @@ FUNCTION_TOOLS = [
     countgd_sam2_instance_segmentation,
     countgd_sam2_video_tracking,
     florence2_ocr,
-    agentic_object_detection,
-    agentic_sam2_instance_segmentation,
-    agentic_sam2_video_tracking,
+    florence2_object_detection,
+    florence2_sam2_instance_segmentation,
+    florence2_sam2_video_tracking,
     claude35_text_extraction,
     document_extraction,
     document_qa,
     ocr,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    activity_recognition,
     depth_anything_v2,
     generate_pose_image,
     vit_nsfw_classification,
