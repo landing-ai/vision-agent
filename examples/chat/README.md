@@ -1,6 +1,7 @@
 # Example App
 This is an example applicaiton to demonstrate how to run VisionAgentV2 locally. This
-only works with the V2 version of VisionAgent.
+only works with the V2 version of VisionAgent and is mainly used for debugging, expect
+to find bugs and issues.
 
 
 # Quick Start
@@ -13,7 +14,7 @@ Then cd into `chat-app` and run `make` to install the node dependencies.
 
 To start the server run:
 ```bash
-fastapi dev app.py
+./run.sh
 ```
 
 And to start the front end, in the chat-app folder run:
