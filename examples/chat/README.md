@@ -25,3 +25,7 @@ npm run dev
 Then go to `http://localhost:3000` in your browser to see the app running.
 
 ![screenshot](https://github.com/landing-ai/vision-agent/blob/main/assets/screenshot.png?raw=true)
+
+# Human-in-the-loop
+If you want to run with human-in-the-loop, set `DEBUG_HIL = True` inside `app.py`. Note
+not all visualizations are supported, only object detection.
