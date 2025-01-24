@@ -20,7 +20,7 @@ PLAN = """
 3. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
 4. Only load/save files from {media_list} unless you specifically saved the file previously.
 5. Ensure you always call `suggestion` initially and `get_tool_for_task` to get the right tool for the subtask.
-6. Calling `plt.imshow` or `save_image` will display the image to you, use this to visually check your results.
+6. Calling `plt.imshow` or `save_image` will display the image to you so you can check your results. If you see an image after <execute_python> it's generated from your code.
 7. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
 8. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool.
 9. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
