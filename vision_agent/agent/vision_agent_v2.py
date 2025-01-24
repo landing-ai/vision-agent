@@ -91,8 +91,6 @@ def maybe_run_action(
     code_interpreter: Optional[CodeInterpreter] = None,
 ) -> Optional[List[AgentMessage]]:
     extracted_chat, final_code = extract_conversation(chat)
-    # only keep last 5 messages to keep context recent and not overwhelm LLM
-    extracted_chat = extracted_chat[-5:]
     if action == "generate_or_edit_vision_code":
         # there's an issue here because coder.generate_code will send it's code_context
         # to the outside user via it's update_callback, but we don't necessarily have
@@ -125,6 +123,7 @@ def maybe_run_action(
             ],
             code="",
         )
+
         context = coder.generate_code_from_plan(
             extracted_chat, plan_context, code_interpreter=code_interpreter
         )
