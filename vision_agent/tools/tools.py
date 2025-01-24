@@ -234,16 +234,24 @@ def od_sam2_video_tracking(
     od_model: ODModels,
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 50,
     fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    SEGMENT_SIZE = 50
-    OVERLAP = 1  # Number of overlapping frames between segments
+    chunk_length = 50 if chunk_length is None else chunk_length
+    segment_size = chunk_length
+    # Number of overlapping frames between segments
+    overlap = 1
+    # chunk_length needs to be segment_size + 1 or else on the last segment it will
+    # run the OD model again and merging will not work
+    chunk_length = chunk_length + 1
+
+    if len(frames) == 0 or not isinstance(frames, List):
+        return {"files": [], "return_data": [], "display_data": []}
 
     image_size = frames[0].shape[:2]
 
     # Split frames into segments with overlap
-    segments = split_frames_into_segments(frames, SEGMENT_SIZE, OVERLAP)
+    segments = split_frames_into_segments(frames, segment_size, overlap)
 
     def _apply_object_detection(  # inner method to avoid circular importing issues.
         od_model: ODModels,
@@ -538,7 +546,7 @@ def owlv2_sam2_instance_segmentation(
 def owlv2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'owlv2_sam2_video_tracking' is a tool that can track and segment multiple
@@ -771,7 +779,7 @@ def florence2_sam2_instance_segmentation(
 def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can track and segment multiple
@@ -1110,7 +1118,7 @@ def countgd_sam2_instance_segmentation(
 def countgd_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
 ) -> List[List[Dict[str, Any]]]:
     """'countgd_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
@@ -1322,7 +1330,7 @@ def custom_object_detection(
 def custom_od_sam2_video_tracking(
     deployment_id: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
 ) -> List[List[Dict[str, Any]]]:
     """'custom_od_sam2_video_tracking' is a tool that can segment multiple objects given a
     custom model with predefined category names.
@@ -2366,7 +2374,7 @@ def agentic_sam2_instance_segmentation(
 def agentic_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
-    chunk_length: Optional[int] = 10,
+    chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple

@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 from vision_agent.tools.tool_utils import (
     add_bboxes_from_masks,
@@ -171,63 +172,45 @@ def _calculate_mask_iou(mask1: np.ndarray, mask2: np.ndarray) -> float:
 def _match_by_iou(
     first_param: List[Dict],
     second_param: List[Dict],
-    iou_threshold: float = 0.8,
-) -> Tuple[List[Dict], Dict[int, int]]:
-    max_id = max((item["id"] for item in first_param), default=0)
+    max_id: int,
+    iou_threshold: float = 0.05,
+) -> Tuple[Dict[int, int], int]:
+    max_first_id = max((item["id"] for item in first_param), default=0)
+    max_second_id = max((item["id"] for item in second_param), default=0)
 
-    matched_new_item_indices = set()
-    id_mapping = {}
-
-    for new_index, new_item in enumerate(second_param):
-        matched_id = None
-
-        for existing_item in first_param:
+    cost_matrix = np.ones((max_first_id + 1, max_second_id + 1))
+    for first_item in first_param:
+        for second_item in second_param:
             iou = _calculate_mask_iou(
-                existing_item["decoded_mask"], new_item["decoded_mask"]
+                first_item["decoded_mask"], second_item["decoded_mask"]
             )
-            if iou > iou_threshold:
-                matched_id = existing_item["id"]
-                matched_new_item_indices.add(new_index)
-                id_mapping[new_item["id"]] = matched_id
-                break
+            cost_matrix[first_item["id"], second_item["id"]] = 1 - iou
 
-        if matched_id:
-            new_item["id"] = matched_id
-        else:
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    id_mapping = {second_id: first_id for first_id, second_id in zip(row_ind, col_ind)}
+    first_id_to_label = {item["id"]: item["label"] for item in first_param}
+
+    cleaned_mapping = {}
+    for elt in second_param:
+        second_id = elt["id"]
+        # if the id is not in the mapping, give it a new id
+        if second_id not in id_mapping:
             max_id += 1
-            id_mapping[new_item["id"]] = max_id
-            new_item["id"] = max_id
-
-    unmatched_items = [
-        item for i, item in enumerate(second_param) if i not in matched_new_item_indices
-    ]
-    combined_list = first_param + unmatched_items
-
-    return combined_list, id_mapping
-
-
-def _update_ids(detections: List[Dict], id_mapping: Dict[int, int]) -> None:
-    for inner_list in detections:
-        for detection in inner_list:
-            if detection["id"] in id_mapping:
-                detection["id"] = id_mapping[detection["id"]]
-            else:
-                max_new_id = max(id_mapping.values(), default=0)
-                detection["id"] = max_new_id + 1
-                id_mapping[detection["id"]] = detection["id"]
-
-
-def _convert_to_2d(detections_per_segment: List[Any]) -> List[Any]:
-    result = []
-    for i, segment in enumerate(detections_per_segment):
-        if i == 0:
-            result.extend(segment)
+            cleaned_mapping[second_id] = max_id
         else:
-            result.extend(segment[1:])
-    return result
+            first_id = id_mapping[second_id]
+            iou = 1 - cost_matrix[first_id, second_id]
+            # only map if the iou is above the threshold and the labels match
+            if iou > iou_threshold and first_id_to_label[first_id] == elt["label"]:
+                cleaned_mapping[second_id] = first_id
+            else:
+                max_id += 1
+                cleaned_mapping[second_id] = max_id
+
+    return cleaned_mapping, max_id
 
 
-def merge_segments(detections_per_segment: List[Any]) -> List[Any]:
+def merge_segments(detections_per_segment: List[Any], overlap: int = 1) -> List[Any]:
     """
     Merges detections from all segments into a unified result.
 
@@ -242,14 +225,18 @@ def merge_segments(detections_per_segment: List[Any]) -> List[Any]:
             for item in detection:
                 item["decoded_mask"] = rle_decode_array(item["mask"])
 
+    merged_result = detections_per_segment[0]
+    max_id = max((item["id"] for item in merged_result[-1]), default=0)
     for segment_idx in range(len(detections_per_segment) - 1):
-        combined_detection, id_mapping = _match_by_iou(
+        id_mapping, max_id = _match_by_iou(
             detections_per_segment[segment_idx][-1],
             detections_per_segment[segment_idx + 1][0],
+            max_id,
         )
-        _update_ids(detections_per_segment[segment_idx + 1], id_mapping)
-
-    merged_result = _convert_to_2d(detections_per_segment)
+        for frame in detections_per_segment[segment_idx + 1][overlap:]:
+            for detection in frame:
+                detection["id"] = id_mapping[detection["id"]]
+        merged_result.extend(detections_per_segment[segment_idx + 1][overlap:])
 
     return merged_result
 
@@ -269,10 +256,26 @@ def post_process(
         Dict[str, Any]: Post-processed data including return_data and display_data.
     """
     return_data = []
-    for frame_idx, frame in enumerate(merged_detections):
+    label_remapping = {}
+    for _, frame in enumerate(merged_detections):
         return_frame_data = []
         for detection in frame:
-            label = f"{detection['id']}: {detection['label']}"
+            label = detection["label"]
+            id = detection["id"]
+
+            # Remap label IDs so for each label the IDs restart at 1. This makes it
+            # easier to count the number of instances per label.
+            if label not in label_remapping:
+                label_remapping[label] = {"max": 1, "remap": {id: 1}}
+            elif label in label_remapping and id not in label_remapping[label]["remap"]:
+                max = label_remapping[label]["max"]
+                max += 1
+                label_remapping[label]["remap"][id] = max
+                label_remapping[label]["max"] = max
+
+            new_id = label_remapping[label]["remap"][id]
+
+            label = f"{new_id}: {detection['label']}"
             return_frame_data.append(
                 {
                     "label": label,
@@ -285,7 +288,6 @@ def post_process(
         return_data.append(return_frame_data)
 
     return_data = add_bboxes_from_masks(return_data)
-    return_data = nms(return_data, iou_threshold=0.95)
 
     # We save the RLE for display purposes, re-calculting RLE can get very expensive.
     # Deleted here because we are returning the numpy masks instead
