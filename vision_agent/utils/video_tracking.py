@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
-from scipy.optimize import linear_sum_assignment
+from scipy.optimize import linear_sum_assignment  # type: ignore
 
 from vision_agent.tools.tool_utils import (
     add_bboxes_from_masks,
