@@ -7,7 +7,6 @@ from scipy.optimize import linear_sum_assignment
 
 from vision_agent.tools.tool_utils import (
     add_bboxes_from_masks,
-    nms,
     send_task_inference_request,
 )
 from vision_agent.utils.image_utils import denormalize_bbox, rle_decode_array
@@ -238,7 +237,7 @@ def merge_segments(detections_per_segment: List[Any], overlap: int = 1) -> List[
                 detection["id"] = id_mapping[detection["id"]]
         merged_result.extend(detections_per_segment[segment_idx + 1][overlap:])
 
-    return merged_result
+    return merged_result  # type: ignore
 
 
 def post_process(
@@ -267,13 +266,13 @@ def post_process(
             # easier to count the number of instances per label.
             if label not in label_remapping:
                 label_remapping[label] = {"max": 1, "remap": {id: 1}}
-            elif label in label_remapping and id not in label_remapping[label]["remap"]:
+            elif label in label_remapping and id not in label_remapping[label]["remap"]:  # type: ignore
                 max = label_remapping[label]["max"]
-                max += 1
-                label_remapping[label]["remap"][id] = max
+                max += 1  # type: ignore
+                label_remapping[label]["remap"][id] = max  # type: ignore
                 label_remapping[label]["max"] = max
 
-            new_id = label_remapping[label]["remap"][id]
+            new_id = label_remapping[label]["remap"][id]  # type: ignore
 
             label = f"{new_id}: {detection['label']}"
             return_frame_data.append(
