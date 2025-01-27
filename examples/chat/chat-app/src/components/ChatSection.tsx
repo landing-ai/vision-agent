@@ -1,5 +1,6 @@
 "use client";
 
+import Visualizer from "@/components/ResultVisualizer";
 import { useState, useEffect } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface Message {
     | "interaction_response"
     | "coder"
     | "planner"
+    | "planner_update"
     | "user"
     | "observation";
   content: string;
@@ -36,6 +38,7 @@ interface Message {
 
 interface MessageBubbleProps {
   message: Message;
+  onSubmit?: (functionName: string, boxThreshold: number) => void;
 }
 
 const CollapsibleMessage = ({ content }: { content: string }) => {
@@ -64,22 +67,33 @@ const CollapsibleMessage = ({ content }: { content: string }) => {
   );
 };
 
-const checkContent = (content: string) => {
+const checkContent = (role: string, content: string) => {
   const finalizePlanMatch = content.match(
     /<finalize_plan>(.*?)<\/finalize_plan>/s,
   );
   const finalCodeMatch = content.match(/<final_code>(.*?)<\/final_code>/s);
-  return !(finalizePlanMatch || finalCodeMatch);
+  return (
+    !(finalizePlanMatch || finalCodeMatch) &&
+    !role.includes("update") &&
+    !role.includes("response")
+  );
 };
 
-const formatAssistantContent = (role: string, content: string) => {
+const formatAssistantContent = (
+  role: string,
+  content: string,
+  onSubmit: (functionName: string, boxThreshold: number) => void,
+) => {
   const responseMatch = content.match(/<response>(.*?)<\/response>/s);
   const thinkingMatch = content.match(/<thinking>(.*?)<\/thinking>/s);
   const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
   const finalPlanJsonMatch = content.match(/<json>(.*?)<\/json>/s);
   const interactionMatch = content.match(/<interaction>(.*?)<\/interaction>/s);
-  const interactionJson = JSON.parse(
-    interactionMatch ? interactionMatch[1] : "{}",
+  let interactionJson = JSON.parse(
+    interactionMatch ? interactionMatch[1] : "[]",
+  );
+  interactionJson = interactionJson.filter(
+    (elt: { type: string }) => elt.type === "tool_func_call",
   );
 
   const finalPlanJson = JSON.parse(
@@ -106,22 +120,7 @@ const formatAssistantContent = (role: string, content: string) => {
 
   if (interactionMatch) {
     return (
-      <>
-        <div>
-          <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
-          Function calls:
-        </div>
-        <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
-          <code style={{ whiteSpace: "pre-wrap" }}>
-            {interactionJson
-              .map(
-                (interaction: { request: { function_name: string } }) =>
-                  `- ${interaction.request.function_name}`,
-              )
-              .join("\n")}
-          </code>
-        </pre>
-      </>
+      <Visualizer detectionResults={interactionJson} onSubmit={onSubmit} />
     );
   }
 
@@ -151,7 +150,7 @@ const formatAssistantContent = (role: string, content: string) => {
   return <></>;
 };
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
   return (
     <div
       className={`mb-4 ${
@@ -169,7 +168,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         message.role === "planner" ||
         message.role === "interaction" ||
         message.role === "coder" ? (
-        formatAssistantContent(message.role, message.content)
+        formatAssistantContent(message.role, message.content, onSubmit)
       ) : (
         message.content
       )}
@@ -187,6 +186,51 @@ export function ChatSection({
 }: ChatSectionProps) {
   const [messages, setMessages] = useState<Message[]>([]);
 
+  const sendMessages = async (messages: Message[]) => {
+    try {
+      console.log("Sending message:", messages[messages.length - 1]);
+      const response = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messages),
+      });
+
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const data = await response.json();
+      console.log("Recieved response:", data);
+    } catch (error) {
+      console.error("Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, there was an error processing your request.",
+        },
+      ]);
+    }
+  };
+
+  const interactionCallback = async (
+    functionName: string,
+    boxThreshold: number,
+  ) => {
+    const message = {
+      role: "interaction_response",
+      content: JSON.stringify({
+        function_name: functionName,
+        box_threshold: boxThreshold,
+      }),
+    } as Message;
+    const updatedMessages = [...messages, message];
+    setMessages(updatedMessages);
+    sendMessages(updatedMessages);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -198,15 +242,8 @@ export function ChatSection({
         messages.length > 0 &&
         messages[messages.length - 1].role === "interaction"
       ) {
-        const function_name = input.value.split(",")[0].trim();
-        const box_threshold = input.value.split(",")[1].trim();
-        userMessage = {
-          role: "interaction_response",
-          content: JSON.stringify({
-            function_name: function_name,
-            box_threshold: box_threshold,
-          }),
-        } as Message;
+        // this is handled by the interaction callback
+        return;
       } else {
         userMessage = { role: "user", content: input.value } as Message;
         if (uploadedImage) {
@@ -216,33 +253,7 @@ export function ChatSection({
 
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
-
-      try {
-        console.log("Sending message:", userMessage);
-        const response = await fetch("http://localhost:8000/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedMessages),
-        });
-
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-
-        const data = await response.json();
-        console.log("Recieved response:", data);
-      } catch (error) {
-        console.error("Error:", error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "Sorry, there was an error processing your request.",
-          },
-        ]);
-      }
+      sendMessages(updatedMessages);
 
       input.value = "";
     }
@@ -291,9 +302,13 @@ export function ChatSection({
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
           {messages
-            .filter((message) => checkContent(message.content))
+            .filter((message) => checkContent(message.role, message.content))
             .map((message, i) => (
-              <MessageBubble key={i} message={message} />
+              <MessageBubble
+                key={i}
+                message={message}
+                onSubmit={interactionCallback}
+              />
             ))}
         </div>
       </ScrollArea>
