@@ -267,10 +267,10 @@ def post_process(
             if label not in label_remapping:
                 label_remapping[label] = {"max": 1, "remap": {id: 1}}
             elif label in label_remapping and id not in label_remapping[label]["remap"]:  # type: ignore
-                max = label_remapping[label]["max"]
-                max += 1  # type: ignore
-                label_remapping[label]["remap"][id] = max  # type: ignore
-                label_remapping[label]["max"] = max
+                max_id = label_remapping[label]["max"]
+                max_id += 1  # type: ignore
+                label_remapping[label]["remap"][id] = max_id  # type: ignore
+                label_remapping[label]["max"] = max_id
 
             new_id = label_remapping[label]["remap"][id]  # type: ignore
 
