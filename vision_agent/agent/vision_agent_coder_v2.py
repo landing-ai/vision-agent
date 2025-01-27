@@ -443,7 +443,7 @@ class VisionAgentCoderV2(AgentCoder):
 
         # we don't need the user_interaction response for generating code since it's
         # already in the plan context
-        while chat[-1].role != "user":
+        while len(chat) > 0 and chat[-1].role != "user":
             chat.pop()
 
         if not chat:
