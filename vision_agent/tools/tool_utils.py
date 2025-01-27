@@ -270,17 +270,22 @@ def add_bboxes_from_masks(
 ) -> List[List[Dict[str, Any]]]:
     for frame_preds in all_preds:
         for preds in frame_preds:
-            if np.sum(preds["mask"]) == 0:
+            mask = preds["mask"]
+            if mask.sum() == 0:
                 preds["bbox"] = []
             else:
-                rows, cols = np.where(preds["mask"])
-                bbox = [
-                    float(np.min(cols)),
-                    float(np.min(rows)),
-                    float(np.max(cols)),
-                    float(np.max(rows)),
-                ]
-                bbox = normalize_bbox(bbox, preds["mask"].shape)
+                # Get indices where mask is True using axis operations
+                rows = np.any(mask, axis=1)
+                cols = np.any(mask, axis=0)
+
+                # Find boundaries using argmax/argmin
+                y_min = np.argmax(rows)
+                y_max = len(rows) - np.argmax(rows[::-1])
+                x_min = np.argmax(cols)
+                x_max = len(cols) - np.argmax(cols[::-1])
+
+                bbox = [float(x_min), float(y_min), float(x_max), float(y_max)]
+                bbox = normalize_bbox(bbox, mask.shape)
                 preds["bbox"] = bbox
 
     return all_preds
