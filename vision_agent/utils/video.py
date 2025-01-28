@@ -106,6 +106,19 @@ def frames_to_bytes(
     return buffer_bytes
 
 
+def rescale(frame: np.ndarray, max_size: Tuple[int, int]) -> np.ndarray:
+    h, w = frame.shape[:2]
+    if h > max_size[0] or w > max_size[1]:
+        if h > w:
+            new_h = max_size[0]
+            new_w = int(w * new_h / h)
+        else:
+            new_w = max_size[1]
+            new_h = int(h * new_w / w)
+        frame = cv2.resize(frame, (new_w, new_h))
+    return frame
+
+
 # WARNING: This cache is a little dangerous because if the underlying video
 # contents change but the filename remains the same it will return the old file contents.
 # For vision agent it's unlikely to change the file contents while keeping the
@@ -158,6 +171,7 @@ def extract_frames_from_video(
         # causes the last frame to be skipped
         elapsed_time = round(elapsed_time, 8)
         if elapsed_time >= targ_frame_time:
+            frame = rescale(frame, (1024, 1024))
             frames.append((cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), i / orig_fps))
             elapsed_time -= targ_frame_time
 
