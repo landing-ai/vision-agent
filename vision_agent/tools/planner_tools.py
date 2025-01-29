@@ -315,6 +315,8 @@ def get_tool_for_task(
                 Image.fromarray(image).save(image_path)
                 image_paths.append(image_path)
 
+        # run no more than 3 images or else it overloads the LLM
+        image_paths = image_paths[:3]
         code, tool_docs_str, tool_output = run_tool_testing(
             task, image_paths, tool_tester, exclude_tools, code_interpreter
         )
@@ -434,7 +436,8 @@ def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
     a problem.
 
     Parameters:
-        prompt: str: The problem statement.
+        prompt: str: The problem statement, provide a detailed description of the
+            problem you are trying to solve.
         medias: List[np.ndarray]: The images to use for the problem
     """
     try:
