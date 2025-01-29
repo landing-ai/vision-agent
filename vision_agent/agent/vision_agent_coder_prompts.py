@@ -230,7 +230,7 @@ This is the documentation for the functions you have access to. You may call any
 
 
 FIX_BUG = """
-**Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting so you can run !pip install to install missing packages.
+**Role** As a coder, your job is to find the error in the code and fix it. You are running in a notebook setting but do not run !pip install to install new packages.
 
 **Documentation**:
 This is the documentation for the functions you have access to. You may call any of these functions to help you complete the task. They are available through importing `from vision_agent.tools import *`.
