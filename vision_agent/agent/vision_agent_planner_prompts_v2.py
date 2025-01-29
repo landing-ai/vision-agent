@@ -551,8 +551,9 @@ TEST_TOOLS = """
 3. Your test case MUST run only on the given images which are {media}
 4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results only for evaluating the tool.
 5. Use mutually exclusive categories for prompts such as 'person, car' and DO NOT use overlapping categories like 'person, athlete' or 'soda can, coke can'.
-6. Print this final dictionary.
-7. Output your code in the following format wrapped in <code> tags:
+6. Test 2 or 3 prompts per tool to find the best prompt for the user request, unless it's video tracking, then only use one prompt to save time.
+7. Print this final dictionary.
+8. Output your code in the following format wrapped in <code> tags:
 <code>
 # Your code here
 </code>
@@ -728,7 +729,7 @@ FINALIZE_PLAN = """
 3. Only use tools obtained from calling `get_tool_for_task`.
 4. Do not include {excluded_tools} tools in your instructions.
 5. Ensure the function is well documented and easy to understand.
-6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and save it to a file with `save_image` or `save_video`.
+6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks`, if bounding boxes or segmentaiton masks are produced, and save it to a file with `save_image` or `save_video`.
 7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
 8. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
 9. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
