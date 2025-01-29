@@ -234,6 +234,7 @@ def od_sam2_video_tracking(
     od_model: ODModels,
     prompt: str,
     frames: List[np.ndarray],
+    box_threshold: float = 0.30,
     chunk_length: Optional[int] = 50,
     fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -278,7 +279,9 @@ def od_sam2_video_tracking(
 
         if od_model == ODModels.COUNTGD:
             segment_results = countgd_object_detection(
-                prompt=prompt, image=segment_frames[frame_number]
+                prompt=prompt,
+                image=segment_frames[frame_number],
+                box_threshold=box_threshold,
             )
             function_name = "countgd_object_detection"
 
@@ -286,6 +289,7 @@ def od_sam2_video_tracking(
             segment_results = owlv2_object_detection(
                 prompt=prompt,
                 image=segment_frames[frame_number],
+                box_threshold=box_threshold,
                 fine_tune_id=fine_tune_id,
             )
             function_name = "owlv2_object_detection"
@@ -310,6 +314,7 @@ def od_sam2_video_tracking(
             segment_results = custom_object_detection(
                 deployment_id=fine_tune_id,
                 image=segment_frames[frame_number],
+                box_threshold=box_threshold,
             )
             function_name = "custom_object_detection"
 
@@ -546,6 +551,7 @@ def owlv2_sam2_instance_segmentation(
 def owlv2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
+    box_threshold: float = 0.10,
     chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
@@ -558,6 +564,8 @@ def owlv2_sam2_video_tracking(
     Parameters:
         prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for the box detection. Defaults
+            to 0.10.
         chunk_length (Optional[int]): The number of frames to re-run owlv2 to find
             new objects.
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
@@ -596,6 +604,7 @@ def owlv2_sam2_video_tracking(
         ODModels.OWLV2,
         prompt=prompt,
         frames=frames,
+        box_threshold=box_threshold,
         chunk_length=chunk_length,
         fine_tune_id=fine_tune_id,
     )
@@ -1118,6 +1127,7 @@ def countgd_sam2_instance_segmentation(
 def countgd_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
+    box_threshold: float = 0.23,
     chunk_length: Optional[int] = 25,
 ) -> List[List[Dict[str, Any]]]:
     """'countgd_sam2_video_tracking' is a tool that can track and segment multiple
@@ -1129,6 +1139,8 @@ def countgd_sam2_video_tracking(
     Parameters:
         prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
         chunk_length (Optional[int]): The number of frames to re-run countgd to find
             new objects.
 
@@ -1162,7 +1174,11 @@ def countgd_sam2_video_tracking(
     """
 
     ret = od_sam2_video_tracking(
-        ODModels.COUNTGD, prompt=prompt, frames=frames, chunk_length=chunk_length
+        ODModels.COUNTGD,
+        prompt=prompt,
+        frames=frames,
+        box_threshold=box_threshold,
+        chunk_length=chunk_length,
     )
     _display_tool_trace(
         countgd_sam2_video_tracking.__name__,
@@ -1944,14 +1960,15 @@ def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
     model="qwen2vl",
-    chunk_length_frames: int = 25,
+    chunk_length_frames: int = 10,
 ) -> List[float]:
     """'activity_recognition' is a tool that can recognize activities in a video given a
     text prompt. It can be used to identify where specific activities or actions
     happen in a video and returns a list of 0s and 1s to indicate the activity.
 
     Parameters:
-        prompt (str): The question about the video
+        prompt (str): The event you want to identify, should be phrased as a question,
+            for example, "Did a goal happen?".
         frames (List[np.ndarray]): The reference frames used for the question
         model (str): The model to use for the inference. Valid values are
             'claude-35', 'gpt-4o', 'qwen2vl'.
@@ -1985,13 +2002,14 @@ def activity_recognition(
                 break
         return sampled_frames
 
-    prompt = f"""You are helping a user do activity recognition. The user wants to identify whether "{prompt}" has occurred in the frames provided. Please respond with a simple "yes" or "no" based on the frames provided. If you are unsure, respond with "I am unsure"."""
+    prompt = (
+        f"{prompt} Please respond with a 'yes' or 'no' based on the frames provided."
+    )
 
     def _lmm_activity_recognition(
         lmm: LMM,
         segment: List[np.ndarray],
     ) -> List[float]:
-        return_value = []
         frames = _sammple(segment, 10)
         media = []
         for frame in frames:
@@ -2006,31 +2024,22 @@ def activity_recognition(
 
         response = cast(str, lmm.generate(prompt, media))
         if "yes" in response.lower():
-            return_value.extend([1.0] * len(segment))
-        else:
-            return_value.extend([0.0] * len(segment))
-        return return_value
+            return [1.0] * len(segment)
+        return [0.0] * len(segment)
 
-    def _qwen2vl_activity_reconition(
-        segment: List[np.ndarray],
-    ) -> List[float]:
+    def _qwen2vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
         payload: Dict[str, Any] = {
             "prompt": prompt,
-            "model": model,
-            "function_name": "video_temporal_localization",
+            "model": "qwen2vl",
+            "function_name": "qwen2_vl_video_vqa",
         }
-        payload["chunk_length_frames"] = chunk_length_frames
         segment_buffer_bytes = [("video", frames_to_bytes(segment))]
-        data = send_inference_request(
-            payload, "video-temporal-localization", files=segment_buffer_bytes, v2=True
+        response = send_inference_request(
+            payload, "image-to-text", files=segment_buffer_bytes, v2=True
         )
-        chunked_data = [cast(float, value) for value in data]
-
-        full_data = []
-        for value in chunked_data:
-            full_data.extend([value] * chunk_length_frames)
-
-        return full_data[: len(segment)]
+        if "yes" in response.lower():
+            return [1.0] * len(segment)
+        return [0.0] * len(segment)
 
     if model == "claude-35":
         _apply_activity_recognition = lambda x: _lmm_activity_recognition(
@@ -2041,7 +2050,7 @@ def activity_recognition(
             OpenAILMM(), x
         )
     elif model == "qwen2vl":
-        _apply_activity_recognition = _qwen2vl_activity_reconition
+        _apply_activity_recognition = _qwen2vl_activity_recognition
     else:
         raise ValueError(f"Invalid model: {model}")
 
