@@ -1,6 +1,6 @@
 "use client";
 
-import Visualizer from "@/components/ResultVisualizer";
+import ImageVisualizerHiL from "@/components/ResultVisualizer";
 import { useState, useEffect } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/collapsible";
 
 interface ChatSectionProps {
-  uploadedImage: string | null;
-  onUploadedImage: (image: string) => void;
+  uploadedMedia: string | null;
+  onUploadedMedia: (image: string) => void;
   uploadedFile: string | null;
   onUploadedFile: (file: string) => void;
   uploadedResult: string | null;
@@ -79,7 +79,7 @@ const checkContent = (role: string, content: string) => {
   );
 };
 
-const formatAssistantContent = (
+const formatAssistantContent = async (
   role: string,
   content: string,
   onSubmit: (functionName: string, boxThreshold: number) => void,
@@ -119,8 +119,31 @@ const formatAssistantContent = (
   }
 
   if (interactionMatch) {
+    for (let i = 0; i < interactionJson.length; i++) {
+      if (interactionJson[i].files[0][0] === "video") {
+        const response = await fetch("http://localhost:8000/create_video", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            b64video: interactionJson[i].files[0][1],
+            detections: interactionJson[i].detections,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        interactionJson[i].files[0][1] = data.b64video;
+      }
+    }
+
     return (
-      <Visualizer detectionResults={interactionJson} onSubmit={onSubmit} />
+      <ImageVisualizerHiL
+        detectionResults={interactionJson}
+        onSubmit={onSubmit}
+      />
     );
   }
 
@@ -177,8 +200,8 @@ export function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
 }
 
 export function ChatSection({
-  uploadedImage,
-  onUploadedImage,
+  uploadedMedia,
+  onUploadedMedia,
   uploadedFile,
   onUploadedFile,
   uploadedResult,
@@ -246,8 +269,8 @@ export function ChatSection({
         return;
       } else {
         userMessage = { role: "user", content: input.value } as Message;
-        if (uploadedImage) {
-          userMessage.media = [uploadedImage];
+        if (uploadedMedia) {
+          userMessage.media = [uploadedMedia];
         }
       }
 
@@ -261,11 +284,15 @@ export function ChatSection({
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
+
+    if (
+      file &&
+      (file.type.startsWith("image/") || file.type.startsWith("video/"))
+    ) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64String = event.target?.result as string;
-        onUploadedImage(base64String);
+        onUploadedMedia(base64String);
       };
       reader.readAsDataURL(file);
     } else {

@@ -30,7 +30,7 @@ interface VisualizerProps {
   onSubmit?: (functionName: string, boxThreshold: number) => void;
 }
 
-const Visualizer: React.FC<VisualizerProps> = ({
+const ImageVisualizerHiL: React.FC<VisualizerProps> = ({
   detectionResults,
   onSubmit,
 }) => {
@@ -211,7 +211,15 @@ const Visualizer: React.FC<VisualizerProps> = ({
           </button>
         )}
 
-        <canvas ref={canvasRef} className="visualizer-canvas max-w-full" />
+        {currentResult.files[0][0] === "video" ? (
+          <video 
+            controls 
+            src={`data:video/mp4;base64,${currentResult.files[0][1]}`}
+            className="max-w-full rounded-lg"
+          />
+        ) : (
+          <canvas ref={canvasRef} className="visualizer-canvas max-w-full" />
+        )}
 
         {detectionResults.length > 1 && (
           <button
@@ -243,4 +251,93 @@ const Visualizer: React.FC<VisualizerProps> = ({
   );
 };
 
-export default Visualizer;
+
+const VideoVisualizerHiL: React.FC<VisualizerProps> = ({
+  detectionResults,
+  onSubmit,
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [threshold, setThreshold] = useState(0.5);
+
+  useEffect(() => {
+    if (videoRef.current && detectionResults[currentIndex]) {
+      const videoData = detectionResults[currentIndex].files[0][1];
+      videoRef.current.src = `data:video/mp4;base64,${videoData}`;
+      videoRef.current.load(); // Reload the video with new source
+    }
+  }, [currentIndex, detectionResults]);
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % detectionResults.length);
+  };
+
+  const handlePrevious = () => {
+    setCurrentIndex(
+      (prev) => (prev - 1 + detectionResults.length) % detectionResults.length
+    );
+  };
+
+  if (!detectionResults || detectionResults.length === 0) {
+    return <div>No results to visualize</div>;
+  }
+
+  return (
+    <div className="visualizer-container p-4 bg-gray-100 rounded-lg">
+      <div className="visualizer-info mb-4">
+        <h3 className="text-lg font-bold">
+          Function: {detectionResults[currentIndex].request.function_name}
+        </h3>
+        <p>
+          Prompt:{" "}
+          {Array.isArray(detectionResults[currentIndex].request.prompts)
+            ? detectionResults[currentIndex].request.prompts.join(", ")
+            : detectionResults[currentIndex].request.prompts}
+        </p>
+      </div>
+
+      <div className="image-navigation-container relative flex items-center justify-center">
+        {detectionResults.length > 1 && (
+          <button
+            onClick={handlePrevious}
+            className="absolute left-0 z-10 bg-white/50 rounded-full p-2 hover:bg-white/75"
+          >
+            <ChevronLeft />
+          </button>
+        )}
+
+        <video 
+          ref={videoRef}
+          controls 
+          className="max-w-full rounded-lg"
+        />
+
+        {detectionResults.length > 1 && (
+          <button
+            onClick={handleNext}
+            className="absolute right-0 z-10 bg-white/50 rounded-full p-2 hover:bg-white/75"
+          >
+            <ChevronRight />
+          </button>
+        )}
+      </div>
+
+      <div className="navigation-info text-center mt-2">
+        <p>
+          Video {currentIndex + 1} of {detectionResults.length}
+        </p>
+      </div>
+
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => onSubmit?.(detectionResults[currentIndex].request.function_name, threshold)}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+        >
+          Choose
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export { ImageVisualizerHiL, VideoVisualizerHiL };

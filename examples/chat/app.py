@@ -1,14 +1,20 @@
 import asyncio
+import base64
+import tempfile
 from typing import Any, Dict, List, Optional
 
+import cv2
 import httpx
+import numpy as np
 from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import vision_agent.tools as T
 from vision_agent.agent import VisionAgentV2
 from vision_agent.agent.types import AgentMessage
 from vision_agent.utils.execute import CodeInterpreterFactory
+from vision_agent.utils.video import frames_to_bytes
 
 app = FastAPI()
 DEBUG_HIL = False
@@ -77,6 +83,49 @@ class Message(BaseModel):
     role: str
     content: str
     media: Optional[List[str]] = None
+
+
+class Detection(BaseModel):
+    label: str
+    bbox: List[int]
+    confidence: float
+    mask: Optional[List[int]] = None
+
+
+def b64_video_to_frames(b64_video: str) -> List[np.ndarray]:
+    video_frames = []
+    # Convert base64 to video file bytes
+    video_bytes = base64.b64decode(
+        b64_video.split(",")[1] if "," in b64_video else b64_video
+    )
+
+    # Create a temporary file to store the video
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=True) as temp_video:
+        temp_video.write(video_bytes)
+        temp_video.flush()
+
+        # Read video frames using OpenCV
+        cap = cv2.VideoCapture(temp_video.name)
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            video_frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        cap.release()
+
+    return video_frames
+
+
+@app.post("/create_video")
+async def create_video(
+    b64video: str,
+    detections: List[List[Detection]],
+) -> Dict[str, Any]:
+    video_frames = b64_video_to_frames(b64video)
+    visualization = T.overlay_bounding_boxes(video_frames, detections)
+    video_bytes = frames_to_bytes(visualization)
+    b64video = base64.b64encode(video_bytes).decode("utf-8")
+    return {"b64video": b64video}
 
 
 @app.post("/chat")
