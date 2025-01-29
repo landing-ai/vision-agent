@@ -65,7 +65,7 @@ desc,doc,name
             },
         ]
     ",owlv2_sam2_instance_segmentation
-"'owlv2_sam2_video_tracking' is a tool that can track and segment multiple objects in a video given a text prompt such as category names or referring expressions. The categories in the text prompt are separated by commas. It returns a list of bounding boxes, label names, masks and associated probability scores and is useful for tracking and counting without duplicating counts.","owlv2_sam2_video_tracking(prompt: str, frames: List[numpy.ndarray], chunk_length: Optional[int] = 25, fine_tune_id: Optional[str] = None) -> List[List[Dict[str, Any]]]:
+"'owlv2_sam2_video_tracking' is a tool that can track and segment multiple objects in a video given a text prompt such as category names or referring expressions. The categories in the text prompt are separated by commas. It returns a list of bounding boxes, label names, masks and associated probability scores and is useful for tracking and counting without duplicating counts.","owlv2_sam2_video_tracking(prompt: str, frames: List[numpy.ndarray], box_threshold: float = 0.1, chunk_length: Optional[int] = 25, fine_tune_id: Optional[str] = None) -> List[List[Dict[str, Any]]]:
 'owlv2_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
     expressions. The categories in the text prompt are separated by commas. It returns
@@ -75,6 +75,8 @@ desc,doc,name
     Parameters:
         prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for the box detection. Defaults
+            to 0.10.
         chunk_length (Optional[int]): The number of frames to re-run owlv2 to find
             new objects.
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
@@ -175,7 +177,7 @@ desc,doc,name
             },
         ]
     ",countgd_sam2_instance_segmentation
-"'countgd_sam2_video_tracking' is a tool that can track and segment multiple objects in a video given a text prompt such as category names or referring expressions. The categories in the text prompt are separated by commas. It returns a list of bounding boxes, label names, masks and associated probability scores and is useful for tracking and counting without duplicating counts.","countgd_sam2_video_tracking(prompt: str, frames: List[numpy.ndarray], chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
+"'countgd_sam2_video_tracking' is a tool that can track and segment multiple objects in a video given a text prompt such as category names or referring expressions. The categories in the text prompt are separated by commas. It returns a list of bounding boxes, label names, masks and associated probability scores and is useful for tracking and counting without duplicating counts.","countgd_sam2_video_tracking(prompt: str, frames: List[numpy.ndarray], box_threshold: float = 0.23, chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
 'countgd_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
     expressions. The categories in the text prompt are separated by commas. It returns
@@ -185,6 +187,8 @@ desc,doc,name
     Parameters:
         prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
         chunk_length (Optional[int]): The number of frames to re-run countgd to find
             new objects.
 
@@ -458,13 +462,14 @@ desc,doc,name
         >>> qwen2_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'
     ",qwen2_vl_video_vqa
-'activity_recognition' is a tool that can recognize activities in a video given a text prompt. It can be used to identify where specific activities or actions happen in a video and returns a list of 0s and 1s to indicate the activity.,"activity_recognition(prompt: str, frames: List[numpy.ndarray], model='qwen2vl', chunk_length_frames: int = 25) -> List[float]:
+'activity_recognition' is a tool that can recognize activities in a video given a text prompt. It can be used to identify where specific activities or actions happen in a video and returns a list of 0s and 1s to indicate the activity.,"activity_recognition(prompt: str, frames: List[numpy.ndarray], model='qwen2vl', chunk_length_frames: int = 10) -> List[float]:
 'activity_recognition' is a tool that can recognize activities in a video given a
     text prompt. It can be used to identify where specific activities or actions
     happen in a video and returns a list of 0s and 1s to indicate the activity.
 
     Parameters:
-        prompt (str): The question about the video
+        prompt (str): The event you want to identify, should be phrased as a question,
+            for example, ""Did a goal happen?"".
         frames (List[np.ndarray]): The reference frames used for the question
         model (str): The model to use for the inference. Valid values are
             'claude-35', 'gpt-4o', 'qwen2vl'.
