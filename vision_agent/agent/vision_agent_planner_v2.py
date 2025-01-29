@@ -21,6 +21,7 @@ from vision_agent.agent.agent_utils import (
     extract_tag,
     print_code,
     print_table,
+    remove_installs_from_code,
 )
 from vision_agent.agent.types import AgentMessage, InteractionContext, PlanContext
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
@@ -180,6 +181,7 @@ def run_critic(
 
 
 def code_safeguards(code: str) -> str:
+    code = remove_installs_from_code(code)
     if "get_tool_for_task" in code:
         lines = code.split("\n")
         new_lines = []
