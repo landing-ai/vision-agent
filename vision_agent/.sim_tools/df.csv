@@ -730,28 +730,3 @@ desc,doc,name
             }],
         )
     ",overlay_segmentation_masks
-'overlay_heat_map' is a utility function that displays a heat map on an image.,"overlay_heat_map(image: numpy.ndarray, heat_map: Dict[str, Any], alpha: float = 0.8) -> numpy.ndarray:
-'overlay_heat_map' is a utility function that displays a heat map on an image.
-
-    Parameters:
-        image (np.ndarray): The image to display the heat map on.
-        heat_map (Dict[str, Any]): A dictionary containing the heat map under the key
-            'heat_map'.
-        alpha (float, optional): The transparency of the overlay. Defaults to 0.8.
-
-    Returns:
-        np.ndarray: The image with the heat map displayed.
-
-    Example
-    -------
-        >>> image_with_heat_map = overlay_heat_map(
-            image,
-            {
-                'heat_map': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 125, 125, 125]], dtype=uint8),
-            },
-        )
-    ",overlay_heat_map
