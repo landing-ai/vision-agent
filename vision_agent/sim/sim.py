@@ -12,17 +12,17 @@ import requests
 from openai import AzureOpenAI, OpenAI
 from scipy.spatial.distance import cosine  # type: ignore
 
-from vision_agent.tools.tool_utils import (
+from vision_agent.tools.tools import get_tools_df
+from vision_agent.utils.tools import (
     _LND_API_KEY,
     _create_requests_session,
     _LND_API_URL_v2,
 )
-from vision_agent.tools.tools import TOOLS_DF
 
 
 @lru_cache(maxsize=1)
 def get_tool_recommender() -> "Sim":
-    return load_cached_sim(TOOLS_DF)
+    return load_cached_sim(get_tools_df())
 
 
 @lru_cache(maxsize=512)

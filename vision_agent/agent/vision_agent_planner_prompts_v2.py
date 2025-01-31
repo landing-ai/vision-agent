@@ -578,9 +578,12 @@ def process_owlv2(image_paths):
         for image_path in image_paths:
             image = load_image(image_path)
             results.extend(owlv2_object_detection("person", image))
+
+        # run only on the first image to save time
+        judgement = judge_od_results("person", load_image(image_paths[0]), results[0])
     except Exception as e:
         results = f"Encountered error when executing process_owlv2: {str(e)}"
-    return results
+    return {"results": results, "judge": judgement}
 
 def process_agentic(image_paths):
     try:
@@ -588,9 +591,12 @@ def process_agentic(image_paths):
         for image_path in image_paths:
             image = load_image(image_path)
             results.extend(agentic_object_detection("person", image))
+
+        # run only on the first image to save time
+        judgement = judge_od_results("person", load_image(image_paths[0]), results[0])
     except Exception as e:
         results = f"Encountered error when executing process_agentic: {str(e)}"
-    return results
+    return {"results": results, "judge": judgement}
 
 def process_countgd(image_paths):
     try:
@@ -598,9 +604,12 @@ def process_countgd(image_paths):
         for image_path in image_paths:
             image = load_image(image_path)
             results.extend(countgd_object_detection("person", image))
+
+        # run only on the first image to save time
+        judgement = judge_od_results("person", load_image(image_paths[0]), results[0])
     except Exception as e:
         results = f"Encountered error when executing process_countgd: {str(e)}"
-    return results
+    return {"results": results, "judge": judgement}
 
 image_paths = ["image1.jpg", "image2.jpg", "image3.jpg", "image4.jpg"]
 
@@ -653,17 +662,21 @@ def process_owlv2_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
         results = owlv2_sam2_video_tracking("person", frames, chunk_length=1)
+        # run judge only on the first frame to save time
+        judgement = judge_od_results("person", frames[0], results[0])
     except Exception as e:
         results = f"Encountered error when executing process_owlv2_sam2_video_tracking: {str(e)}"
-    return results
+    return {"results": results, "judge": judgement}
 
 def process_countgd_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
         results = countgd_sam2_video_tracking("person", frames, chunk_length=1)
+        # run judge only on the first frame to save time
+        judgement = judge_od_results("person", frames[0], results[0])
     except Exception as e:
         results = f"Encountered error when executing process_countgd: {str(e)}"
-    return results
+    return {"results": results, "jduge": judgement}
 
 
 with ThreadPoolExecutor() as executor:

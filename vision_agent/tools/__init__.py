@@ -13,16 +13,7 @@ from .meta_tools import (
     view_media_artifact,
 )
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
-from .tool_utils import add_bboxes_from_masks, get_tool_descriptions_by_names
 from .tools import (
-    FUNCTION_TOOLS,
-    TOOL_DESCRIPTIONS,
-    TOOL_DOCSTRING,
-    TOOLS,
-    TOOLS_DF,
-    TOOLS_INFO,
-    UTIL_TOOLS,
-    UTILITIES_DOCSTRING,
     activity_recognition,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
@@ -46,7 +37,6 @@ from .tools import (
     florence2_sam2_video_tracking,
     flux_image_inpainting,
     generate_pose_image,
-    get_tool_documentation,
     load_image,
     minimum_distance,
     ocr,
@@ -68,6 +58,7 @@ from .tools import (
     vit_image_classification,
     vit_nsfw_classification,
 )
+from .planner_tools import judge_od_results
 
 __new_tools__ = [
     "import vision_agent as va",
@@ -79,13 +70,20 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from .tools import (  # noqa: F811
+        from vision_agent.utils.tools_doc import (  # noqa: F811
             get_tool_descriptions,
             get_tools_df,
             get_tools_info,
         )
 
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
+        from vision_agent.tools import (
+            TOOL_DESCRIPTIONS,
+            TOOL_DOCSTRING,
+            TOOLS,
+            TOOLS_DF,
+            TOOLS_INFO,
+        )
 
         if tool not in TOOLS:
             TOOLS.append(tool)

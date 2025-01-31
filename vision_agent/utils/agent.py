@@ -14,8 +14,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 import vision_agent.tools as T
-from vision_agent.agent.types import AgentMessage, PlanContext
-from vision_agent.lmm.types import Message
+from vision_agent.models import AgentMessage, PlanContext, Message
 from vision_agent.utils.execute import CodeInterpreter, Execution
 from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
 
@@ -185,6 +184,7 @@ class DefaultImports:
         "import os",
         "import numpy as np",
         "from vision_agent.tools import *",
+        "from vision_agent.tools.planner_tools import judge_od_results",
         "from typing import *",
         "from pillow_heif import register_heif_opener",
         "register_heif_opener()",

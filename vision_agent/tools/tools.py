@@ -21,20 +21,7 @@ from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
-from vision_agent.tools.tool_utils import (
-    ToolCallTrace,
-    add_bboxes_from_masks,
-    get_tool_descriptions,
-    get_tool_documentation,
-    get_tools_df,
-    get_tools_info,
-    nms,
-    send_inference_request,
-    send_task_inference_request,
-    should_report_tool_traces,
-    single_nms,
-)
-from vision_agent.tools.tools_types import JobStatus
+from vision_agent.models import JobStatus
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -48,6 +35,21 @@ from vision_agent.utils.image_utils import (
     rle_decode,
     rle_decode_array,
 )
+from vision_agent.utils.tools import (
+    ToolCallTrace,
+    add_bboxes_from_masks,
+    nms,
+    send_inference_request,
+    send_task_inference_request,
+    should_report_tool_traces,
+    single_nms,
+)
+from vision_agent.utils.tools_doc import get_tool_descriptions as _get_tool_descriptions
+from vision_agent.utils.tools_doc import (
+    get_tool_documentation as _get_tool_documentation,
+)
+from vision_agent.utils.tools_doc import get_tools_df as _get_tools_df
+from vision_agent.utils.tools_doc import get_tools_info as _get_tools_info
 from vision_agent.utils.video import (
     extract_frames_from_video,
     frames_to_bytes,
@@ -3197,8 +3199,26 @@ UTIL_TOOLS = [
 
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
 
-TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
-TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
-TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
-TOOLS_INFO = get_tools_info(FUNCTION_TOOLS)  # type: ignore
-UTILITIES_DOCSTRING = get_tool_documentation(UTIL_TOOLS)  # type: ignore
+
+def get_tools():
+    return TOOLS
+
+
+def get_tools_info():
+    return _get_tools_info(FUNCTION_TOOLS)
+
+
+def get_tools_df():
+    return _get_tools_df(TOOLS)  # type: ignore
+
+
+def get_tools_descriptions():
+    return _get_tool_descriptions(TOOLS)  # type: ignore
+
+
+def get_tools_docstring():
+    return _get_tool_documentation(TOOLS)  # type: ignore
+
+
+def get_utilties_docstring():
+    return get_tool_documentation(UTIL_TOOLS)  # type: ignore

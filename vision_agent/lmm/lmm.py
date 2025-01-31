@@ -9,9 +9,8 @@ import requests
 from anthropic.types import ImageBlockParam, MessageParam, TextBlockParam
 from openai import AzureOpenAI, OpenAI
 
+from vision_agent.models import Message
 from vision_agent.utils.image_utils import encode_media
-
-from .types import Message
 
 
 class LMM(ABC):

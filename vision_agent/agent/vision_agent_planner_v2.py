@@ -13,16 +13,6 @@ from rich.markup import escape
 import vision_agent.tools as T
 import vision_agent.tools.planner_tools as pt
 from vision_agent.agent import AgentPlanner
-from vision_agent.agent.agent_utils import (
-    add_media_to_chat,
-    capture_media_from_exec,
-    convert_message_to_agentmessage,
-    extract_json,
-    extract_tag,
-    print_code,
-    print_table,
-)
-from vision_agent.agent.types import AgentMessage, InteractionContext, PlanContext
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     CRITIQUE_PLAN,
     EXAMPLE_PLAN1,
@@ -33,17 +23,28 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     PLAN,
 )
 from vision_agent.configs import Config
-from vision_agent.lmm import LMM, Message
-from vision_agent.tools.planner_tools import check_function_call, get_tool_documentation
+from vision_agent.lmm import LMM
+from vision_agent.models import AgentMessage, InteractionContext, Message, PlanContext
+from vision_agent.tools.planner_tools import check_function_call
+from vision_agent.utils.agent import (
+    add_media_to_chat,
+    capture_media_from_exec,
+    convert_message_to_agentmessage,
+    extract_json,
+    extract_tag,
+    print_code,
+    print_table,
+)
 from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
     Execution,
 )
+from vision_agent.utils.tools_doc import get_tool_documentation
 
 logging.basicConfig(level=logging.INFO)
 CONFIG = Config()
-UTIL_DOCSTRING = T.get_tool_documentation(
+UTIL_DOCSTRING = get_tool_documentation(
     [
         T.load_image,
         T.extract_frames_and_timestamps,
@@ -358,6 +359,16 @@ def get_steps(chat: List[AgentMessage], max_steps: int) -> int:
     return max_steps
 
 
+def format_tool_output(tool_thoughts: str, tool_docstring: str) -> str:
+    return_str = "[get_tool_for_task output]\n"
+    if tool_thoughts.strip() != "":
+        return_str += f"{tool_thoughts}\n\n"
+    return_str += (
+        f"Tool Documentation:\n{tool_docstring}\n[end of get_tool_for_task output]\n"
+    )
+    return return_str
+
+
 def replace_interaction_with_obs(chat: List[AgentMessage]) -> List[AgentMessage]:
     chat = copy.deepcopy(chat)
     new_chat = []
@@ -369,7 +380,9 @@ def replace_interaction_with_obs(chat: List[AgentMessage]) -> List[AgentMessage]
             try:
                 response = json.loads(chat[i + 1].content)
                 function_name = response["function_name"]
-                tool_doc = get_tool_documentation(function_name)
+                tool_doc = format_tool_output(
+                    "", T.TOOLS_DF[T.TOOLS_DF["name"] == function_name]["doc"].values[0]
+                )
                 if "box_threshold" in response:
                     tool_doc = f"Use the following function with box_threshold={response['box_threshold']}. This tool and its parameters were chosen by the user so do not change them in your planning.\n\n{tool_doc}."
                 new_chat.append(AgentMessage(role="observation", content=tool_doc))

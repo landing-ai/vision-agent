@@ -9,7 +9,16 @@ from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import (
+from vision_agent.agent.vision_agent_planner_prompts import (
+    PICK_PLAN,
+    PLAN,
+    PREVIOUS_FAILED,
+    TEST_PLANS,
+    USER_REQ,
+)
+from vision_agent.lmm import LMM, AnthropicLMM, AzureOpenAILMM, OllamaLMM, OpenAILMM
+from vision_agent.models import Message
+from vision_agent.utils.agent import (
     _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
     extract_code,
@@ -18,27 +27,12 @@ from vision_agent.agent.agent_utils import (
     format_plans,
     print_code,
 )
-from vision_agent.agent.vision_agent_planner_prompts import (
-    PICK_PLAN,
-    PLAN,
-    PREVIOUS_FAILED,
-    TEST_PLANS,
-    USER_REQ,
-)
-from vision_agent.lmm import (
-    LMM,
-    AnthropicLMM,
-    AzureOpenAILMM,
-    Message,
-    OllamaLMM,
-    OpenAILMM,
-)
 from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
+from vision_agent.sim import AzureSim, OllamaSim, Sim
 
 _LOGGER = logging.getLogger(__name__)
 

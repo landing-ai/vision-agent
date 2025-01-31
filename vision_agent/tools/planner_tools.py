@@ -1,5 +1,7 @@
 import inspect
 import logging
+import math
+import random
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
@@ -10,7 +12,6 @@ from IPython.display import display
 from PIL import Image
 
 import vision_agent.tools as T
-from vision_agent.agent.agent_utils import DefaultImports, extract_json, extract_tag
 from vision_agent.agent.vision_agent_planner_prompts_v2 import (
     CATEGORIZE_TOOL_REQUEST,
     FINALIZE_PLAN,
@@ -21,6 +22,7 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
 )
 from vision_agent.configs import Config
 from vision_agent.lmm import LMM, AnthropicLMM
+from vision_agent.utils.agent import DefaultImports, extract_json, extract_tag
 from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
@@ -28,10 +30,12 @@ from vision_agent.utils.execute import (
     MimeType,
 )
 from vision_agent.utils.image_utils import convert_to_b64
-from vision_agent.utils.sim import get_tool_recommender
+from vision_agent.sim import get_tool_recommender
+from vision_agent.utils.tools_doc import get_tool_documentation
+from vision_agent.tools.tools import get_tools, get_tools_info
 
-TOOL_FUNCTIONS = {tool.__name__: tool for tool in T.TOOLS}
-LOAD_TOOLS_DOCSTRING = T.get_tool_documentation(
+TOOL_FUNCTIONS = {tool.__name__: tool for tool in get_tools()}
+LOAD_TOOLS_DOCSTRING = get_tool_documentation(
     [T.load_image, T.extract_frames_and_timestamps]
 )
 
@@ -50,6 +54,59 @@ def format_tool_output(tool_thoughts: str, tool_docstring: str) -> str:
     return return_str
 
 
+def judge_od_results(
+    prompt: str,
+    image: np.ndarray,
+    detections: List[Dict[str, Any]],
+) -> str:
+    """Given an image and the detections, this function will judge the results and
+    return the thoughts on the results.
+
+    Parameters:
+        prompt (str): The prompt that was used to generate the detections.
+        image (np.ndarray): The image that the detections were made on.
+        detections (List[Dict[str, Any]]): The detections made on the image.
+
+    Returns:
+        str: The thoughts on the results.
+    """
+
+    if not detections:
+        return "No detections found in the image."
+
+    od_judge = CONFIG.create_od_judge()
+    max_crop_size = (512, 512)
+
+    # Randomly sample up to 10 detections
+    num_samples = min(10, len(detections))
+    sampled_detections = random.sample(detections, num_samples)
+    crops = []
+    h, w = image.shape[:2]
+
+    for detection in sampled_detections:
+        if "bbox" not in detection:
+            continue
+        x1, y1, x2, y2 = detection["bbox"]
+        crop = image[int(y1 * h) : int(y2 * h), int(x1 * w) : int(x2 * w)]
+        if crop.shape[0] > max_crop_size[0] or crop.shape[1] > max_crop_size[1]:
+            crop = Image.fromarray(crop)
+            crop.thumbnail(max_crop_size)
+            crop = np.array(crop)
+        crops.append("data:image/png;base64," + convert_to_b64(crop))
+
+    sampled_detection_info = [
+        {"score": d["score"], "label": d["label"]} for d in sampled_detections
+    ]
+
+    prompt = f"""The user is trying to detect '{prompt}' in an image. You are show 10 images which represent crops of the detected objets. Below is the detection labels and scores:
+{sampled_detection_info}
+
+Look over each of the images and corresponding labels and scores. Provide a judgement on whether or not the results are correct. If the results are incorrect you can only suggest a different prompt or a threshold."""
+
+    response = cast(str, od_judge.generate(prompt, media=crops))
+    return response
+
+
 def run_multi_judge(
     tool_chooser: LMM,
     tool_docs_str: str,
@@ -57,6 +114,7 @@ def run_multi_judge(
     code: str,
     tool_output_str: str,
     image_paths: List[str],
+    n_judges: int = 3,
 ) -> Tuple[Optional[Callable], str, str]:
     error_message = ""
     prompt = PICK_TOOL.format(
@@ -77,7 +135,7 @@ def run_multi_judge(
 
     responses = []
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(run_judge) for _ in range(3)]
+        futures = [executor.submit(run_judge) for _ in range(n_judges)]
         for future in as_completed(futures):
             responses.append(future.result())
 
@@ -86,7 +144,7 @@ def run_multi_judge(
     for tool, tool_thoughts, tool_docstring in responses:
         if tool is not None:
             counts[tool.__name__] = counts.get(tool.__name__, 0) + 1
-            if counts[tool.__name__] >= 2:
+            if counts[tool.__name__] >= math.ceil(n_judges / 2):
                 return tool, tool_thoughts, tool_docstring
 
     if len(responses) == 0:
@@ -104,9 +162,10 @@ def extract_tool_info(
     tool_thoughts = tool_choice_context.get("thoughts", "")
     tool_docstring = ""
     tool = tool_choice_context.get("best_tool", None)
+    tools_info = get_tools_info()
     if tool in TOOL_FUNCTIONS:
         tool = TOOL_FUNCTIONS[tool]
-        tool_docstring = T.TOOLS_INFO[tool.__name__]
+        tool_docstring = tools_info[tool.__name__]
 
     return tool, tool_thoughts, tool_docstring, ""
 
@@ -183,7 +242,9 @@ def retrieve_tool_docs(lmm: LMM, task: str, exclude_tools: Optional[List[str]]) 
                 all_tool_doc_names.add(tool_doc["name"])
 
     tool_docs_str = explanation + "\n\n" + "\n".join([e["doc"] for e in all_tool_docs])
-    tool_docs_str += "\n" + LOAD_TOOLS_DOCSTRING
+    tool_docs_str += (
+        "\n" + LOAD_TOOLS_DOCSTRING + get_tool_documentation([judge_od_results])
+    )
     return tool_docs_str
 
 
@@ -323,16 +384,16 @@ def get_tool_for_task(
         tool_output_str = tool_output.text(include_results=False).strip()
 
         _, tool_thoughts, tool_docstring = run_multi_judge(
-            tool_chooser, tool_docs_str, task, code, tool_output_str, image_paths
+            tool_chooser,
+            tool_docs_str,
+            task,
+            code,
+            tool_output_str,
+            image_paths,
+            n_judges=1,
         )
 
     print(format_tool_output(tool_thoughts, tool_docstring))
-
-
-def get_tool_documentation(tool_name: str) -> str:
-    # use same format as get_tool_for_task
-    tool_doc = T.TOOLS_DF[T.TOOLS_DF["name"] == tool_name]["doc"].values[0]
-    return format_tool_output("", tool_doc)
 
 
 def get_tool_for_task_human_reviewer(
@@ -454,4 +515,4 @@ PLANNER_TOOLS = [
     suggestion,
     get_tool_for_task,
 ]
-PLANNER_DOCSTRING = T.get_tool_documentation(PLANNER_TOOLS)  # type: ignore
+PLANNER_DOCSTRING = get_tool_documentation(PLANNER_TOOLS)  # type: ignore
