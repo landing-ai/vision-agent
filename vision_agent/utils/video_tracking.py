@@ -5,11 +5,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 from scipy.optimize import linear_sum_assignment  # type: ignore
 
-from vision_agent.tools.tool_utils import (
-    add_bboxes_from_masks,
-    send_task_inference_request,
-)
 from vision_agent.utils.image_utils import denormalize_bbox, rle_decode_array
+from vision_agent.utils.tools import add_bboxes_from_masks, send_task_inference_request
 from vision_agent.utils.video import frames_to_bytes
 
 
