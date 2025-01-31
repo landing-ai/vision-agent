@@ -96,6 +96,16 @@ class Config(BaseModel):
         }
     )
 
+    # for get_tool_for_task
+    od_judge: Type[LMM] = Field(default=AnthropicLMM)
+    od_judge_kwargs: dict = Field(
+        default_factory=lambda: {
+            "model_name": "claude-3-5-sonnet-20241022",
+            "temperature": 0.0,
+            "image_size": 512,
+        }
+    )
+
     # for suggestions module
     suggester: Type[LMM] = Field(default=OpenAILMM)
     suggester_kwargs: dict = Field(
@@ -142,6 +152,9 @@ class Config(BaseModel):
 
     def create_tool_chooser(self) -> LMM:
         return self.tool_chooser(**self.tool_chooser_kwargs)
+
+    def create_od_judge(self) -> LMM:
+        return self.od_judge(**self.od_judge_kwargs)
 
     def create_suggester(self) -> LMM:
         return self.suggester(**self.suggester_kwargs)
