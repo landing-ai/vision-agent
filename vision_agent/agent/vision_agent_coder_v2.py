@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 from rich.console import Console
 from rich.markup import escape
 
-import vision_agent.tools.tools as T
+from vision_agent.tools.tools import get_utilties_docstring
 from vision_agent.agent import AgentCoder, AgentPlanner
 from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
 from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
@@ -207,7 +207,7 @@ def test_code(
     test = write_test(
         tester=tester,
         chat=chat,
-        tool_util_docs=T.UTILITIES_DOCSTRING,
+        tool_util_docs=get_utilties_docstring(),
         code=code,
         media_list=media_list,
     )
@@ -227,7 +227,7 @@ def test_code(
     while (not result.success or len(result.logs.stdout) == 0) and count < 3:
         code, test, debug_info = debug_code(
             debugger,
-            T.UTILITIES_DOCSTRING + "\n" + tool_docs,
+            get_utilties_docstring() + "\n" + tool_docs,
             plan,
             code,
             test,

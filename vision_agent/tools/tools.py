@@ -3194,7 +3194,6 @@ UTIL_TOOLS = [
     save_video,
     overlay_bounding_boxes,
     overlay_segmentation_masks,
-    overlay_heat_map,
 ]
 
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
@@ -3221,4 +3220,4 @@ def get_tools_docstring():
 
 
 def get_utilties_docstring():
-    return get_tool_documentation(UTIL_TOOLS)  # type: ignore
+    return _get_tool_documentation(UTIL_TOOLS)  # type: ignore
