@@ -22,7 +22,7 @@ PLAN = """
 5. Ensure you always call `suggestion` initially and `get_tool_for_task` to get the right tool for the subtask.
 6. Calling `plt.imshow` or `save_image` will display the image to you so you can check your results. If you see an image after <execute_python> it's generated from your code.
 7. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
-8. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool.
+8. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool output, tools are often better at things like counting and detecting small objects.
 9. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
 
 <thinking>Your thought process...</thinking>
@@ -549,11 +549,10 @@ TEST_TOOLS = """
 1. List all the tools under **Tools** and the user request. Write a program to load the media and call the most relevant tools in parallel and print it's output along with other relevant information.
 2. Create a dictionary where the keys are the tool name and the values are the tool outputs. Remove numpy arrays from the printed dictionary.
 3. Your test case MUST run only on the given images which are {media}
-4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results only for evaluating the tool.
-5. Use mutually exclusive categories for prompts such as 'person, car' and DO NOT use overlapping categories like 'person, athlete' or 'soda can, coke can'.
-6. Test 2 or 3 prompts per tool to find the best prompt for the user request, unless it's video tracking, then only use one prompt to save time.
-7. Print this final dictionary.
-8. Output your code in the following format wrapped in <code> tags:
+4. For video tracking, use chunk_length=1 and at least 3 frames to ensure the best results when evaluating the tool.
+5. Use mutually exclusive categories for prompts such as 'person, car' and not 'person, athlete' to avoid over counting.
+6. Print this final dictionary.
+7. Output your code in the following format wrapped in <code> tags:
 <code>
 # Your code here
 </code>
@@ -569,7 +568,7 @@ Count the number of pedestrians across all the images.
 
 <code>
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import load_image, owlv2_object_detection, agetic_object_detection, countgd_object_detection
+from vision_agent.tools import load_image, owlv2_object_detection, florence2_object_detection, countgd_object_detection
 
 # process functions in a try catch so that if it fails it doesn't cause `as_completed` to hang
 def process_owlv2(image_paths):
@@ -578,25 +577,19 @@ def process_owlv2(image_paths):
         for image_path in image_paths:
             image = load_image(image_path)
             results.extend(owlv2_object_detection("person", image))
-
-        # run only on the first image to save time
-        judgement = judge_od_results("person", load_image(image_paths[0]), results[0])
     except Exception as e:
         results = f"Encountered error when executing process_owlv2: {str(e)}"
-    return {"results": results, "judge": judgement}
+    return results
 
-def process_agentic(image_paths):
+def process_florence2(image_paths):
     try:
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(agentic_object_detection("person", image))
-
-        # run only on the first image to save time
-        judgement = judge_od_results("person", load_image(image_paths[0]), results[0])
+            results.extend(florence2_object_detection("person", image))
     except Exception as e:
-        results = f"Encountered error when executing process_agentic: {str(e)}"
-    return {"results": results, "judge": judgement}
+        results = f"Encountered error when executing process_florence2: {str(e)}"
+    return results
 
 def process_countgd(image_paths):
     try:
@@ -604,19 +597,16 @@ def process_countgd(image_paths):
         for image_path in image_paths:
             image = load_image(image_path)
             results.extend(countgd_object_detection("person", image))
-
-        # run only on the first image to save time
-        judgement = judge_od_results("person", load_image(image_paths[0]), results[0])
     except Exception as e:
         results = f"Encountered error when executing process_countgd: {str(e)}"
-    return {"results": results, "judge": judgement}
+    return results
 
 image_paths = ["image1.jpg", "image2.jpg", "image3.jpg", "image4.jpg"]
 
 with ThreadPoolExecutor() as executor:
     futures = {{
         executor.submit(process_owlv2, image_paths): "owlv2_object_detection",
-        executor.submit(agentic_object_detection, image_paths): "agentic_object_detection",
+        executor.submit(process_florence2, image_paths): "florence2_phrase_grounding",
         executor.submit(process_countgd, image_paths): "countgd_object_detection",
     }}
 
@@ -641,7 +631,7 @@ Count the number of people in the video.
 <code>
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import extract_frames_and_timestamps, owlv2_sam2_video_tracking, countgd_sam2_video_tracking
+from vision_agent.tools import extract_frames_and_timestamps, owlv2_sam2_video_tracking, florence2_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames_and_timestamps("video.mp4", 1)
@@ -662,27 +652,23 @@ def process_owlv2_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
         results = owlv2_sam2_video_tracking("person", frames, chunk_length=1)
-        # run judge only on the first frame to save time
-        judgement = judge_od_results("person", frames[0], results[0])
     except Exception as e:
         results = f"Encountered error when executing process_owlv2_sam2_video_tracking: {str(e)}"
-    return {"results": results, "judge": judgement}
+    return results
 
-def process_countgd_sam2_video_tracking(frames):
+def process_florence2_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
-        results = countgd_sam2_video_tracking("person", frames, chunk_length=1)
-        # run judge only on the first frame to save time
-        judgement = judge_od_results("person", frames[0], results[0])
+        results = florence2_sam2_video_tracking("person", frames, chunk_length=1)
     except Exception as e:
-        results = f"Encountered error when executing process_countgd: {str(e)}"
-    return {"results": results, "jduge": judgement}
+        results = f"Encountered error when executing process_florence2_sam2: {str(e)}"
+    return results
 
 
 with ThreadPoolExecutor() as executor:
     futures = {{
         executor.submit(process_owlv2_sam2_video_tracking, frames): "owlv2_sam2_video_tracking",
-        executor.submit(process_countgd_sam2_video_tracking, frames): "countgd_sam2_video_tracking",
+        executor.submit(process_florence2_sam2_video_tracking, frames): "florence2_sam2_video_tracking",
     }}
     final_results = {{}}
     for future in as_completed(futures):
