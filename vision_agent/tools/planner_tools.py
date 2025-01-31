@@ -390,7 +390,7 @@ def get_tool_for_task(
             code,
             tool_output_str,
             image_paths,
-            n_judges=1,
+            n_judges=3,
         )
 
     print(format_tool_output(tool_thoughts, tool_docstring))
