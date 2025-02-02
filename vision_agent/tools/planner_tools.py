@@ -22,6 +22,8 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
 )
 from vision_agent.configs import Config
 from vision_agent.lmm import LMM, AnthropicLMM
+from vision_agent.sim import get_tool_recommender
+from vision_agent.tools.tools import get_tools, get_tools_info
 from vision_agent.utils.agent import DefaultImports, extract_json, extract_tag
 from vision_agent.utils.execute import (
     CodeInterpreter,
@@ -30,9 +32,7 @@ from vision_agent.utils.execute import (
     MimeType,
 )
 from vision_agent.utils.image_utils import convert_to_b64
-from vision_agent.sim import get_tool_recommender
 from vision_agent.utils.tools_doc import get_tool_documentation
-from vision_agent.tools.tools import get_tools, get_tools_info
 
 TOOL_FUNCTIONS = {tool.__name__: tool for tool in get_tools()}
 LOAD_TOOLS_DOCSTRING = get_tool_documentation(
@@ -420,7 +420,7 @@ def get_tool_for_task_human_reviewer(
 
         tools = [
             t.__name__
-            for t in T.TOOLS
+            for t in get_tools()
             if inspect.signature(t).parameters.get("box_threshold")  # type: ignore
         ]
 
