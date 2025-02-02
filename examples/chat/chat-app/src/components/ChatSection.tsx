@@ -1,6 +1,7 @@
 "use client";
 
-import { VisualizerHiL } from "@/components/ResultVisualizer";
+// import { VisualizerHiL } from "@/components/ResultVisualizer";
+import { GroupedVisualizer } from "@/components/GroupedVisualizer";
 import { useState, useEffect } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,7 @@ const formatAssistantContent = (
 
   if (interactionMatch) {
     return (
-      <VisualizerHiL
+      <GroupedVisualizer
         detectionResults={interactionJson}
         onSubmit={onSubmit}
       />
