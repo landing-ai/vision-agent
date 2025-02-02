@@ -63,7 +63,9 @@ class OpenAILMM(LMM):
         self.image_size = image_size
         self.image_detail = image_detail
         # o1 does not use max_tokens
-        if "max_tokens" not in kwargs and not (model_name.startswith("o1") or model_name.startswith("o3")):
+        if "max_tokens" not in kwargs and not (
+            model_name.startswith("o1") or model_name.startswith("o3")
+        ):
             kwargs["max_tokens"] = max_tokens
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
