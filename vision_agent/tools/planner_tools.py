@@ -34,10 +34,14 @@ from vision_agent.utils.execute import (
 from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.tools_doc import get_tool_documentation
 
-TOOL_FUNCTIONS = {tool.__name__: tool for tool in get_tools()}
-LOAD_TOOLS_DOCSTRING = get_tool_documentation(
-    [T.load_image, T.extract_frames_and_timestamps]
-)
+
+def get_tool_functions():
+    return {tool.__name__: tool for tool in get_tools()}
+
+
+def get_load_tools_docstring():
+    return get_tool_documentation([T.load_image, T.extract_frames_and_timestamps])
+
 
 CONFIG = Config()
 _LOGGER = logging.getLogger(__name__)
@@ -163,8 +167,10 @@ def extract_tool_info(
     tool_docstring = ""
     tool = tool_choice_context.get("best_tool", None)
     tools_info = get_tools_info()
-    if tool in TOOL_FUNCTIONS:
-        tool = TOOL_FUNCTIONS[tool]
+
+    tool_functions = get_tool_functions()
+    if tool in tool_functions:
+        tool = tool_functions[tool]
         tool_docstring = tools_info[tool.__name__]
 
     return tool, tool_thoughts, tool_docstring, ""
@@ -243,7 +249,7 @@ def retrieve_tool_docs(lmm: LMM, task: str, exclude_tools: Optional[List[str]]) 
 
     tool_docs_str = explanation + "\n\n" + "\n".join([e["doc"] for e in all_tool_docs])
     tool_docs_str += (
-        "\n" + LOAD_TOOLS_DOCSTRING + get_tool_documentation([judge_od_results])
+        "\n" + get_load_tools_docstring() + get_tool_documentation([judge_od_results])
     )
     return tool_docs_str
 
