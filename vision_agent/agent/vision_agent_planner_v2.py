@@ -380,8 +380,9 @@ def replace_interaction_with_obs(chat: List[AgentMessage]) -> List[AgentMessage]
             try:
                 response = json.loads(chat[i + 1].content)
                 function_name = response["function_name"]
+                tools_df = T.get_tools_df()
                 tool_doc = format_tool_output(
-                    "", T.TOOLS_DF[T.TOOLS_DF["name"] == function_name]["doc"].values[0]
+                    "", tools_df[tools_df["name"] == function_name]["doc"].values[0]
                 )
                 if "box_threshold" in response:
                     tool_doc = f"Use the following function with box_threshold={response['box_threshold']}. This tool and its parameters were chosen by the user so do not change them in your planning.\n\n{tool_doc}."
