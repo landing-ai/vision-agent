@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 from rich.console import Console
 from rich.markup import escape
 
-from vision_agent.tools.tools import get_utilties_docstring
 from vision_agent.agent import AgentCoder, AgentPlanner
 from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
 from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
@@ -18,7 +17,9 @@ from vision_agent.models import (
     Message,
     PlanContext,
 )
+from vision_agent.sim import Sim, get_tool_recommender
 from vision_agent.tools.meta_tools import get_diff
+from vision_agent.tools.tools import get_utilties_docstring
 from vision_agent.utils.agent import (
     DefaultImports,
     add_media_to_chat,
@@ -35,7 +36,6 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.sim import Sim, get_tool_recommender
 
 CONFIG = Config()
 _CONSOLE = Console()

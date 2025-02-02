@@ -18,6 +18,7 @@ from vision_agent.agent.vision_agent_planner_prompts import (
 )
 from vision_agent.lmm import LMM, AnthropicLMM, AzureOpenAILMM, OllamaLMM, OpenAILMM
 from vision_agent.models import Message
+from vision_agent.sim import AzureSim, OllamaSim, Sim
 from vision_agent.utils.agent import (
     _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
@@ -32,7 +33,6 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.sim import AzureSim, OllamaSim, Sim
 
 _LOGGER = logging.getLogger(__name__)
 
