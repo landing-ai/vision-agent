@@ -1,6 +1,6 @@
 "use client";
 
-import ImageVisualizerHiL from "@/components/ResultVisualizer";
+import { VisualizerHiL } from "@/components/ResultVisualizer";
 import { useState, useEffect } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ const checkContent = (role: string, content: string) => {
   );
 };
 
-const formatAssistantContent = async (
+const formatAssistantContent = (
   role: string,
   content: string,
   onSubmit: (functionName: string, boxThreshold: number) => void,
@@ -119,28 +119,8 @@ const formatAssistantContent = async (
   }
 
   if (interactionMatch) {
-    for (let i = 0; i < interactionJson.length; i++) {
-      if (interactionJson[i].files[0][0] === "video") {
-        const response = await fetch("http://localhost:8000/create_video", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            b64video: interactionJson[i].files[0][1],
-            detections: interactionJson[i].detections,
-          }),
-        });
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data = await response.json();
-        interactionJson[i].files[0][1] = data.b64video;
-      }
-    }
-
     return (
-      <ImageVisualizerHiL
+      <VisualizerHiL
         detectionResults={interactionJson}
         onSubmit={onSubmit}
       />
@@ -173,7 +153,7 @@ const formatAssistantContent = async (
   return <></>;
 };
 
-export function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
+function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
   return (
     <div
       className={`mb-4 ${

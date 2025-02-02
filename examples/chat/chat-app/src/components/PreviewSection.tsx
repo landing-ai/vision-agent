@@ -24,7 +24,6 @@ export function PreviewSection({
   uploadedFile,
   uploadedResult,
 }: PreviewSectionProps) {
-  console.log(uploadedMedia);
   return (
     <Card className="overflow-hidden">
       <Tabs defaultValue="media">
