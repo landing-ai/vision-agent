@@ -12,12 +12,12 @@ from pydantic import BaseModel
 
 import vision_agent.tools as T
 from vision_agent.agent import VisionAgentV2
-from vision_agent.agent.types import AgentMessage
+from vision_agent.models import AgentMessage
 from vision_agent.utils.execute import CodeInterpreterFactory
 from vision_agent.utils.video import frames_to_bytes
 
 app = FastAPI()
-DEBUG_HIL = False
+DEBUG_HIL = True
 
 # Configure CORS
 app.add_middleware(
@@ -114,18 +114,6 @@ def b64_video_to_frames(b64_video: str) -> List[np.ndarray]:
         cap.release()
 
     return video_frames
-
-
-@app.post("/create_video")
-async def create_video(
-    b64video: str,
-    detections: List[List[Detection]],
-) -> Dict[str, Any]:
-    video_frames = b64_video_to_frames(b64video)
-    visualization = T.overlay_bounding_boxes(video_frames, detections)
-    video_bytes = frames_to_bytes(visualization)
-    b64video = base64.b64encode(video_bytes).decode("utf-8")
-    return {"b64video": b64video}
 
 
 @app.post("/chat")
