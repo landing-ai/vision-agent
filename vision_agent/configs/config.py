@@ -112,7 +112,8 @@ class Config(BaseModel):
         default_factory=lambda: {
             "model_name": "o1",
             "temperature": 1.0,
-            "image_size": 768,
+            "image_detail": "high",
+            "image_size": 1024,
         }
     )
 
