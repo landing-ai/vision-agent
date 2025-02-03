@@ -9,21 +9,22 @@ PLAN = """
 **Example Planning**: Here are some examples of how you can search for a plan, in the examples the user output is denoted by USER, your output is denoted by AGENT and the observations after your code execution are denoted by OBSERVATION:
 {examples}
 
-**Current Planning**:
---- START PLANNING ---
+**Current Planning**: This is the plan you are currently working on
+--- START CURRENT PLANNING ---
 {planning}
---- END PLANNING ---
+--- END CURRENT PLANNING ---
 
 **Instructions**:
 1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You can <count> number of turns to complete the user's request.
 2. You can execute python code in the ipython notebook using <execute_python> tags. Only output one <execute_python> tag at a time.
 3. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
 4. Only load/save files from {media_list} unless you specifically saved the file previously.
-5. Ensure you always call `suggestion` initially and `get_tool_for_task` to get the right tool for the subtask.
+5. Ensure you always call `suggestion` and `claude35_vqa` initially and `get_tool_for_task` to get the right tool for the subtask.
 6. Calling `plt.imshow` or `save_image` will display the image to you so you can check your results. If you see an image after <execute_python> it's generated from your code.
-7. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
-8. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool output, tools are often better at things like counting and detecting small objects.
-9. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
+7. Be sure to print results returned for tools so you can see the output.
+8. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
+9. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool output, tools are often better at things like counting and detecting small objects.
+10. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
 
 <thinking>Your thought process...</thinking>
 <execute_python>Your code here</execute_python>
