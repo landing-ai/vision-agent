@@ -27,7 +27,7 @@ You can run VisionAgent in a local Jupyter Notebook [Counting cans in an image](
 You can use VisionAgent to generate code to count the number of people in an image:
 ```python
 from vision_agent.agent import VisionAgentCoderV2
-from vision_agent.agent.types import AgentMessage
+from vision_agent.models import AgentMessage
 
 agent = VisionAgentCoderV2(verbose=True)
 code_context = agent.generate_code(
