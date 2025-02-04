@@ -2046,11 +2046,15 @@ def activity_recognition(
         return [0.0] * len(segment)
 
     if model == "claude-35":
+
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
             return _lmm_activity_recognition(AnthropicLMM(), segment)
+
     elif model == "gpt-4o":
+
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
             return _lmm_activity_recognition(OpenAILMM(), segment)
+
     elif model == "qwen2vl":
         _apply_activity_recognition = _qwen2vl_activity_recognition
     else:
