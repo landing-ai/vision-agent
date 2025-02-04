@@ -195,8 +195,7 @@ def encode_media(
 
     def resize_to_b64(image: ImageType, resize: Optional[int] = None) -> str:
         if resize is not None:
-            if image.size[0] > resize or image.size[1] > resize:
-                image.thumbnail((resize, resize))
+            image.thumbnail((resize, resize))
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
         return base64.b64encode(buffer.getvalue()).decode("utf-8")

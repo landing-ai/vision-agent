@@ -1481,9 +1481,9 @@ def agentic_object_detection(
     fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'agentic_object_detection' is a tool that can detect multiple objects given a
-    text prompt such as category names or referring expressions on images. It's
-    particularly good at detecting fewer objects given detailed descriptive prompts. It
-    returns a list of bounding boxes with normalized coordinates, label names and
+    text prompt such as object names or referring expressions on images. It's
+    particularly good at detecting specific objects given detailed descriptive prompts.
+    It returns a list of bounding boxes with normalized coordinates, label names and
     associated probability scores.
 
     Parameters:
@@ -1530,10 +1530,10 @@ def agentic_sam2_instance_segmentation(
     prompt: str, image: np.ndarray
 ) -> List[Dict[str, Any]]:
     """'agentic_sam2_instance_segmentation' is a tool that can detect multiple
-    instances given a text prompt such as category names or referring expressions on
-    images. It's particularly good at detecting fewer objects given detailed descriptive
-    prompts. It returns a list of bounding boxes with normalized coordinates, label
-    names, masks and associated probability scores.
+    instances given a text prompt such as object names or referring expressions on
+    images. It's particularly good at detecting specific objects given detailed
+    descriptive prompts. It returns a list of bounding boxes with normalized
+    coordinates, label names, masks and associated probability scores.
 
     Parameters:
         prompt (str): The object that needs to be counted, only supports a single
@@ -1589,8 +1589,8 @@ def agentic_sam2_video_tracking(
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
-    objects in a video given a text prompt such as category names or referring
-    expressions. It's particularly good at detecting fewer objects given detailed
+    objects in a video given a text prompt such as object names or referring
+    expressions. It's particularly good at detecting specific objects given detailed
     descriptive prompts and returns a list of bounding boxes, label names, masks and
     associated probability scores and is useful for tracking and counting without
     duplicating counts.

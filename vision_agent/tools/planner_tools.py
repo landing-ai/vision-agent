@@ -102,10 +102,10 @@ def judge_od_results(
         {"score": d["score"], "label": d["label"]} for d in sampled_detections
     ]
 
-    prompt = f"""The user is trying to detect '{prompt}' in an image. You are show 10 images which represent crops of the detected objets. Below is the detection labels and scores:
+    prompt = f"""The user is trying to detect '{prompt}' in an image. You are shown 10 images which represent crops of the detected objets. Below is the detection labels and scores:
 {sampled_detection_info}
 
-Look over each of the images and corresponding labels and scores. Provide a judgement on whether or not the results are correct. If the results are incorrect you can only suggest a different prompt or a threshold."""
+Look over each of the cropped images and corresponding labels and scores. Provide a judgement on whether or not the results are correct. If the results are incorrect you can only suggest a different prompt or a threshold."""
 
     response = cast(str, od_judge.generate(prompt, media=crops))
     return response

@@ -108,13 +108,14 @@ def frames_to_bytes(
 
 def rescale(frame: np.ndarray, max_size: Tuple[int, int]) -> np.ndarray:
     h, w = frame.shape[:2]
-    if h > max_size[0] or w > max_size[1]:
-        if h > w:
-            new_h = max_size[0]
-            new_w = int(w * new_h / h)
-        else:
-            new_w = max_size[1]
-            new_h = int(h * new_w / w)
+    new_h, new_w = h, w
+    if new_h > max_size[0]:
+        new_h = max_size[0]
+        new_w = int(w * new_h / h)
+    if new_w > max_size[1]:
+        new_w = max_size[1]
+        new_h = int(h * new_w / w)
+    if h != new_h or w != new_w:
         frame = cv2.resize(frame, (new_w, new_h))
     return frame
 
