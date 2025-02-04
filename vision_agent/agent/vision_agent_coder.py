@@ -484,7 +484,7 @@ class VisionAgentCoder(Agent):
                 tool_info=tool_doc,
                 tool_output=tool_output_str,
                 plan_thoughts=plan_thoughts_str,
-                tool_utils=T.UTILITIES_DOCSTRING,
+                tool_utils=T.get_utilties_docstring(),
                 working_memory=working_memory,
                 coder=self.coder,
                 tester=self.tester,

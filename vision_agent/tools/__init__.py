@@ -75,27 +75,11 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from vision_agent.utils.tools_doc import (  # noqa: F811
-            get_tool_descriptions,
-            get_tools_df,
-            get_tools_info,
-        )
-
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
-        from vision_agent.tools import (
-            TOOL_DESCRIPTIONS,
-            TOOL_DOCSTRING,
-            TOOLS,
-            TOOLS_DF,
-            TOOLS_INFO,
-        )
+        from vision_agent.tools.tools import TOOLS
 
-        if tool not in TOOLS:
-            TOOLS.append(tool)
-            TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
-            TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
-            TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
-            TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
+        if tool not in TOOLS:  # type: ignore
+            TOOLS.append(tool)  # type: ignore
 
             globals()[tool.__name__] = tool
             if imports is not None:

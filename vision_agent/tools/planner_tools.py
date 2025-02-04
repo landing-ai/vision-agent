@@ -35,11 +35,11 @@ from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.tools_doc import get_tool_documentation
 
 
-def get_tool_functions():
+def get_tool_functions() -> Dict[str, Callable]:
     return {tool.__name__: tool for tool in get_tools()}
 
 
-def get_load_tools_docstring():
+def get_load_tools_docstring() -> str:
     return get_tool_documentation([T.load_image, T.extract_frames_and_timestamps])
 
 
@@ -93,8 +93,8 @@ def judge_od_results(
         x1, y1, x2, y2 = detection["bbox"]
         crop = image[int(y1 * h) : int(y2 * h), int(x1 * w) : int(x2 * w)]
         if crop.shape[0] > max_crop_size[0] or crop.shape[1] > max_crop_size[1]:
-            crop = Image.fromarray(crop)
-            crop.thumbnail(max_crop_size)
+            crop = Image.fromarray(crop)  # type: ignore
+            crop.thumbnail(max_crop_size)  # type: ignore
             crop = np.array(crop)
         crops.append("data:image/png;base64," + convert_to_b64(crop))
 
@@ -427,7 +427,7 @@ def get_tool_for_task_human_reviewer(
         tools = [
             t.__name__
             for t in get_tools()
-            if inspect.signature(t).parameters.get("box_threshold")  # type: ignore
+            if inspect.signature(t).parameters.get("box_threshold")
         ]
 
         _, _, tool_output = run_tool_testing(

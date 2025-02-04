@@ -33,6 +33,7 @@ from vision_agent.utils.execute import (
     CodeInterpreterFactory,
     Execution,
 )
+from vision_agent.utils.tools_doc import get_tool_descriptions_by_names
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -342,7 +343,7 @@ class VisionAgentPlanner(Agent):
             _LOGGER.setLevel(logging.INFO)
 
         self.tool_recommender = (
-            Sim(T.TOOLS_DF, sim_key="desc")
+            Sim(T.get_tools_df(), sim_key="desc")
             if tool_recommender is None
             else tool_recommender
         )
@@ -408,7 +409,7 @@ class VisionAgentPlanner(Agent):
 
             plans = write_plans(
                 chat,
-                T.get_tool_descriptions_by_names(
+                get_tool_descriptions_by_names(
                     custom_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
                 ),
                 format_feedback(working_memory),
@@ -531,7 +532,7 @@ class OllamaVisionAgentPlanner(VisionAgentPlanner):
                 else planner
             ),
             tool_recommender=(
-                OllamaSim(T.TOOLS_DF, sim_key="desc")
+                OllamaSim(T.get_tools_df(), sim_key="desc")
                 if tool_recommender is None
                 else tool_recommender
             ),
@@ -553,7 +554,7 @@ class AzureVisionAgentPlanner(VisionAgentPlanner):
         super().__init__(
             planner=(AzureOpenAILMM(temperature=0.0) if planner is None else planner),
             tool_recommender=(
-                AzureSim(T.TOOLS_DF, sim_key="desc")
+                AzureSim(T.get_tools_df(), sim_key="desc")
                 if tool_recommender is None
                 else tool_recommender
             ),

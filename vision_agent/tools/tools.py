@@ -8,11 +8,12 @@ from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from uuid import UUID
 
 import cv2
 import numpy as np
+import pandas as pd
 import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
@@ -1961,7 +1962,7 @@ Answer the question directly using only the information from the document, do no
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
-    model="qwen2vl",
+    model: str = "qwen2vl",
     chunk_length_frames: int = 10,
 ) -> List[float]:
     """'activity_recognition' is a tool that can recognize activities in a video given a
@@ -2058,16 +2059,16 @@ def activity_recognition(
 
     with ThreadPoolExecutor() as executor:
         futures = {
-            executor.submit(_apply_activity_recognition, segment): segment_index  # type: ignore
+            executor.submit(_apply_activity_recognition, segment): segment_index
             for segment_index, segment in enumerate(segments)
         }
 
-        return_values = []
+        return_value_tuples = []
         for future in as_completed(futures):
             segment_index = futures[future]
-            return_values.append((segment_index, future.result()))
-    return_values = [x[1] for x in sorted(return_values, key=lambda x: x[0])]
-    return_values = cast(List[float], [e for o in return_values for e in o])
+            return_value_tuples.append((segment_index, future.result()))
+    return_values = [x[1] for x in sorted(return_value_tuples, key=lambda x: x[0])]
+    return_values_flattened = cast(List[float], [e for o in return_values for e in o])
 
     _display_tool_trace(
         activity_recognition.__name__,
@@ -2075,7 +2076,7 @@ def activity_recognition(
         return_values,
         files,
     )
-    return return_values
+    return return_values_flattened
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
@@ -3199,25 +3200,25 @@ UTIL_TOOLS = [
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
 
 
-def get_tools():
-    return TOOLS
+def get_tools() -> List[Callable]:
+    return TOOLS  # type: ignore
 
 
-def get_tools_info():
-    return _get_tools_info(FUNCTION_TOOLS)
+def get_tools_info() -> Dict[str, str]:
+    return _get_tools_info(FUNCTION_TOOLS)  # type: ignore
 
 
-def get_tools_df():
+def get_tools_df() -> pd.DataFrame:
     return _get_tools_df(TOOLS)  # type: ignore
 
 
-def get_tools_descriptions():
+def get_tools_descriptions() -> str:
     return _get_tool_descriptions(TOOLS)  # type: ignore
 
 
-def get_tools_docstring():
+def get_tools_docstring() -> str:
     return _get_tool_documentation(TOOLS)  # type: ignore
 
 
-def get_utilties_docstring():
+def get_utilties_docstring() -> str:
     return _get_tool_documentation(UTIL_TOOLS)  # type: ignore
