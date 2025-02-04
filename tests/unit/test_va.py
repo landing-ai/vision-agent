@@ -1,4 +1,4 @@
-from vision_agent.agent.agent_utils import extract_tag
+from vision_agent.utils.agent import extract_tag
 from vision_agent.agent.vision_agent import _clean_response
 from vision_agent.tools.meta_tools import use_extra_vision_agent_args
 

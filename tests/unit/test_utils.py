@@ -1,4 +1,4 @@
-from vision_agent.agent.agent_utils import (
+from vision_agent.utils.agent import (
     extract_code,
     extract_json,
     extract_tag,
