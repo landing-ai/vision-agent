@@ -34,6 +34,7 @@ from vision_agent.utils.agent import (
     extract_tag,
     print_code,
     print_table,
+    remove_installs_from_code,
 )
 from vision_agent.utils.execute import (
     CodeInterpreter,
