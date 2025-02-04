@@ -462,7 +462,7 @@ desc,doc,name
         >>> qwen2_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'
     ",qwen2_vl_video_vqa
-'activity_recognition' is a tool that can recognize activities in a video given a text prompt. It can be used to identify where specific activities or actions happen in a video and returns a list of 0s and 1s to indicate the activity.,"activity_recognition(prompt: str, frames: List[numpy.ndarray], model='qwen2vl', chunk_length_frames: int = 10) -> List[float]:
+'activity_recognition' is a tool that can recognize activities in a video given a text prompt. It can be used to identify where specific activities or actions happen in a video and returns a list of 0s and 1s to indicate the activity.,"activity_recognition(prompt: str, frames: List[numpy.ndarray], model: str = 'qwen2vl', chunk_length_frames: int = 10) -> List[float]:
 'activity_recognition' is a tool that can recognize activities in a video given a
     text prompt. It can be used to identify where specific activities or actions
     happen in a video and returns a list of 0s and 1s to indicate the activity.
