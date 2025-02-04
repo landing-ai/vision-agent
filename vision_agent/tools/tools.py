@@ -1959,6 +1959,18 @@ Answer the question directly using only the information from the document, do no
     return llm_output
 
 
+def _sample(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
+    sample_indices = np.linspace(0, len(frames) - 1, sample_size, dtype=int)
+    sampled_frames = []
+
+    for i, frame in enumerate(frames):
+        if i in sample_indices:
+            sampled_frames.append(frame)
+        if len(sampled_frames) >= sample_size:
+            break
+    return sampled_frames
+
+
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
@@ -1994,17 +2006,6 @@ def activity_recognition(
         frames, segment_size=chunk_length_frames, overlap=0
     )
 
-    def _sammple(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
-        sample_indices = np.linspace(0, len(frames) - 1, sample_size, dtype=int)
-        sampled_frames = []
-
-        for i, frame in enumerate(frames):
-            if i in sample_indices:
-                sampled_frames.append(frame)
-            if len(sampled_frames) >= sample_size:
-                break
-        return sampled_frames
-
     prompt = (
         f"{prompt} Please respond with a 'yes' or 'no' based on the frames provided."
     )
@@ -2013,7 +2014,7 @@ def activity_recognition(
         lmm: LMM,
         segment: List[np.ndarray],
     ) -> List[float]:
-        frames = _sammple(segment, 10)
+        frames = _sample(segment, 10)
         media = []
         for frame in frames:
             buffer = io.BytesIO()
@@ -2045,13 +2046,11 @@ def activity_recognition(
         return [0.0] * len(segment)
 
     if model == "claude-35":
-        _apply_activity_recognition = lambda x: _lmm_activity_recognition(
-            AnthropicLMM(), x
-        )
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _lmm_activity_recognition(AnthropicLMM(), segment)
     elif model == "gpt-4o":
-        _apply_activity_recognition = lambda x: _lmm_activity_recognition(
-            OpenAILMM(), x
-        )
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _lmm_activity_recognition(OpenAILMM(), segment)
     elif model == "qwen2vl":
         _apply_activity_recognition = _qwen2vl_activity_recognition
     else:
