@@ -2,14 +2,12 @@ import { Detection } from "./types";
 import { useRef, useEffect } from "react";
 import { drawBoundingBox } from "./utils";
 
-
 interface VideoVisualizerProps {
-  videoSrc: string;              // Base64 video source (with data URI prefix)
-  detections: Detection[][];     // Each inner array corresponds to one frame’s detections.
+  videoSrc: string; // Base64 video source (with data URI prefix)
+  detections: Detection[][]; // Each inner array corresponds to one frame’s detections.
   threshold: number;
   fps?: number;
 }
-
 
 // --- VideoVisualizer Component ---
 // This component renders a <video> with an overlaid canvas.
@@ -37,7 +35,8 @@ const VideoVisualizer: React.FC<VideoVisualizerProps> = ({
     };
 
     videoEl.addEventListener("loadedmetadata", handleLoadedMetadata);
-    return () => videoEl.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    return () =>
+      videoEl.removeEventListener("loadedmetadata", handleLoadedMetadata);
   }, []);
 
   // On each time update, clear the canvas and draw bounding boxes for the current frame.
@@ -56,13 +55,54 @@ const VideoVisualizer: React.FC<VideoVisualizerProps> = ({
 
       // Calculate the current frame (assumes constant fps).
       const currentFrame = Math.floor(videoEl.currentTime * fps);
-      const frameDetections = detections[currentFrame] || [];
-
-      frameDetections
-        .filter((det) => det.score >= threshold)
-        .forEach((detection) => {
-          drawBoundingBox(ctx, detection);
+      if (typeof detections === "string") {
+        // Draw response string (for text-based responses).
+        const fontSize = Math.min(canvas.width, canvas.height) * 0.05;
+        ctx.font = `${fontSize}px Arial`;
+        
+        // Text wrapping configuration
+        const maxWidth = canvas.width - 40; // Padding on both sides
+        const lineHeight = fontSize * 1.2;
+        const padding = 20;
+        
+        // Wrap text into lines
+        const words = detections.split(' ');
+        const lines: string[] = [];
+        let currentLine = words[0];
+        
+        for (let i = 1; i < words.length; i++) {
+            const testLine = currentLine + ' ' + words[i];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+        
+        // Calculate background height based on number of lines
+        const bgHeight = (lines.length * lineHeight) + (padding * 2);
+        
+        // Draw background
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(10, 10, canvas.width - 20, bgHeight);
+        
+        // Draw text lines
+        ctx.fillStyle = "white";
+        lines.forEach((line, i) => {
+            ctx.fillText(line, padding, padding + (i + 1) * lineHeight);
         });
+      } else {
+        const frameDetections = detections[currentFrame] || [];
+
+        frameDetections
+          .filter((det) => det.score >= threshold)
+          .forEach((detection) => {
+            drawBoundingBox(ctx, detection);
+          });
+      }
     };
 
     videoEl.addEventListener("timeupdate", handleTimeUpdate);

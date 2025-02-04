@@ -34,11 +34,43 @@ const ImageVisualizer: React.FC<ImageVisualizerProps> = ({
 
       if (typeof detectionItem.response.data === "string") {
         // Draw response string (for text-based responses).
-        ctx.font = "64px Arial";
+        const fontSize = Math.min(canvas.width, canvas.height) * 0.05;
+        ctx.font = `${fontSize}px Arial`;
+        
+        // Text wrapping configuration
+        const maxWidth = canvas.width - 40; // Padding on both sides
+        const lineHeight = fontSize * 1.2;
+        const padding = 20;
+        
+        // Wrap text into lines
+        const words = detectionItem.response.data.split(' ');
+        const lines: string[] = [];
+        let currentLine = words[0];
+        
+        for (let i = 1; i < words.length; i++) {
+            const testLine = currentLine + ' ' + words[i];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+        
+        // Calculate background height based on number of lines
+        const bgHeight = (lines.length * lineHeight) + (padding * 2);
+        
+        // Draw background
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(10, 10, canvas.width - 20, 80);
+        ctx.fillRect(10, 10, canvas.width - 20, bgHeight);
+        
+        // Draw text lines
         ctx.fillStyle = "white";
-        ctx.fillText(detectionItem.response.data, 20, 70);
+        lines.forEach((line, i) => {
+            ctx.fillText(line, padding, padding + (i + 1) * lineHeight);
+        });
       } else {
         // For images, assume response.data is an array of Detection.
         (detectionItem.response.data as Detection[])
