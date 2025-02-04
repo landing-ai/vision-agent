@@ -181,6 +181,7 @@ def run_critic(
 
 
 def code_safeguards(code: str) -> str:
+    code = remove_installs_from_code(code)
     if "get_tool_for_task" in code:
         lines = code.split("\n")
         new_lines = []
