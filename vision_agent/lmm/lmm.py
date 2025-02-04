@@ -9,9 +9,8 @@ import requests
 from anthropic.types import ImageBlockParam, MessageParam, TextBlockParam
 from openai import AzureOpenAI, OpenAI
 
+from vision_agent.models import Message
 from vision_agent.utils.image_utils import encode_media
-
-from .types import Message
 
 
 class LMM(ABC):
@@ -64,7 +63,9 @@ class OpenAILMM(LMM):
         self.image_size = image_size
         self.image_detail = image_detail
         # o1 does not use max_tokens
-        if "max_tokens" not in kwargs and not model_name.startswith("o1"):
+        if "max_tokens" not in kwargs and not (
+            model_name.startswith("o1") or model_name.startswith("o3")
+        ):
             kwargs["max_tokens"] = max_tokens
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}

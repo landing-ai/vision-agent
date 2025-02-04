@@ -1,18 +1,15 @@
-import inspect
 import logging
 import os
 from base64 import b64encode
-from typing import Any, Callable, Dict, List, MutableMapping, Optional, Tuple
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple
 
 import numpy as np
-import pandas as pd
 from IPython.display import display
 from pydantic import BaseModel
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from vision_agent.tools.tools_types import BoundingBoxes
 from vision_agent.utils.exceptions import RemoteToolCallFailed
 from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.image_utils import normalize_bbox
@@ -121,89 +118,6 @@ def _create_requests_session(
     return session
 
 
-def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
-    docstrings = ""
-    for func in funcs:
-        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}\n\n"
-
-    return docstrings
-
-
-def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
-    descriptions = ""
-    for func in funcs:
-        description = func.__doc__
-        if description is None:
-            description = ""
-
-        if "Parameters:" in description:
-            description = (
-                description[: description.find("Parameters:")]
-                .replace("\n", " ")
-                .strip()
-            )
-
-        description = " ".join(description.split())
-        descriptions += f"- {func.__name__}{inspect.signature(func)}: {description}\n"
-    return descriptions
-
-
-def get_tool_descriptions_by_names(
-    tool_name: Optional[List[str]],
-    funcs: List[Callable[..., Any]],
-    util_funcs: List[
-        Callable[..., Any]
-    ],  # util_funcs will always be added to the list of functions
-) -> str:
-    if tool_name is None:
-        return get_tool_descriptions(funcs + util_funcs)
-
-    invalid_names = [
-        name for name in tool_name if name not in {func.__name__ for func in funcs}
-    ]
-
-    if invalid_names:
-        raise ValueError(f"Invalid customized tool names: {', '.join(invalid_names)}")
-
-    filtered_funcs = (
-        funcs
-        if not tool_name
-        else [func for func in funcs if func.__name__ in tool_name]
-    )
-    return get_tool_descriptions(filtered_funcs + util_funcs)
-
-
-def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
-    data: Dict[str, List[str]] = {"desc": [], "doc": [], "name": []}
-
-    for func in funcs:
-        desc = func.__doc__
-        if desc is None:
-            desc = ""
-        desc = desc[: desc.find("Parameters:")].replace("\n", " ").strip()
-        desc = " ".join(desc.split())
-
-        doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
-        data["desc"].append(desc)
-        data["doc"].append(doc)
-        data["name"].append(func.__name__)
-
-    return pd.DataFrame(data)  # type: ignore
-
-
-def get_tools_info(funcs: List[Callable[..., Any]]) -> Dict[str, str]:
-    data: Dict[str, str] = {}
-
-    for func in funcs:
-        desc = func.__doc__
-        if desc is None:
-            desc = ""
-
-        data[func.__name__] = f"{func.__name__}{inspect.signature(func)}:\n{desc}"
-
-    return data
-
-
 def _call_post(
     url: str,
     payload: dict[str, Any],
@@ -257,12 +171,6 @@ def _call_post(
         if tool_call_trace is not None and should_report_tool_traces():
             trace = tool_call_trace.model_dump()
             display({MimeType.APPLICATION_JSON: trace}, raw=True)
-
-
-def filter_bboxes_by_threshold(
-    bboxes: BoundingBoxes, threshold: float
-) -> BoundingBoxes:
-    return list(filter(lambda bbox: bbox.score >= threshold, bboxes))
 
 
 def add_bboxes_from_masks(

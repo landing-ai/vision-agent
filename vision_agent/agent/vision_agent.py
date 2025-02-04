@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import extract_json, extract_tag
 from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE1,
     EXAMPLES_CODE2,
@@ -14,7 +13,8 @@ from vision_agent.agent.vision_agent_prompts import (
     EXAMPLES_CODE3_EXTRA2,
     VA_CODE,
 )
-from vision_agent.lmm import LMM, AnthropicLMM, Message, OpenAILMM
+from vision_agent.lmm import LMM, AnthropicLMM, OpenAILMM
+from vision_agent.models import Message
 from vision_agent.tools.meta_tools import (
     META_TOOL_DOCSTRING,
     Artifacts,
@@ -22,6 +22,7 @@ from vision_agent.tools.meta_tools import (
     use_extra_vision_agent_args,
 )
 from vision_agent.utils import CodeInterpreterFactory
+from vision_agent.utils.agent import extract_json, extract_tag
 from vision_agent.utils.execute import CodeInterpreter, Execution
 
 logging.basicConfig(level=logging.INFO)

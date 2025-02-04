@@ -9,7 +9,17 @@ from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent import Agent
-from vision_agent.agent.agent_utils import (
+from vision_agent.agent.vision_agent_planner_prompts import (
+    PICK_PLAN,
+    PLAN,
+    PREVIOUS_FAILED,
+    TEST_PLANS,
+    USER_REQ,
+)
+from vision_agent.lmm import LMM, AnthropicLMM, AzureOpenAILMM, OllamaLMM, OpenAILMM
+from vision_agent.models import Message
+from vision_agent.sim import AzureSim, OllamaSim, Sim
+from vision_agent.utils.agent import (
     _MAX_TABULATE_COL_WIDTH,
     DefaultImports,
     extract_code,
@@ -18,27 +28,12 @@ from vision_agent.agent.agent_utils import (
     format_plans,
     print_code,
 )
-from vision_agent.agent.vision_agent_planner_prompts import (
-    PICK_PLAN,
-    PLAN,
-    PREVIOUS_FAILED,
-    TEST_PLANS,
-    USER_REQ,
-)
-from vision_agent.lmm import (
-    LMM,
-    AnthropicLMM,
-    AzureOpenAILMM,
-    Message,
-    OllamaLMM,
-    OpenAILMM,
-)
 from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.sim import AzureSim, OllamaSim, Sim
+from vision_agent.utils.tools_doc import get_tool_descriptions_by_names
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -348,7 +343,7 @@ class VisionAgentPlanner(Agent):
             _LOGGER.setLevel(logging.INFO)
 
         self.tool_recommender = (
-            Sim(T.TOOLS_DF, sim_key="desc")
+            Sim(T.get_tools_df(), sim_key="desc")
             if tool_recommender is None
             else tool_recommender
         )
@@ -414,7 +409,7 @@ class VisionAgentPlanner(Agent):
 
             plans = write_plans(
                 chat,
-                T.get_tool_descriptions_by_names(
+                get_tool_descriptions_by_names(
                     custom_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
                 ),
                 format_feedback(working_memory),
@@ -537,7 +532,7 @@ class OllamaVisionAgentPlanner(VisionAgentPlanner):
                 else planner
             ),
             tool_recommender=(
-                OllamaSim(T.TOOLS_DF, sim_key="desc")
+                OllamaSim(T.get_tools_df(), sim_key="desc")
                 if tool_recommender is None
                 else tool_recommender
             ),
@@ -559,7 +554,7 @@ class AzureVisionAgentPlanner(VisionAgentPlanner):
         super().__init__(
             planner=(AzureOpenAILMM(temperature=0.0) if planner is None else planner),
             tool_recommender=(
-                AzureSim(T.TOOLS_DF, sim_key="desc")
+                AzureSim(T.get_tools_df(), sim_key="desc")
                 if tool_recommender is None
                 else tool_recommender
             ),

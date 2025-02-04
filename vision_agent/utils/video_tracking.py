@@ -5,11 +5,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 from scipy.optimize import linear_sum_assignment  # type: ignore
 
-from vision_agent.tools.tool_utils import (
-    add_bboxes_from_masks,
-    send_task_inference_request,
-)
 from vision_agent.utils.image_utils import denormalize_bbox, rle_decode_array
+from vision_agent.utils.tools import add_bboxes_from_masks, send_task_inference_request
 from vision_agent.utils.video import frames_to_bytes
 
 
@@ -115,6 +112,40 @@ def process_segment(
         metadata=metadata,
     )
 
+    segment_detections = join_scores(transformed_detections, segment_detections)
+    return segment_detections
+
+
+def join_scores(
+    transformed_detections: List[Optional[Dict[str, Any]]],
+    segment_detections: List[List[Dict[str, Any]]],
+) -> List[List[Dict[str, Any]]]:
+    # The scores should really be returned from the SAM2 endpoint so we don't have to
+    # try and match them.
+    for detection in transformed_detections:
+        if detection is not None:
+            for i in range(len(detection["scores"])):
+                id_to_score = {}
+                if len(segment_detections) > 0:
+                    # This assumes none of the initial boxes are filtered out by SAM2
+                    # so we have a 1:1 mapping between the initial boxes and the SAM2 boxes
+                    for j, segment_detection in enumerate(segment_detections[0]):
+                        id_to_score[segment_detection["id"]] = detection["scores"][j]
+
+                # after we've created the id_to_score, assign the scores. Some of the
+                # boxes could have been removed in subsequent frames, hence the mapping
+                # is needed
+                for t in range(len(segment_detections)):
+                    for segment_detection in segment_detections[t]:
+                        if segment_detection["id"] in id_to_score:
+                            segment_detection["score"] = id_to_score[
+                                segment_detection["id"]
+                            ]
+                        else:
+                            # if we can't find the score, set it to 1.0 so it doesn't
+                            # get filtered out
+                            segment_detection["score"] = 1.0
+
     return segment_detections
 
 
@@ -141,11 +172,13 @@ def transform_detections(
             bboxes = [
                 denormalize_bbox(detection["bbox"], image_size) for detection in frame
             ]
+            scores = [detection["score"] for detection in frame]
 
             output_list.append(
                 {
                     "labels": labels,
                     "bboxes": bboxes,
+                    "scores": scores,
                 }
             )
         else:
@@ -280,7 +313,7 @@ def post_process(
                     "label": label,
                     "mask": detection["decoded_mask"],
                     "rle": detection["mask"],
-                    "score": 1.0,
+                    "score": detection["score"],
                 }
             )
             del detection["decoded_mask"]

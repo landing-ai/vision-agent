@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from vision_agent.agent.types import (
+from vision_agent.models import (
     AgentMessage,
     CodeContext,
     InteractionContext,
+    Message,
     PlanContext,
 )
-from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter
 
 
