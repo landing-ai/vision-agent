@@ -8,11 +8,12 @@ from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from uuid import UUID
 
 import cv2
 import numpy as np
+import pandas as pd
 import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
@@ -20,21 +21,8 @@ from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm.lmm import AnthropicLMM
-from vision_agent.tools.tool_utils import (
-    ToolCallTrace,
-    add_bboxes_from_masks,
-    get_tool_descriptions,
-    get_tool_documentation,
-    get_tools_df,
-    get_tools_info,
-    nms,
-    send_inference_request,
-    send_task_inference_request,
-    should_report_tool_traces,
-    single_nms,
-)
-from vision_agent.tools.tools_types import JobStatus
+from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
+from vision_agent.models import JobStatus
 from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
@@ -48,6 +36,21 @@ from vision_agent.utils.image_utils import (
     rle_decode,
     rle_decode_array,
 )
+from vision_agent.utils.tools import (
+    ToolCallTrace,
+    add_bboxes_from_masks,
+    nms,
+    send_inference_request,
+    send_task_inference_request,
+    should_report_tool_traces,
+    single_nms,
+)
+from vision_agent.utils.tools_doc import get_tool_descriptions as _get_tool_descriptions
+from vision_agent.utils.tools_doc import (
+    get_tool_documentation as _get_tool_documentation,
+)
+from vision_agent.utils.tools_doc import get_tools_df as _get_tools_df
+from vision_agent.utils.tools_doc import get_tools_info as _get_tools_info
 from vision_agent.utils.video import (
     extract_frames_from_video,
     frames_to_bytes,
@@ -234,6 +237,7 @@ def od_sam2_video_tracking(
     od_model: ODModels,
     prompt: str,
     frames: List[np.ndarray],
+    box_threshold: float = 0.30,
     chunk_length: Optional[int] = 50,
     fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -278,7 +282,9 @@ def od_sam2_video_tracking(
 
         if od_model == ODModels.COUNTGD:
             segment_results = countgd_object_detection(
-                prompt=prompt, image=segment_frames[frame_number]
+                prompt=prompt,
+                image=segment_frames[frame_number],
+                box_threshold=box_threshold,
             )
             function_name = "countgd_object_detection"
 
@@ -286,6 +292,7 @@ def od_sam2_video_tracking(
             segment_results = owlv2_object_detection(
                 prompt=prompt,
                 image=segment_frames[frame_number],
+                box_threshold=box_threshold,
                 fine_tune_id=fine_tune_id,
             )
             function_name = "owlv2_object_detection"
@@ -310,6 +317,7 @@ def od_sam2_video_tracking(
             segment_results = custom_object_detection(
                 deployment_id=fine_tune_id,
                 image=segment_frames[frame_number],
+                box_threshold=box_threshold,
             )
             function_name = "custom_object_detection"
 
@@ -546,6 +554,7 @@ def owlv2_sam2_instance_segmentation(
 def owlv2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
+    box_threshold: float = 0.10,
     chunk_length: Optional[int] = 25,
     fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
@@ -558,6 +567,8 @@ def owlv2_sam2_video_tracking(
     Parameters:
         prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for the box detection. Defaults
+            to 0.10.
         chunk_length (Optional[int]): The number of frames to re-run owlv2 to find
             new objects.
         fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
@@ -596,6 +607,7 @@ def owlv2_sam2_video_tracking(
         ODModels.OWLV2,
         prompt=prompt,
         frames=frames,
+        box_threshold=box_threshold,
         chunk_length=chunk_length,
         fine_tune_id=fine_tune_id,
     )
@@ -1118,6 +1130,7 @@ def countgd_sam2_instance_segmentation(
 def countgd_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
+    box_threshold: float = 0.23,
     chunk_length: Optional[int] = 25,
 ) -> List[List[Dict[str, Any]]]:
     """'countgd_sam2_video_tracking' is a tool that can track and segment multiple
@@ -1129,6 +1142,8 @@ def countgd_sam2_video_tracking(
     Parameters:
         prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        box_threshold (float, optional): The threshold for detection. Defaults
+            to 0.23.
         chunk_length (Optional[int]): The number of frames to re-run countgd to find
             new objects.
 
@@ -1162,7 +1177,11 @@ def countgd_sam2_video_tracking(
     """
 
     ret = od_sam2_video_tracking(
-        ODModels.COUNTGD, prompt=prompt, frames=frames, chunk_length=chunk_length
+        ODModels.COUNTGD,
+        prompt=prompt,
+        frames=frames,
+        box_threshold=box_threshold,
+        chunk_length=chunk_length,
     )
     _display_tool_trace(
         countgd_sam2_video_tracking.__name__,
@@ -1171,6 +1190,9 @@ def countgd_sam2_video_tracking(
         ret["files"],
     )
     return ret["return_data"]  # type: ignore
+
+
+# Custom Models
 
 
 def countgd_visual_prompt_object_detection(
@@ -1379,6 +1401,247 @@ def custom_od_sam2_video_tracking(
     )
     _display_tool_trace(
         custom_od_sam2_video_tracking.__name__,
+        {},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
+
+
+# Agentic OD Tools
+
+
+def _agentic_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+    fine_tune_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
+
+    files = [("image", image_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "model": "agentic",
+    }
+    metadata = {"function_name": "agentic_object_detection"}
+
+    if fine_tune_id is not None:
+        landing_api = LandingPublicAPI()
+        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
+        if status is not JobStatus.SUCCEEDED:
+            raise FineTuneModelIsNotReady(
+                f"Fine-tuned model {fine_tune_id} is not ready yet"
+            )
+
+        # we can only execute fine-tuned models with florence2
+        payload = {
+            "prompts": payload["prompts"],
+            "jobId": fine_tune_id,
+            "model": "florence2",
+        }
+
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
+    )
+
+    # get the first frame
+    bboxes = detections[0]
+    bboxes_formatted = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": bbox["score"],
+        }
+        for bbox in bboxes
+    ]
+    display_data = [
+        {
+            "label": bbox["label"],
+            "bbox": bbox["bounding_box"],
+            "score": bbox["score"],
+        }
+        for bbox in bboxes
+    ]
+    return {
+        "files": files,
+        "return_data": bboxes_formatted,
+        "display_data": display_data,
+    }
+
+
+def agentic_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    fine_tune_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """'agentic_object_detection' is a tool that can detect multiple objects given a
+    text prompt such as object names or referring expressions on images. It's
+    particularly good at detecting specific objects given detailed descriptive prompts.
+    It returns a list of bounding boxes with normalized coordinates, label names and
+    associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with no commas or periods.
+        image (np.ndarray): The image to ground the prompt to.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> agentic_object_detection("a red car", image)
+        [
+            {'score': 0.99, 'label': 'a red car', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.98, 'label': 'a red car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+        ]
+    """
+
+    image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return []
+
+    ret = _agentic_object_detection(
+        prompt, image, image_size, fine_tune_id=fine_tune_id
+    )
+
+    _display_tool_trace(
+        agentic_object_detection.__name__,
+        {"prompts": prompt},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
+
+
+def agentic_sam2_instance_segmentation(
+    prompt: str, image: np.ndarray
+) -> List[Dict[str, Any]]:
+    """'agentic_sam2_instance_segmentation' is a tool that can detect multiple
+    instances given a text prompt such as object names or referring expressions on
+    images. It's particularly good at detecting specific objects given detailed
+    descriptive prompts. It returns a list of bounding boxes with normalized
+    coordinates, label names, masks and associated probability scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted, only supports a single
+            prompt with no commas or periods.
+        image (np.ndarray): The image that contains multiple instances of the object.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> agentic_sam2_instance_segmentation("a large blue flower", image)
+        [
+            {
+                'score': 0.49,
+                'label': 'a large blue flower',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+
+    od_ret = _agentic_object_detection(prompt, image, image.shape[:2])
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+
+    _display_tool_trace(
+        agentic_sam2_instance_segmentation.__name__,
+        {
+            "prompts": prompt,
+        },
+        seg_ret["display_data"],
+        seg_ret["files"],
+    )
+
+    return seg_ret["return_data"]  # type: ignore
+
+
+def agentic_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    chunk_length: Optional[int] = 25,
+    fine_tune_id: Optional[str] = None,
+) -> List[List[Dict[str, Any]]]:
+    """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as object names or referring
+    expressions. It's particularly good at detecting specific objects given detailed
+    descriptive prompts and returns a list of bounding boxes, label names, masks and
+    associated probability scores and is useful for tracking and counting without
+    duplicating counts.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with  no commas or periods.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
+            to find new objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
+
+    Example
+    -------
+        >>> agentic_sam2_video_tracking("a runner with yellow shoes", frames)
+        [
+            [
+                {
+                    'label': '0: a runner with yellow shoes',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    """
+
+    ret = od_sam2_video_tracking(
+        ODModels.AGENTIC,
+        prompt=prompt,
+        frames=frames,
+        chunk_length=chunk_length,
+        fine_tune_id=fine_tune_id,
+    )
+    _display_tool_trace(
+        agentic_sam2_video_tracking.__name__,
         {},
         ret["display_data"],
         ret["files"],
@@ -1696,85 +1959,127 @@ Answer the question directly using only the information from the document, do no
     return llm_output
 
 
-def video_temporal_localization(
+def _sample(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
+    sample_indices = np.linspace(0, len(frames) - 1, sample_size, dtype=int)
+    sampled_frames = []
+
+    for i, frame in enumerate(frames):
+        if i in sample_indices:
+            sampled_frames.append(frame)
+        if len(sampled_frames) >= sample_size:
+            break
+    return sampled_frames
+
+
+def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
     model: str = "qwen2vl",
-    chunk_length_frames: int = 2,
+    chunk_length_frames: int = 10,
 ) -> List[float]:
-    """'video_temporal_localization' will run qwen2vl on each chunk_length_frames
-    value selected for the video. It can detect multiple objects independently per
-    chunk_length_frames given a text prompt such as a referring expression
-    but does not track objects across frames.
-    It returns a list of floats with a value of 1.0 if the objects are found in a given
-    chunk_length_frames of the video.
+    """'activity_recognition' is a tool that can recognize activities in a video given a
+    text prompt. It can be used to identify where specific activities or actions
+    happen in a video and returns a list of 0s and 1s to indicate the activity.
 
     Parameters:
-        prompt (str): The question about the video
+        prompt (str): The event you want to identify, should be phrased as a question,
+            for example, "Did a goal happen?".
         frames (List[np.ndarray]): The reference frames used for the question
         model (str): The model to use for the inference. Valid values are
-            'qwen2vl', 'gpt4o'.
+            'claude-35', 'gpt-4o', 'qwen2vl'.
         chunk_length_frames (int): length of each chunk in frames
 
     Returns:
-        List[float]: A list of floats with a value of 1.0 if the objects to be found
-            are present in the chunk_length_frames of the video.
+        List[float]: A list of floats with a value of 1.0 if the activity is detected in
+            the chunk_length_frames of the video.
 
     Example
     -------
-        >>> video_temporal_localization('Did a goal happened?', frames)
+        >>> activity_recognition('Did a goal happened?', frames)
         [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
     """
 
     buffer_bytes = frames_to_bytes(frames)
     files = [("video", buffer_bytes)]
-    payload: Dict[str, Any] = {
-        "prompt": prompt,
-        "model": model,
-        "function_name": "video_temporal_localization",
-    }
-    payload["chunk_length_frames"] = chunk_length_frames
 
-    segments = split_frames_into_segments(frames, segment_size=50, overlap=0)
+    segments = split_frames_into_segments(
+        frames, segment_size=chunk_length_frames, overlap=0
+    )
 
-    def _apply_temporal_localization(
+    prompt = (
+        f"{prompt} Please respond with a 'yes' or 'no' based on the frames provided."
+    )
+
+    def _lmm_activity_recognition(
+        lmm: LMM,
         segment: List[np.ndarray],
     ) -> List[float]:
+        frames = _sample(segment, 10)
+        media = []
+        for frame in frames:
+            buffer = io.BytesIO()
+            image_pil = Image.fromarray(frame)
+            if image_pil.size[0] > 768:
+                image_pil.thumbnail((768, 768))
+            image_pil.save(buffer, format="PNG")
+            image_bytes = buffer.getvalue()
+            image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+            media.append(image_b64)
+
+        response = cast(str, lmm.generate(prompt, media))
+        if "yes" in response.lower():
+            return [1.0] * len(segment)
+        return [0.0] * len(segment)
+
+    def _qwen2vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+        payload: Dict[str, Any] = {
+            "prompt": prompt,
+            "model": "qwen2vl",
+            "function_name": "qwen2_vl_video_vqa",
+        }
         segment_buffer_bytes = [("video", frames_to_bytes(segment))]
-        data = send_inference_request(
-            payload, "video-temporal-localization", files=segment_buffer_bytes, v2=True
+        response = send_inference_request(
+            payload, "image-to-text", files=segment_buffer_bytes, v2=True
         )
-        chunked_data = [cast(float, value) for value in data]
+        if "yes" in response.lower():
+            return [1.0] * len(segment)
+        return [0.0] * len(segment)
 
-        full_data = []
-        for value in chunked_data:
-            full_data.extend([value] * chunk_length_frames)
+    if model == "claude-35":
 
-        return full_data[: len(segment)]
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _lmm_activity_recognition(AnthropicLMM(), segment)
+
+    elif model == "gpt-4o":
+
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _lmm_activity_recognition(OpenAILMM(), segment)
+
+    elif model == "qwen2vl":
+        _apply_activity_recognition = _qwen2vl_activity_recognition
+    else:
+        raise ValueError(f"Invalid model: {model}")
 
     with ThreadPoolExecutor() as executor:
         futures = {
-            executor.submit(_apply_temporal_localization, segment): segment_index
+            executor.submit(_apply_activity_recognition, segment): segment_index
             for segment_index, segment in enumerate(segments)
         }
 
-        localization_per_segment = []
+        return_value_tuples = []
         for future in as_completed(futures):
             segment_index = futures[future]
-            localization_per_segment.append((segment_index, future.result()))
-
-    localization_per_segment = [
-        x[1] for x in sorted(localization_per_segment, key=lambda x: x[0])  # type: ignore
-    ]
-    localizations = cast(List[float], [e for o in localization_per_segment for e in o])
+            return_value_tuples.append((segment_index, future.result()))
+    return_values = [x[1] for x in sorted(return_value_tuples, key=lambda x: x[0])]
+    return_values_flattened = cast(List[float], [e for o in return_values for e in o])
 
     _display_tool_trace(
-        video_temporal_localization.__name__,
-        payload,
-        localization_per_segment,
+        activity_recognition.__name__,
+        {"prompt": prompt, "model": model},
+        return_values,
         files,
     )
-    return localizations
+    return return_values_flattened
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
@@ -2198,242 +2503,6 @@ def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any
         files,
     )
     return response
-
-
-# Agentic OD Tools
-
-
-def _agentic_object_detection(
-    prompt: str,
-    image: np.ndarray,
-    image_size: Tuple[int, ...],
-    image_bytes: Optional[bytes] = None,
-    fine_tune_id: Optional[str] = None,
-) -> Dict[str, Any]:
-    if image_bytes is None:
-        image_bytes = numpy_to_bytes(image)
-
-    files = [("image", image_bytes)]
-    payload = {
-        "prompts": [s.strip() for s in prompt.split(",")],
-        "model": "agentic",
-    }
-    metadata = {"function_name": "agentic_object_detection"}
-
-    if fine_tune_id is not None:
-        landing_api = LandingPublicAPI()
-        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
-        if status is not JobStatus.SUCCEEDED:
-            raise FineTuneModelIsNotReady(
-                f"Fine-tuned model {fine_tune_id} is not ready yet"
-            )
-
-        # we can only execute fine-tuned models with florence2
-        payload = {
-            "prompts": payload["prompts"],
-            "jobId": fine_tune_id,
-            "model": "florence2",
-        }
-
-    detections = send_task_inference_request(
-        payload,
-        "text-to-object-detection",
-        files=files,
-        metadata=metadata,
-    )
-
-    # get the first frame
-    bboxes = detections[0]
-    bboxes_formatted = [
-        {
-            "label": bbox["label"],
-            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
-            "score": bbox["score"],
-        }
-        for bbox in bboxes
-    ]
-    display_data = [
-        {
-            "label": bbox["label"],
-            "bbox": bbox["bounding_box"],
-            "score": bbox["score"],
-        }
-        for bbox in bboxes
-    ]
-    return {
-        "files": files,
-        "return_data": bboxes_formatted,
-        "display_data": display_data,
-    }
-
-
-def agentic_object_detection(
-    prompt: str,
-    image: np.ndarray,
-    fine_tune_id: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    """'agentic_object_detection' is a tool that can detect and count multiple objects
-    given a text prompt such as category names or referring expressions on images. The
-    categories in text prompt are separated by commas. It returns a list of bounding
-    boxes with normalized coordinates, label names and associated probability scores.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        image (np.ndarray): The image to ground the prompt to.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
-            bounding box of the detected objects with normalized coordinates between 0
-            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
-            top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box.
-
-    Example
-    -------
-        >>> agentic_object_detection("car", image)
-        [
-            {'score': 0.99, 'label': 'car', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
-        ]
-    """
-
-    image_size = image.shape[:2]
-    if image_size[0] < 1 or image_size[1] < 1:
-        return []
-
-    ret = _agentic_object_detection(
-        prompt, image, image_size, fine_tune_id=fine_tune_id
-    )
-
-    _display_tool_trace(
-        agentic_object_detection.__name__,
-        {"prompts": prompt},
-        ret["display_data"],
-        ret["files"],
-    )
-    return ret["return_data"]  # type: ignore
-
-
-def agentic_sam2_instance_segmentation(
-    prompt: str, image: np.ndarray
-) -> List[Dict[str, Any]]:
-    """'agentic_sam2_instance_segmentation' is a tool that can detect and count multiple
-    instances of objects given a text prompt such as category names or referring
-    expressions on images. The categories in text prompt are separated by commas. It
-    returns a list of bounding boxes with normalized coordinates, label names, masks
-    and associated probability scores.
-
-    Parameters:
-        prompt (str): The object that needs to be counted.
-        image (np.ndarray): The image that contains multiple instances of the object.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
-            bounding box, and mask of the detected objects with normalized coordinates
-            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
-            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
-            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
-            the background.
-
-    Example
-    -------
-        >>> agentic_sam2_instance_segmentation("flower", image)
-        [
-            {
-                'score': 0.49,
-                'label': 'flower',
-                'bbox': [0.1, 0.11, 0.35, 0.4],
-                'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0],
-                    ...,
-                    [0, 0, 0, ..., 0, 0, 0],
-                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-            },
-        ]
-    """
-
-    od_ret = _agentic_object_detection(prompt, image, image.shape[:2])
-    seg_ret = _sam2(
-        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
-    )
-
-    _display_tool_trace(
-        agentic_sam2_instance_segmentation.__name__,
-        {
-            "prompts": prompt,
-        },
-        seg_ret["display_data"],
-        seg_ret["files"],
-    )
-
-    return seg_ret["return_data"]  # type: ignore
-
-
-def agentic_sam2_video_tracking(
-    prompt: str,
-    frames: List[np.ndarray],
-    chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
-) -> List[List[Dict[str, Any]]]:
-    """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
-    objects in a video given a text prompt such as category names or referring
-    expressions. The categories in the text prompt are separated by commas. It returns
-    a list of bounding boxes, label names, masks and associated probability scores and
-    is useful for tracking and counting without duplicating counts.
-
-    Parameters:
-        prompt (str): The prompt to ground to the image.
-        frames (List[np.ndarray]): The list of frames to ground the prompt to.
-        chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
-            to find new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
-
-    Returns:
-        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
-            label, segmentation mask and bounding boxes. The outer list represents each
-            frame and the inner list is the entities per frame. The detected objects
-            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
-            and ymin are the coordinates of the top-left and xmax and ymax are the
-            coordinates of the bottom-right of the bounding box. The mask is binary 2D
-            numpy array where 1 indicates the object and 0 indicates the background.
-            The label names are prefixed with their ID represent the total count.
-
-    Example
-    -------
-        >>> agentic_sam2_video_tracking("dinosaur", frames)
-        [
-            [
-                {
-                    'label': '0: dinosaur',
-                    'bbox': [0.1, 0.11, 0.35, 0.4],
-                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
-                        [0, 0, 0, ..., 0, 0, 0],
-                        ...,
-                        [0, 0, 0, ..., 0, 0, 0],
-                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
-                },
-            ],
-            ...
-        ]
-    """
-
-    ret = od_sam2_video_tracking(
-        ODModels.AGENTIC,
-        prompt=prompt,
-        frames=frames,
-        chunk_length=chunk_length,
-        fine_tune_id=fine_tune_id,
-    )
-    _display_tool_trace(
-        agentic_sam2_video_tracking.__name__,
-        {},
-        ret["display_data"],
-        ret["files"],
-    )
-    return ret["return_data"]  # type: ignore
 
 
 def minimum_distance(
@@ -3103,19 +3172,19 @@ FUNCTION_TOOLS = [
     countgd_sam2_instance_segmentation,
     countgd_sam2_video_tracking,
     florence2_ocr,
+    florence2_object_detection,
     florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
-    florence2_object_detection,
     claude35_text_extraction,
     document_extraction,
     document_qa,
     ocr,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    activity_recognition,
     depth_anything_v2,
     generate_pose_image,
     vit_nsfw_classification,
-    video_temporal_localization,
     flux_image_inpainting,
     siglip_classification,
     minimum_distance,
@@ -3129,13 +3198,30 @@ UTIL_TOOLS = [
     save_video,
     overlay_bounding_boxes,
     overlay_segmentation_masks,
-    overlay_heat_map,
 ]
 
 TOOLS = FUNCTION_TOOLS + UTIL_TOOLS
 
-TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
-TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
-TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
-TOOLS_INFO = get_tools_info(FUNCTION_TOOLS)  # type: ignore
-UTILITIES_DOCSTRING = get_tool_documentation(UTIL_TOOLS)  # type: ignore
+
+def get_tools() -> List[Callable]:
+    return TOOLS  # type: ignore
+
+
+def get_tools_info() -> Dict[str, str]:
+    return _get_tools_info(FUNCTION_TOOLS)  # type: ignore
+
+
+def get_tools_df() -> pd.DataFrame:
+    return _get_tools_df(TOOLS)  # type: ignore
+
+
+def get_tools_descriptions() -> str:
+    return _get_tool_descriptions(TOOLS)  # type: ignore
+
+
+def get_tools_docstring() -> str:
+    return _get_tool_documentation(TOOLS)  # type: ignore
+
+
+def get_utilties_docstring() -> str:
+    return _get_tool_documentation(UTIL_TOOLS)  # type: ignore

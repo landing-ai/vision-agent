@@ -1,3 +1,4 @@
+import base64
 import copy
 import json
 import logging
@@ -14,8 +15,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 
 import vision_agent.tools as T
-from vision_agent.agent.types import AgentMessage, PlanContext
-from vision_agent.lmm.types import Message
+from vision_agent.models import AgentMessage, Message, PlanContext
 from vision_agent.utils.execute import CodeInterpreter, Execution
 from vision_agent.utils.image_utils import b64_to_pil, convert_to_b64
 
@@ -185,6 +185,7 @@ class DefaultImports:
         "import os",
         "import numpy as np",
         "from vision_agent.tools import *",
+        "from vision_agent.tools.planner_tools import judge_od_results",
         "from typing import *",
         "from pillow_heif import register_heif_opener",
         "register_heif_opener()",
@@ -247,6 +248,14 @@ def add_media_to_chat(
                         mode="wb", suffix=".png", delete=False
                     ) as temp_file:
                         media_pil.save(temp_file, format="PNG")
+                        media = str(temp_file.name)
+                elif isinstance(media, str) and media.startswith("data:video/"):
+                    ext = media.split(";")[0].split("/")[-1]
+                    with tempfile.NamedTemporaryFile(
+                        mode="wb", suffix=f".{ext}", delete=False
+                    ) as temp_file:
+                        media_bytes = base64.b64decode(media.split(",")[1])
+                        temp_file.write(media_bytes)
                         media = str(temp_file.name)
                 if code_interpreter is not None:
                     media = str(code_interpreter.upload_file(media))

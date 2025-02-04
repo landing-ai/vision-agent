@@ -12,12 +12,11 @@ from IPython.display import display
 
 import vision_agent as va
 from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.lmm.types import Message
-from vision_agent.tools.tool_utils import get_tool_documentation
-from vision_agent.tools.tools import TOOL_DESCRIPTIONS
-from vision_agent.tools.tools_types import BboxInput, BboxInputBase64, PromptTask
+from vision_agent.models import BboxInput, BboxInputBase64, Message, PromptTask
+from vision_agent.tools.tools import get_tools_descriptions as _get_tool_descriptions
 from vision_agent.utils.execute import Execution, MimeType
 from vision_agent.utils.image_utils import convert_to_b64
+from vision_agent.utils.tools_doc import get_tool_documentation
 
 CURRENT_FILE = None
 CURRENT_LINE = 0
@@ -571,7 +570,7 @@ def get_tool_descriptions() -> str:
     """Returns a description of all the tools that `generate_vision_code` has access to.
     Helpful for answering questions about what types of vision tasks you can do with
     `generate_vision_code`."""
-    return TOOL_DESCRIPTIONS
+    return _get_tool_descriptions()
 
 
 def object_detection_fine_tuning(bboxes: List[Dict[str, Any]]) -> str:

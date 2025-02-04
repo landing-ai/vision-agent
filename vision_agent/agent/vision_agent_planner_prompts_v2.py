@@ -9,21 +9,22 @@ PLAN = """
 **Example Planning**: Here are some examples of how you can search for a plan, in the examples the user output is denoted by USER, your output is denoted by AGENT and the observations after your code execution are denoted by OBSERVATION:
 {examples}
 
-**Current Planning**:
---- START PLANNING ---
+**Current Planning**: This is the plan you are currently working on
+--- START CURRENT PLANNING ---
 {planning}
---- END PLANNING ---
+--- END CURRENT PLANNING ---
 
 **Instructions**:
 1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You can <count> number of turns to complete the user's request.
 2. You can execute python code in the ipython notebook using <execute_python> tags. Only output one <execute_python> tag at a time.
 3. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
 4. Only load/save files from {media_list} unless you specifically saved the file previously.
-5. Ensure you always call `suggestion` initially and `get_tool_for_task` to get the right tool for the subtask.
+5. Ensure you always call `suggestion` and `claude35_vqa` initially and `get_tool_for_task` to get the right tool for the subtask.
 6. Calling `plt.imshow` or `save_image` will display the image to you so you can check your results. If you see an image after <execute_python> it's generated from your code.
-7. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
-8. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool.
-9. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
+7. Be sure to print results returned for tools so you can see the output.
+8. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
+9. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool output, tools are often better at things like counting and detecting small objects.
+10. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
 
 <thinking>Your thought process...</thinking>
 <execute_python>Your code here</execute_python>
@@ -334,23 +335,21 @@ get_tool_for_task('Identify and track the boxes in the video', frames[:5])
 
 OBSERVATION:
 [get_tool_for_task output]
-For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: florence2_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor and using the prompt 'box'.
+For tracking boxes moving on a conveyor belt, we need a tool that can consistently track the same box across frames without losing it or double counting. Looking at the outputs: countgd_sam2_video_tracking successfully tracks the single box across all 5 frames, maintaining consistent tracking IDs and showing the box's movement along the conveyor and using the prompt 'box'.
 
 Tool Documentation:
-def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 10) -> List[List[Dict[str, Any]]]:
-    'florence2_sam2_video_tracking' is a tool that can track and segment multiple
+def countgd_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
+    'countgd_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
     expressions. The categories in the text prompt are separated by commas. It returns
     a list of bounding boxes, label names, masks and associated probability scores and
     is useful for tracking and counting without duplicating counts.
 
     Parameters:
-        prompt (str): The prompt to ground to the video.
+        prompt (str): The prompt to ground to the image.
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
-        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+        chunk_length (Optional[int]): The number of frames to re-run countgd to find
             new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
@@ -364,7 +363,7 @@ def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_l
 
     Example
     -------
-        >>> florence2_sam2_video_tracking("car, dinosaur", frames)
+        >>> countgd_sam2_video_tracking("car, dinosaur", frames)
         [
             [
                 {
@@ -382,7 +381,7 @@ def florence2_sam2_video_tracking(prompt: str, frames: List[np.ndarray], chunk_l
 
 AGENT: <thinking>Now that I have the tool and prompt for tracking I need to find a tool to identify if there is tape on each of the boxes.</thinking>
 <execute_python>
-track_predictions = florence2_sam2_video_tracking("box", frames)
+track_predictions = countgd_sam2_video_tracking("box", frames)
 
 # only use first 5 frames to reduce processing time
 crops = []
@@ -512,16 +511,16 @@ PICK_PLAN = """
 
 CATEGORIZE_TOOL_REQUEST = """
 You are given a task: "{task}" from the user. You must extract the type of category this task belongs to, it can be one or more of the following:
+- "VQA" - answering questions about an image or video, can be used for most tasks, should generally be included.
 - "object detection and counting" - detecting objects or counting objects from a text prompt in an image.
 - "instance segmentation" - segmenting objects in an image given a text prompt.
 - "classification" - classifying objects in an image given a text prompt.
 - "segmentation" - segmenting objects in an image or video given a text prompt.
 - "OCR" - extracting text from an image.
-- "VQA" - answering questions about an image or video, can also be used for text extraction.
 - "DocQA" - answering questions about a document or extracting information from a document.
 - "video object tracking" - tracking objects in a video.
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
-- "temporal localization" - localizing the time period an event occurs in a video.
+- "activity recognition" - identifying time period(s) an event occurs in a video.
 - "inpainting" - filling in masked parts of an image.
 
 Return the category or categories (comma separated) inside tags <category># your categories here</category>. If you are unsure about a task, it is better to include more categories than less.
@@ -718,7 +717,7 @@ PICK_TOOL = """
 FINALIZE_PLAN = """
 **Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agent to write a program to accomplish the user request.
 
-**Documentation**: You can use these tools to help you visualize or save the output:
+**Documentation**: You can use these tools to help you visualize or save the output (they are imported `from vision_agent.tools import *`):
 {tool_desc}
 
 **Planning**: Here is chain of thoughts, executions and observations from the planning agent:
@@ -730,7 +729,7 @@ FINALIZE_PLAN = """
 3. Only use tools obtained from calling `get_tool_for_task`.
 4. Do not include {excluded_tools} tools in your instructions.
 5. Ensure the function is well documented and easy to understand.
-6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks` and save it to a file with `save_image` or `save_video`.
+6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks`, if bounding boxes or segmentaiton masks are produced, and save it to a file with `save_image` or `save_video`.
 7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
 8. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
 9. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:

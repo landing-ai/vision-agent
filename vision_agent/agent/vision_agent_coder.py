@@ -9,16 +9,6 @@ from tabulate import tabulate
 
 import vision_agent.tools as T
 from vision_agent.agent.agent import Agent
-from vision_agent.agent.agent_utils import (
-    _MAX_TABULATE_COL_WIDTH,
-    DefaultImports,
-    extract_code,
-    extract_tag,
-    format_feedback,
-    print_code,
-    remove_installs_from_code,
-    strip_function_calls,
-)
 from vision_agent.agent.vision_agent_coder_prompts import (
     CODE,
     FIX_BUG,
@@ -32,16 +22,20 @@ from vision_agent.agent.vision_agent_planner import (
     OpenAIVisionAgentPlanner,
     PlanContext,
 )
-from vision_agent.lmm import (
-    LMM,
-    AnthropicLMM,
-    AzureOpenAILMM,
-    Message,
-    OllamaLMM,
-    OpenAILMM,
-)
+from vision_agent.lmm import LMM, AnthropicLMM, AzureOpenAILMM, OllamaLMM, OpenAILMM
+from vision_agent.models import Message
 from vision_agent.tools.meta_tools import get_diff
 from vision_agent.utils import CodeInterpreterFactory, Execution
+from vision_agent.utils.agent import (
+    _MAX_TABULATE_COL_WIDTH,
+    DefaultImports,
+    extract_code,
+    extract_tag,
+    format_feedback,
+    print_code,
+    remove_installs_from_code,
+    strip_function_calls,
+)
 from vision_agent.utils.execute import CodeInterpreter
 
 logging.basicConfig(stream=sys.stdout)
@@ -490,7 +484,7 @@ class VisionAgentCoder(Agent):
                 tool_info=tool_doc,
                 tool_output=tool_output_str,
                 plan_thoughts=plan_thoughts_str,
-                tool_utils=T.UTILITIES_DOCSTRING,
+                tool_utils=T.get_utilties_docstring(),
                 working_memory=working_memory,
                 coder=self.coder,
                 tester=self.tester,

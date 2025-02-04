@@ -12,17 +12,10 @@ from .meta_tools import (
     use_object_detection_fine_tuning,
     view_media_artifact,
 )
+from .planner_tools import judge_od_results
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
-from .tool_utils import add_bboxes_from_masks, get_tool_descriptions_by_names
 from .tools import (
-    FUNCTION_TOOLS,
-    TOOL_DESCRIPTIONS,
-    TOOL_DOCSTRING,
-    TOOLS,
-    TOOLS_DF,
-    TOOLS_INFO,
-    UTIL_TOOLS,
-    UTILITIES_DOCSTRING,
+    activity_recognition,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
     agentic_sam2_video_tracking,
@@ -45,7 +38,11 @@ from .tools import (
     florence2_sam2_video_tracking,
     flux_image_inpainting,
     generate_pose_image,
-    get_tool_documentation,
+    get_tools,
+    get_tools_descriptions,
+    get_tools_df,
+    get_tools_docstring,
+    get_utilties_docstring,
     load_image,
     minimum_distance,
     ocr,
@@ -64,7 +61,6 @@ from .tools import (
     save_video,
     siglip_classification,
     template_match,
-    video_temporal_localization,
     vit_image_classification,
     vit_nsfw_classification,
 )
@@ -79,20 +75,11 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        from .tools import (  # noqa: F811
-            get_tool_descriptions,
-            get_tools_df,
-            get_tools_info,
-        )
-
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
+        from vision_agent.tools.tools import TOOLS
 
-        if tool not in TOOLS:
-            TOOLS.append(tool)
-            TOOLS_DF = get_tools_df(TOOLS)  # type: ignore
-            TOOL_DESCRIPTIONS = get_tool_descriptions(TOOLS)  # type: ignore
-            TOOL_DOCSTRING = get_tool_documentation(TOOLS)  # type: ignore
-            TOOLS_INFO = get_tools_info(TOOLS)  # type: ignore
+        if tool not in TOOLS:  # type: ignore
+            TOOLS.append(tool)  # type: ignore
 
             globals()[tool.__name__] = tool
             if imports is not None:

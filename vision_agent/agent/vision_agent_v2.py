@@ -4,23 +4,23 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from vision_agent.agent import Agent, AgentCoder, VisionAgentCoderV2
-from vision_agent.agent.agent_utils import (
+from vision_agent.agent.vision_agent_coder_v2 import format_code_context
+from vision_agent.agent.vision_agent_prompts_v2 import CONVERSATION
+from vision_agent.configs import Config
+from vision_agent.lmm import LMM
+from vision_agent.models import (
+    AgentMessage,
+    CodeContext,
+    InteractionContext,
+    Message,
+    PlanContext,
+)
+from vision_agent.utils.agent import (
     add_media_to_chat,
     convert_message_to_agentmessage,
     extract_tag,
     format_conversation,
 )
-from vision_agent.agent.types import (
-    AgentMessage,
-    CodeContext,
-    InteractionContext,
-    PlanContext,
-)
-from vision_agent.agent.vision_agent_coder_v2 import format_code_context
-from vision_agent.agent.vision_agent_prompts_v2 import CONVERSATION
-from vision_agent.configs import Config
-from vision_agent.lmm import LMM
-from vision_agent.lmm.types import Message
 from vision_agent.utils.execute import CodeInterpreter, CodeInterpreterFactory
 
 CONFIG = Config()

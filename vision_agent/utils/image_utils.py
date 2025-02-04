@@ -183,7 +183,9 @@ def encode_image_bytes(image: bytes, resize: Optional[int] = None) -> str:
     return encoded_image
 
 
-def encode_media(media: Union[str, Path], resize: Optional[int] = None) -> str:
+def encode_media(
+    media: Union[str, Path, np.ndarray, ImageType], resize: Optional[int] = None
+) -> str:
     if isinstance(media, str) and media.startswith(("http", "https")):
         # for mp4 video url, we assume there is a same url but ends with png
         # vision-agent-ui will upload this png when uploading the video
@@ -191,15 +193,24 @@ def encode_media(media: Union[str, Path], resize: Optional[int] = None) -> str:
             return media[:-4] + ".png"
         return media
 
-    # if media is in base64 ensure it's the correct resize
+    def resize_to_b64(image: ImageType, resize: Optional[int] = None) -> str:
+        if resize is not None:
+            image.thumbnail((resize, resize))
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    # if media is in base64, numpy array or PIL Image ensure it's the correct resize
     if isinstance(media, str) and media.startswith("data:image/"):
         image_pil = b64_to_pil(media)
-        if resize is not None:
-            if image_pil.size[0] > resize or image_pil.size[1] > resize:
-                image_pil.thumbnail((resize, resize))
-        buffer = io.BytesIO()
-        image_pil.save(buffer, format="PNG")
-        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+        return resize_to_b64(image_pil, resize=resize)
+
+    if isinstance(media, np.ndarray):
+        image_pil = Image.fromarray(media).convert("RGB")
+        return resize_to_b64(image_pil, resize=resize)
+
+    if isinstance(media, ImageType):
+        return resize_to_b64(media, resize=resize)
 
     extension = "png"
     extension = Path(media).suffix

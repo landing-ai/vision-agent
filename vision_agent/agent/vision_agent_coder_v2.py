@@ -5,9 +5,22 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union, cast
 from rich.console import Console
 from rich.markup import escape
 
-import vision_agent.tools.tools as T
 from vision_agent.agent import AgentCoder, AgentPlanner
-from vision_agent.agent.agent_utils import (
+from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
+from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
+from vision_agent.configs import Config
+from vision_agent.lmm import LMM
+from vision_agent.models import (
+    AgentMessage,
+    CodeContext,
+    InteractionContext,
+    Message,
+    PlanContext,
+)
+from vision_agent.sim import Sim, get_tool_recommender
+from vision_agent.tools.meta_tools import get_diff
+from vision_agent.tools.tools import get_utilties_docstring
+from vision_agent.utils.agent import (
     DefaultImports,
     add_media_to_chat,
     capture_media_from_exec,
@@ -18,24 +31,11 @@ from vision_agent.agent.agent_utils import (
     print_code,
     strip_function_calls,
 )
-from vision_agent.agent.types import (
-    AgentMessage,
-    CodeContext,
-    InteractionContext,
-    PlanContext,
-)
-from vision_agent.agent.vision_agent_coder_prompts_v2 import CODE, FIX_BUG, TEST
-from vision_agent.agent.vision_agent_planner_v2 import VisionAgentPlannerV2
-from vision_agent.configs import Config
-from vision_agent.lmm import LMM
-from vision_agent.lmm.types import Message
-from vision_agent.tools.meta_tools import get_diff
 from vision_agent.utils.execute import (
     CodeInterpreter,
     CodeInterpreterFactory,
     Execution,
 )
-from vision_agent.utils.sim import Sim, get_tool_recommender
 
 CONFIG = Config()
 _CONSOLE = Console()
@@ -207,7 +207,7 @@ def test_code(
     test = write_test(
         tester=tester,
         chat=chat,
-        tool_util_docs=T.UTILITIES_DOCSTRING,
+        tool_util_docs=get_utilties_docstring(),
         code=code,
         media_list=media_list,
     )
@@ -227,7 +227,7 @@ def test_code(
     while (not result.success or len(result.logs.stdout) == 0) and count < 3:
         code, test, debug_info = debug_code(
             debugger,
-            T.UTILITIES_DOCSTRING + "\n" + tool_docs,
+            get_utilties_docstring() + "\n" + tool_docs,
             plan,
             code,
             test,

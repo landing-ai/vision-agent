@@ -25,7 +25,7 @@ from vision_agent.tools import (
     qwen2_vl_video_vqa,
     siglip_classification,
     template_match,
-    video_temporal_localization,
+    activity_recognition,
     vit_image_classification,
     vit_nsfw_classification,
     custom_object_detection,
@@ -361,11 +361,11 @@ def test_qwen2_vl_video_vqa():
     assert "cat" in result.strip()
 
 
-def test_video_temporal_localization():
+def test_activity_recognition():
     frames = [
         np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
     ]
-    result = video_temporal_localization(
+    result = activity_recognition(
         prompt="Is it there a cat in this video?",
         frames=frames,
         model="qwen2vl",

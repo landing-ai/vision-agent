@@ -1,6 +1,7 @@
 "use client";
 
-import Visualizer from "@/components/ResultVisualizer";
+// import { VisualizerHiL } from "@/components/ResultVisualizer";
+import { GroupedVisualizer } from "@/components/GroupedVisualizer";
 import { useState, useEffect } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,8 @@ import {
 } from "@/components/ui/collapsible";
 
 interface ChatSectionProps {
-  uploadedImage: string | null;
-  onUploadedImage: (image: string) => void;
+  uploadedMedia: string | null;
+  onUploadedMedia: (image: string) => void;
   uploadedFile: string | null;
   onUploadedFile: (file: string) => void;
   uploadedResult: string | null;
@@ -120,7 +121,10 @@ const formatAssistantContent = (
 
   if (interactionMatch) {
     return (
-      <Visualizer detectionResults={interactionJson} onSubmit={onSubmit} />
+      <GroupedVisualizer
+        detectionResults={interactionJson}
+        onSubmit={onSubmit}
+      />
     );
   }
 
@@ -150,7 +154,7 @@ const formatAssistantContent = (
   return <></>;
 };
 
-export function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
+function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
   return (
     <div
       className={`mb-4 ${
@@ -177,8 +181,8 @@ export function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
 }
 
 export function ChatSection({
-  uploadedImage,
-  onUploadedImage,
+  uploadedMedia,
+  onUploadedMedia,
   uploadedFile,
   onUploadedFile,
   uploadedResult,
@@ -246,8 +250,8 @@ export function ChatSection({
         return;
       } else {
         userMessage = { role: "user", content: input.value } as Message;
-        if (uploadedImage) {
-          userMessage.media = [uploadedImage];
+        if (uploadedMedia) {
+          userMessage.media = [uploadedMedia];
         }
       }
 
@@ -261,11 +265,15 @@ export function ChatSection({
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith("image/")) {
+
+    if (
+      file &&
+      (file.type.startsWith("image/") || file.type.startsWith("video/"))
+    ) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64String = event.target?.result as string;
-        onUploadedImage(base64String);
+        onUploadedMedia(base64String);
       };
       reader.readAsDataURL(file);
     } else {
