@@ -369,6 +369,15 @@ def get_tool_for_task(
     tool_chooser = CONFIG.create_tool_chooser()
 
     if isinstance(images, list):
+        if len(images) > 0 and isinstance(images[0], dict):
+            if all(["frame" in image for image in images]):
+                images = [image["frame"] for image in images]
+            else:
+                raise ValueError(
+                    f"Expected a list of numpy arrays or a dictionary of strings to lists of numpy arrays, got a list of dictionaries instead: {images}"
+                )
+
+    if isinstance(images, list):
         images = {"image": images}
 
     with (
@@ -388,6 +397,10 @@ def get_tool_for_task(
             task, image_paths, tool_tester, exclude_tools, code_interpreter
         )
         tool_output_str = tool_output.text(include_results=False).strip()
+        with open("/Users/dillonlaird/landing.ai/vision-agent/tool_output.txt", "w") as f:
+            f.write(tool_output_str)
+        with open("/Users/dillonlaird/landing.ai/vision-agent/testing_code.py", "w") as f:
+            f.write(code)
 
         _, tool_thoughts, tool_docstring = run_multi_judge(
             tool_chooser,
@@ -411,6 +424,15 @@ def get_tool_for_task_human_reviewer(
     tool_tester = CONFIG.create_tool_tester()
 
     if isinstance(images, list):
+        if len(images) > 0 and isinstance(images[0], dict):
+            if all(["frame" in image for image in images]):
+                images = [image["frame"] for image in images]
+            else:
+                raise ValueError(
+                    f"Expected a list of numpy arrays or a dictionary of strings to lists of numpy arrays, got a list of dictionaries instead: {images}"
+                )
+
+    if isinstance(images, list):
         images = {"image": images}
 
     with (
@@ -423,6 +445,9 @@ def get_tool_for_task_human_reviewer(
                 image_path = f"{tmpdirname}/{k}_{i}.png"
                 Image.fromarray(image).save(image_path)
                 image_paths.append(image_path)
+
+        # run no more than 3 images or else it overloads the LLM
+        image_paths = image_paths[:3]
 
         tools = [
             t.__name__
