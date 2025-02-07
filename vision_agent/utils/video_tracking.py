@@ -54,7 +54,6 @@ def process_segment(
     segment_frames: List[np.ndarray],
     od_model: ODModels,
     prompt: str,
-    fine_tune_id: Optional[str],
     chunk_length: Optional[int],
     image_size: Tuple[int, ...],
     segment_index: int,
@@ -67,7 +66,6 @@ def process_segment(
         segment_frames (List[np.ndarray]): Frames in the segment.
         od_model (ODModels): Object detection model to use.
         prompt (str): Prompt for the model.
-        fine_tune_id (Optional[str]): Fine-tune model ID.
         chunk_length (Optional[int]): Chunk length for processing.
         image_size (Tuple[int, int]): Size of the images.
         segment_index (int): Index of the segment.
@@ -90,7 +88,7 @@ def process_segment(
     for idx in range(0, len(segment_frames), step):
         frame_number = idx
         segment_results[idx], function_name = object_detection_tool(
-            od_model, prompt, segment_index, frame_number, fine_tune_id, segment_frames
+            od_model, prompt, segment_index, frame_number, segment_frames
         )
 
     transformed_detections = transform_detections(
