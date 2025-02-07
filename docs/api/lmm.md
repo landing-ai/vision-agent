@@ -5,3 +5,5 @@
 ::: vision_agent.lmm.OllamaLMM
 
 ::: vision_agent.lmm.AnthropicLMM
+
+::: vision_agent.lmm.GoogleLMM

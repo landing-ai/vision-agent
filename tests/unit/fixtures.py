@@ -4,13 +4,6 @@ import pytest
 
 
 @pytest.fixture
-def langsmith_wrap_oepnai_mock(request, openai_llm_mock):
-    with patch("vision_agent.llm.llm.wrap_openai") as mock:
-        mock.return_value = openai_llm_mock
-        yield mock
-
-
-@pytest.fixture
 def openai_lmm_mock(request):
     content = request.param
 
