@@ -11,10 +11,9 @@ import libcst as cst
 from IPython.display import display
 
 import vision_agent as va
-from vision_agent.models import BboxInput, BboxInputBase64, Message, PromptTask
+from vision_agent.models import Message
 from vision_agent.tools.tools import get_tools_descriptions as _get_tool_descriptions
 from vision_agent.utils.execute import Execution, MimeType
-from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.tools_doc import get_tool_documentation
 
 CURRENT_FILE = None

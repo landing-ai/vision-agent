@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
-from uuid import UUID
 
 import cv2
 import numpy as np
@@ -21,7 +20,6 @@ from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
-from vision_agent.models import JobStatus
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
     b64_to_pil,
