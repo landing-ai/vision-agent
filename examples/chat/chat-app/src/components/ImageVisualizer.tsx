@@ -71,7 +71,7 @@ const ImageVisualizer: React.FC<ImageVisualizerProps> = ({
         lines.forEach((line, i) => {
             ctx.fillText(line, padding, padding + (i + 1) * lineHeight);
         });
-      } else {
+      } else if (Array.isArray(detectionItem.response.data)) {
         // For images, assume response.data is an array of Detection.
         (detectionItem.response.data as Detection[])
           .filter((detection) => detection.score >= threshold)

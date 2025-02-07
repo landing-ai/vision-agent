@@ -1,7 +1,7 @@
 "use client";
 
-// import { VisualizerHiL } from "@/components/ResultVisualizer";
 import { GroupedVisualizer } from "@/components/GroupedVisualizer";
+import { Polygon } from "@/components/PolygonDrawer";
 import { useState, useEffect } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ interface ChatSectionProps {
   onUploadedFile: (file: string) => void;
   uploadedResult: string | null;
   onUploadedResult: (result: string) => void;
+  polygons: Polygon[];
 }
 
 interface Message {
@@ -60,7 +61,7 @@ const CollapsibleMessage = ({ content }: { content: string }) => {
         <span className="text-sm font-medium">Observation</span>
       </div>
       <CollapsibleContent>
-        <pre className="pt-2 bg-gray-100 p-2 rounded-md overflow-x-auto">
+        <pre className="pt-2 bg-gray-100 p-2 rounded-md overflow-x-auto max-w-full whitespace-pre-wrap">
           <code className="text-sm">{content}</code>
         </pre>
       </CollapsibleContent>
@@ -144,7 +145,7 @@ const formatAssistantContent = (
           </div>
         )}
         {pythonMatch && (
-          <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
+          <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs max-w-full whitespace-pre-wrap">
             <code>{pythonMatch[1].trim()}</code>
           </pre>
         )}
@@ -157,7 +158,7 @@ const formatAssistantContent = (
 function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
   return (
     <div
-      className={`mb-4 ${
+      className={`mb-4 break-words ${
         message.role === "user" || message.role === "interaction_response"
           ? "ml-auto bg-primary text-primary-foreground"
           : message.role === "assistant"
@@ -187,12 +188,22 @@ export function ChatSection({
   onUploadedFile,
   uploadedResult,
   onUploadedResult,
+  polygons,
 }: ChatSectionProps) {
   const [messages, setMessages] = useState<Message[]>([]);
 
   const sendMessages = async (messages: Message[]) => {
     try {
-      console.log("Sending message:", messages[messages.length - 1]);
+      const lastMessage = {...messages[messages.length - 1]};
+      if (polygons.length > 0 && lastMessage.role === "user") {
+        const polygonStrings = polygons.map(polygon => 
+          `${polygon.name}: [${polygon.points.map(p => `(${p.x}, ${p.y})`).join(', ')}]`
+        );
+        lastMessage.content += "\nPolygons: " + polygonStrings.join('; ');
+      }
+      
+      console.log("Sending message:", lastMessage);
+      messages[messages.length - 1] = lastMessage;
       const response = await fetch("http://localhost:8000/chat", {
         method: "POST",
         headers: {
