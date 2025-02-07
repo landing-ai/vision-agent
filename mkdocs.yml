@@ -74,8 +74,10 @@ markdown_extensions:
 nav:
   - VisionAgent: index.md
   - APIs:
-      - vision_agent.agent: api/agent.md
       - vision_agent.tools: api/tools.md
+      - vision_agent.agent: api/agent.md
       - vision_agent.lmm: api/lmm.md
-      - vision_agent.utils: api/utils.md
+      - vision_agent.sim: api/sim.md
+      - vision_agent.configs: api/configs.md
+      - vision_agent.models: api/models.md
   - VisionAgent (Old): index_old.md
