@@ -397,10 +397,6 @@ def get_tool_for_task(
             task, image_paths, tool_tester, exclude_tools, code_interpreter
         )
         tool_output_str = tool_output.text(include_results=False).strip()
-        with open("/Users/dillonlaird/landing.ai/vision-agent/tool_output.txt", "w") as f:
-            f.write(tool_output_str)
-        with open("/Users/dillonlaird/landing.ai/vision-agent/testing_code.py", "w") as f:
-            f.write(code)
 
         _, tool_thoughts, tool_docstring = run_multi_judge(
             tool_chooser,
