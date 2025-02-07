@@ -6,11 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { gruvboxLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { PolygonDrawer, Polygon } from "@/components/PolygonDrawer";
 
 interface PreviewSectionProps {
   uploadedMedia: string | null;
   uploadedFile: string | null;
   uploadedResult: string | null;
+  onPolygonsChange: (polygons: Polygon[]) => void;
 }
 
 interface File {
@@ -23,6 +25,7 @@ export function PreviewSection({
   uploadedMedia,
   uploadedFile,
   uploadedResult,
+  onPolygonsChange,
 }: PreviewSectionProps) {
   return (
     <Card className="overflow-hidden">
@@ -35,21 +38,10 @@ export function PreviewSection({
         <TabsContent value="media" className="p-4">
           <div className="border rounded-md p-4">
             {uploadedMedia ? (
-              uploadedMedia.startsWith("data:video/") ? (
-                <video
-                  src={uploadedMedia}
-                  controls
-                  className="max-w-full rounded-md border"
-                >
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <img
-                  src={uploadedMedia}
-                  alt="Uploaded"
-                  className="max-w-full rounded-md border"
-                />
-              )
+              <PolygonDrawer
+                media={uploadedMedia || ""}
+                onPolygonsChange={onPolygonsChange}
+              />
             ) : (
               <p>No media uploaded yet.</p>
             )}
@@ -65,6 +57,7 @@ export function PreviewSection({
                   padding: "1rem",
                   borderRadius: "0.375rem",
                   backgroundColor: "var(--muted)",
+                  fontSize: "0.8rem", // 14px
                 }}
                 wrapLongLines={true}
               >
