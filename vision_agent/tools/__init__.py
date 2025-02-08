@@ -58,6 +58,8 @@ from .tools import (
     owlv2_sam2_video_tracking,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
+    qwen25_vl_images_vqa,
+    qwen25_vl_video_vqa,
     sam2,
     save_image,
     save_json,

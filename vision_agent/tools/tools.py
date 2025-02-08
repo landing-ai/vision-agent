@@ -1873,6 +1873,92 @@ def glee_sam2_video_tracking(
     return ret["return_data"]  # type: ignore
 
 
+# Qwen2 and 2.5 VL Tool
+
+
+def qwen25_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
+    """'qwen25_vl_images_vqa' is a tool that can answer any questions about arbitrary
+    images including regular images or images of documents or presentations. It can be
+    very useful for document QA or OCR text extraction. It returns text as an answer to
+    the question.
+
+    Parameters:
+        prompt (str): The question about the document image
+        images (List[np.ndarray]): The reference images used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> qwen25_vl_images_vqa('Give a summary of the document', images)
+        'The document talks about the history of the United States of America and its...'
+    """
+    if isinstance(images, np.ndarray):
+        images = [images]
+
+    for image in images:
+        if image.shape[0] < 1 or image.shape[1] < 1:
+            raise ValueError(f"Image is empty, image shape: {image.shape}")
+
+    files = [("images", numpy_to_bytes(image)) for image in images]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen25vl",
+        "function_name": "qwen25_vl_images_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    _display_tool_trace(
+        qwen25_vl_images_vqa.__name__,
+        payload,
+        cast(str, data),
+        files,
+    )
+    return cast(str, data)
+
+
+def qwen25_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
+    """'qwen25_vl_video_vqa' is a tool that can answer any questions about arbitrary videos
+    including regular videos or videos of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> qwen25_vl_video_vqa('Which football player made the goal?', frames)
+        'Lionel Messi'
+    """
+
+    if len(frames) == 0 or not isinstance(frames, List):
+        raise ValueError("Must provide a list of numpy arrays for frames")
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen25vl",
+        "function_name": "qwen25_vl_video_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    _display_tool_trace(
+        qwen25_vl_video_vqa.__name__,
+        payload,
+        cast(str, data),
+        files,
+    )
+    return cast(str, data)
+
+
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
     """'qwen2_vl_images_vqa' is a tool that can answer any questions about arbitrary
     images including regular images or images of documents or presentations. It can be
