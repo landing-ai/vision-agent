@@ -320,6 +320,13 @@ def od_sam2_video_tracking(
                 box_threshold=box_threshold,
             )
             function_name = "custom_object_detection"
+        elif od_model == ODModels.GLEE:
+            segment_results = glee_object_detection(
+                prompt=prompt,
+                image=segment_frames[frame_number],
+                box_threshold=box_threshold,
+            )
+            function_name = "glee_object_detection"
 
         else:
             raise NotImplementedError(
@@ -1643,6 +1650,223 @@ def agentic_sam2_video_tracking(
     _display_tool_trace(
         agentic_sam2_video_tracking.__name__,
         {},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
+
+
+# GLEE Tools
+
+
+def _glee_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float,
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
+
+    files = [("image", image_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "confidence": box_threshold,
+        "model": "glee",
+    }
+    metadata = {"function_name": "glee"}
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
+    )
+    # get the first frame
+    bboxes = detections[0]
+    bboxes_formatted = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+    display_data = [
+        {
+            "label": bbox["label"],
+            "bbox": bbox["bounding_box"],
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+    return {
+        "files": files,
+        "return_data": bboxes_formatted,
+        "display_data": display_data,
+    }
+
+
+def glee_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'glee_object_detection' is a tool that can detect multiple objects given a
+    text prompt such as object names or referring expressions on images. It's
+    particularly good at detecting specific objects given detailed descriptive prompts.
+    It returns a list of bounding boxes with normalized coordinates, label names and
+    associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with no commas or periods.
+        image (np.ndarray): The image to ground the prompt to.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> glee_object_detection("person holding a box", image)
+        [
+            {'score': 0.99, 'label': 'person holding a box', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.98, 'label': 'person holding a box', 'bbox': [0.2, 0.21, 0.45, 0.5},
+        ]
+    """
+
+    od_ret = _glee_object_detection(prompt, image, box_threshold, image.shape[:2])
+    _display_tool_trace(
+        glee_object_detection.__name__,
+        {"prompts": prompt, "confidence": box_threshold},
+        od_ret["display_data"],
+        od_ret["files"],
+    )
+    return od_ret["return_data"]  # type: ignore
+
+
+def glee_sam2_instance_segmentation(
+    prompt: str, image: np.ndarray, box_threshold: float = 0.23
+) -> List[Dict[str, Any]]:
+    """'glee_sam2_instance_segmentation' is a tool that can detect multiple
+    instances given a text prompt such as object names or referring expressions on
+    images. It's particularly good at detecting specific objects given detailed
+    descriptive prompts. It returns a list of bounding boxes with normalized
+    coordinates, label names, masks and associated probability scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted, only supports a single
+            prompt with no commas or periods.
+        image (np.ndarray): The image that contains multiple instances of the object.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> glee_sam2_instance_segmentation("a large blue flower", image)
+        [
+            {
+                'score': 0.49,
+                'label': 'a large blue flower',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    od_ret = _glee_object_detection(prompt, image, box_threshold, image.shape[:2])
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+
+    _display_tool_trace(
+        glee_sam2_instance_segmentation.__name__,
+        {
+            "prompts": prompt,
+            "confidence": box_threshold,
+        },
+        seg_ret["display_data"],
+        seg_ret["files"],
+    )
+
+    return seg_ret["return_data"]  # type: ignore
+
+
+def glee_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    box_threshold: float = 0.23,
+    chunk_length: Optional[int] = 25,
+) -> List[List[Dict[str, Any]]]:
+    """'glee_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as object names or referring
+    expressions. It's particularly good at detecting specific objects given detailed
+    descriptive prompts and returns a list of bounding boxes, label names, masks and
+    associated probability scores and is useful for tracking and counting without
+    duplicating counts.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with  no commas or periods.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
+            to find new objects.
+        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
+            fine-tuned model ID here to use it.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
+
+    Example
+    -------
+        >>> glee_sam2_video_tracking("a runner with yellow shoes", frames)
+        [
+            [
+                {
+                    'label': '0: a runner with yellow shoes',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    """
+    ret = od_sam2_video_tracking(
+        ODModels.GLEE,
+        prompt=prompt,
+        frames=frames,
+        box_threshold=box_threshold,
+        chunk_length=chunk_length,
+    )
+    _display_tool_trace(
+        glee_sam2_video_tracking.__name__,
+        {"prompt": prompt, "chunk_length": chunk_length},
         ret["display_data"],
         ret["files"],
     )
