@@ -235,6 +235,7 @@ def od_sam2_video_tracking(
     frames: List[np.ndarray],
     box_threshold: float = 0.30,
     chunk_length: Optional[int] = 50,
+    deployment_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     chunk_length = 50 if chunk_length is None else chunk_length
     segment_size = chunk_length
@@ -257,6 +258,7 @@ def od_sam2_video_tracking(
         prompt: str,
         segment_index: int,
         frame_number: int,
+        deployment_id: str,
         segment_frames: list,
     ) -> tuple:
         """
@@ -267,6 +269,7 @@ def od_sam2_video_tracking(
             prompt: The prompt for the object detection model.
             segment_index: The index of the current segment.
             frame_number: The number of the current frame.
+            deployment_id: Optional ID for the model.
             segment_frames: List of frames for the current segment.
 
         Returns:
@@ -305,6 +308,7 @@ def od_sam2_video_tracking(
 
         elif od_model == ODModels.CUSTOM:
             segment_results = custom_object_detection(
+                deployment_id=deployment_id,
                 image=segment_frames[frame_number],
                 box_threshold=box_threshold,
             )
@@ -326,6 +330,7 @@ def od_sam2_video_tracking(
                 segment_frames=segment,
                 od_model=od_model,
                 prompt=prompt,
+                deployment_id=deployment_id,
                 chunk_length=chunk_length,
                 image_size=image_size,
                 segment_index=segment_index,
@@ -1321,6 +1326,7 @@ def custom_od_sam2_video_tracking(
         prompt="",
         frames=frames,
         chunk_length=chunk_length,
+        deployment_id=deployment_id,
     )
     _display_tool_trace(
         custom_od_sam2_video_tracking.__name__,

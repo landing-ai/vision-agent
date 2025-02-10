@@ -491,3 +491,13 @@ def test_video_tracking_by_given_model():
     assert len(result) == 10
     assert len([res["label"] for res in result[0]]) == 24
     assert len([res["mask"] for res in result[0]]) == 24
+
+
+def test_finetuned_object_detection_empty():
+    img = ski.data.coins()
+
+    result = custom_object_detection(
+        deployment_id="5015ec65-b99b-4d62-bef1-fb6acb87bb9c",
+        image=img,
+    )
+    assert len(result) == 0  # no coin objects detected on the finetuned model
