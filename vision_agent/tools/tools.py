@@ -1334,6 +1334,7 @@ def custom_od_sam2_video_tracking(
     deployment_id: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 25,
+    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'custom_od_sam2_video_tracking' is a tool that can segment multiple objects given a
     custom model with predefined category names.
@@ -1378,7 +1379,7 @@ def custom_od_sam2_video_tracking(
         prompt="",
         frames=frames,
         chunk_length=chunk_length,
-        deployment_id=deployment_id,
+        fine_tune_id=fine_tune_id,
     )
     _display_tool_trace(
         custom_od_sam2_video_tracking.__name__,
