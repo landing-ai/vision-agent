@@ -2,7 +2,6 @@ import logging
 import os
 import tempfile
 from functools import lru_cache
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 import av  # type: ignore
