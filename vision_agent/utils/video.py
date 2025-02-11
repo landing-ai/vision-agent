@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 import av  # type: ignore
@@ -25,8 +26,8 @@ def _resize_frame(frame: np.ndarray) -> np.ndarray:
 def video_writer(
     frames: List[np.ndarray],
     fps: float = _DEFAULT_INPUT_FPS,
-    file_ext: str = ".mp4",
     filename: Optional[str] = None,
+    file_ext: str = ".mp4",
 ) -> str:
     if isinstance(fps, str):
         # fps could be a string when it's passed in from a web endpoint deployment
