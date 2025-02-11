@@ -68,7 +68,8 @@ def process_segment(
         segment_frames (List[np.ndarray]): Frames in the segment.
         od_model (ODModels): Object detection model to use.
         prompt (str): Prompt for the model.
-        deployment_id (Optional[str]): The model ID.
+        fine_tune_id (Optional[str]): Fine-tune model ID.
+        deployment_id (Optional[str]): The model deployment ID.
         chunk_length (Optional[int]): Chunk length for processing.
         image_size (Tuple[int, int]): Size of the images.
         segment_index (int): Index of the segment.
