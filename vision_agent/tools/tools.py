@@ -1240,7 +1240,11 @@ def _countgd_visual_object_detection(
         }
         for bbox in bboxes
     ]
-    return {"files": files, "return_data": bboxes_formatted, "display_data": display_data}
+    return {
+        "files": files,
+        "return_data": bboxes_formatted,
+        "display_data": display_data,
+    }
 
 
 def countgd_visual_object_detection(
@@ -1256,7 +1260,8 @@ def countgd_visual_object_detection(
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-            [xmin, ymin, xmax, ymax]. Up to 3 bounding boxes can be provided.
+            [xmin, ymin, xmax, ymax] with normalized coordinatse. Up to 3 bounding
+            boxes can be provided.
         image (np.ndarray): The image that contains multiple instances of the object.
         box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
 
@@ -1284,9 +1289,7 @@ def countgd_visual_object_detection(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
-    od_ret = _countgd_visual_object_detection(
-        visual_prompts, image, box_threshold
-    )
+    od_ret = _countgd_visual_object_detection(visual_prompts, image, box_threshold)
 
     _display_tool_trace(
         countgd_visual_object_detection.__name__,
@@ -1309,7 +1312,8 @@ def countgd_sam2_visual_instance_segmentation(
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-            [xmin, ymin, xmax, ymax]. Up to 3 bounding boxes can be provided.
+            [xmin, ymin, xmax, ymax] with normalized coordinates. Up to 3 bounding
+            boxes can be provided.
         image (np.ndarray): The image that contains multiple instances of the object.
         box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
 
@@ -1341,9 +1345,7 @@ def countgd_sam2_visual_instance_segmentation(
         ]
     """
 
-    od_ret = _countgd_visual_object_detection(
-        visual_prompts, image, box_threshold
-    )
+    od_ret = _countgd_visual_object_detection(visual_prompts, image, box_threshold)
     seg_ret = _sam2(
         image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
     )
@@ -1357,7 +1359,6 @@ def countgd_sam2_visual_instance_segmentation(
 
 
 # Custom Models
-
 
 
 def custom_object_detection(
