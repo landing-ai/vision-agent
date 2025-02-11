@@ -1215,9 +1215,8 @@ def countgd_visual_prompt_object_detection(
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
             [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided. image
-            (np.ndarray): The image that contains multiple instances of the object.
-            box_threshold (float, optional): The threshold for detection. Defaults to
-            0.23.
+        (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1248,7 +1247,11 @@ def countgd_visual_prompt_object_detection(
     visual_prompts = [
         denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
     ]
-    payload = {"visual_prompts": json.dumps(visual_prompts), "model": "countgd"}
+    payload = {
+        "visual_prompts": json.dumps(visual_prompts),
+        "model": "countgd",
+        "confidence": box_threshold,
+    }
     metadata = {"function_name": "countgd_visual_prompt_object_detection"}
 
     detections = send_task_inference_request(
@@ -1489,9 +1492,9 @@ def agentic_object_detection(
 ) -> List[Dict[str, Any]]:
     """'agentic_object_detection' is a tool that can detect multiple objects given a
     text prompt such as object names or referring expressions on images. It's
-    particularly good at detecting specific objects given detailed descriptive prompts.
-    It returns a list of bounding boxes with normalized coordinates, label names and
-    associated probability scores.
+    particularly good at detecting specific objects given detailed descriptive prompts
+    but runs slower. It returns a list of bounding boxes with normalized coordinates,
+    label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image, only supports a single prompt
@@ -1539,8 +1542,8 @@ def agentic_sam2_instance_segmentation(
     """'agentic_sam2_instance_segmentation' is a tool that can detect multiple
     instances given a text prompt such as object names or referring expressions on
     images. It's particularly good at detecting specific objects given detailed
-    descriptive prompts. It returns a list of bounding boxes with normalized
-    coordinates, label names, masks and associated probability scores.
+    descriptive prompts but runs slower. It returns a list of bounding boxes with
+    normalized coordinates, label names, masks and associated probability scores.
 
     Parameters:
         prompt (str): The object that needs to be counted, only supports a single
@@ -1598,9 +1601,9 @@ def agentic_sam2_video_tracking(
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as object names or referring
     expressions. It's particularly good at detecting specific objects given detailed
-    descriptive prompts and returns a list of bounding boxes, label names, masks and
-    associated probability scores and is useful for tracking and counting without
-    duplicating counts.
+    descriptive prompts but runs slower, and returns a list of bounding boxes, label
+    names, masks and associated probability scores and is useful for tracking and
+    counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the image, only supports a single prompt
