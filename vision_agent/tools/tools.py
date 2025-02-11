@@ -236,6 +236,7 @@ def od_sam2_video_tracking(
     box_threshold: float = 0.30,
     chunk_length: Optional[int] = 50,
     fine_tune_id: Optional[str] = None,
+    deployment_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     chunk_length = 50 if chunk_length is None else chunk_length
     segment_size = chunk_length
@@ -259,6 +260,7 @@ def od_sam2_video_tracking(
         segment_index: int,
         frame_number: int,
         fine_tune_id: str,
+        deployment_id: str,
         segment_frames: list,
     ) -> tuple:
         """
@@ -269,7 +271,7 @@ def od_sam2_video_tracking(
             prompt: The prompt for the object detection model.
             segment_index: The index of the current segment.
             frame_number: The number of the current frame.
-            fine_tune_id: Optional fine-tune ID for the model.
+            deployment_id: Optional The Model ID.
             segment_frames: List of frames for the current segment.
 
         Returns:
@@ -308,7 +310,7 @@ def od_sam2_video_tracking(
 
         elif od_model == ODModels.CUSTOM:
             segment_results = custom_object_detection(
-                deployment_id=fine_tune_id,
+                deployment_id=deployment_id,
                 image=segment_frames[frame_number],
                 box_threshold=box_threshold,
             )
@@ -330,6 +332,7 @@ def od_sam2_video_tracking(
                 segment_frames=segment,
                 od_model=od_model,
                 prompt=prompt,
+                deployment_id=deployment_id,
                 fine_tune_id=fine_tune_id,
                 chunk_length=chunk_length,
                 image_size=image_size,
@@ -1334,7 +1337,6 @@ def custom_od_sam2_video_tracking(
     deployment_id: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'custom_od_sam2_video_tracking' is a tool that can segment multiple objects given a
     custom model with predefined category names.
@@ -1379,7 +1381,7 @@ def custom_od_sam2_video_tracking(
         prompt="",
         frames=frames,
         chunk_length=chunk_length,
-        fine_tune_id=fine_tune_id,
+        deployment_id=deployment_id,
     )
     _display_tool_trace(
         custom_od_sam2_video_tracking.__name__,
