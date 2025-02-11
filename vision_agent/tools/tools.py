@@ -1199,23 +1199,65 @@ def countgd_sam2_video_tracking(
     return ret["return_data"]  # type: ignore
 
 
-# Custom Models
+def _countgd_visual_object_detection(
+    visual_prompts: List[List[float]],
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> Dict[str, Any]:
+    image_size = image.shape[:2]
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    visual_prompts = [
+        denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
+    ]
+    payload = {
+        "visual_prompts": json.dumps(visual_prompts),
+        "model": "countgd",
+        "confidence": box_threshold,
+    }
+    metadata = {"function_name": "countgd_visual_prompt_object_detection"}
+
+    detections = send_task_inference_request(
+        payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
+    )
+
+    # get the first frame
+    bboxes = detections[0]
+    bboxes_formatted = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+    display_data = [
+        {
+            "label": bbox["label"],
+            "bbox": bbox["bounding_box"],
+            "score": bbox["score"],
+        }
+        for bbox in bboxes
+    ]
+    return {"files": files, "return_data": bboxes_formatted, "display_data": display_data}
 
 
-def countgd_visual_prompt_object_detection(
+def countgd_visual_object_detection(
     visual_prompts: List[List[float]],
     image: np.ndarray,
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
-    """'countgd_visual_prompt_object_detection' is a tool that can precisely count
-    multiple instances of an object given few visual example prompts. It returns a list
-    of bounding boxes with normalized coordinates, label names and associated
-    confidence scores.
+    """'countgd_visual_object_detection' is a tool that can detect multiple instances
+    of an object given a visual prompt. It is particularly useful when trying to detect
+    and count a large number of objects. You can optionally separate object names in
+    the prompt with commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-            [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided. image
-        (np.ndarray): The image that contains multiple instances of the object.
+            [xmin, ymin, xmax, ymax]. Up to 3 bounding boxes can be provided.
+        image (np.ndarray): The image that contains multiple instances of the object.
         box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
 
     Returns:
@@ -1242,47 +1284,80 @@ def countgd_visual_prompt_object_detection(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    visual_prompts = [
-        denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
-    ]
-    payload = {
-        "visual_prompts": json.dumps(visual_prompts),
-        "model": "countgd",
-        "confidence": box_threshold,
-    }
-    metadata = {"function_name": "countgd_visual_prompt_object_detection"}
-
-    detections = send_task_inference_request(
-        payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
+    od_ret = _countgd_visual_object_detection(
+        visual_prompts, image, box_threshold
     )
 
-    # get the first frame
-    bboxes_per_frame = detections[0]
-    bboxes_formatted = [
-        {
-            "label": bbox["label"],
-            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
-            "score": round(bbox["score"], 2),
-        }
-        for bbox in bboxes_per_frame
-    ]
     _display_tool_trace(
-        countgd_visual_prompt_object_detection.__name__,
-        payload,
+        countgd_visual_object_detection.__name__,
+        {},
+        od_ret["display_data"],
+        od_ret["files"],
+    )
+
+    return od_ret["return_data"]  # type: ignore
+
+
+def countgd_sam2_visual_instance_segmentation(
+    visual_prompts: List[List[float]],
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_sam2_visual_instance_segmentation' is a tool that can precisely count
+    multiple instances of an object given few visual example prompts. It returns a list
+    of bounding boxes, label names, masks and associated probability scores.
+
+    Parameters:
+        visual_prompts (List[List[float]]): Bounding boxes of the object in format
+            [xmin, ymin, xmax, ymax]. Up to 3 bounding boxes can be provided.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_visual_instance_segmentation(
+            visual_prompts=[[0.1, 0.1, 0.4, 0.42], [0.2, 0.3, 0.25, 0.35]],
+            image=image
+        )
         [
             {
-                "label": e["label"],
-                "score": e["score"],
-                "bbox": denormalize_bbox(e["bbox"], image_size),
-            }
-            for e in bboxes_formatted
-        ],
-        files,
-    )
+                'score': 0.49,
+                'label': 'object',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
 
-    return bboxes_formatted
+    od_ret = _countgd_visual_object_detection(
+        visual_prompts, image, box_threshold
+    )
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+    _display_tool_trace(
+        countgd_sam2_visual_instance_segmentation.__name__,
+        {},
+        seg_ret["display_data"],
+        seg_ret["files"],
+    )
+    return seg_ret["return_data"]  # type: ignore
+
+
+# Custom Models
+
 
 
 def custom_object_detection(
