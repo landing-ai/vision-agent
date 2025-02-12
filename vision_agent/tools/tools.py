@@ -235,7 +235,6 @@ def od_sam2_video_tracking(
     frames: List[np.ndarray],
     box_threshold: float = 0.30,
     chunk_length: Optional[int] = 50,
-    fine_tune_id: Optional[str] = None,
     deployment_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     chunk_length = 50 if chunk_length is None else chunk_length
@@ -259,7 +258,6 @@ def od_sam2_video_tracking(
         prompt: str,
         segment_index: int,
         frame_number: int,
-        fine_tune_id: str,
         deployment_id: str,
         segment_frames: list,
     ) -> tuple:
@@ -271,7 +269,7 @@ def od_sam2_video_tracking(
             prompt: The prompt for the object detection model.
             segment_index: The index of the current segment.
             frame_number: The number of the current frame.
-            deployment_id: Optional The Model ID.
+            deployment_id: Optional The Model deployment ID.
             segment_frames: List of frames for the current segment.
 
         Returns:
@@ -333,7 +331,6 @@ def od_sam2_video_tracking(
                 od_model=od_model,
                 prompt=prompt,
                 deployment_id=deployment_id,
-                fine_tune_id=fine_tune_id,
                 chunk_length=chunk_length,
                 image_size=image_size,
                 segment_index=segment_index,
@@ -420,7 +417,6 @@ def owlv2_object_detection(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.10,
-    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'owlv2_object_detection' is a tool that can detect and count multiple objects
     given a text prompt such as category names or referring expressions on images. The
@@ -448,14 +444,6 @@ def owlv2_object_detection(
             {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
         ]
     """
-
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
 
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
@@ -540,7 +528,6 @@ def owlv2_sam2_video_tracking(
     frames: List[np.ndarray],
     box_threshold: float = 0.10,
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'owlv2_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
@@ -585,14 +572,6 @@ def owlv2_sam2_video_tracking(
         ]
     """
 
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
-
     ret = od_sam2_video_tracking(
         ODModels.OWLV2,
         prompt=prompt,
@@ -615,7 +594,6 @@ def owlv2_sam2_video_tracking(
 def florence2_object_detection(
     prompt: str,
     image: np.ndarray,
-    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'florence2_object_detection' is a tool that can detect multiple objects given a
     text prompt which can be object names or caption. You can optionally separate the
@@ -642,14 +620,6 @@ def florence2_object_detection(
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
         ]
     """
-
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
 
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
@@ -693,7 +663,6 @@ def florence2_object_detection(
 def florence2_sam2_instance_segmentation(
     prompt: str,
     image: np.ndarray,
-    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'florence2_sam2_instance_segmentation' is a tool that can segment multiple
     objects given a text prompt such as category names or referring expressions. The
@@ -730,14 +699,6 @@ def florence2_sam2_instance_segmentation(
             },
         ]
     """
-
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
 
     if image.shape[0] < 1 or image.shape[1] < 1:
         return []
@@ -779,7 +740,6 @@ def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
@@ -822,14 +782,6 @@ def florence2_sam2_video_tracking(
             ...
         ]
     """
-
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
 
     if len(frames) == 0 or not isinstance(frames, List):
         raise ValueError("Must provide a list of numpy arrays for frames")
@@ -1446,7 +1398,6 @@ def _agentic_object_detection(
 def agentic_object_detection(
     prompt: str,
     image: np.ndarray,
-    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'agentic_object_detection' is a tool that can detect multiple objects given a
     text prompt such as object names or referring expressions on images. It's
@@ -1474,14 +1425,6 @@ def agentic_object_detection(
             {'score': 0.98, 'label': 'a red car', 'bbox': [0.2, 0.21, 0.45, 0.5},
         ]
     """
-
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
 
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
@@ -1558,7 +1501,6 @@ def agentic_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as object names or referring
@@ -1602,14 +1544,6 @@ def agentic_sam2_video_tracking(
             ...
         ]
     """
-
-    if fine_tune_id is not None:
-        _LOGGER.warning(
-            (
-                "The 'fine_tune_id' parameter is deprecated and "
-                "will be removed in a future version."
-            )
-        )
 
     ret = od_sam2_video_tracking(
         ODModels.AGENTIC,

@@ -503,20 +503,3 @@ def test_finetuned_object_detection_empty():
         image=img,
     )
     assert len(result) == 0  # no coin objects detected on the finetuned model
-
-
-def test_owlv2_object_detection_deprecated_fine_tune_id_logging(caplog):
-    img = ski.data.coins()
-    FINE_TUNE_ID = "8af5dff4-436b-4678-a240-276e2a6ec798"
-
-    with caplog.at_level(logging.WARNING):
-        result = owlv2_object_detection(
-            prompt="coin",
-            image=img,
-            fine_tune_id=FINE_TUNE_ID,
-        )
-
-    assert (
-        "The 'fine_tune_id' parameter is deprecated and will be removed in a future version"
-        in caplog.text
-    )
