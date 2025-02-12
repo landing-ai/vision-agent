@@ -2798,15 +2798,15 @@ def save_video(
             raise ValueError("A frame is not a valid NumPy array with shape (H, W, C)")
 
     if output_video_path is None:
-        output_video_path = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".mp4"
-        ).name
+        output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     else:
+        output_file = open(output_video_path, "wb")
         Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
 
-    output_video_path = video_writer(frames, fps, filename=output_video_path)
-    _save_video_to_result(output_video_path)
-    return output_video_path
+    with output_file as file:
+        video_writer(frames, fps, file=file)
+    _save_video_to_result(output_file.name)
+    return output_file.name
 
 
 def _save_video_to_result(video_uri: str) -> None:
