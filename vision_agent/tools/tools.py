@@ -2801,8 +2801,8 @@ def save_video(
     if output_video_path is None:
         output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     else:
-        output_file = open(output_video_path, "wb")
         Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
+        output_file = open(output_video_path, "wb")
 
     with output_file as file:
         video_writer(frames, fps, file=file)
