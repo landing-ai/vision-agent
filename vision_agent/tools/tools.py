@@ -8,7 +8,7 @@ from base64 import b64encode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import IO, Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from uuid import UUID
 
 import cv2
@@ -2797,6 +2797,7 @@ def save_video(
         ):
             raise ValueError("A frame is not a valid NumPy array with shape (H, W, C)")
 
+    output_file: IO[bytes]
     if output_video_path is None:
         output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     else:
