@@ -31,7 +31,7 @@ def video_writer(
         fps = float(fps)
     if file is None:
         file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    with av.open(file.name, "w") as container:
+    with av.open(file, "w") as container:
         stream = container.add_stream("h264", rate=fps)
         height, width = frames[0].shape[:2]
         stream.height = height - (height % 2)
