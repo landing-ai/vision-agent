@@ -2804,7 +2804,7 @@ def save_video(
     else:
         Path(output_video_path).parent.mkdir(parents=True, exist_ok=True)
 
-    output_video_path = video_writer(frames, fps, output_video_path)
+    output_video_path = video_writer(frames, fps, filename=output_video_path)
     _save_video_to_result(output_video_path)
     return output_video_path
 
