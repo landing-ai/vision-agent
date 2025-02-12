@@ -28,11 +28,13 @@ def video_writer(
     filename: Optional[str] = None,
     file_ext: str = ".mp4",
 ) -> str:
+    tempf = None
     if isinstance(fps, str):
         # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
     if filename is None:
-        filename = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext).name
+        tempf = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
+        filename = tempf.name
     container = av.open(filename, mode="w")
     stream = container.add_stream("h264", rate=fps)
     height, width = frames[0].shape[:2]
@@ -52,6 +54,9 @@ def video_writer(
     for packet in stream.encode():
         container.mux(packet)
     container.close()
+    # for windows nee to manually close tempfile, cannot use with NamedTemporaryFile(delete=True)
+    if tempf is not None:
+        tempf.close()
     return filename
 
 
@@ -68,7 +73,7 @@ def frames_to_bytes(
     if isinstance(fps, str):
         # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
-    filename = video_writer(frames, fps, file_ext)
+    filename = video_writer(frames, fps, file_ext=file_ext)
     # TODO: look into memory-mapped files to avoid reading the entire file into memory
     with open(filename, "rb") as f:
         buffer_bytes = f.read()
