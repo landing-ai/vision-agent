@@ -1,8 +1,7 @@
 import logging
-import os
 import tempfile
 from functools import lru_cache
-from typing import List, Optional, Tuple
+from typing import IO, List, Optional, Tuple
 
 import av  # type: ignore
 import cv2
@@ -25,39 +24,32 @@ def _resize_frame(frame: np.ndarray) -> np.ndarray:
 def video_writer(
     frames: List[np.ndarray],
     fps: float = _DEFAULT_INPUT_FPS,
-    filename: Optional[str] = None,
-    file_ext: str = ".mp4",
+    file: Optional[IO[bytes]] = None,
 ) -> str:
-    tempf = None
     if isinstance(fps, str):
         # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
-    if filename is None:
-        tempf = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
-        filename = tempf.name
-    container = av.open(filename, mode="w")
-    stream = container.add_stream("h264", rate=fps)
-    height, width = frames[0].shape[:2]
-    stream.height = height - (height % 2)
-    stream.width = width - (width % 2)
-    stream.pix_fmt = "yuv420p"
-    stream.options = {"crf": "10"}
-    for frame in frames:
-        # Remove the alpha channel (convert RGBA to RGB)
-        frame_rgb = frame[:, :, :3]
-        # Resize the frame to make dimensions divisible by 2
-        frame_rgb = _resize_frame(frame_rgb)
-        av_frame = av.VideoFrame.from_ndarray(frame_rgb, format="rgb24")
-        for packet in stream.encode(av_frame):
-            container.mux(packet)
+    if file is None:
+        file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    with av.open(file, "w") as container:
+        stream = container.add_stream("h264", rate=fps)
+        height, width = frames[0].shape[:2]
+        stream.height = height - (height % 2)
+        stream.width = width - (width % 2)
+        stream.pix_fmt = "yuv420p"
+        stream.options = {"crf": "10"}
+        for frame in frames:
+            # Remove the alpha channel (convert RGBA to RGB)
+            frame_rgb = frame[:, :, :3]
+            # Resize the frame to make dimensions divisible by 2
+            frame_rgb = _resize_frame(frame_rgb)
+            av_frame = av.VideoFrame.from_ndarray(frame_rgb, format="rgb24")
+            for packet in stream.encode(av_frame):
+                container.mux(packet)
 
-    for packet in stream.encode():
-        container.mux(packet)
-    container.close()
-    # for windows nee to manually close tempfile, cannot use with NamedTemporaryFile(delete=True)
-    if tempf is not None:
-        tempf.close()
-    return filename
+        for packet in stream.encode():
+            container.mux(packet)
+    return file.name
 
 
 def frames_to_bytes(
@@ -73,11 +65,10 @@ def frames_to_bytes(
     if isinstance(fps, str):
         # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
-    filename = video_writer(frames, fps, file_ext=file_ext)
-    # TODO: look into memory-mapped files to avoid reading the entire file into memory
-    with open(filename, "rb") as f:
+    with tempfile.NamedTemporaryFile(delete=True, suffix=file_ext) as f:
+        video_writer(frames, fps, f)
+        f.seek(0)
         buffer_bytes = f.read()
-    os.unlink(filename)
     return buffer_bytes
 
 
