@@ -2613,7 +2613,7 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
 
 
 def depth_anything_v2(image: np.ndarray) -> np.ndarray:
-    """'depth_anything_v2' is a tool that runs depth_anythingv2 model to generate a
+    """'depth_anything_v2' is a tool that runs depth_anything v2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
     represents depth values as pixel intesities with pixel values ranging from 0 to 255.
 
@@ -2621,7 +2621,8 @@ def depth_anything_v2(image: np.ndarray) -> np.ndarray:
         image (np.ndarray): The image to used to generate depth image
 
     Returns:
-        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255.
+        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255
+            where high values represent closer objects and low values further.
 
     Example
     -------
