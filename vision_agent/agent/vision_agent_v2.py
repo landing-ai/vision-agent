@@ -11,6 +11,7 @@ from vision_agent.lmm import LMM
 from vision_agent.models import (
     AgentMessage,
     CodeContext,
+    ErrorContext,
     InteractionContext,
     Message,
     PlanContext,
@@ -37,19 +38,22 @@ def extract_conversation(
         return chat, None
 
     extracted_chat = []
-    for chat_i in chat:
+    for i, chat_i in enumerate(chat):
         if chat_i.role == "user":
             extracted_chat.append(chat_i)
         elif chat_i.role == "coder":
             if "<final_code>" in chat_i.content:
                 extracted_chat.append(chat_i)
+                # keep corresponding observation from final code execution
+                if i + 1 < len(chat) and chat[i + 1].role == "observation":
+                    extracted_chat.append(chat[i + 1])
         elif include_conv and chat_i.role == "conversation":
             extracted_chat.append(chat_i)
 
-    # only keep the last <final_code> and <final_test>
+    # only keep the last <final_code>, <final_test> and their corresponding observation
     final_code = None
     extracted_chat_strip_code: List[AgentMessage] = []
-    for chat_i in reversed(extracted_chat):
+    for i, chat_i in reversed(list(enumerate(extracted_chat))):
         if "<final_code>" in chat_i.content and final_code is None:
             extracted_chat_strip_code = [chat_i] + extracted_chat_strip_code
             final_code = extract_tag(chat_i.content, "final_code")
@@ -109,6 +113,10 @@ def maybe_run_action(
                     role="interaction",
                     content=json.dumps([elt.model_dump() for elt in context.chat]),
                 )
+            ]
+        elif isinstance(context, ErrorContext):
+            return [
+                AgentMessage(role="observation", content=context.error),
             ]
     elif action == "edit_code":
         # We don't want to pass code in plan_context.code so the coder will generate

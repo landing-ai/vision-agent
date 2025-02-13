@@ -16,16 +16,28 @@ AGENT: <response>Yes, I can help you with that. I will write the code to detect 
 OBSERVATION:
 <final_code>
 from vision_agent.tools import load_image, owl_v2_image
-def detect_dogs(image_path: str):
+def detect_dogs(image_path: str) -> int:
     image = load_image(image_path)
     dogs = owl_v2_image(image)
-    return dogs
+    return len(dogs)
 </final_code>
 <final_test>
 def test_detect_dogs():
     dogs = detect_dogs("images/dogs.jpg")
-    assert len(dogs) > 0
+    assert isinstance(dogs, int)
+    print(f"Number of dogs detected: {dogs}")
+    return dogs
 </final_test>
+
+OBSERVATION: ----- stdout -----
+Number of dogs detected: 8
+
+----- stderr -----
+
+----- Intermediate output-----
+None
+----- Final output -----
+8
 
 AGENT: <response>Here is the code to detect dogs in the image.</response>
 --- END EXAMPLE1 ---
