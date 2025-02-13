@@ -30,7 +30,7 @@ class Config(BaseModel):
     summarizer: Type[LMM] = Field(default=OpenAILMM)
     summarizer_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "o1",
+            "model_name": "o3-mini",
             "temperature": 1.0,  # o1 has fixed temperature
             "image_size": 768,
         }
