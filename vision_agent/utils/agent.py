@@ -162,13 +162,16 @@ def format_conversation(chat: List[AgentMessage]) -> str:
         if (
             chat_i.role == "user"
             or chat_i.role == "coder"
-            or chat_i.role == "observation"
+            or chat_i.role == "final_observation"
+            or chat_i.role == "error_observation"
         ):
-            # we want to print the final code and it's corresponding observation
-            if "<final_code>" in chat_i.content or chat_i.role == "observation":
-                prompt += f"OBSERVATION: {chat_i.content}\n\n"
-            elif chat_i.role == "user":
+            # we want to print user messages, final code, final code observations or errors
+            if chat_i.role == "user":
                 prompt += f"USER: {chat_i.content}\n\n"
+            elif "<cinal_code>" in chat_i.content:
+                prompt += f"OBSERVATION: {chat_i.content}\n\n"
+            else:
+                prompt += f"OBERSVATION: {chat_i.content}\n\n"
         elif chat_i.role == "conversation":
             prompt += f"AGENT: {chat_i.content}\n\n"
     return prompt

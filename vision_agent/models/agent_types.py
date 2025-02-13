@@ -29,11 +29,15 @@ class AgentMessage(BaseModel):
         Literal["user"],
         Literal["assistant"],  # planner, coder and conversation are of type assistant
         Literal["observation"],
+        Literal["final_observation"],  # the observation from the final code output
+        Literal["error_observation"],  # the observation from the error message
         Literal["interaction"],
         Literal["interaction_response"],
         Literal["conversation"],
         Literal["planner"],
-        Literal["planner_update"],
+        Literal[
+            "planner_update"
+        ],  # an intermediate update from the planner to show partial information
         Literal["coder"],
     ]
     content: str
@@ -78,7 +82,9 @@ class InteractionContext(BaseModel):
 
 
 class ErrorContext(BaseModel):
-    """ErrorContext is a data model that represents an error message.
+    """ErrorContext is a data model that represents an error message. These errors can
+    happen in the planning phase when a model does not output correctly formatted
+    messages (often because it considers some response to be a safety issue).
 
     error: The error message.
     """
