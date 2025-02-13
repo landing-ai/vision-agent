@@ -70,7 +70,31 @@ __new_tools__ = [
 
 
 def register_tool(imports: Optional[List] = None) -> Callable:
+    """A decorator to register a tool function globally and optionally manage imports.
+
+    This decorator adds the given tool function to a global list of tools and makes it 
+    accessible globally by its name. Optionally, it can manage additional imports 
+    related to the tool.
+
+    Args:
+        imports (Optional[List]): A list of additional imports required by the tool. 
+            These imports will be appended to a global list if provided.
+
+    Returns:
+        Callable: The original tool function, unchanged."""
     def decorator(tool: Callable) -> Callable:
+        """Registers a tool function globally if not already registered.
+
+    This decorator adds the specified tool function to a global list of
+    tools if it is not already present. It also makes the tool function
+    accessible globally by its name and optionally adds its source code
+    to a list of new tools.
+
+    Args:
+        tool (Callable): The tool function to be registered.
+
+    Returns:
+        Callable: The original tool function."""
         import inspect
 
         global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
