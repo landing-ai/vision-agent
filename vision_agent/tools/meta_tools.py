@@ -11,11 +11,9 @@ import libcst as cst
 from IPython.display import display
 
 import vision_agent as va
-from vision_agent.clients.landing_public_api import LandingPublicAPI
-from vision_agent.models import BboxInput, BboxInputBase64, Message, PromptTask
+from vision_agent.models import Message
 from vision_agent.tools.tools import get_tools_descriptions as _get_tool_descriptions
 from vision_agent.utils.execute import Execution, MimeType
-from vision_agent.utils.image_utils import convert_to_b64
 from vision_agent.utils.tools_doc import get_tool_documentation
 
 CURRENT_FILE = None
@@ -573,48 +571,6 @@ def get_tool_descriptions() -> str:
     return _get_tool_descriptions()
 
 
-def object_detection_fine_tuning(bboxes: List[Dict[str, Any]]) -> str:
-    """DO NOT use this function unless the user has supplied you with bboxes.
-    'object_detection_fine_tuning' is a tool that fine-tunes object detection models to
-    be able to detect objects in an image based on a given dataset. It returns the fine
-    tuning job id.
-
-    Parameters:
-        bboxes (List[BboxInput]): A list of BboxInput containing the image path, labels
-            and bounding boxes. The coordinates are unnormalized.
-
-    Returns:
-        str: The fine tuning job id, this id will used to retrieve the fine tuned
-            model.
-
-    Example
-    -------
-        >>> fine_tuning_job_id = object_detection_fine_tuning(
-            [{'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[370, 30, 560, 290]]},
-             {'image_path': 'filename.png', 'labels': ['screw'], 'bboxes': [[120, 0, 300, 170]]}],
-             "phrase_grounding"
-        )
-    """
-    task = "phrase_grounding"
-    bboxes_input = [BboxInput.model_validate(bbox) for bbox in bboxes]
-    task_type = PromptTask[task.upper()]
-    fine_tuning_request = [
-        BboxInputBase64(
-            image=convert_to_b64(bbox_input.image_path),
-            filename=Path(bbox_input.image_path).name,
-            labels=bbox_input.labels,
-            bboxes=bbox_input.bboxes,
-        )
-        for bbox_input in bboxes_input
-    ]
-    landing_api = LandingPublicAPI()
-    fine_tune_id = str(
-        landing_api.launch_fine_tuning_job("florencev2", task_type, fine_tuning_request)
-    )
-    print(f"[Fine tuning id: {fine_tune_id}]")
-    return fine_tune_id
-
-
 def get_diff(before: str, after: str) -> str:
     return "".join(
         difflib.unified_diff(
@@ -721,83 +677,6 @@ def use_extra_vision_agent_args(
     return modified_tree.code
 
 
-def use_object_detection_fine_tuning(
-    artifacts: Artifacts, name: str, fine_tune_id: str
-) -> str:
-    """Replaces calls to 'owl_v2_image', 'florence2_phrase_detection' and
-    'florence2_sam2_image' with the fine tuning id. This ensures that the code utilizes
-    the fined tuned florence2 model. Returns the diff between the original code and the
-    new code.
-
-    Parameters:
-        artifacts (Artifacts): The artifacts object to edit the code from.
-        name (str): The name of the artifact to edit.
-        fine_tune_id (str): The fine tuning job id.
-
-    Examples
-    --------
-        >>> diff = use_object_detection_fine_tuning(artifacts, "code.py", "23b3b022-5ebf-4798-9373-20ef36429abf")
-    """
-
-    if name not in artifacts:
-        output_str = f"[Artifact {name} does not exist]"
-        print(output_str)
-        return output_str
-
-    code = artifacts[name]
-
-    patterns_with_fine_tune_id = [
-        (
-            r'florence2_phrase_grounding\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
-            lambda match: f'florence2_phrase_grounding("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
-        ),
-        (
-            r'florence2_phrase_grounding_video\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
-            lambda match: f'florence2_phrase_grounding_video("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
-        ),
-        (
-            r'owl_v2_image\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
-            lambda match: f'owl_v2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
-        ),
-        (
-            r'florence2_sam2_image\(\s*["\']([^"\']+)["\']\s*,\s*([^,]+)(?:,\s*["\'][^"\']+["\'])?\s*\)',
-            lambda match: f'florence2_sam2_image("{match.group(1)}", {match.group(2)}, "{fine_tune_id}")',
-        ),
-    ]
-
-    new_code = code
-    for (
-        pattern_with_fine_tune_id,
-        replacer_with_fine_tune_id,
-    ) in patterns_with_fine_tune_id:
-        if re.search(pattern_with_fine_tune_id, new_code):
-            new_code = re.sub(
-                pattern_with_fine_tune_id, replacer_with_fine_tune_id, new_code
-            )
-
-    if new_code == code:
-        output_str = (
-            f"[No function calls to replace with fine tuning id in artifact {name}]"
-        )
-        print(output_str)
-        return output_str
-
-    artifacts[name] = new_code
-
-    diff = get_diff_with_prompts(name, code, new_code)
-    print(diff)
-
-    display(
-        {
-            MimeType.APPLICATION_ARTIFACT: json.dumps(
-                {"name": name, "content": new_code, "action": "edit"}
-            )
-        },
-        raw=True,
-    )
-    return diff
-
-
 META_TOOL_DOCSTRING = get_tool_documentation(
     [
         get_tool_descriptions,
@@ -807,8 +686,6 @@ META_TOOL_DOCSTRING = get_tool_documentation(
         generate_vision_code,
         edit_vision_code,
         view_media_artifact,
-        object_detection_fine_tuning,
-        use_object_detection_fine_tuning,
         list_artifacts,
     ]
 )

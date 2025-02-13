@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Tuple, Union, cast
-from uuid import UUID
 
 import cv2
 import numpy as np
@@ -20,10 +19,7 @@ from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 
-from vision_agent.clients.landing_public_api import LandingPublicAPI
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
-from vision_agent.models import JobStatus
-from vision_agent.utils.exceptions import FineTuneModelIsNotReady
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
     b64_to_pil,
@@ -239,7 +235,7 @@ def od_sam2_video_tracking(
     frames: List[np.ndarray],
     box_threshold: float = 0.30,
     chunk_length: Optional[int] = 50,
-    fine_tune_id: Optional[str] = None,
+    deployment_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     chunk_length = 50 if chunk_length is None else chunk_length
     segment_size = chunk_length
@@ -262,7 +258,7 @@ def od_sam2_video_tracking(
         prompt: str,
         segment_index: int,
         frame_number: int,
-        fine_tune_id: str,
+        deployment_id: str,
         segment_frames: list,
     ) -> tuple:
         """
@@ -273,7 +269,7 @@ def od_sam2_video_tracking(
             prompt: The prompt for the object detection model.
             segment_index: The index of the current segment.
             frame_number: The number of the current frame.
-            fine_tune_id: Optional fine-tune ID for the model.
+            deployment_id: Optional The Model deployment ID.
             segment_frames: List of frames for the current segment.
 
         Returns:
@@ -293,7 +289,6 @@ def od_sam2_video_tracking(
                 prompt=prompt,
                 image=segment_frames[frame_number],
                 box_threshold=box_threshold,
-                fine_tune_id=fine_tune_id,
             )
             function_name = "owlv2_object_detection"
 
@@ -301,7 +296,6 @@ def od_sam2_video_tracking(
             segment_results = florence2_object_detection(
                 prompt=prompt,
                 image=segment_frames[frame_number],
-                fine_tune_id=fine_tune_id,
             )
             function_name = "florence2_object_detection"
 
@@ -309,13 +303,12 @@ def od_sam2_video_tracking(
             segment_results = agentic_object_detection(
                 prompt=prompt,
                 image=segment_frames[frame_number],
-                fine_tune_id=fine_tune_id,
             )
             function_name = "agentic_object_detection"
 
         elif od_model == ODModels.CUSTOM:
             segment_results = custom_object_detection(
-                deployment_id=fine_tune_id,
+                deployment_id=deployment_id,
                 image=segment_frames[frame_number],
                 box_threshold=box_threshold,
             )
@@ -337,7 +330,7 @@ def od_sam2_video_tracking(
                 segment_frames=segment,
                 od_model=od_model,
                 prompt=prompt,
-                fine_tune_id=fine_tune_id,
+                deployment_id=deployment_id,
                 chunk_length=chunk_length,
                 image_size=image_size,
                 segment_index=segment_index,
@@ -376,7 +369,6 @@ def _owlv2_object_detection(
     box_threshold: float,
     image_size: Tuple[int, ...],
     image_bytes: Optional[bytes] = None,
-    fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     if image_bytes is None:
         image_bytes = numpy_to_bytes(image)
@@ -388,21 +380,6 @@ def _owlv2_object_detection(
         "model": "owlv2",
     }
     metadata = {"function_name": "owlv2_object_detection"}
-
-    if fine_tune_id is not None:
-        landing_api = LandingPublicAPI()
-        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
-        if status is not JobStatus.SUCCEEDED:
-            raise FineTuneModelIsNotReady(
-                f"Fine-tuned model {fine_tune_id} is not ready yet"
-            )
-
-        # we can only execute fine-tuned models with florence2
-        payload = {
-            "prompts": payload["prompts"],
-            "jobId": fine_tune_id,
-            "model": "florence2",
-        }
 
     detections = send_task_inference_request(
         payload,
@@ -440,7 +417,6 @@ def owlv2_object_detection(
     prompt: str,
     image: np.ndarray,
     box_threshold: float = 0.10,
-    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'owlv2_object_detection' is a tool that can detect and count multiple objects
     given a text prompt such as category names or referring expressions on images. The
@@ -452,8 +428,6 @@ def owlv2_object_detection(
         image (np.ndarray): The image to ground the prompt to.
         box_threshold (float, optional): The threshold for the box detection. Defaults
             to 0.10.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -475,9 +449,7 @@ def owlv2_object_detection(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
-    ret = _owlv2_object_detection(
-        prompt, image, box_threshold, image_size, fine_tune_id=fine_tune_id
-    )
+    ret = _owlv2_object_detection(prompt, image, box_threshold, image_size)
 
     _display_tool_trace(
         owlv2_object_detection.__name__,
@@ -556,7 +528,6 @@ def owlv2_sam2_video_tracking(
     frames: List[np.ndarray],
     box_threshold: float = 0.10,
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'owlv2_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
@@ -571,8 +542,6 @@ def owlv2_sam2_video_tracking(
             to 0.10.
         chunk_length (Optional[int]): The number of frames to re-run owlv2 to find
             new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
@@ -609,7 +578,6 @@ def owlv2_sam2_video_tracking(
         frames=frames,
         box_threshold=box_threshold,
         chunk_length=chunk_length,
-        fine_tune_id=fine_tune_id,
     )
     _display_tool_trace(
         owlv2_sam2_video_tracking.__name__,
@@ -624,7 +592,8 @@ def owlv2_sam2_video_tracking(
 
 
 def florence2_object_detection(
-    prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
+    prompt: str,
+    image: np.ndarray,
 ) -> List[Dict[str, Any]]:
     """'florence2_object_detection' is a tool that can detect multiple objects given a
     text prompt which can be object names or caption. You can optionally separate the
@@ -635,8 +604,6 @@ def florence2_object_detection(
         prompt (str): The prompt to ground to the image. Use exclusive categories that
             do not overlap such as 'person, car' and NOT 'person, athlete'.
         image (np.ndarray): The image to used to detect objects
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -653,6 +620,7 @@ def florence2_object_detection(
             {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
         ]
     """
+
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
         return []
@@ -664,16 +632,6 @@ def florence2_object_detection(
         "model": "florence2",
     }
     metadata = {"function_name": "florence2_object_detection"}
-
-    if fine_tune_id is not None:
-        landing_api = LandingPublicAPI()
-        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
-        if status is not JobStatus.SUCCEEDED:
-            raise FineTuneModelIsNotReady(
-                f"Fine-tuned model {fine_tune_id} is not ready yet"
-            )
-
-        payload["jobId"] = fine_tune_id
 
     detections = send_task_inference_request(
         payload,
@@ -703,7 +661,8 @@ def florence2_object_detection(
 
 
 def florence2_sam2_instance_segmentation(
-    prompt: str, image: np.ndarray, fine_tune_id: Optional[str] = None
+    prompt: str,
+    image: np.ndarray,
 ) -> List[Dict[str, Any]]:
     """'florence2_sam2_instance_segmentation' is a tool that can segment multiple
     objects given a text prompt such as category names or referring expressions. The
@@ -715,8 +674,6 @@ def florence2_sam2_instance_segmentation(
         prompt (str): The prompt to ground to the image. Use exclusive categories that
             do not overlap such as 'person, car' and NOT 'person, athlete'.
         image (np.ndarray): The image to ground the prompt to.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
@@ -742,6 +699,7 @@ def florence2_sam2_instance_segmentation(
             },
         ]
     """
+
     if image.shape[0] < 1 or image.shape[1] < 1:
         return []
 
@@ -752,16 +710,6 @@ def florence2_sam2_instance_segmentation(
         "model": "florence2sam2",
     }
     metadata = {"function_name": "florence2_sam2_instance_segmentation"}
-
-    if fine_tune_id is not None:
-        landing_api = LandingPublicAPI()
-        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
-        if status is not JobStatus.SUCCEEDED:
-            raise FineTuneModelIsNotReady(
-                f"Fine-tuned model {fine_tune_id} is not ready yet"
-            )
-
-        payload["jobId"] = fine_tune_id
 
     detections = send_task_inference_request(
         payload,
@@ -792,7 +740,6 @@ def florence2_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'florence2_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as category names or referring
@@ -806,8 +753,6 @@ def florence2_sam2_video_tracking(
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run florence2 to find
             new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
@@ -837,6 +782,7 @@ def florence2_sam2_video_tracking(
             ...
         ]
     """
+
     if len(frames) == 0 or not isinstance(frames, List):
         raise ValueError("Must provide a list of numpy arrays for frames")
 
@@ -850,16 +796,6 @@ def florence2_sam2_video_tracking(
 
     if chunk_length is not None:
         payload["chunk_length_frames"] = chunk_length  # type: ignore
-
-    if fine_tune_id is not None:
-        landing_api = LandingPublicAPI()
-        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
-        if status is not JobStatus.SUCCEEDED:
-            raise FineTuneModelIsNotReady(
-                f"Fine-tuned model {fine_tune_id} is not ready yet"
-            )
-
-        payload["jobId"] = fine_tune_id
 
     detections = send_task_inference_request(
         payload,
@@ -1397,7 +1333,7 @@ def custom_od_sam2_video_tracking(
         prompt="",
         frames=frames,
         chunk_length=chunk_length,
-        fine_tune_id=deployment_id,
+        deployment_id=deployment_id,
     )
     _display_tool_trace(
         custom_od_sam2_video_tracking.__name__,
@@ -1416,7 +1352,6 @@ def _agentic_object_detection(
     image: np.ndarray,
     image_size: Tuple[int, ...],
     image_bytes: Optional[bytes] = None,
-    fine_tune_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     if image_bytes is None:
         image_bytes = numpy_to_bytes(image)
@@ -1427,21 +1362,6 @@ def _agentic_object_detection(
         "model": "agentic",
     }
     metadata = {"function_name": "agentic_object_detection"}
-
-    if fine_tune_id is not None:
-        landing_api = LandingPublicAPI()
-        status = landing_api.check_fine_tuning_job(UUID(fine_tune_id))
-        if status is not JobStatus.SUCCEEDED:
-            raise FineTuneModelIsNotReady(
-                f"Fine-tuned model {fine_tune_id} is not ready yet"
-            )
-
-        # we can only execute fine-tuned models with florence2
-        payload = {
-            "prompts": payload["prompts"],
-            "jobId": fine_tune_id,
-            "model": "florence2",
-        }
 
     detections = send_task_inference_request(
         payload,
@@ -1478,7 +1398,6 @@ def _agentic_object_detection(
 def agentic_object_detection(
     prompt: str,
     image: np.ndarray,
-    fine_tune_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """'agentic_object_detection' is a tool that can detect multiple objects given a
     text prompt such as object names or referring expressions on images. It's
@@ -1490,8 +1409,6 @@ def agentic_object_detection(
         prompt (str): The prompt to ground to the image, only supports a single prompt
             with no commas or periods.
         image (np.ndarray): The image to ground the prompt to.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1513,9 +1430,7 @@ def agentic_object_detection(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
-    ret = _agentic_object_detection(
-        prompt, image, image_size, fine_tune_id=fine_tune_id
-    )
+    ret = _agentic_object_detection(prompt, image, image_size)
 
     _display_tool_trace(
         agentic_object_detection.__name__,
@@ -1586,7 +1501,6 @@ def agentic_sam2_video_tracking(
     prompt: str,
     frames: List[np.ndarray],
     chunk_length: Optional[int] = 25,
-    fine_tune_id: Optional[str] = None,
 ) -> List[List[Dict[str, Any]]]:
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as object names or referring
@@ -1601,8 +1515,6 @@ def agentic_sam2_video_tracking(
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
             to find new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
@@ -1638,7 +1550,6 @@ def agentic_sam2_video_tracking(
         prompt=prompt,
         frames=frames,
         chunk_length=chunk_length,
-        fine_tune_id=fine_tune_id,
     )
     _display_tool_trace(
         agentic_sam2_video_tracking.__name__,

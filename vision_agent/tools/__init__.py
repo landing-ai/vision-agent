@@ -7,9 +7,7 @@ from .meta_tools import (
     generate_vision_code,
     get_tool_descriptions,
     list_artifacts,
-    object_detection_fine_tuning,
     open_code_artifact,
-    use_object_detection_fine_tuning,
     view_media_artifact,
 )
 from .planner_tools import judge_od_results
