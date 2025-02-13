@@ -11,6 +11,7 @@ from vision_agent.lmm import LMM
 from vision_agent.models import (
     AgentMessage,
     CodeContext,
+    ErrorContext,
     InteractionContext,
     Message,
     PlanContext,
@@ -27,7 +28,9 @@ CONFIG = Config()
 
 
 def extract_conversation(
-    chat: List[AgentMessage], include_conv: bool = False
+    chat: List[AgentMessage],
+    include_conv: bool = False,
+    include_errors: bool = False,
 ) -> Tuple[List[AgentMessage], Optional[str]]:
     chat = copy.deepcopy(chat)
 
@@ -43,13 +46,18 @@ def extract_conversation(
         elif chat_i.role == "coder":
             if "<final_code>" in chat_i.content:
                 extracted_chat.append(chat_i)
+        elif chat_i.role == "final_observation":
+            extracted_chat.append(chat_i)
         elif include_conv and chat_i.role == "conversation":
             extracted_chat.append(chat_i)
+        elif include_errors and chat_i.role == "error_observation":
+            extracted_chat.append(chat_i)
 
-    # only keep the last <final_code> and <final_test>
+    # only keep the last <final_code>, <final_test>
     final_code = None
     extracted_chat_strip_code: List[AgentMessage] = []
-    for chat_i in reversed(extracted_chat):
+    for chat_i in reversed((extracted_chat)):
+        # don't check role here because user could send updated <final_code>
         if "<final_code>" in chat_i.content and final_code is None:
             extracted_chat_strip_code = [chat_i] + extracted_chat_strip_code
             final_code = extract_tag(chat_i.content, "final_code")
@@ -66,7 +74,12 @@ def extract_conversation(
 
 
 def run_conversation(agent: LMM, chat: List[AgentMessage]) -> str:
-    extracted_chat, _ = extract_conversation(chat, include_conv=True)
+    # Include conversation and error messages. The error messages can come from one of
+    # the agents refusing to write a correctly formatted message, want to inform the
+    # conversation agent of this.
+    extracted_chat, _ = extract_conversation(
+        chat, include_conv=True, include_errors=True
+    )
 
     conv = format_conversation(extracted_chat)
     prompt = CONVERSATION.format(
@@ -101,7 +114,9 @@ def maybe_run_action(
         if isinstance(context, CodeContext):
             return [
                 AgentMessage(role="coder", content=format_code_context(context)),
-                AgentMessage(role="observation", content=context.test_result.text()),
+                AgentMessage(
+                    role="final_observation", content=context.test_result.text()
+                ),
             ]
         elif isinstance(context, InteractionContext):
             return [
@@ -109,6 +124,10 @@ def maybe_run_action(
                     role="interaction",
                     content=json.dumps([elt.model_dump() for elt in context.chat]),
                 )
+            ]
+        elif isinstance(context, ErrorContext):
+            return [
+                AgentMessage(role="error_observation", content=context.error),
             ]
     elif action == "edit_code":
         # We don't want to pass code in plan_context.code so the coder will generate
@@ -129,7 +148,7 @@ def maybe_run_action(
         )
         return [
             AgentMessage(role="coder", content=format_code_context(context)),
-            AgentMessage(role="observation", content=context.test_result.text()),
+            AgentMessage(role="final_observation", content=context.test_result.text()),
         ]
     elif action == "view_image":
         pass

@@ -28,7 +28,7 @@ jobs:
       - run: mkdir -p docs-build
       - run: poetry run mkdocs build -f mkdocs.yml -d docs-build/
 
-      - uses: actions/upload-pages-artifact@v1
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: docs-build/
 
