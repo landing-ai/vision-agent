@@ -28,7 +28,7 @@ jobs:
       - run: mkdir -p docs-build
       - run: poetry run mkdocs build -f mkdocs.yml -d docs-build/
 
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: docs-build/
 
@@ -45,4 +45,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
