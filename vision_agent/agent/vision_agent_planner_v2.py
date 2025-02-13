@@ -24,7 +24,13 @@ from vision_agent.agent.vision_agent_planner_prompts_v2 import (
 )
 from vision_agent.configs import Config
 from vision_agent.lmm import LMM
-from vision_agent.models import AgentMessage, InteractionContext, Message, PlanContext
+from vision_agent.models import (
+    AgentMessage,
+    ErrorContext,
+    InteractionContext,
+    Message,
+    PlanContext,
+)
 from vision_agent.tools.planner_tools import check_function_call
 from vision_agent.utils.agent import (
     add_media_to_chat,
@@ -322,7 +328,7 @@ def create_finalize_plan(
     model: LMM,
     chat: List[AgentMessage],
     verbose: bool = False,
-) -> Tuple[List[AgentMessage], PlanContext]:
+) -> Tuple[List[AgentMessage], Union[PlanContext, ErrorContext]]:
     # if we're in the middle of an interaction, don't finalize the plan
     if chat[-1].role == "interaction":
         return [], PlanContext(plan="", instructions=[], code="")
@@ -337,11 +343,19 @@ def create_finalize_plan(
     return_chat = [AgentMessage(role="planner", content=plan_str, media=None)]
 
     plan_json = extract_tag(plan_str, "json")
-    plan = (
-        extract_json(plan_json)
-        if plan_json is not None
-        else {"plan": plan_str, "instructions": [], "code": ""}
-    )
+
+    # sometimes the planner model will refuse to answer a question becuase of some
+    # safety concern, we then wont be able to parse the response so we have to send
+    # it back to the user/conversation agent
+    try:
+        plan = (
+            extract_json(plan_json)
+            if plan_json is not None
+            else {"plan": plan_str, "instructions": [], "code": ""}
+        )
+    except json.JSONDecodeError:
+        return return_chat, ErrorContext(error=plan_str)
+
     code_snippets = extract_tag(plan_str, "code")
     plan["code"] = code_snippets if code_snippets is not None else ""
     if verbose:
@@ -473,14 +487,17 @@ class VisionAgentPlannerV2(AgentPlanner):
         plan_or_interaction = self.generate_plan(input_msg)
         if isinstance(plan_or_interaction, InteractionContext):
             return plan_or_interaction.chat[-1].content
-        return plan_or_interaction.plan
+        elif isinstance(plan_or_interaction, PlanContext):
+            return plan_or_interaction.plan
+        else:
+            return plan_or_interaction.error
 
     def generate_plan(
         self,
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> Union[PlanContext, InteractionContext]:
+    ) -> Union[PlanContext, InteractionContext, ErrorContext]:
         """Generate a plan to solve a vision task.
 
         Parameters:

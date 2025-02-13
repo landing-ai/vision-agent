@@ -13,6 +13,7 @@ from vision_agent.lmm import LMM
 from vision_agent.models import (
     AgentMessage,
     CodeContext,
+    ErrorContext,
     InteractionContext,
     Message,
     PlanContext,
@@ -372,7 +373,7 @@ class VisionAgentCoderV2(AgentCoder):
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> Union[CodeContext, InteractionContext]:
+    ) -> Union[CodeContext, InteractionContext, ErrorContext]:
         """Generate vision code from a conversation.
 
         Parameters:
@@ -403,6 +404,8 @@ class VisionAgentCoderV2(AgentCoder):
             )
             # the planner needs an interaction, so return before generating code
             if isinstance(plan_context, InteractionContext):
+                return plan_context
+            elif isinstance(plan_context, ErrorContext):
                 return plan_context
 
             code_context = self.generate_code_from_plan(
