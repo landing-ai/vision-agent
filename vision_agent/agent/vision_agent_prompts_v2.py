@@ -25,7 +25,7 @@ def detect_dogs(image_path: str) -> int:
 def test_detect_dogs():
     dogs = detect_dogs("images/dogs.jpg")
     assert isinstance(dogs, int)
-    print(f"Number of dogs detected: {dogs}")
+    print(f"Number of dogs detected: {{dogs}}")
     return dogs
 </final_test>
 
