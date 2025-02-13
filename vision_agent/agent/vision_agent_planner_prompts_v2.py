@@ -717,7 +717,7 @@ PICK_TOOL = """
 FINALIZE_PLAN = """
 **Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agent to write a program to accomplish the user request.
 
-**Documentation**: You can use these tools to help you visualize or save the output (they are imported `from vision_agent.tools import *`):
+**Documentation**: You can use these tools to help complete the code (they are imported `from vision_agent.tools import *`):
 {tool_desc}
 
 **Planning**: Here is chain of thoughts, executions and observations from the planning agent:
@@ -726,13 +726,14 @@ FINALIZE_PLAN = """
 **Instructions**:
 1. Summarize the plan that the planning agent found.
 2. Write a single function that solves the problem based on what the planner found and only returns the final solution.
-3. Only use tools obtained from calling `get_tool_for_task`.
-4. Do not include {excluded_tools} tools in your instructions.
-5. Ensure the function is well documented and easy to understand.
-6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks`, if bounding boxes or segmentaiton masks are produced, and save it to a file with `save_image` or `save_video`.
-7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
-8. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
-9. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
+3. Ensure the function takes in a single argument for the image or video, all other arguments must be keyword arguments with default values.
+4. Only use tools obtained from calling `get_tool_for_task` and the ones provided in the documentation.
+5. Do not include {excluded_tools} tools in your instructions.
+6. Ensure the function is well documented and easy to understand.
+7. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks`, if bounding boxes or segmentaiton masks are produced, and save it to a file with `save_image` or `save_video`.
+8. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
+9. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
+10. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
 
 <json>
 {{
