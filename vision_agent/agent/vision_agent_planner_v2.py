@@ -588,7 +588,7 @@ class VisionAgentPlannerV2(AgentPlanner):
                 for chat_elt in updated_chat:
                     self.update_callback(chat_elt.model_dump())
 
-            context: Union[PlanContext, InteractionContext]
+            context: Union[PlanContext, InteractionContext, ErrorContext]
             if interaction:
                 context = InteractionContext(chat=int_chat)
             else:

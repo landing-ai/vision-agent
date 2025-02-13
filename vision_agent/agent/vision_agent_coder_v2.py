@@ -366,6 +366,8 @@ class VisionAgentCoderV2(AgentCoder):
         code_or_interaction = self.generate_code(input_msg)
         if isinstance(code_or_interaction, InteractionContext):
             return code_or_interaction.chat[-1].content
+        elif isinstance(code_or_interaction, ErrorContext):
+            return code_or_interaction.error
         return code_or_interaction.code
 
     def generate_code(

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 from vision_agent.models import (
     AgentMessage,
     CodeContext,
+    ErrorContext,
     InteractionContext,
     Message,
     PlanContext,
@@ -36,7 +37,7 @@ class AgentCoder(Agent):
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> Union[CodeContext, InteractionContext]:
+    ) -> Union[CodeContext, InteractionContext, ErrorContext]:
         pass
 
     @abstractmethod
@@ -56,5 +57,5 @@ class AgentPlanner(Agent):
         chat: List[AgentMessage],
         max_steps: Optional[int] = None,
         code_interpreter: Optional[CodeInterpreter] = None,
-    ) -> Union[PlanContext, InteractionContext]:
+    ) -> Union[PlanContext, InteractionContext, ErrorContext]:
         pass
