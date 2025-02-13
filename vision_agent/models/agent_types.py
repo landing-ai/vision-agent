@@ -75,3 +75,12 @@ class InteractionContext(BaseModel):
     """
 
     chat: List[AgentMessage]
+
+
+class ErrorContext(BaseModel):
+    """ErrorContext is a data model that represents an error message.
+
+    error: The error message.
+    """
+
+    error: str
