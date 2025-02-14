@@ -7,7 +7,7 @@ from vision_agent.tools import (
     countgd_object_detection,
     countgd_sam2_instance_segmentation,
     countgd_sam2_video_tracking,
-    countgd_visual_prompt_object_detection,
+    countgd_visual_object_detection,
     depth_anything_v2,
     detr_segmentation,
     florence2_object_detection,
@@ -465,9 +465,9 @@ def test_countgd_object_detection_empty():
     assert result == []
 
 
-def test_countgd_visual_prompt_object_detection():
+def test_countgd_visual_object_detection():
     img = ski.data.coins()
-    result = countgd_visual_prompt_object_detection(
+    result = countgd_visual_object_detection(
         visual_prompts=[[85, 106, 122, 145]],
         image=img,
     )
@@ -475,8 +475,8 @@ def test_countgd_visual_prompt_object_detection():
     assert [res["label"] for res in result] == ["object"] * 24
 
 
-def test_countgd_visual_prompt_object_detection_empty():
-    result = countgd_visual_prompt_object_detection(
+def test_countgd_visual_object_detection_empty():
+    result = countgd_visual_object_detection(
         visual_prompts=[[85, 106, 122, 145]],
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
