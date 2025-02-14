@@ -1712,8 +1712,6 @@ def glee_object_detection(
         prompt (str): The prompt to ground to the image, only supports a single prompt
             with no commas or periods.
         image (np.ndarray): The image to ground the prompt to.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1816,8 +1814,6 @@ def glee_sam2_video_tracking(
         frames (List[np.ndarray]): The list of frames to ground the prompt to.
         chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
             to find new objects.
-        fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-            fine-tuned model ID here to use it.
 
     Returns:
         List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
