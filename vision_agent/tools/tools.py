@@ -2360,6 +2360,58 @@ def _sample(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
     return sampled_frames
 
 
+def _lmm_activity_recognition(
+    lmm: LMM,
+    segment: List[np.ndarray],
+    prompt: str,
+) -> List[float]:
+    frames = _sample(segment, 10)
+    media = []
+    for frame in frames:
+        buffer = io.BytesIO()
+        image_pil = Image.fromarray(frame)
+        if image_pil.size[0] > 768:
+            image_pil.thumbnail((768, 768))
+        image_pil.save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+        image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+        media.append(image_b64)
+
+    response = cast(str, lmm.generate(prompt, media))
+    if "yes" in response.lower():
+        return [1.0] * len(segment)
+    return [0.0] * len(segment)
+
+
+def _qwenvl_activity_recognition(
+    segment: List[np.ndarray], prompt: str, model_name: str = "qwen2vl"
+) -> List[float]:
+    payload: Dict[str, Any] = {
+        "prompt": prompt,
+        "model": model_name,
+        "function_name": f"{model_name}_vl_video_vqa",
+    }
+    segment_buffer_bytes = [("video", frames_to_bytes(segment))]
+    response = send_inference_request(
+        payload, "image-to-text", files=segment_buffer_bytes, v2=True
+    )
+    if "yes" in response.lower():
+        return [1.0] * len(segment)
+    return [0.0] * len(segment)
+
+
+def _qwen2vl_activity_recognition(
+    segment: List[np.ndarray], prompt: str
+) -> List[float]:
+    return _qwenvl_activity_recognition(segment, prompt, model_name="qwen2vl")
+
+
+def _qwen25vl_activity_recognition(
+    segment: List[np.ndarray], prompt: str
+) -> List[float]:
+    return _qwenvl_activity_recognition(segment, prompt, model_name="qwen25vl")
+
+
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
@@ -2399,63 +2451,26 @@ def activity_recognition(
         f"{prompt} Please respond with a 'yes' or 'no' based on the frames provided."
     )
 
-    def _lmm_activity_recognition(
-        lmm: LMM,
-        segment: List[np.ndarray],
-    ) -> List[float]:
-        frames = _sample(segment, 10)
-        media = []
-        for frame in frames:
-            buffer = io.BytesIO()
-            image_pil = Image.fromarray(frame)
-            if image_pil.size[0] > 768:
-                image_pil.thumbnail((768, 768))
-            image_pil.save(buffer, format="PNG")
-            image_bytes = buffer.getvalue()
-            image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
-            media.append(image_b64)
-
-        response = cast(str, lmm.generate(prompt, media))
-        if "yes" in response.lower():
-            return [1.0] * len(segment)
-        return [0.0] * len(segment)
-
-    def _qwenvl_activity_recognition(
-        segment: List[np.ndarray], model_name: str = "qwen2vl"
-    ) -> List[float]:
-        payload: Dict[str, Any] = {
-            "prompt": prompt,
-            "model": model_name,
-            "function_name": f"{model_name}_vl_video_vqa",
-        }
-        segment_buffer_bytes = [("video", frames_to_bytes(segment))]
-        response = send_inference_request(
-            payload, "image-to-text", files=segment_buffer_bytes, v2=True
-        )
-        if "yes" in response.lower():
-            return [1.0] * len(segment)
-        return [0.0] * len(segment)
-
-    def _qwen2vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-        return _qwenvl_activity_recognition(segment, model_name="qwen2vl")
-
-    def _qwen25vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-        return _qwenvl_activity_recognition(segment, model_name="qwen25vl")
-
     if model == "claude-35":
 
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _lmm_activity_recognition(AnthropicLMM(), segment)
+            return _lmm_activity_recognition(AnthropicLMM(), segment, prompt)
 
     elif model == "gpt-4o":
 
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _lmm_activity_recognition(OpenAILMM(), segment)
+            return _lmm_activity_recognition(OpenAILMM(), segment, prompt)
 
     elif model == "qwen2vl":
-        _apply_activity_recognition = _qwen2vl_activity_recognition
+
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _qwen2vl_activity_recognition(segment, prompt)
+
     elif model == "qwen25vl":
-        _apply_activity_recognition = _qwen25vl_activity_recognition
+
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _qwen25vl_activity_recognition(segment, prompt)
+
     else:
         raise ValueError(f"Invalid model: {model}")
 
