@@ -313,6 +313,13 @@ def od_sam2_video_tracking(
                 box_threshold=box_threshold,
             )
             function_name = "custom_object_detection"
+        elif od_model == ODModels.GLEE:
+            segment_results = glee_object_detection(
+                prompt=prompt,
+                image=segment_frames[frame_number],
+                box_threshold=box_threshold,
+            )
+            function_name = "glee_object_detection"
 
         else:
             raise NotImplementedError(
@@ -1128,25 +1135,71 @@ def countgd_sam2_video_tracking(
     return ret["return_data"]  # type: ignore
 
 
-# Custom Models
+def _countgd_visual_object_detection(
+    visual_prompts: List[List[float]],
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> Dict[str, Any]:
+    image_size = image.shape[:2]
+
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
+    visual_prompts = [
+        denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
+    ]
+    payload = {
+        "visual_prompts": json.dumps(visual_prompts),
+        "model": "countgd",
+        "confidence": box_threshold,
+    }
+    metadata = {"function_name": "countgd_visual_object_detection"}
+
+    detections = send_task_inference_request(
+        payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
+    )
+
+    # get the first frame
+    bboxes = detections[0]
+    bboxes_formatted = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+    display_data = [
+        {
+            "label": bbox["label"],
+            "bbox": bbox["bounding_box"],
+            "score": bbox["score"],
+        }
+        for bbox in bboxes
+    ]
+    return {
+        "files": files,
+        "return_data": bboxes_formatted,
+        "display_data": display_data,
+    }
 
 
-def countgd_visual_prompt_object_detection(
+def countgd_visual_object_detection(
     visual_prompts: List[List[float]],
     image: np.ndarray,
     box_threshold: float = 0.23,
 ) -> List[Dict[str, Any]]:
-    """'countgd_visual_prompt_object_detection' is a tool that can precisely count
-    multiple instances of an object given few visual example prompts. It returns a list
-    of bounding boxes with normalized coordinates, label names and associated
-    confidence scores.
+    """'countgd_visual_object_detection' is a tool that can detect multiple instances
+    of an object given a visual prompt. It is particularly useful when trying to detect
+    and count a large number of objects. You can optionally separate object names in
+    the prompt with commas. It returns a list of bounding boxes with normalized
+    coordinates, label names and associated confidence scores.
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-            [xmin, ymin, xmax, ymax]. Upto 3 bounding boxes can be provided. image
-            (np.ndarray): The image that contains multiple instances of the object.
-            box_threshold (float, optional): The threshold for detection. Defaults to
-            0.23.
+            [xmin, ymin, xmax, ymax] with normalized coordinates. Up to 3 bounding
+            boxes can be provided.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -1172,43 +1225,76 @@ def countgd_visual_prompt_object_detection(
     if image_size[0] < 1 or image_size[1] < 1:
         return []
 
-    buffer_bytes = numpy_to_bytes(image)
-    files = [("image", buffer_bytes)]
-    visual_prompts = [
-        denormalize_bbox(bbox, image.shape[:2]) for bbox in visual_prompts
-    ]
-    payload = {"visual_prompts": json.dumps(visual_prompts), "model": "countgd"}
-    metadata = {"function_name": "countgd_visual_prompt_object_detection"}
+    od_ret = _countgd_visual_object_detection(visual_prompts, image, box_threshold)
 
-    detections = send_task_inference_request(
-        payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
+    _display_tool_trace(
+        countgd_visual_object_detection.__name__,
+        {},
+        od_ret["display_data"],
+        od_ret["files"],
     )
 
-    # get the first frame
-    bboxes_per_frame = detections[0]
-    bboxes_formatted = [
-        {
-            "label": bbox["label"],
-            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
-            "score": round(bbox["score"], 2),
-        }
-        for bbox in bboxes_per_frame
-    ]
-    _display_tool_trace(
-        countgd_visual_prompt_object_detection.__name__,
-        payload,
+    return od_ret["return_data"]  # type: ignore
+
+
+def countgd_sam2_visual_instance_segmentation(
+    visual_prompts: List[List[float]],
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'countgd_sam2_visual_instance_segmentation' is a tool that can precisely count
+    multiple instances of an object given few visual example prompts. It returns a list
+    of bounding boxes, label names, masks and associated probability scores.
+
+    Parameters:
+        visual_prompts (List[List[float]]): Bounding boxes of the object in format
+            [xmin, ymin, xmax, ymax] with normalized coordinates. Up to 3 bounding
+            boxes can be provided.
+        image (np.ndarray): The image that contains multiple instances of the object.
+        box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> countgd_sam2_visual_instance_segmentation(
+            visual_prompts=[[0.1, 0.1, 0.4, 0.42], [0.2, 0.3, 0.25, 0.35]],
+            image=image
+        )
         [
             {
-                "label": e["label"],
-                "score": e["score"],
-                "bbox": denormalize_bbox(e["bbox"], image_size),
-            }
-            for e in bboxes_formatted
-        ],
-        files,
-    )
+                'score': 0.49,
+                'label': 'object',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
 
-    return bboxes_formatted
+    od_ret = _countgd_visual_object_detection(visual_prompts, image, box_threshold)
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+    _display_tool_trace(
+        countgd_sam2_visual_instance_segmentation.__name__,
+        {},
+        seg_ret["display_data"],
+        seg_ret["files"],
+    )
+    return seg_ret["return_data"]  # type: ignore
+
+
+# Custom Models
 
 
 def custom_object_detection(
@@ -1401,9 +1487,9 @@ def agentic_object_detection(
 ) -> List[Dict[str, Any]]:
     """'agentic_object_detection' is a tool that can detect multiple objects given a
     text prompt such as object names or referring expressions on images. It's
-    particularly good at detecting specific objects given detailed descriptive prompts.
-    It returns a list of bounding boxes with normalized coordinates, label names and
-    associated probability scores.
+    particularly good at detecting specific objects given detailed descriptive prompts
+    but runs slower. It returns a list of bounding boxes with normalized coordinates,
+    label names and associated probability scores.
 
     Parameters:
         prompt (str): The prompt to ground to the image, only supports a single prompt
@@ -1447,8 +1533,8 @@ def agentic_sam2_instance_segmentation(
     """'agentic_sam2_instance_segmentation' is a tool that can detect multiple
     instances given a text prompt such as object names or referring expressions on
     images. It's particularly good at detecting specific objects given detailed
-    descriptive prompts. It returns a list of bounding boxes with normalized
-    coordinates, label names, masks and associated probability scores.
+    descriptive prompts but runs slower. It returns a list of bounding boxes with
+    normalized coordinates, label names, masks and associated probability scores.
 
     Parameters:
         prompt (str): The object that needs to be counted, only supports a single
@@ -1505,9 +1591,9 @@ def agentic_sam2_video_tracking(
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as object names or referring
     expressions. It's particularly good at detecting specific objects given detailed
-    descriptive prompts and returns a list of bounding boxes, label names, masks and
-    associated probability scores and is useful for tracking and counting without
-    duplicating counts.
+    descriptive prompts but runs slower, and returns a list of bounding boxes, label
+    names, masks and associated probability scores and is useful for tracking and
+    counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the image, only supports a single prompt
@@ -1558,6 +1644,305 @@ def agentic_sam2_video_tracking(
         ret["files"],
     )
     return ret["return_data"]  # type: ignore
+
+
+# GLEE Tools
+
+
+def _glee_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float,
+    image_size: Tuple[int, ...],
+    image_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    if image_bytes is None:
+        image_bytes = numpy_to_bytes(image)
+
+    files = [("image", image_bytes)]
+    payload = {
+        "prompts": [s.strip() for s in prompt.split(",")],
+        "confidence": box_threshold,
+        "model": "glee",
+    }
+    metadata = {"function_name": "glee"}
+    detections = send_task_inference_request(
+        payload,
+        "text-to-object-detection",
+        files=files,
+        metadata=metadata,
+    )
+    # get the first frame
+    bboxes = detections[0]
+    bboxes_formatted = [
+        {
+            "label": bbox["label"],
+            "bbox": normalize_bbox(bbox["bounding_box"], image_size),
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+    display_data = [
+        {
+            "label": bbox["label"],
+            "bbox": bbox["bounding_box"],
+            "score": round(bbox["score"], 2),
+        }
+        for bbox in bboxes
+    ]
+    return {
+        "files": files,
+        "return_data": bboxes_formatted,
+        "display_data": display_data,
+    }
+
+
+def glee_object_detection(
+    prompt: str,
+    image: np.ndarray,
+    box_threshold: float = 0.23,
+) -> List[Dict[str, Any]]:
+    """'glee_object_detection' is a tool that can detect multiple objects given a
+    text prompt such as object names or referring expressions on images. It's
+    particularly good at detecting specific objects given detailed descriptive prompts.
+    It returns a list of bounding boxes with normalized coordinates, label names and
+    associated probability scores.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with no commas or periods.
+        image (np.ndarray): The image to ground the prompt to.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
+            bounding box of the detected objects with normalized coordinates between 0
+            and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
+            top-left and xmax and ymax are the coordinates of the bottom-right of the
+            bounding box.
+
+    Example
+    -------
+        >>> glee_object_detection("person holding a box", image)
+        [
+            {'score': 0.99, 'label': 'person holding a box', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 0.98, 'label': 'person holding a box', 'bbox': [0.2, 0.21, 0.45, 0.5},
+        ]
+    """
+
+    od_ret = _glee_object_detection(prompt, image, box_threshold, image.shape[:2])
+    _display_tool_trace(
+        glee_object_detection.__name__,
+        {"prompts": prompt, "confidence": box_threshold},
+        od_ret["display_data"],
+        od_ret["files"],
+    )
+    return od_ret["return_data"]  # type: ignore
+
+
+def glee_sam2_instance_segmentation(
+    prompt: str, image: np.ndarray, box_threshold: float = 0.23
+) -> List[Dict[str, Any]]:
+    """'glee_sam2_instance_segmentation' is a tool that can detect multiple
+    instances given a text prompt such as object names or referring expressions on
+    images. It's particularly good at detecting specific objects given detailed
+    descriptive prompts. It returns a list of bounding boxes with normalized
+    coordinates, label names, masks and associated probability scores.
+
+    Parameters:
+        prompt (str): The object that needs to be counted, only supports a single
+            prompt with no commas or periods.
+        image (np.ndarray): The image that contains multiple instances of the object.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the score, label,
+            bounding box, and mask of the detected objects with normalized coordinates
+            (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the top-left
+            and xmax and ymax are the coordinates of the bottom-right of the bounding box.
+            The mask is binary 2D numpy array where 1 indicates the object and 0 indicates
+            the background.
+
+    Example
+    -------
+        >>> glee_sam2_instance_segmentation("a large blue flower", image)
+        [
+            {
+                'score': 0.49,
+                'label': 'a large blue flower',
+                'bbox': [0.1, 0.11, 0.35, 0.4],
+                'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0],
+                    ...,
+                    [0, 0, 0, ..., 0, 0, 0],
+                    [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+            },
+        ]
+    """
+    od_ret = _glee_object_detection(prompt, image, box_threshold, image.shape[:2])
+    seg_ret = _sam2(
+        image, od_ret["return_data"], image.shape[:2], image_bytes=od_ret["files"][0][1]
+    )
+
+    _display_tool_trace(
+        glee_sam2_instance_segmentation.__name__,
+        {
+            "prompts": prompt,
+            "confidence": box_threshold,
+        },
+        seg_ret["display_data"],
+        seg_ret["files"],
+    )
+
+    return seg_ret["return_data"]  # type: ignore
+
+
+def glee_sam2_video_tracking(
+    prompt: str,
+    frames: List[np.ndarray],
+    box_threshold: float = 0.23,
+    chunk_length: Optional[int] = 25,
+) -> List[List[Dict[str, Any]]]:
+    """'glee_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as object names or referring
+    expressions. It's particularly good at detecting specific objects given detailed
+    descriptive prompts and returns a list of bounding boxes, label names, masks and
+    associated probability scores and is useful for tracking and counting without
+    duplicating counts.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image, only supports a single prompt
+            with  no commas or periods.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run agentic object detection to
+            to find new objects.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
+
+    Example
+    -------
+        >>> glee_sam2_video_tracking("a runner with yellow shoes", frames)
+        [
+            [
+                {
+                    'label': '0: a runner with yellow shoes',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    """
+    ret = od_sam2_video_tracking(
+        ODModels.GLEE,
+        prompt=prompt,
+        frames=frames,
+        box_threshold=box_threshold,
+        chunk_length=chunk_length,
+    )
+    _display_tool_trace(
+        glee_sam2_video_tracking.__name__,
+        {"prompt": prompt, "chunk_length": chunk_length},
+        ret["display_data"],
+        ret["files"],
+    )
+    return ret["return_data"]  # type: ignore
+
+
+# Qwen2 and 2.5 VL Tool
+
+
+def qwen25_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
+    """'qwen25_vl_images_vqa' is a tool that can answer any questions about arbitrary
+    images including regular images or images of documents or presentations. It can be
+    very useful for document QA or OCR text extraction. It returns text as an answer to
+    the question.
+
+    Parameters:
+        prompt (str): The question about the document image
+        images (List[np.ndarray]): The reference images used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> qwen25_vl_images_vqa('Give a summary of the document', images)
+        'The document talks about the history of the United States of America and its...'
+    """
+    if isinstance(images, np.ndarray):
+        images = [images]
+
+    for image in images:
+        if image.shape[0] < 1 or image.shape[1] < 1:
+            raise ValueError(f"Image is empty, image shape: {image.shape}")
+
+    files = [("images", numpy_to_bytes(image)) for image in images]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen25vl",
+        "function_name": "qwen25_vl_images_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    _display_tool_trace(
+        qwen25_vl_images_vqa.__name__,
+        payload,
+        cast(str, data),
+        files,
+    )
+    return cast(str, data)
+
+
+def qwen25_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
+    """'qwen25_vl_video_vqa' is a tool that can answer any questions about arbitrary videos
+    including regular videos or videos of documents or presentations. It returns text
+    as an answer to the question.
+
+    Parameters:
+        prompt (str): The question about the video
+        frames (List[np.ndarray]): The reference frames used for the question
+
+    Returns:
+        str: A string which is the answer to the given prompt.
+
+    Example
+    -------
+        >>> qwen25_vl_video_vqa('Which football player made the goal?', frames)
+        'Lionel Messi'
+    """
+
+    if len(frames) == 0 or not isinstance(frames, list):
+        raise ValueError("Must provide a list of numpy arrays for frames")
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+    payload = {
+        "prompt": prompt,
+        "model": "qwen25vl",
+        "function_name": "qwen25_vl_video_vqa",
+    }
+    data: Dict[str, Any] = send_inference_request(
+        payload, "image-to-text", files=files, v2=True
+    )
+    _display_tool_trace(
+        qwen25_vl_video_vqa.__name__,
+        payload,
+        cast(str, data),
+        files,
+    )
+    return cast(str, data)
 
 
 def qwen2_vl_images_vqa(prompt: str, images: List[np.ndarray]) -> str:
@@ -1882,6 +2267,58 @@ def _sample(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
     return sampled_frames
 
 
+def _lmm_activity_recognition(
+    lmm: LMM,
+    segment: List[np.ndarray],
+    prompt: str,
+) -> List[float]:
+    frames = _sample(segment, 10)
+    media = []
+    for frame in frames:
+        buffer = io.BytesIO()
+        image_pil = Image.fromarray(frame)
+        if image_pil.size[0] > 768:
+            image_pil.thumbnail((768, 768))
+        image_pil.save(buffer, format="PNG")
+        image_bytes = buffer.getvalue()
+        image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
+        media.append(image_b64)
+
+    response = cast(str, lmm.generate(prompt, media))
+    if "yes" in response.lower():
+        return [1.0] * len(segment)
+    return [0.0] * len(segment)
+
+
+def _qwenvl_activity_recognition(
+    segment: List[np.ndarray], prompt: str, model_name: str = "qwen2vl"
+) -> List[float]:
+    payload: Dict[str, Any] = {
+        "prompt": prompt,
+        "model": model_name,
+        "function_name": f"{model_name}_vl_video_vqa",
+    }
+    segment_buffer_bytes = [("video", frames_to_bytes(segment))]
+    response = send_inference_request(
+        payload, "image-to-text", files=segment_buffer_bytes, v2=True
+    )
+    if "yes" in response.lower():
+        return [1.0] * len(segment)
+    return [0.0] * len(segment)
+
+
+def _qwen2vl_activity_recognition(
+    segment: List[np.ndarray], prompt: str
+) -> List[float]:
+    return _qwenvl_activity_recognition(segment, prompt, model_name="qwen2vl")
+
+
+def _qwen25vl_activity_recognition(
+    segment: List[np.ndarray], prompt: str
+) -> List[float]:
+    return _qwenvl_activity_recognition(segment, prompt, model_name="qwen25vl")
+
+
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
@@ -1921,53 +2358,26 @@ def activity_recognition(
         f"{prompt} Please respond with a 'yes' or 'no' based on the frames provided."
     )
 
-    def _lmm_activity_recognition(
-        lmm: LMM,
-        segment: List[np.ndarray],
-    ) -> List[float]:
-        frames = _sample(segment, 10)
-        media = []
-        for frame in frames:
-            buffer = io.BytesIO()
-            image_pil = Image.fromarray(frame)
-            if image_pil.size[0] > 768:
-                image_pil.thumbnail((768, 768))
-            image_pil.save(buffer, format="PNG")
-            image_bytes = buffer.getvalue()
-            image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
-            media.append(image_b64)
-
-        response = cast(str, lmm.generate(prompt, media))
-        if "yes" in response.lower():
-            return [1.0] * len(segment)
-        return [0.0] * len(segment)
-
-    def _qwen2vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-        payload: Dict[str, Any] = {
-            "prompt": prompt,
-            "model": "qwen2vl",
-            "function_name": "qwen2_vl_video_vqa",
-        }
-        segment_buffer_bytes = [("video", frames_to_bytes(segment))]
-        response = send_inference_request(
-            payload, "image-to-text", files=segment_buffer_bytes, v2=True
-        )
-        if "yes" in response.lower():
-            return [1.0] * len(segment)
-        return [0.0] * len(segment)
-
     if model == "claude-35":
 
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _lmm_activity_recognition(AnthropicLMM(), segment)
+            return _lmm_activity_recognition(AnthropicLMM(), segment, prompt)
 
     elif model == "gpt-4o":
 
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _lmm_activity_recognition(OpenAILMM(), segment)
+            return _lmm_activity_recognition(OpenAILMM(), segment, prompt)
 
     elif model == "qwen2vl":
-        _apply_activity_recognition = _qwen2vl_activity_recognition
+
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _qwen2vl_activity_recognition(segment, prompt)
+
+    elif model == "qwen25vl":
+
+        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+            return _qwen25vl_activity_recognition(segment, prompt)
+
     else:
         raise ValueError(f"Invalid model: {model}")
 
@@ -2135,15 +2545,16 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
 
 
 def depth_anything_v2(image: np.ndarray) -> np.ndarray:
-    """'depth_anything_v2' is a tool that runs depth_anythingv2 model to generate a
+    """'depth_anything_v2' is a tool that runs depth anything v2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
-    represents depth values as pixel intesities with pixel values ranging from 0 to 255.
+    represents depth values as pixel intensities with pixel values ranging from 0 to 255.
 
     Parameters:
         image (np.ndarray): The image to used to generate depth image
 
     Returns:
-        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255.
+        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255
+            where high values represent closer objects and low values further.
 
     Example
     -------
