@@ -2420,11 +2420,13 @@ def activity_recognition(
             return [1.0] * len(segment)
         return [0.0] * len(segment)
 
-    def _qwen2vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+    def _qwenvl_activity_recognition(
+        segment: List[np.ndarray], model_name: str = "qwen2vl"
+    ) -> List[float]:
         payload: Dict[str, Any] = {
             "prompt": prompt,
-            "model": "qwen2vl",
-            "function_name": "qwen2_vl_video_vqa",
+            "model": model_name,
+            "function_name": f"{model_name}_vl_video_vqa",
         }
         segment_buffer_bytes = [("video", frames_to_bytes(segment))]
         response = send_inference_request(
@@ -2433,6 +2435,12 @@ def activity_recognition(
         if "yes" in response.lower():
             return [1.0] * len(segment)
         return [0.0] * len(segment)
+
+    def _qwen2vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+        return _qwenvl_activity_recognition(segment, model_name="qwen2vl")
+
+    def _qwen25vl_activity_recognition(segment: List[np.ndarray]) -> List[float]:
+        return _qwenvl_activity_recognition(segment, model_name="qwen25vl")
 
     if model == "claude-35":
 
@@ -2446,6 +2454,8 @@ def activity_recognition(
 
     elif model == "qwen2vl":
         _apply_activity_recognition = _qwen2vl_activity_recognition
+    elif model == "qwen25vl":
+        _apply_activity_recognition = _qwen25vl_activity_recognition
     else:
         raise ValueError(f"Invalid model: {model}")
 
