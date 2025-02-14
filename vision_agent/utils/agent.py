@@ -159,11 +159,12 @@ def format_conversation(chat: List[AgentMessage]) -> str:
     chat = copy.deepcopy(chat)
     prompt = ""
     for chat_i in chat:
-        if chat_i.role == "user" or chat_i.role == "coder":
-            if "<final_code>" in chat_i.content:
-                prompt += f"OBSERVATION: {chat_i.content}\n\n"
-            elif chat_i.role == "user":
+        # we want to print user messages, final code, final code observations or errors
+        if chat_i.role in ["user", "coder", "final_observation", "error_observation"]:
+            if chat_i.role == "user":
                 prompt += f"USER: {chat_i.content}\n\n"
+            else:
+                prompt += f"OBSERVATION: {chat_i.content}\n\n"
         elif chat_i.role == "conversation":
             prompt += f"AGENT: {chat_i.content}\n\n"
     return prompt
