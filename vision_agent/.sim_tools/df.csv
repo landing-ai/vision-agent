@@ -474,8 +474,8 @@ desc,doc,name
         >>> activity_recognition('Did a goal happened?', frames)
         [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
     ",activity_recognition
-'depth_anything_v2' is a tool that runs depth_anything v2 model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intensities with pixel values ranging from 0 to 255.,"depth_anything_v2(image: numpy.ndarray) -> numpy.ndarray:
-'depth_anything_v2' is a tool that runs depth_anything v2 model to generate a
+'depth_anything_v2' is a tool that runs depth anything v2 model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intensities with pixel values ranging from 0 to 255.,"depth_anything_v2(image: numpy.ndarray) -> numpy.ndarray:
+'depth_anything_v2' is a tool that runs depth anything v2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
     represents depth values as pixel intensities with pixel values ranging from 0 to 255.
 

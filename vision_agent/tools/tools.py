@@ -1152,7 +1152,7 @@ def _countgd_visual_object_detection(
         "model": "countgd",
         "confidence": box_threshold,
     }
-    metadata = {"function_name": "countgd_visual_prompt_object_detection"}
+    metadata = {"function_name": "countgd_visual_object_detection"}
 
     detections = send_task_inference_request(
         payload, "visual-prompts-to-object-detection", files=files, metadata=metadata
@@ -1196,7 +1196,7 @@ def countgd_visual_object_detection(
 
     Parameters:
         visual_prompts (List[List[float]]): Bounding boxes of the object in format
-            [xmin, ymin, xmax, ymax] with normalized coordinatse. Up to 3 bounding
+            [xmin, ymin, xmax, ymax] with normalized coordinates. Up to 3 bounding
             boxes can be provided.
         image (np.ndarray): The image that contains multiple instances of the object.
         box_threshold (float, optional): The threshold for detection. Defaults to 0.23.
@@ -1927,7 +1927,7 @@ def qwen25_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
         'Lionel Messi'
     """
 
-    if len(frames) == 0 or not isinstance(frames, List):
+    if len(frames) == 0 or not isinstance(frames, list):
         raise ValueError("Must provide a list of numpy arrays for frames")
 
     buffer_bytes = frames_to_bytes(frames)
