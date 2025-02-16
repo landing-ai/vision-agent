@@ -248,9 +248,7 @@ def retrieve_tool_docs(lmm: LMM, task: str, exclude_tools: Optional[List[str]]) 
                 all_tool_doc_names.add(tool_doc["name"])
 
     tool_docs_str = explanation + "\n\n" + "\n".join([e["doc"] for e in all_tool_docs])
-    tool_docs_str += (
-        "\n" + get_load_tools_docstring() + get_tool_documentation([judge_od_results])
-    )
+    tool_docs_str += get_load_tools_docstring()
     return tool_docs_str
 
 
@@ -346,22 +344,22 @@ def get_tool_for_task(
     and output signatures are.
 
     Parameters:
-        task: str: The task to accomplish.
-        images: Union[Dict[str, List[np.ndarray]], List[np.ndarray]]: The images to use
+        task (str): The task to accomplish.
+        images (Union[Dict[str, List[np.ndarray]], List[np.ndarray]]): The images to use
             for the task. If a key is provided, it is used as the file name.
-        exclude_tools: Optional[List[str]]: A list of tool names to exclude from the
+        exclude_tools (Optional[List[str]]): A list of tool names to exclude from the
             recommendations. This is helpful if you are calling get_tool_for_task twice
             and do not want the same tool recommended.
 
     Returns:
-        The tool to use for the task is printed to stdout
+        None: The function does not return the tool but prints it to stdout.
 
     Examples
     --------
         >>> get_tool_for_task(
         >>>     "Give me an OCR model that can find 'hot chocolate' in the image",
         >>>     {"image": [image]})
-        >>> get_tool_for_taks(
+        >>> get_tool_for_task(
         >>>     "I need a tool that can paint a background for this image and maks",
         >>>     {"image": [image], "mask": [mask]})
     """
@@ -521,7 +519,8 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
 def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
     """Given your problem statement and the images, this will provide you with a
     suggested plan on how to proceed. Always call suggestion when starting to solve
-    a problem.
+    a problem. 'suggestion' will only print pseudo code for you to execute, it will not
+    execute the code for you.
 
     Parameters:
         prompt: str: The problem statement, provide a detailed description of the
