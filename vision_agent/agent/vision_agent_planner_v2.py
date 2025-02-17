@@ -317,7 +317,8 @@ def maybe_run_code(
         media_data = capture_media_from_exec(execution)
         int_chat_elt = AgentMessage(role="observation", content=obs, media=None)
         if media_list:
-            int_chat_elt.media = cast(List[Union[str, Path]], media_data)
+            # Don't sned more than 3 media files to the planner or it can get overloaded
+            int_chat_elt.media = cast(List[Union[str, Path]], media_data[:3])
         return_chat.append(int_chat_elt)
     else:
         return_chat.append(AgentMessage(role="planner", content=response, media=None))
