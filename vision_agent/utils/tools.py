@@ -17,7 +17,7 @@ from vision_agent.utils.type_defs import LandingaiAPIKey
 
 _LOGGER = logging.getLogger(__name__)
 _LND_API_KEY = os.environ.get("LANDINGAI_API_KEY", LandingaiAPIKey().api_key)
-_LND_BASE_URL = os.environ.get("LANDINGAI_URL", "https://api.landing.ai")
+_LND_BASE_URL = os.environ.get("LANDINGAI_URL", "https://api.va.landing.ai")
 _LND_API_URL = f"{_LND_BASE_URL}/v1/agent/model"
 _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
 
