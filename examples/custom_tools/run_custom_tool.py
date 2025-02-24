@@ -2,6 +2,9 @@ import numpy as np
 from template_match import template_matching_with_rotation
 
 import vision_agent as va
+import vision_agent.tools as T
+import vision_agent.tools.planner_tools as pt
+from vision_agent.models import AgentMessage
 from vision_agent.utils.image_utils import get_image_size, normalize_bbox
 
 
@@ -38,13 +41,20 @@ def template_match(target_image: np.ndarray, template_image: np.ndarray) -> dict
 
 
 if __name__ == "__main__":
-    agent = va.agent.VisionAgentCoder(verbosity=2)
-    result = agent.chat_with_workflow(
+    agent = va.agent.VisionAgentCoderV2(verbose=True)
+    template = T.load_image("pid_template.png")
+    pid = T.load_image("pid.png")
+    __import__("ipdb").set_trace()
+    pt.get_tool_for_task(
+        "Find instances of a template image in a larger image",
+        {"template": [template], "image": [pid]},
+    )
+    result = agent.generate_code(
         [
-            {
-                "role": "user",
-                "content": "Can you find the locations of the pid_template.png in pid.png and tell me if any are nearby 'NOTE 5'?",
-            }
-        ],
-        media="pid.png",
+            AgentMessage(
+                role="user",
+                content="Can you find the locations of the pid_template.png in pid.png and tell me if any are nearby 'NOTE 5'?",
+                media=["pid.png", "pid_template.png"],
+            )
+        ]
     )
