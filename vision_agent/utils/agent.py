@@ -103,24 +103,37 @@ def extract_code(code: str) -> str:
     return code
 
 
-def extract_tag(
-    content: str,
-    tag: str,
-) -> Optional[str]:
+def _extract_arbitrary(content: str, start: str, stop: str) -> Optional[str]:
     inner_content = None
     remaning = content
     all_inner_content = []
 
-    while f"<{tag}>" in remaning:
-        inner_content_i = remaning[remaning.find(f"<{tag}>") + len(f"<{tag}>") :]
-        if f"</{tag}>" not in inner_content_i:
+    while start in remaning:
+        inner_content_i = remaning[remaning.find(start) + len(start) :]
+        if stop not in inner_content_i:
             break
-        inner_content_i = inner_content_i[: inner_content_i.find(f"</{tag}>")]
-        remaning = remaning[remaning.find(f"</{tag}>") + len(f"</{tag}>") :]
+        inner_content_i = inner_content_i[: inner_content_i.find(stop)]
+        remaning = remaning[remaning.find(stop) + len(stop) :]
         all_inner_content.append(inner_content_i)
 
     if len(all_inner_content) > 0:
         inner_content = "\n".join(all_inner_content)
+
+    return inner_content
+
+
+def extract_markdown(content: str, tag: str) -> Optional[str]:
+    return _extract_arbitrary(content, f"```{tag}", "```")
+
+
+def extract_tag(
+    content: str,
+    tag: str,
+    extract_markdown: str | None = None,
+) -> Optional[str]:
+    inner_content = _extract_arbitrary(content, f"<{tag}>", f"</{tag}>")
+    if inner_content is None and extract_markdown is not None:
+        inner_content = _extract_arbitrary(content, f"```{extract_markdown}", "```")
     return inner_content
 
 
