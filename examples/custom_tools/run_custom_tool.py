@@ -42,13 +42,6 @@ def template_match(target_image: np.ndarray, template_image: np.ndarray) -> dict
 
 if __name__ == "__main__":
     agent = va.agent.VisionAgentCoderV2(verbose=True)
-    template = T.load_image("pid_template.png")
-    pid = T.load_image("pid.png")
-    __import__("ipdb").set_trace()
-    pt.get_tool_for_task(
-        "Find instances of a template image in a larger image",
-        {"template": [template], "image": [pid]},
-    )
     result = agent.generate_code(
         [
             AgentMessage(
