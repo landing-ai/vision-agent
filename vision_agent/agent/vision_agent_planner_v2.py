@@ -544,7 +544,9 @@ class VisionAgentPlannerV2(AgentPlanner):
 
                 response = response_safeguards(response)
                 thinking = extract_tag(response, "thinking")
-                code = extract_tag(response, "execute_python", extract_markdown="python")
+                code = extract_tag(
+                    response, "execute_python", extract_markdown="python"
+                )
                 finalize_plan = extract_tag(response, "finalize_plan")
                 finished = finalize_plan is not None
                 self.update_callback({"role": "planner_update", "content": response})
