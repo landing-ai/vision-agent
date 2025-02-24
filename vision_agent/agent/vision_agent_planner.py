@@ -410,7 +410,7 @@ class VisionAgentPlanner(Agent):
             plans = write_plans(
                 chat,
                 get_tool_descriptions_by_names(
-                    custom_tool_names, T.FUNCTION_TOOLS, T.UTIL_TOOLS  # type: ignore
+                    custom_tool_names, T.tools.FUNCTION_TOOLS, T.tools.UTIL_TOOLS  # type: ignore
                 ),
                 format_feedback(working_memory),
                 self.planner,
