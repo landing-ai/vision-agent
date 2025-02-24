@@ -129,7 +129,7 @@ def extract_markdown(content: str, tag: str) -> Optional[str]:
 def extract_tag(
     content: str,
     tag: str,
-    extract_markdown: str | None = None,
+    extract_markdown: Optional[str] = None,
 ) -> Optional[str]:
     inner_content = _extract_arbitrary(content, f"<{tag}>", f"</{tag}>")
     if inner_content is None and extract_markdown is not None:
