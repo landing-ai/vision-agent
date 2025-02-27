@@ -1451,7 +1451,7 @@ def _agentic_object_detection(
 
     detections = send_task_inference_request(
         payload,
-        "text-to-object-detection",
+        "agentic-object-detection",
         files=files,
         metadata=metadata,
     )
