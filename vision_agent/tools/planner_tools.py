@@ -130,7 +130,7 @@ def run_multi_judge(
 
     def run_judge() -> Tuple[Optional[Callable], str, str]:
         response = tool_chooser.generate(prompt, media=image_paths, temperature=1.0)
-        tool_choice_context = extract_tag(response, "json")  # type: ignore
+        tool_choice_context = extract_tag(response, "json", extract_markdown="json")  # type: ignore
         tool_choice_context_dict = extract_json(tool_choice_context)  # type: ignore
         tool, tool_thoughts, tool_docstring, _ = extract_tool_info(
             tool_choice_context_dict
@@ -275,7 +275,7 @@ def run_tool_testing(
     )
 
     response = lmm.generate(prompt, media=image_paths)
-    code = extract_tag(response, "code")  # type: ignore
+    code = extract_tag(response, "code", extract_markdown="python")  # type: ignore
     if code is None:
         raise ValueError(f"Could not extract code from response: {response}")
 
@@ -304,7 +304,7 @@ def run_tool_testing(
             media=str(image_paths),
         )
         response = cast(str, lmm.generate(prompt, media=image_paths))
-        code = extract_tag(response, "code")
+        code = extract_tag(response, "code", extract_markdown="python")
         if code is None:
             code = response
 

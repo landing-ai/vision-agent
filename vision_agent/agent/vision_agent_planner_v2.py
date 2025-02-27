@@ -154,7 +154,7 @@ def run_multi_trial_planning(
         response3=responses[2],
     )
     response = cast(str, model.chat([{"role": "user", "content": prompt}]))
-    json_str = extract_tag(response, "json")
+    json_str = extract_tag(response, "json", extract_markdown="json")
     if json_str:
         json_data = extract_json(json_str)
         best = np.argmax([int(json_data[f"response{k}"]) for k in [1, 2, 3]])
@@ -230,7 +230,7 @@ def execute_code_action(
     while not execution.success and count <= 3:
         prompt = FIX_BUG.format(chat_history=get_planning(chat), code=code, error=obs)
         response = cast(str, model.chat([{"role": "user", "content": prompt}]))
-        new_code = extract_tag(response, "code")
+        new_code = extract_tag(response, "code", extract_markdown="python")
         if not new_code:
             continue
         else:
@@ -343,7 +343,7 @@ def create_finalize_plan(
     plan_str = cast(str, response)
     return_chat = [AgentMessage(role="planner", content=plan_str, media=None)]
 
-    plan_json = extract_tag(plan_str, "json")
+    plan_json = extract_tag(plan_str, "json", extract_markdown="json")
 
     # sometimes the planner model will refuse to answer a question becuase of some
     # safety concern, we then wont be able to parse the response so we have to send
@@ -357,7 +357,7 @@ def create_finalize_plan(
     except json.JSONDecodeError:
         return return_chat, ErrorContext(error=plan_str)
 
-    code_snippets = extract_tag(plan_str, "code")
+    code_snippets = extract_tag(plan_str, "code", extract_markdown="python")
     plan["code"] = code_snippets if code_snippets is not None else ""
     if verbose:
         _CONSOLE.print(
@@ -544,7 +544,9 @@ class VisionAgentPlannerV2(AgentPlanner):
 
                 response = response_safeguards(response)
                 thinking = extract_tag(response, "thinking")
-                code = extract_tag(response, "execute_python")
+                code = extract_tag(
+                    response, "execute_python", extract_markdown="python"
+                )
                 finalize_plan = extract_tag(response, "finalize_plan")
                 finished = finalize_plan is not None
                 self.update_callback({"role": "planner_update", "content": response})
