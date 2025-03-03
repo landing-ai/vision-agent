@@ -33,7 +33,7 @@ The `VisionAgentPlannerV2` returns `PlanContext` which contains the a finalized 
 
 
 #### Callbacks
-If you want to recieve intermediate messages you can use the `update_callback` argument in all the `V2` constructors. This will asynchronously send `AgentMessage`'s to the callback function you provide. You can see an example of how to run this in `examples/chat/app.py`
+If you want to receive intermediate messages you can use the `update_callback` argument in all the `V2` constructors. This will asynchronously send `AgentMessage`'s to the callback function you provide. You can see an example of how to run this in `examples/chat/app.py`
 
 ### Human-in-the-loop
 Human-in-the-loop is a feature that allows the user to interact with the agents at certain points in the conversation. This is handled by using the `interaction` and `interaction_response` roles in the `AgentMessage`. You can enable this feature by passing `hil=True` to the `VisionAgentV2`, currently you can only use human-in-the-loop if you are also using the `update_callback` to collect the messages and pass them back to `VisionAgentV2`.
