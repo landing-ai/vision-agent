@@ -16,7 +16,7 @@ from vision_agent.utils.execute import Error, MimeType
 from vision_agent.utils.image_utils import normalize_bbox
 
 _LOGGER = logging.getLogger(__name__)
-_LND_BASE_URL = os.environ.get("LANDINGAI_URL", "https://api.landing.ai")
+_LND_BASE_URL = os.environ.get("LANDINGAI_URL", "https://api.va.landing.ai")
 _LND_API_URL = f"{_LND_BASE_URL}/v1/agent/model"
 _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
 
