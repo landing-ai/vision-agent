@@ -27,6 +27,8 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
   const [polygons, setPolygons] = useState<Polygon[]>([]);
   // State to store points for the polygon currently being drawn
   const [currentPoints, setCurrentPoints] = useState<Point[]>([]);
+  // State to store the current preview point (mouse position)
+  const [previewPoint, setPreviewPoint] = useState<Point | null>(null);
   const [intrinsicDimensions, setIntrinsicDimensions] = useState<{
     width: number;
     height: number;
@@ -119,8 +121,24 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
     setCurrentPoints((prev) => [...prev, intrinsicPoint]);
   };
 
+  // Handler for mouse move events over the SVG.
+  // Updates the preview point for the polygon being drawn.
+  const handleSvgMouseMove = (e: MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const displayedX = e.clientX - rect.left;
+    const displayedY = e.clientY - rect.top;
+    const intrinsicPoint = getIntrinsicPoint(displayedX, displayedY);
+    setPreviewPoint(intrinsicPoint);
+  };
+
+  // When the mouse leaves the SVG, clear the preview point so that the polygon auto-connects.
+  const handleSvgMouseLeave = () => {
+    setPreviewPoint(null);
+  };
+
   // Completes the current polygon by prompting for a name.
-  // If valid, the polygon is saved and the onPolygonAdded callback is fired.
+  // If valid, the polygon is saved.
   const handleFinishPolygon = () => {
     if (currentPoints.length < 3) {
       alert("A polygon must have at least 3 points.");
@@ -138,9 +156,10 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
     console.log("New polygon:", newPolygon);
     setPolygons((prevPolygons) => [...prevPolygons, newPolygon]);
     setCurrentPoints([]);
+    setPreviewPoint(null);
   };
 
-  // Deletes a polygon by its id and fires the onPolygonRemoved callback.
+  // Deletes a polygon by its id.
   const handleDeletePolygon = (id: number) => {
     setPolygons((prevPolygons) => prevPolygons.filter((p) => p.id !== id));
   };
@@ -162,7 +181,7 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
 
   return (
     <div>
-      {/* Container for the video and the SVG overlay */}
+      {/* Container for the media and the SVG overlay */}
       <div style={{ position: "relative", display: "inline-block" }}>
         {media ? (
           mediaType === "video" ? (
@@ -192,6 +211,8 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
         <svg
           ref={svgRef}
           onClick={handleSvgClick}
+          onMouseMove={handleSvgMouseMove}
+          onMouseLeave={handleSvgMouseLeave}
           style={{
             position: "absolute",
             top: 0,
@@ -218,15 +239,29 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
               }}
             />
           ))}
-          {/* Render the polygon being drawn (as an open polyline) */}
-          {currentPoints.length > 0 && (
-            <polyline
-              points={convertPointsToString(currentPoints)}
-              fill="none"
-              stroke="red"
-              strokeWidth="2"
-            />
-          )}
+          {/* Render the shape being drawn */}
+          {currentPoints.length > 0 &&
+            (currentPoints.length < 3 ? (
+              // For fewer than 3 points, show a red polyline (with preview if available)
+              <polyline
+                points={convertPointsToString(
+                  previewPoint ? [...currentPoints, previewPoint] : currentPoints
+                )}
+                fill="none"
+                stroke="red"
+                strokeWidth="2"
+              />
+            ) : (
+              // For 3 or more points, render a blue filled polygon.
+              <polygon
+                points={convertPointsToString(
+                  previewPoint ? [...currentPoints, previewPoint] : currentPoints
+                )}
+                fill="rgba(0, 128, 255, 0.3)"
+                stroke="blue"
+                strokeWidth="2"
+              />
+            ))}
         </svg>
       </div>
 
@@ -235,7 +270,14 @@ const PolygonDrawer: React.FC<PolygonDrawerProps> = ({
         <Button onClick={handleFinishPolygon} className="mr-2">
           Add Polygon
         </Button>
-        <Button onClick={() => setCurrentPoints([])}>Undo</Button>
+        <Button
+          onClick={() => {
+            setCurrentPoints([]);
+            setPreviewPoint(null);
+          }}
+        >
+          Undo
+        </Button>
       </div>
 
       {/* List of saved polygons with delete buttons */}
