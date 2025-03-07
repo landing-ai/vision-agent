@@ -14,7 +14,7 @@ from scipy.spatial.distance import cosine  # type: ignore
 
 from vision_agent.tools.tools import get_tools_df
 from vision_agent.utils.tools import (
-    _LND_API_KEY,
+    get_vision_agent_api_key,
     _create_requests_session,
     _LND_API_URL_v2,
 )
@@ -57,7 +57,8 @@ def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
         "model": "stella1.5b",
     }
     url = f"{_LND_API_URL_v2}/embeddings"
-    headers = {"apikey": _LND_API_KEY}
+    vision_agent_api_key = get_vision_agent_api_key()
+    headers = {"Authorization": f"Basic {vision_agent_api_key}"}
     session = _create_requests_session(
         url=url,
         num_retry=3,
