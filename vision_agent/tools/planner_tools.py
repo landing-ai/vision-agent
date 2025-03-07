@@ -236,7 +236,7 @@ def retrieve_tool_docs(lmm: LMM, task: str, exclude_tools: Optional[List[str]]) 
     all_tool_docs = []
     all_tool_doc_names = set()
     exclude_tools = [] if exclude_tools is None else exclude_tools
-    for category in categories:
+    for category in categories + [task]:
         tool_docs = sim.top_k(category, k=3, thresh=0.3)
 
         for tool_doc in tool_docs:
