@@ -23,10 +23,10 @@ pip install vision-agent
 
 ```bash
 export ANTHROPIC_API_KEY="your-api-key"
-export OPENAI_API_KEY="your-api-key"
+export GEMINI_API_KEY="your-api-key"
 ```
 
-> **_NOTE:_** We found using both Anthropic Claude-3.5 and OpenAI o1 to be provide the best performance for VisionAgent. If you want to use a different LLM provider or only one, see 'Using Other LLM Providers' below.
+> **_NOTE:_** We found using both Anthropic Claude-3.7 and Gemini-2.0-Flash-Exp to be provide the best performance for VisionAgent. If you want to use a different LLM provider or only one, see 'Using Other LLM Providers' below.
 
 You will also need to set your VisionAgent API key to be able to authenticate when using the hosted vision tools that we provide through our APIs. Currently, the APIs are free to use so you will only need to get it from [here](https://va.landing.ai/account/api-key).
 
@@ -103,6 +103,34 @@ You can use other LLM providers by changing `config.py` in the `vision_agent/con
 directory. For example to change to Anthropic simply just run:
 ```bash
 cp vision_agent/configs/anthropic_config.py vision_agent/configs/config.py
+```
+
+You can also modify the existing `config.py` file yourself to use a different LLM
+provider, for example if you wanted to change the planner from Anthropic inside
+`config.py` to OpenAI you would replace this code:
+```python
+    planner: Type[LMM] = Field(default=AnthropicLMM)
+    planner_kwargs: dict = Field(
+        default_factory=lambda: {
+            "model_name": "claude-3-7-sonnet-20250219",
+            "temperature": 0.0,
+            "image_size": 768,
+        }
+    )
+```
+
+with this code:
+
+```python
+    planner: Type[LMM] = Field(default=OpenAILMM)
+    planner_kwargs: dict = Field(
+        default_factory=lambda: {
+            "model_name": "gpt-4o-2024-11-20",
+            "temperature": 0.0,
+            "image_size": 768,
+            "image_detail": "low",
+        }
+    )
 ```
 
 > **_NOTE:_** VisionAgent moves fast and we are constantly updating and changing the library. If you have any questions or need help, please reach out to us on our discord channel.
