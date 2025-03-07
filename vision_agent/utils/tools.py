@@ -61,7 +61,7 @@ def send_inference_request(
         headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
         headers.pop("apikey")
 
-    if runtime_tag := os.environ.get("RUNTIME_TAG", ""):
+    if runtime_tag := os.environ.get("RUNTIME_TAG", "vision-agent"):
         headers["runtime_tag"] = runtime_tag
 
     session = _create_requests_session(
