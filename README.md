@@ -28,7 +28,7 @@ export OPENAI_API_KEY="your-api-key"
 
 > **_NOTE:_** We found using both Anthropic Claude-3.5 and OpenAI o1 to be provide the best performance for VisionAgent. If you want to use a different LLM provider or only one, see 'Using Other LLM Providers' below.
 
-You will also need to set your VisionAgent API key to be able to authenticate when using the hosted vision tools that we provide through our APIs. To get a VisionAgent API key you can visit this [link](https://va.landing.ai/account/api-key).
+You will also need to set your VisionAgent API key to be able to authenticate when using the hosted vision tools that we provide through our APIs. Currently, the APIs are free to use so you will only need to get it from [here](https://va.landing.ai/account/api-key).
 
 ```bash
 export VISION_AGENT_API_KEY="your-api-key"
