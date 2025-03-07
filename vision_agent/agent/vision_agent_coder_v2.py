@@ -78,7 +78,7 @@ def write_code(
         plan=plan,
     )
     response = cast(str, coder([{"role": "user", "content": prompt}], stream=False))
-    maybe_code = extract_tag(response, "code")
+    maybe_code = extract_tag(response, "code", extract_markdown="python")
 
     # if the response wasn't properly formatted with the code tags just retrun the response
     if maybe_code is None:
@@ -105,7 +105,7 @@ def write_test(
         media=media_list,
     )
     response = cast(str, tester([{"role": "user", "content": prompt}], stream=False))
-    maybe_code = extract_tag(response, "code")
+    maybe_code = extract_tag(response, "code", extract_markdown="python")
 
     # if the response wasn't properly formatted with the code tags just retrun the response
     if maybe_code is None:
@@ -151,8 +151,12 @@ def debug_code(
             fixed_code_and_test_str = cast(str, fixed_code_and_test_str)
             thoughts_tag = extract_tag(fixed_code_and_test_str, "thoughts")
             thoughts = thoughts_tag if thoughts_tag is not None else ""
-            fixed_code = extract_tag(fixed_code_and_test_str, "code")
-            fixed_test = extract_tag(fixed_code_and_test_str, "test")
+            fixed_code = extract_tag(
+                fixed_code_and_test_str, "code", extract_markdown="python"
+            )
+            fixed_test = extract_tag(
+                fixed_code_and_test_str, "test", extract_markdown="python"
+            )
 
             success = not (fixed_code is None and fixed_test is None)
 
