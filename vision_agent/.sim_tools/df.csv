@@ -235,45 +235,43 @@ desc,doc,name
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
         ]
     ",florence2_ocr
-"'agentic_object_detection' is a tool that can detect multiple objects given a text prompt such as object names or referring expressions on images. It's particularly good at detecting specific objects given detailed descriptive prompts but runs slower so not ideal for high counts. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence score of 1.0.","agentic_object_detection(prompt: str, image: numpy.ndarray) -> List[Dict[str, Any]]:
-'agentic_object_detection' is a tool that can detect multiple objects given a
-    text prompt such as object names or referring expressions on images. It's
-    particularly good at detecting specific objects given detailed descriptive prompts
-    but runs slower so not ideal for high counts. It returns a list of bounding boxes
-    with normalized coordinates, label names and associated confidence score of 1.0.
+"'florence2_object_detection' is a tool that can detect multiple objects given a text prompt which can be object names or caption. You can optionally separate the object names in the text with commas. It returns a list of bounding boxes with normalized coordinates, label names and associated confidence scores of 1.0.","florence2_object_detection(prompt: str, image: numpy.ndarray) -> List[Dict[str, Any]]:
+'florence2_object_detection' is a tool that can detect multiple objects given a
+    text prompt which can be object names or caption. You can optionally separate the
+    object names in the text with commas. It returns a list of bounding boxes with
+    normalized coordinates, label names and associated confidence scores of 1.0.
 
     Parameters:
-        prompt (str): The prompt to ground to the image, only supports a single prompt
-            with no commas or periods.
-        image (np.ndarray): The image to ground the prompt to.
+        prompt (str): The prompt to ground to the image. Use exclusive categories that
+            do not overlap such as 'person, car' and NOT 'person, athlete'.
+        image (np.ndarray): The image to used to detect objects
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
             bounding box of the detected objects with normalized coordinates between 0
             and 1 (xmin, ymin, xmax, ymax). xmin and ymin are the coordinates of the
             top-left and xmax and ymax are the coordinates of the bottom-right of the
-            bounding box.
+            bounding box. The scores are always 1.0 and cannot be thresholded
 
     Example
     -------
-        >>> agentic_object_detection(""a red car"", image)
+        >>> florence2_object_detection('person looking at a coyote', image)
         [
-            {'score': 0.99, 'label': 'a red car', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-            {'score': 0.98, 'label': 'a red car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+            {'score': 1.0, 'label': 'person', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+            {'score': 1.0, 'label': 'coyote', 'bbox': [0.34, 0.21, 0.85, 0.5},
         ]
-    ",agentic_object_detection
-"'agentic_sam2_instance_segmentation' is a tool that can detect multiple instances given a text prompt such as object names or referring expressions on images. It's particularly good at detecting specific objects given detailed descriptive prompts but runs slower so not ideal for high counts. It returns a list of bounding boxes with normalized coordinates, label names, masks and associated confidence score of 1.0.","agentic_sam2_instance_segmentation(prompt: str, image: numpy.ndarray) -> List[Dict[str, Any]]:
-'agentic_sam2_instance_segmentation' is a tool that can detect multiple
-    instances given a text prompt such as object names or referring expressions on
-    images. It's particularly good at detecting specific objects given detailed
-    descriptive prompts but runs slower so not ideal for high counts. It returns a list
-    of bounding boxes with normalized coordinates, label names, masks and associated
-    confidence score of 1.0.
+    ",florence2_object_detection
+"'florence2_sam2_instance_segmentation' is a tool that can segment multiple objects given a text prompt such as category names or referring expressions. The categories in the text prompt are separated by commas. It returns a list of bounding boxes, label names, mask file names and associated probability scores of 1.0.","florence2_sam2_instance_segmentation(prompt: str, image: numpy.ndarray) -> List[Dict[str, Any]]:
+'florence2_sam2_instance_segmentation' is a tool that can segment multiple
+    objects given a text prompt such as category names or referring expressions. The
+    categories in the text prompt are separated by commas. It returns a list of
+    bounding boxes, label names, mask file names and associated probability scores of
+    1.0.
 
     Parameters:
-        prompt (str): The object that needs to be counted, only supports a single
-            prompt with no commas or periods.
-        image (np.ndarray): The image that contains multiple instances of the object.
+        prompt (str): The prompt to ground to the image. Use exclusive categories that
+            do not overlap such as 'person, car' and NOT 'person, athlete'.
+        image (np.ndarray): The image to ground the prompt to.
 
     Returns:
         List[Dict[str, Any]]: A list of dictionaries containing the score, label,
@@ -285,11 +283,11 @@ desc,doc,name
 
     Example
     -------
-        >>> agentic_sam2_instance_segmentation(""a large blue flower"", image)
+        >>> florence2_sam2_instance_segmentation(""car, dinosaur"", image)
         [
             {
-                'score': 0.49,
-                'label': 'a large blue flower',
+                'score': 1.0,
+                'label': 'dinosaur',
                 'bbox': [0.1, 0.11, 0.35, 0.4],
                 'mask': array([[0, 0, 0, ..., 0, 0, 0],
                     [0, 0, 0, ..., 0, 0, 0],
@@ -298,7 +296,49 @@ desc,doc,name
                     [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
             },
         ]
-    ",agentic_sam2_instance_segmentation
+    ",florence2_sam2_instance_segmentation
+"'florence2_sam2_video_tracking' is a tool that can track and segment multiple objects in a video given a text prompt such as category names or referring expressions. The categories in the text prompt are separated by commas. It returns a list of bounding boxes, label names, masks and associated probability scores and is useful for tracking and counting without duplicating counts.","florence2_sam2_video_tracking(prompt: str, frames: List[numpy.ndarray], chunk_length: Optional[int] = 25) -> List[List[Dict[str, Any]]]:
+'florence2_sam2_video_tracking' is a tool that can track and segment multiple
+    objects in a video given a text prompt such as category names or referring
+    expressions. The categories in the text prompt are separated by commas. It returns
+    a list of bounding boxes, label names, masks and associated probability scores and
+    is useful for tracking and counting without duplicating counts.
+
+    Parameters:
+        prompt (str): The prompt to ground to the image. Use exclusive categories that
+            do not overlap such as 'person, car' and NOT 'person, athlete'.
+        frames (List[np.ndarray]): The list of frames to ground the prompt to.
+        chunk_length (Optional[int]): The number of frames to re-run florence2 to find
+            new objects.
+
+    Returns:
+        List[List[Dict[str, Any]]]: A list of list of dictionaries containing the
+            label, segmentation mask and bounding boxes. The outer list represents each
+            frame and the inner list is the entities per frame. The detected objects
+            have normalized coordinates between 0 and 1 (xmin, ymin, xmax, ymax). xmin
+            and ymin are the coordinates of the top-left and xmax and ymax are the
+            coordinates of the bottom-right of the bounding box. The mask is binary 2D
+            numpy array where 1 indicates the object and 0 indicates the background.
+            The label names are prefixed with their ID represent the total count.
+
+    Example
+    -------
+        >>> florence2_sam2_video_tracking(""car, dinosaur"", frames)
+        [
+            [
+                {
+                    'label': '0: dinosaur',
+                    'bbox': [0.1, 0.11, 0.35, 0.4],
+                    'mask': array([[0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0],
+                        ...,
+                        [0, 0, 0, ..., 0, 0, 0],
+                        [0, 0, 0, ..., 0, 0, 0]], dtype=uint8),
+                },
+            ],
+            ...
+        ]
+    ",florence2_sam2_video_tracking
 'claude35_text_extraction' is a tool that can extract text from an image. It returns the extracted text as a string and can be used as an alternative to OCR if you do not need to know the exact bounding box of the text.,"claude35_text_extraction(image: numpy.ndarray) -> str:
 'claude35_text_extraction' is a tool that can extract text from an image. It
     returns the extracted text as a string and can be used as an alternative to OCR if
