@@ -7,8 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  LANDINGAI_DEV_API_KEY: ${{ secrets.LANDINGAI_DEV_API_KEY }}
-  LANDINGAI_API_KEY: ${{ secrets.LANDINGAI_API_KEY }}
+  VISION_AGENT_API_KEY: ${{ secrets.VISION_AGENT_API_KEY }}
   OPENAI_API_KEY: 123test
   PYTHONUTF8: 1
 

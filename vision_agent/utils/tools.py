@@ -23,11 +23,11 @@ _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
 
 @cache
 def get_landingai_api_key() -> str:
-    landingai_api_key = os.environ.get("LANDINGAI_API_KEY")
+    landingai_api_key = os.environ.get("VISION_AGENT_API_KEY")
     if landingai_api_key:
         return landingai_api_key
     else:
-        raise ValueError("LANDINGAI_API_KEY not found in environment variables.")
+        raise ValueError("VISION_AGENT_API_KEY not found in environment variables.")
 
 
 def should_report_tool_traces() -> bool:

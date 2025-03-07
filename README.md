@@ -31,7 +31,7 @@ export OPENAI_API_KEY="your-api-key"
 You will also need to set your LandingAI API key to be able to authenticate when using the hosted vision tools that we provide through our APIs. To get a LandingAI API key you can visit this [link](https://va.landing.ai/account/api-key).
 
 ```bash
-export LANDINGAI_API_KEY="your-api-key"
+export VISION_AGENT_API_KEY="your-api-key"
 ```
 
 ## Documentation
