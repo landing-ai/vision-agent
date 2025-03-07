@@ -22,10 +22,10 @@ _LND_API_URL_v2 = f"{_LND_BASE_URL}/v1/tools"
 
 
 @cache
-def get_landingai_api_key() -> str:
-    landingai_api_key = os.environ.get("VISION_AGENT_API_KEY")
-    if landingai_api_key:
-        return landingai_api_key
+def get_vision_agent_api_key() -> str:
+    vision_agent_api_key = os.environ.get("VISION_AGENT_API_KEY")
+    if vision_agent_api_key:
+        return vision_agent_api_key
     else:
         raise ValueError("VISION_AGENT_API_KEY not found in environment variables.")
 
@@ -55,8 +55,8 @@ def send_inference_request(
     if "TOOL_ENDPOINT_URL" in os.environ:
         url = os.environ["TOOL_ENDPOINT_URL"]
 
-    landingai_api_key = get_landingai_api_key()
-    headers = {"Authorization": f"Basic {landingai_api_key}"}
+    vision_agent_api_key = get_vision_agent_api_key()
+    headers = {"Authorization": f"Basic {vision_agent_api_key}"}
     if "TOOL_ENDPOINT_AUTH" in os.environ:
         headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
         headers.pop("apikey")
@@ -89,8 +89,8 @@ def send_task_inference_request(
     is_form: bool = False,
 ) -> Any:
     url = f"{_LND_API_URL_v2}/{task_name}"
-    landingai_api_key = get_landingai_api_key()
-    headers = {"Authorization": f"Basic {landingai_api_key}"}
+    vision_agent_api_key = get_vision_agent_api_key()
+    headers = {"Authorization": f"Basic {vision_agent_api_key}"}
     session = _create_requests_session(
         url=url,
         num_retry=3,
