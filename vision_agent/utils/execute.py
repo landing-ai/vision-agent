@@ -13,12 +13,7 @@ from time import sleep
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import nbformat
-import tenacity
 from dotenv import load_dotenv
-from h11._util import LocalProtocolError
-from httpx import ConnectError
-from httpx import RemoteProtocolError as HttpcoreRemoteProtocolError
-from httpx import RemoteProtocolError as HttpxRemoteProtocolError
 from nbclient import NotebookClient
 from nbclient import __version__ as nbclient_version
 from nbclient.exceptions import CellTimeoutError, DeadKernelError
