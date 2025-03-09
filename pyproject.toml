@@ -34,8 +34,6 @@ nbclient = "^0.10.0"
 nbformat = "^5.10.4"
 rich = "^13.7.1"
 ipykernel = "^6.29.4"
-e2b = "^0.17.2a50"
-e2b-code-interpreter = "0.0.11a37"
 tenacity = "^8.3.0"
 pillow-heif = "^0.16.0"
 pytube = "15.0.0"
@@ -106,6 +104,4 @@ module = [
     "cv2.*",
     "openai.*",
     "sentence_transformers.*",
-    "e2b_code_interpreter.*",
-    "e2b.*"
 ]
