@@ -24,11 +24,6 @@ from opentelemetry.trace import SpanKind, Status, StatusCode, get_tracer
 from pydantic import BaseModel, field_serializer
 from typing_extensions import Self
 
-from vision_agent.utils.exceptions import (
-    RemoteSandboxCreationError,
-    RemoteSandboxExecutionError,
-)
-
 load_dotenv()
 _LOGGER = logging.getLogger(__name__)
 _SESSION_TIMEOUT = 600  # 10 minutes
