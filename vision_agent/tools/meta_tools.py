@@ -346,14 +346,14 @@ def generate_vision_plan(
 
     # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
     if ZMQ_PORT is not None:
-        agent = va.agent.VisionAgentPlanner(
+        agent = va.agent.VisionAgentPlannerV2(
             report_progress_callback=lambda inp: report_progress_callback(
                 int(ZMQ_PORT), inp
             ),
             verbosity=0,
         )
     else:
-        agent = va.agent.VisionAgentPlanner(verbosity=0)
+        agent = va.agent.VisionAgentPlannerV2(verbosity=0)
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.generate_plan(
@@ -419,7 +419,7 @@ def generate_vision_code(
             verbosity=0,
         )
     else:
-        agent = va.agent.VisionAgentCoder(verbosity=0)
+        agent = va.agent.VisionAgentCoderV2(verbosity=0)
 
     fixed_chat: List[Message] = [{"role": "user", "content": chat, "media": media}]
     response = agent.generate_code(
@@ -484,7 +484,7 @@ def edit_vision_code(
     """
 
     # verbosity is set to 0 to avoid adding extra content to the VisionAgent conversation
-    agent = va.agent.VisionAgentCoder(verbosity=0)
+    agent = va.agent.VisionAgentCoderV2(verbosity=0)
     if name not in artifacts:
         print(f"[Artifact {name} does not exist]")
         return f"[Artifact {name} does not exist]"
