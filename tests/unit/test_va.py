@@ -1,5 +1,4 @@
 from vision_agent.utils.agent import extract_tag
-from vision_agent.agent.vision_agent import _clean_response
 from vision_agent.tools.meta_tools import use_extra_vision_agent_args
 
 
@@ -56,21 +55,3 @@ def test_parse_execution_multiple_executes():
     code = "<execute_python>print('Hello, World!')</execute_python><execute_python>print('Hello, World!')</execute_python>"
     assert parse_execution(code) == "print('Hello, World!')\nprint('Hello, World!')"
 
-
-def test_clean_response():
-    response = """<thinking>Thinking...</thinking>
-<response>Here is the code:</response>
-<execute_python>print('Hello, World!')</execute_python>"""
-    assert _clean_response(response) == response
-
-
-def test_clean_response_remove_extra():
-    response = """<thinking>Thinking...</thinking>
-<response>Here is the code:</response>
-<execute_python>print('Hello, World!')</execute_python>
-<thinking>More thinking...</thinking>
-<response>Response to code...</response>"""
-    expected_response = """<thinking>Thinking...</thinking>
-<response>Here is the code:</response>
-<execute_python>print('Hello, World!')</execute_python>"""
-    assert _clean_response(response) == expected_response

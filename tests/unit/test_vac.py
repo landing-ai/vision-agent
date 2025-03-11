@@ -1,4 +1,4 @@
-from vision_agent.agent.vision_agent_coder import strip_function_calls
+from vision_agent.agent.vision_agent_coder_v2 import strip_function_calls
 
 
 def test_strip_non_function_real_case():
