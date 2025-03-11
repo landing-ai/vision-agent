@@ -1,23 +1,14 @@
 import difflib
-import json
 import os
 import re
-import subprocess
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
-import libcst as cst
 from IPython.display import display
 
-import vision_agent as va
-from vision_agent.models import Message
 from vision_agent.tools.tools import get_tools_descriptions as _get_tool_descriptions
 from vision_agent.utils.execute import Execution, MimeType
 from vision_agent.utils.tools_doc import get_tool_documentation
-from vision_agent.models import (
-    AgentMessage,
-)
 
 CURRENT_FILE = None
 CURRENT_LINE = 0
