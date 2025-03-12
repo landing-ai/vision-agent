@@ -58,7 +58,7 @@ def send_inference_request(
     vision_agent_api_key = get_vision_agent_api_key()
     headers = {
         "Authorization": f"Basic {vision_agent_api_key}",
-        "X-Source": "vision-agent",
+        "X-Source": "vision_agent",
     }
     if "TOOL_ENDPOINT_AUTH" in os.environ:
         headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
@@ -95,7 +95,7 @@ def send_task_inference_request(
     vision_agent_api_key = get_vision_agent_api_key()
     headers = {
         "Authorization": f"Basic {vision_agent_api_key}",
-        "X-Source": "vision-agent",
+        "X-Source": "vision_agent",
     }
     session = _create_requests_session(
         url=url,
