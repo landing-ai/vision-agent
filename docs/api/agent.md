@@ -1,7 +1,5 @@
 ::: vision_agent.agent.agent.Agent
 
-::: vision_agent.agent.vision_agent.VisionAgent
+::: vision_agent.agent.vision_agent_v2.VisionAgentV2
 
-::: vision_agent.agent.vision_agent_coder.VisionAgentCoder
-
-::: vision_agent.agent.vision_agent_coder.AzureVisionAgentCoder
+::: vision_agent.agent.vision_agent_coder_v2.VisionAgentCoderV2

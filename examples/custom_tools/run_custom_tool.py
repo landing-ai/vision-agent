@@ -38,7 +38,7 @@ def template_match(target_image: np.ndarray, template_image: np.ndarray) -> dict
 
 
 if __name__ == "__main__":
-    agent = va.agent.VisionAgentCoder(verbosity=2)
+    agent = va.agent.VisionAgentCoderV2(verbosity=2)
     result = agent.chat_with_workflow(
         [
             {
