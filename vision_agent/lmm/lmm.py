@@ -98,7 +98,7 @@ class OpenAILMM(LMM):
         for c in chat:
             fixed_c = {"role": c["role"]}
             fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
-            if "media" in c:
+            if "media" in c and self.model_name != "o3-mini":
                 for media in c["media"]:
                     resize = kwargs["resize"] if "resize" in kwargs else self.image_size
                     image_detail = (
@@ -154,7 +154,7 @@ class OpenAILMM(LMM):
                 ],
             }
         ]
-        if media and len(media) > 0:
+        if media and len(media) > 0 and self.model_name != "o3-mini":
             for m in media:
                 resize = kwargs["resize"] if "resize" in kwargs else None
                 image_detail = (

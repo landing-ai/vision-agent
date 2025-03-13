@@ -9,21 +9,21 @@ PLAN = """
 **Example Planning**: Here are some examples of how you can search for a plan, in the examples the user output is denoted by USER, your output is denoted by AGENT and the observations after your code execution are denoted by OBSERVATION:
 {examples}
 
-**Current Planning**: This is the plan you are currently working on
+**Current Planning**: Below are your previous thoughts, code and observations from the planning process:
 --- START CURRENT PLANNING ---
 {planning}
 --- END CURRENT PLANNING ---
 
 **Instructions**:
-1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You can <count> number of turns to complete the user's request.
+1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You have <count> number of turns to complete the user's request.
 2. You can execute python code in the ipython notebook using <execute_python> tags. Only output one <execute_python> tag at a time.
-3. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
+3. Output <finalize_plan> when you have written your final code, you do not need to wait until all turns are used to do this. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION.
 4. Only load/save files from {media_list} unless you specifically saved the file previously.
-5. Ensure you always call `suggestion` and `claude35_vqa` initially and `get_tool_for_task` to get the right tool for the subtask.
+5. Ensure you always call `suggestion` and `vqa` initially and `get_tool_for_task` to get the right tool for the subtask.
 6. Calling `plt.imshow` or `save_image` will display the image to you so you can check your results. If you see an image after <execute_python> it's generated from your code.
 7. Be sure to print results returned for tools so you can see the output.
 8. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
-9. DO NOT over index on claude35_vqa, if tool output is close to claude35_vqa's output you do not need to improve the tool output, tools are often better at things like counting and detecting small objects.
+9. DO NOT over index on the vqa model. If tool output is close to vqa's output do not improve the tool output. If you have >10 detected objects, or the objects are very small, trust the tool output over the vqa model.
 10. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
 
 <thinking>Your thought process...</thinking>
@@ -39,13 +39,13 @@ USER: Count the number of pedestrians in the image.
 AGENT: <thinking>I need to gather more information, I will ask for a description of the image and a solution to the problem to work towards as well as a suggestion on how best to solve it.</thinking>
 <execute_python>
 image = load_image('drone.jpg')
-claude35_vqa('Can you describe this image? How many pedestrians do you count in the image?', [image])
+vqa('Can you describe this image? How many pedestrians do you count in the image?', [image])
 suggestion('How can I count the number of pedestrians in the image?', [image])
 </execute_python>
 
-OBSERVATION: [claude35_vqa output]
+OBSERVATION: [vqa output]
 From this aerial view of a busy urban street, it's difficult to clearly see or count individual pedestrians. The image shows a bird's eye view of a city intersection with multiple lanes of traffic, parked cars, sidewalks, and some green spaces. While there may be people in cars or on the sidewalks, they are not distinctly visible from this height and perspective. The focus of the image is more on the urban infrastructure, traffic patterns, and overall city layout rather than on individuals.
-[end of claude35_vqa output]
+[end of vqa output]
 
 [suggestions]
 [suggestion 0]
@@ -161,7 +161,7 @@ detections = merge_bounding_box_list(detection_from_subdivided_images)
 [end of suggestion]
 <count>9</count>
 
-AGENT: <thinking>Following the suggested plan, I will subdivide the image into smaller parts and find the right tool on the smaller parts. I will also re-check with claude35_vqa on the subdivided images.</thinking>
+AGENT: <thinking>Following the suggested plan, I will subdivide the image into smaller parts and find the right tool on the smaller parts. I will also re-check with vqa on the subdivided images.</thinking>
 <execute_python>
 def subdivide_image(image):
     height, width, _ = image.shape
@@ -176,14 +176,14 @@ def subdivide_image(image):
     return [top_left, top_right, bottom_left, bottom_right]
 
 images = subdivide_image(image)
-claude35_vqa('How many pedestrians do you see in these images?', images)
+vqa('How many pedestrians do you see in these images?', images)
 get_tool_for_task('Count the number of pedestrians in the images', images)
 </execute_python>
 
 OBSERVATION:
-[claude35_vqa_output]
+[vqa_output]
 In these aerial images, I can see approximately 5-6 pedestrians walking in various locations, including near the retail signage are and along the sidewalks.
-[end of claude35_vqa_output]
+[end of vqa_output]
 
 [get_tool_for_task output]
 After examining the image, I can see it's an aerial view of a busy urban intersection with multiple lanes of traffic. There are numerous cars visible, each likely containing at least one person (the driver). While it's difficult to count exact individuals, I can estimate based on the number of vehicles. The countgd_object_detection tool is the best choice for this task as it can detect and count multiple instances of an object given a text prompt. I will use this tool with the prompt 'pedistrian' to count the number of pedestrians in the image.
@@ -269,7 +269,7 @@ print(len(detections))
 OBSERVATION: 24
 <count>7</count>
 
-AGENT: <thinking>countgd_object_detection detected 24 pedestrians in the image by subdividing the image into smaller regions, this differs from claude35_vqa's answer of 5-6 pedestrians. I will use countgd_object_detection's answer since it is specifically designed to count objects.</thinking>
+AGENT: <thinking>countgd_object_detection detected 24 pedestrians in the image by subdividing the image into smaller regions, this differs from vqa model's answer of 5-6 pedestrians. I will use countgd_object_detection's answer since it is specifically designed to count objects.</thinking>
 <finalize_plan>This plan successfully detected 24 pedestrians in the image by subdividing the image into smaller regions and using the countgd_object_detection tool on each region. The bounding boxes were then merged to count the unique pedestrians.</finalize_plan>
 --- END EXAMPLE1 ---
 """
@@ -283,13 +283,13 @@ AGENT: <thinking>I need to gather more information, I will ask for a description
 <execute_python>
 frames = extract_frames_and_timestamps('video.mp4', 1)
 frames  = [f["frame"] for f in frames]
-claude35_vqa('Can you describe this video? How many boxes are there and do they have tape on them?', frames[:5])
+vqa('Can you describe this video? How many boxes are there and do they have tape on them?', frames[:5])
 suggestion('How can I identify boxes with tape on them in the video?', frames[:5])
 </execute_python>
 
-OBSERVATION: [claude35_vqa output]
+OBSERVATION: [vqa output]
 In this video, there appear to be 2 cardboard boxes moving along a roller conveyor system. The boxes are brown/kraft colored and appear to have tape sealing them. You can see clear packing tape on the top and sides of the boxes.
-[end of claude35_vqa output]
+[end of vqa output]
 
 [suggestions]
 [suggestion 0]
@@ -400,20 +400,18 @@ get_tool_for_task('Identify if there is tape on the boxes', crops[:3])
 
 OBSERVATION:
 [get_tool_for_task output]
-owlv2_object_detection performed best with the prompt 'tape', as it specifically detected multiple instances of tape with localized bounding boxes, which matches what's visible in the images.
+glee_object_detection performed best with the prompt 'tape', as it specifically detected multiple instances of tape with localized bounding boxes, which matches what's visible in the images.
 
-'owlv2_object_detection' is a tool that can detect and count multiple objects given a
-text prompt such as category names or referring expressions on images. The categories
-in text prompt are separated by commas. It returns a list of bounding boxes with
-normalized coordinates, label names and associated probability scores.
+'glee_object_detection' is a tool that can detect multiple objects given a
+text prompt such as object names or referring expressions on images. It's
+particularly good at detecting specific objects given detailed descriptive prompts.
+It returns a list of bounding boxes with normalized coordinates, label names and
+associated probability scores.
 
 Parameters:
-    prompt (str): The prompt to ground to the image.
+    prompt (str): The prompt to ground to the image, only supports a single prompt
+        with no commas or periods.
     image (np.ndarray): The image to ground the prompt to.
-    box_threshold (float, optional): The threshold for the box detection. Defaults
-        to 0.10.
-    fine_tune_id (Optional[str]): If you have a fine-tuned model, you can pass the
-        fine-tuned model ID here to use it.
 
 Returns:
     List[Dict[str, Any]]: A list of dictionaries containing the score, label, and
@@ -424,10 +422,10 @@ Returns:
 
 Example
 -------
-    >>> owlv2_object_detection("car, dinosaur", image)
+    >>> glee_object_detection("person holding a box", image)
     [
-        {'score': 0.99, 'label': 'dinosaur', 'bbox': [0.1, 0.11, 0.35, 0.4]},
-        {'score': 0.98, 'label': 'car', 'bbox': [0.2, 0.21, 0.45, 0.5},
+        {'score': 0.99, 'label': 'person holding a box', 'bbox': [0.1, 0.11, 0.35, 0.4]},
+        {'score': 0.98, 'label': 'person holding a box', 'bbox': [0.2, 0.21, 0.45, 0.5},
     ]
 [end of get_tool_for_task output]
 <count>7</count>
@@ -445,7 +443,7 @@ for frame, frame_predictions in zip(frames, track_predictions):
             int(obj["bbox"][0] * width) : int(obj["bbox"][2] * width),
             :,
         ]
-        detections = owlv2_object_detection("tape", crop)
+        detections = glee_object_detection("tape", crop)
         obj_to_info[obj["label"]].extend(detections)
 
 
@@ -512,7 +510,7 @@ PICK_PLAN = """
 CATEGORIZE_TOOL_REQUEST = """
 You are given a task: "{task}" from the user. You must extract the type of category this task belongs to, it can be one or more of the following:
 - "VQA" - answering questions about an image or video, can be used for most tasks, should generally be included.
-- "object detection and counting" - detecting objects or counting objects from a text prompt in an image.
+- "object detection" - detecting objects or counting objects from a text prompt in an image.
 - "instance segmentation" - segmenting objects in an image given a text prompt.
 - "classification" - classifying objects in an image given a text prompt.
 - "segmentation" - segmenting objects in an image or video given a text prompt.
@@ -569,27 +567,27 @@ Count the number of pedestrians across all the images.
 
 <code>
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import load_image, owlv2_object_detection, florence2_object_detection, countgd_object_detection
+from vision_agent.tools import load_image, agentic_object_detection, glee_object_detection, countgd_object_detection
 
 # process functions in a try catch so that if it fails it doesn't cause `as_completed` to hang
-def process_owlv2(image_paths):
+def process_agentic(image_paths):
     try:
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(owlv2_object_detection("person", image))
+            results.extend(agentic_object_detection("person", image))
     except Exception as e:
-        results = f"Encountered error when executing process_owlv2: {str(e)}"
+        results = f"Encountered error when executing process_agentic: {str(e)}"
     return results
 
-def process_florence2(image_paths):
+def process_glee_object_detection(image_paths):
     try:
         results = []
         for image_path in image_paths:
             image = load_image(image_path)
-            results.extend(florence2_object_detection("person", image))
+            results.extend(glee_object_detection("person", image))
     except Exception as e:
-        results = f"Encountered error when executing process_florence2: {str(e)}"
+        results = f"Encountered error when executing process_glee: {str(e)}"
     return results
 
 def process_countgd(image_paths):
@@ -606,8 +604,8 @@ image_paths = ["image1.jpg", "image2.jpg", "image3.jpg", "image4.jpg"]
 
 with ThreadPoolExecutor() as executor:
     futures = {{
-        executor.submit(process_owlv2, image_paths): "owlv2_object_detection",
-        executor.submit(process_florence2, image_paths): "florence2_phrase_grounding",
+        executor.submit(process_agentic, image_paths): "agentic_object_detection",
+        executor.submit(process_glee, image_paths): "glee_object_detection",
         executor.submit(process_countgd, image_paths): "countgd_object_detection",
     }}
 
@@ -632,7 +630,7 @@ Count the number of people in the video.
 <code>
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from vision_agent.tools import extract_frames_and_timestamps, owlv2_sam2_video_tracking, florence2_sam2_video_tracking
+from vision_agent.tools import extract_frames_and_timestamps, countgd_sam2_video_tracking, glee_sam2_video_tracking
 
 # sample at 1 FPS and use the first 10 frames to reduce processing time
 frames = extract_frames_and_timestamps("video.mp4", 1)
@@ -649,18 +647,18 @@ def remove_arrays(o):
     else:
         return o
 
-def process_owlv2_sam2_video_tracking(frames):
+def process_countgd_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
-        results = owlv2_sam2_video_tracking("person", frames, chunk_length=1)
+        results = countgd_sam2_video_tracking("person", frames, chunk_length=1)
     except Exception as e:
-        results = f"Encountered error when executing process_owlv2_sam2_video_tracking: {str(e)}"
+        results = f"Encountered error when executing process_countgd_sam2_video_tracking: {str(e)}"
     return results
 
-def process_florence2_sam2_video_tracking(frames):
+def process_glee_sam2_video_tracking(frames):
     try:
         # run with chunk_length=1 to ensure best results
-        results = florence2_sam2_video_tracking("person", frames, chunk_length=1)
+        results = glee_sam2_video_tracking("person", frames, chunk_length=1)
     except Exception as e:
         results = f"Encountered error when executing process_florence2_sam2: {str(e)}"
     return results
@@ -668,8 +666,8 @@ def process_florence2_sam2_video_tracking(frames):
 
 with ThreadPoolExecutor() as executor:
     futures = {{
-        executor.submit(process_owlv2_sam2_video_tracking, frames): "owlv2_sam2_video_tracking",
-        executor.submit(process_florence2_sam2_video_tracking, frames): "florence2_sam2_video_tracking",
+        executor.submit(process_countgd_sam2_video_tracking, frames): "countgd_sam2_video_tracking",
+        executor.submit(process_glee_sam2_video_tracking, frames): "glee_sam2_video_tracking",
     }}
     final_results = {{}}
     for future in as_completed(futures):
@@ -701,7 +699,7 @@ PICK_TOOL = """
 **Instructions**:
 1. Re-read the user request, plans, tool outputs and examine the image.
 2. Given the user request, try to solve the problem yourself.
-3. Pick which tool output best matches your solution and the user request, DO NOT focus on other factors.
+3. Pick which tool output best matches your solution and the user request, DO NOT focus on other factors like confidence score.
 4. DO NOT modify confidence thresholds unless the tool output is completely wrong.
 5. Remember for videos that in order to count objects a video some sort of tracking is needed, or else you will overcount the objects.
 7. Return the following JSON format inside <json> tags using the exact tool name for best_tool:
@@ -717,7 +715,7 @@ PICK_TOOL = """
 FINALIZE_PLAN = """
 **Task**: You are given a chain of thoughts, python executions and observations from a planning agent as it tries to construct a plan to solve a user request. Your task is to summarize the plan it found so that another programming agent to write a program to accomplish the user request.
 
-**Documentation**: You can use these tools to help you visualize or save the output (they are imported `from vision_agent.tools import *`):
+**Documentation**: You can use these tools to help complete the code (they are imported `from vision_agent.tools import *`):
 {tool_desc}
 
 **Planning**: Here is chain of thoughts, executions and observations from the planning agent:
@@ -726,13 +724,14 @@ FINALIZE_PLAN = """
 **Instructions**:
 1. Summarize the plan that the planning agent found.
 2. Write a single function that solves the problem based on what the planner found and only returns the final solution.
-3. Only use tools obtained from calling `get_tool_for_task`.
-4. Do not include {excluded_tools} tools in your instructions.
-5. Ensure the function is well documented and easy to understand.
-6. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks`, if bounding boxes or segmentaiton masks are produced, and save it to a file with `save_image` or `save_video`.
-7. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
-8. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
-9. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
+3. Ensure the function takes in a single argument for the image or video path, all other arguments must be keyword arguments with default values.
+4. Only use tools obtained from calling `get_tool_for_task` and the ones provided in the documentation.
+5. Do not include {excluded_tools} tools in your instructions.
+6. Ensure the function is well documented and easy to understand, DO NOT escape quotes in the function documentation.
+7. Ensure you visualize the output with `overlay_bounding_boxes` or `overlay_segmentation_masks`, if bounding boxes or segmentaiton masks are produced, and save it to a file with `save_image` or `save_video`.
+8. Use the default FPS for extracting frames from videos unless otherwise specified by the user.
+9. Include the expected answer in your 'plan' so that the programming agent can properly test if it has the correct answer.
+10. Respond in the following format with JSON surrounded by <json> tags and code surrounded by <code> tags:
 
 <json>
 {{
@@ -744,7 +743,7 @@ FINALIZE_PLAN = """
 </json>
 
 <code>
-# Code snippets here
+# Your function code here
 </code>
 """
 

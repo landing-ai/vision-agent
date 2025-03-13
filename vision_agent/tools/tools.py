@@ -1488,8 +1488,8 @@ def agentic_object_detection(
     """'agentic_object_detection' is a tool that can detect multiple objects given a
     text prompt such as object names or referring expressions on images. It's
     particularly good at detecting specific objects given detailed descriptive prompts
-    but runs slower. It returns a list of bounding boxes with normalized coordinates,
-    label names and associated probability scores.
+    but runs slower so not ideal for high counts. It returns a list of bounding boxes
+    with normalized coordinates, label names and associated confidence score of 1.0.
 
     Parameters:
         prompt (str): The prompt to ground to the image, only supports a single prompt
@@ -1533,8 +1533,9 @@ def agentic_sam2_instance_segmentation(
     """'agentic_sam2_instance_segmentation' is a tool that can detect multiple
     instances given a text prompt such as object names or referring expressions on
     images. It's particularly good at detecting specific objects given detailed
-    descriptive prompts but runs slower. It returns a list of bounding boxes with
-    normalized coordinates, label names, masks and associated probability scores.
+    descriptive prompts but runs slower so not ideal for high counts. It returns a list
+    of bounding boxes with normalized coordinates, label names, masks and associated
+    confidence score of 1.0.
 
     Parameters:
         prompt (str): The object that needs to be counted, only supports a single
@@ -1591,9 +1592,9 @@ def agentic_sam2_video_tracking(
     """'agentic_sam2_video_tracking' is a tool that can track and segment multiple
     objects in a video given a text prompt such as object names or referring
     expressions. It's particularly good at detecting specific objects given detailed
-    descriptive prompts but runs slower, and returns a list of bounding boxes, label
-    names, masks and associated probability scores and is useful for tracking and
-    counting without duplicating counts.
+    descriptive prompts but runs slower so not ideal for high counts. It returns a list
+    of bounding boxes, label names, masks and associated confidence score of 1.0 and is
+    useful for tracking and counting without duplicating counts.
 
     Parameters:
         prompt (str): The prompt to ground to the image, only supports a single prompt
@@ -2307,22 +2308,10 @@ def _qwenvl_activity_recognition(
     return [0.0] * len(segment)
 
 
-def _qwen2vl_activity_recognition(
-    segment: List[np.ndarray], prompt: str
-) -> List[float]:
-    return _qwenvl_activity_recognition(segment, prompt, model_name="qwen2vl")
-
-
-def _qwen25vl_activity_recognition(
-    segment: List[np.ndarray], prompt: str
-) -> List[float]:
-    return _qwenvl_activity_recognition(segment, prompt, model_name="qwen25vl")
-
-
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
-    model: str = "qwen2vl",
+    model: str = "qwen25vl",
     chunk_length_frames: int = 10,
 ) -> List[float]:
     """'activity_recognition' is a tool that can recognize activities in a video given a
@@ -2371,12 +2360,12 @@ def activity_recognition(
     elif model == "qwen2vl":
 
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _qwen2vl_activity_recognition(segment, prompt)
+            return _qwenvl_activity_recognition(segment, prompt, model_name="qwen2vl")
 
     elif model == "qwen25vl":
 
         def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _qwen25vl_activity_recognition(segment, prompt)
+            return _qwenvl_activity_recognition(segment, prompt, model_name="qwen25vl")
 
     else:
         raise ValueError(f"Invalid model: {model}")
@@ -3488,9 +3477,9 @@ def _plot_counting(
 
 
 FUNCTION_TOOLS = [
-    owlv2_object_detection,
-    owlv2_sam2_instance_segmentation,
-    owlv2_sam2_video_tracking,
+    glee_object_detection,
+    glee_sam2_instance_segmentation,
+    glee_sam2_video_tracking,
     countgd_object_detection,
     countgd_sam2_instance_segmentation,
     countgd_sam2_video_tracking,
@@ -3502,8 +3491,8 @@ FUNCTION_TOOLS = [
     document_extraction,
     document_qa,
     ocr,
-    qwen2_vl_images_vqa,
-    qwen2_vl_video_vqa,
+    qwen25_vl_images_vqa,
+    qwen25_vl_video_vqa,
     activity_recognition,
     depth_anything_v2,
     generate_pose_image,

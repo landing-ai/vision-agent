@@ -2,7 +2,7 @@ from typing import Type
 
 from pydantic import BaseModel, Field
 
-from vision_agent.lmm import LMM, AnthropicLMM, OpenAILMM
+from vision_agent.lmm import LMM, AnthropicLMM, OpenAILMM, GoogleLMM
 
 
 class Config(BaseModel):
@@ -10,7 +10,7 @@ class Config(BaseModel):
     agent: Type[LMM] = Field(default=AnthropicLMM)
     agent_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -20,17 +20,16 @@ class Config(BaseModel):
     planner: Type[LMM] = Field(default=AnthropicLMM)
     planner_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
     )
 
-    # for vision_agent_planner_v2
-    summarizer: Type[LMM] = Field(default=OpenAILMM)
+    summarizer: Type[LMM] = Field(default=AnthropicLMM)
     summarizer_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "o1",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 1.0,  # o1 has fixed temperature
             "image_size": 768,
         }
@@ -40,7 +39,7 @@ class Config(BaseModel):
     critic: Type[LMM] = Field(default=AnthropicLMM)
     critic_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -50,7 +49,7 @@ class Config(BaseModel):
     coder: Type[LMM] = Field(default=AnthropicLMM)
     coder_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -60,7 +59,7 @@ class Config(BaseModel):
     tester: Type[LMM] = Field(default=AnthropicLMM)
     tester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -70,7 +69,7 @@ class Config(BaseModel):
     debugger: Type[LMM] = Field(default=AnthropicLMM)
     debugger_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -80,7 +79,7 @@ class Config(BaseModel):
     tool_tester: Type[LMM] = Field(default=AnthropicLMM)
     tool_tester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -90,7 +89,7 @@ class Config(BaseModel):
     tool_chooser: Type[LMM] = Field(default=AnthropicLMM)
     tool_chooser_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 1.0,
             "image_size": 768,
         }
@@ -100,7 +99,7 @@ class Config(BaseModel):
     od_judge: Type[LMM] = Field(default=AnthropicLMM)
     od_judge_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 512,
         }
@@ -118,10 +117,10 @@ class Config(BaseModel):
     )
 
     # for vqa module
-    vqa: Type[LMM] = Field(default=AnthropicLMM)
+    vqa: Type[LMM] = Field(default=GoogleLMM)
     vqa_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "gemini-2.0-flash-exp",
             "temperature": 0.0,
             "image_size": 768,
         }

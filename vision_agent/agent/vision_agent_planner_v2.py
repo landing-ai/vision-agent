@@ -73,7 +73,7 @@ class DefaultPlanningImports:
         "import cv2",
         "from typing import *",
         "from vision_agent.tools import *",
-        "from vision_agent.tools.planner_tools import claude35_vqa, suggestion, get_tool_for_task",
+        "from vision_agent.tools.planner_tools import vqa, suggestion, get_tool_for_task",
         "from pillow_heif import register_heif_opener",
         "register_heif_opener()",
         "import matplotlib.pyplot as plt",
@@ -228,6 +228,7 @@ def execute_code_action(
 
     count = 1
     while not execution.success and count <= 3:
+        start = time.time()
         prompt = FIX_BUG.format(chat_history=get_planning(chat), code=code, error=obs)
         response = cast(str, model.chat([{"role": "user", "content": prompt}]))
         new_code = extract_tag(response, "code", extract_markdown="python")
@@ -243,7 +244,7 @@ def execute_code_action(
         if verbose:
             print_code(f"Fixing Bug Round {count}:", code)
             _CONSOLE.print(
-                f"[bold cyan]Code Execution Output:[/bold cyan] [yellow]{escape(obs)}[/yellow]"
+                f"[bold cyan]Code Execution Output ({end - start:.2f}s):[/bold cyan] [yellow]{escape(obs)}[/yellow]"
             )
         count += 1
 

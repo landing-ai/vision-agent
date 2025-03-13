@@ -10,7 +10,7 @@ class Config(BaseModel):
     agent: Type[LMM] = Field(default=OpenAILMM)
     agent_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -21,7 +21,7 @@ class Config(BaseModel):
     planner: Type[LMM] = Field(default=OpenAILMM)
     planner_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -42,7 +42,7 @@ class Config(BaseModel):
     critic: Type[LMM] = Field(default=OpenAILMM)
     critic_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -53,7 +53,7 @@ class Config(BaseModel):
     coder: Type[LMM] = Field(default=OpenAILMM)
     coder_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -64,7 +64,7 @@ class Config(BaseModel):
     tester: Type[LMM] = Field(default=OpenAILMM)
     tester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -75,7 +75,7 @@ class Config(BaseModel):
     debugger: Type[LMM] = Field(default=OpenAILMM)
     debugger_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -86,7 +86,7 @@ class Config(BaseModel):
     tool_tester: Type[LMM] = Field(default=OpenAILMM)
     tool_tester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
@@ -97,7 +97,7 @@ class Config(BaseModel):
     tool_chooser: Type[LMM] = Field(default=OpenAILMM)
     tool_chooser_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 1.0,
             "image_size": 768,
             "image_detail": "low",
@@ -108,7 +108,7 @@ class Config(BaseModel):
     suggester: Type[LMM] = Field(default=OpenAILMM)
     suggester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 1.0,
             "image_size": 768,
             "image_detail": "low",
@@ -119,7 +119,7 @@ class Config(BaseModel):
     vqa: Type[LMM] = Field(default=OpenAILMM)
     vqa_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "gpt-4o-2024-08-06",
+            "model_name": "gpt-4o-2024-11-20",
             "temperature": 0.0,
             "image_size": 768,
             "image_detail": "low",
