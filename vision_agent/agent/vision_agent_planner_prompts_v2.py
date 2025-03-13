@@ -9,21 +9,21 @@ PLAN = """
 **Example Planning**: Here are some examples of how you can search for a plan, in the examples the user output is denoted by USER, your output is denoted by AGENT and the observations after your code execution are denoted by OBSERVATION:
 {examples}
 
-**Current Planning**: This is the plan you are currently working on
+**Current Planning**: Below are your previous thoughts, code and observations from the planning process:
 --- START CURRENT PLANNING ---
 {planning}
 --- END CURRENT PLANNING ---
 
 **Instructions**:
-1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You can <count> number of turns to complete the user's request.
+1. Read over the user request and context provided and output <thinking> tags to indicate your thought process. You have <count> number of turns to complete the user's request.
 2. You can execute python code in the ipython notebook using <execute_python> tags. Only output one <execute_python> tag at a time.
-3. Only output <finalize_plan> when you are done planning and want to end the planning process. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION's.
+3. Output <finalize_plan> when you have written your final code, you do not need to wait until all turns are used to do this. DO NOT output <finalize_plan> with <execute_python> tags, only after OBSERVATION.
 4. Only load/save files from {media_list} unless you specifically saved the file previously.
-5. Ensure you always call `suggestion` and `claude35_vqa` initially and `get_tool_for_task` to get the right tool for the subtask.
+5. Ensure you always call `suggestion` and `vqa` initially and `get_tool_for_task` to get the right tool for the subtask.
 6. Calling `plt.imshow` or `save_image` will display the image to you so you can check your results. If you see an image after <execute_python> it's generated from your code.
 7. Be sure to print results returned for tools so you can see the output.
 8. DO NOT hard code the answer into your code, it should be dynamic and work for any similar request.
-9. DO NOT over index on claude35_vqa. If tool output is close to claude35_vqa's output do not improve the tool output. If you are detection >10 objects, or the objects are very small, trust the tool output over claude35_vqa.
+9. DO NOT over index on the vqa model. If tool output is close to vqa's output do not improve the tool output. If you have >10 detected objects, or the objects are very small, trust the tool output over the vqa model.
 10. You can only respond in the following format with a single <thinking>, <execute_python> or <finalize_plan> tag:
 
 <thinking>Your thought process...</thinking>
@@ -39,13 +39,13 @@ USER: Count the number of pedestrians in the image.
 AGENT: <thinking>I need to gather more information, I will ask for a description of the image and a solution to the problem to work towards as well as a suggestion on how best to solve it.</thinking>
 <execute_python>
 image = load_image('drone.jpg')
-claude35_vqa('Can you describe this image? How many pedestrians do you count in the image?', [image])
+vqa('Can you describe this image? How many pedestrians do you count in the image?', [image])
 suggestion('How can I count the number of pedestrians in the image?', [image])
 </execute_python>
 
-OBSERVATION: [claude35_vqa output]
+OBSERVATION: [vqa output]
 From this aerial view of a busy urban street, it's difficult to clearly see or count individual pedestrians. The image shows a bird's eye view of a city intersection with multiple lanes of traffic, parked cars, sidewalks, and some green spaces. While there may be people in cars or on the sidewalks, they are not distinctly visible from this height and perspective. The focus of the image is more on the urban infrastructure, traffic patterns, and overall city layout rather than on individuals.
-[end of claude35_vqa output]
+[end of vqa output]
 
 [suggestions]
 [suggestion 0]
@@ -161,7 +161,7 @@ detections = merge_bounding_box_list(detection_from_subdivided_images)
 [end of suggestion]
 <count>9</count>
 
-AGENT: <thinking>Following the suggested plan, I will subdivide the image into smaller parts and find the right tool on the smaller parts. I will also re-check with claude35_vqa on the subdivided images.</thinking>
+AGENT: <thinking>Following the suggested plan, I will subdivide the image into smaller parts and find the right tool on the smaller parts. I will also re-check with vqa on the subdivided images.</thinking>
 <execute_python>
 def subdivide_image(image):
     height, width, _ = image.shape
@@ -176,14 +176,14 @@ def subdivide_image(image):
     return [top_left, top_right, bottom_left, bottom_right]
 
 images = subdivide_image(image)
-claude35_vqa('How many pedestrians do you see in these images?', images)
+vqa('How many pedestrians do you see in these images?', images)
 get_tool_for_task('Count the number of pedestrians in the images', images)
 </execute_python>
 
 OBSERVATION:
-[claude35_vqa_output]
+[vqa_output]
 In these aerial images, I can see approximately 5-6 pedestrians walking in various locations, including near the retail signage are and along the sidewalks.
-[end of claude35_vqa_output]
+[end of vqa_output]
 
 [get_tool_for_task output]
 After examining the image, I can see it's an aerial view of a busy urban intersection with multiple lanes of traffic. There are numerous cars visible, each likely containing at least one person (the driver). While it's difficult to count exact individuals, I can estimate based on the number of vehicles. The countgd_object_detection tool is the best choice for this task as it can detect and count multiple instances of an object given a text prompt. I will use this tool with the prompt 'pedistrian' to count the number of pedestrians in the image.
@@ -269,7 +269,7 @@ print(len(detections))
 OBSERVATION: 24
 <count>7</count>
 
-AGENT: <thinking>countgd_object_detection detected 24 pedestrians in the image by subdividing the image into smaller regions, this differs from claude35_vqa's answer of 5-6 pedestrians. I will use countgd_object_detection's answer since it is specifically designed to count objects.</thinking>
+AGENT: <thinking>countgd_object_detection detected 24 pedestrians in the image by subdividing the image into smaller regions, this differs from vqa model's answer of 5-6 pedestrians. I will use countgd_object_detection's answer since it is specifically designed to count objects.</thinking>
 <finalize_plan>This plan successfully detected 24 pedestrians in the image by subdividing the image into smaller regions and using the countgd_object_detection tool on each region. The bounding boxes were then merged to count the unique pedestrians.</finalize_plan>
 --- END EXAMPLE1 ---
 """
@@ -283,13 +283,13 @@ AGENT: <thinking>I need to gather more information, I will ask for a description
 <execute_python>
 frames = extract_frames_and_timestamps('video.mp4', 1)
 frames  = [f["frame"] for f in frames]
-claude35_vqa('Can you describe this video? How many boxes are there and do they have tape on them?', frames[:5])
+vqa('Can you describe this video? How many boxes are there and do they have tape on them?', frames[:5])
 suggestion('How can I identify boxes with tape on them in the video?', frames[:5])
 </execute_python>
 
-OBSERVATION: [claude35_vqa output]
+OBSERVATION: [vqa output]
 In this video, there appear to be 2 cardboard boxes moving along a roller conveyor system. The boxes are brown/kraft colored and appear to have tape sealing them. You can see clear packing tape on the top and sides of the boxes.
-[end of claude35_vqa output]
+[end of vqa output]
 
 [suggestions]
 [suggestion 0]

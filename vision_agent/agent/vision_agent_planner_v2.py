@@ -73,7 +73,7 @@ class DefaultPlanningImports:
         "import cv2",
         "from typing import *",
         "from vision_agent.tools import *",
-        "from vision_agent.tools.planner_tools import claude35_vqa, suggestion, get_tool_for_task",
+        "from vision_agent.tools.planner_tools import vqa, suggestion, get_tool_for_task",
         "from pillow_heif import register_heif_opener",
         "register_heif_opener()",
         "import matplotlib.pyplot as plt",

@@ -495,8 +495,8 @@ def finalize_plan(user_request: str, chain_of_thoughts: str) -> str:
     return finalized_plan
 
 
-def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
-    """Asks the Claude-3.5 model a question about the given media and returns an answer.
+def vqa(prompt: str, medias: List[np.ndarray]) -> None:
+    """Asks the VQA model a question about the given media and returns an answer.
 
     Parameters:
         prompt: str: The question to ask the model.
@@ -513,7 +513,7 @@ def claude35_vqa(prompt: str, medias: List[np.ndarray]) -> None:
     ]
 
     response = cast(str, vqa.generate(prompt, media=all_media_b64))
-    print(f"[claude35_vqa output]\n{response}\n[end of claude35_vqa output]")
+    print(f"[vqa output]\n{response}\n[end of vqa output]")
 
 
 def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
@@ -537,7 +537,7 @@ def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
 
 
 PLANNER_TOOLS = [
-    claude35_vqa,
+    vqa,
     suggestion,
     get_tool_for_task,
 ]
