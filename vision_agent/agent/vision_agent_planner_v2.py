@@ -442,7 +442,7 @@ class VisionAgentPlannerV2(AgentPlanner):
             hil (bool): Whether to use human-in-the-loop mode.
             verbose (bool): Whether to print out debug information.
             code_sandbox_runtime (Optional[str]): The code sandbox runtime to use, can
-                be one of: None, "local" or "e2b". If None, it will read from the
+                be one of: None or "local". If None, it will read from the
                 environment variable CODE_SANDBOX_RUNTIME.
             update_callback (Callable[[Dict[str, Any]], None]): The callback function
                 that will send back intermediate conversation messages.
