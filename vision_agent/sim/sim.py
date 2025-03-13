@@ -58,7 +58,10 @@ def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
     }
     url = f"{_LND_API_URL_v2}/embeddings"
     vision_agent_api_key = get_vision_agent_api_key()
-    headers = {"Authorization": f"Basic {vision_agent_api_key}"}
+    headers = {
+        "Authorization": f"Basic {vision_agent_api_key}",
+        "X-Source": "vision_agent",
+    }
     session = _create_requests_session(
         url=url,
         num_retry=3,
