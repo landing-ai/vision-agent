@@ -2,7 +2,7 @@ from typing import Type
 
 from pydantic import BaseModel, Field
 
-from vision_agent.lmm import LMM, AnthropicLMM
+from vision_agent.lmm import LMM, AnthropicLMM, OpenAILMM
 
 
 class Config(BaseModel):
@@ -10,7 +10,7 @@ class Config(BaseModel):
     agent: Type[LMM] = Field(default=AnthropicLMM)
     agent_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -20,18 +20,17 @@ class Config(BaseModel):
     planner: Type[LMM] = Field(default=AnthropicLMM)
     planner_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
     )
 
-    # for vision_agent_planner_v2
     summarizer: Type[LMM] = Field(default=AnthropicLMM)
     summarizer_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
-            "temperature": 0.0,
+            "model_name": "claude-3-7-sonnet-20250219",
+            "temperature": 1.0,  # o1 has fixed temperature
             "image_size": 768,
         }
     )
@@ -40,7 +39,7 @@ class Config(BaseModel):
     critic: Type[LMM] = Field(default=AnthropicLMM)
     critic_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -50,7 +49,7 @@ class Config(BaseModel):
     coder: Type[LMM] = Field(default=AnthropicLMM)
     coder_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -60,7 +59,7 @@ class Config(BaseModel):
     tester: Type[LMM] = Field(default=AnthropicLMM)
     tester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -70,7 +69,7 @@ class Config(BaseModel):
     debugger: Type[LMM] = Field(default=AnthropicLMM)
     debugger_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -80,7 +79,7 @@ class Config(BaseModel):
     tool_tester: Type[LMM] = Field(default=AnthropicLMM)
     tool_tester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -90,19 +89,30 @@ class Config(BaseModel):
     tool_chooser: Type[LMM] = Field(default=AnthropicLMM)
     tool_chooser_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 1.0,
             "image_size": 768,
         }
     )
 
+    # for get_tool_for_task
+    od_judge: Type[LMM] = Field(default=AnthropicLMM)
+    od_judge_kwargs: dict = Field(
+        default_factory=lambda: {
+            "model_name": "claude-3-7-sonnet-20250219",
+            "temperature": 0.0,
+            "image_size": 512,
+        }
+    )
+
     # for suggestions module
-    suggester: Type[LMM] = Field(default=AnthropicLMM)
+    suggester: Type[LMM] = Field(default=OpenAILMM)
     suggester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "o1",
             "temperature": 1.0,
-            "image_size": 768,
+            "image_detail": "high",
+            "image_size": 1024,
         }
     )
 
@@ -110,7 +120,7 @@ class Config(BaseModel):
     vqa: Type[LMM] = Field(default=AnthropicLMM)
     vqa_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "claude-3-5-sonnet-20241022",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 0.0,
             "image_size": 768,
         }
@@ -142,6 +152,9 @@ class Config(BaseModel):
 
     def create_tool_chooser(self) -> LMM:
         return self.tool_chooser(**self.tool_chooser_kwargs)
+
+    def create_od_judge(self) -> LMM:
+        return self.od_judge(**self.od_judge_kwargs)
 
     def create_suggester(self) -> LMM:
         return self.suggester(**self.suggester_kwargs)

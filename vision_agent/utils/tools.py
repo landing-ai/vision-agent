@@ -56,7 +56,10 @@ def send_inference_request(
         url = os.environ["TOOL_ENDPOINT_URL"]
 
     vision_agent_api_key = get_vision_agent_api_key()
-    headers = {"Authorization": f"Basic {vision_agent_api_key}"}
+    headers = {
+        "Authorization": f"Basic {vision_agent_api_key}",
+        "X-Source": "vision_agent",
+    }
     if "TOOL_ENDPOINT_AUTH" in os.environ:
         headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
         headers.pop("apikey")
@@ -90,7 +93,10 @@ def send_task_inference_request(
 ) -> Any:
     url = f"{_LND_API_URL_v2}/{task_name}"
     vision_agent_api_key = get_vision_agent_api_key()
-    headers = {"Authorization": f"Basic {vision_agent_api_key}"}
+    headers = {
+        "Authorization": f"Basic {vision_agent_api_key}",
+        "X-Source": "vision_agent",
+    }
     session = _create_requests_session(
         url=url,
         num_retry=3,
