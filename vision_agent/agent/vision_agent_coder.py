@@ -349,7 +349,7 @@ class VisionAgentCoder(Agent):
                 running in parallel. This callback ensures that the progress are not
                 mixed up.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
-                it can be one of: None, "local" or "e2b". If None, it will read from
+                it can be one of: None or "local". If None, it will read from
                 the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
                 object is provided it will use that.
         """

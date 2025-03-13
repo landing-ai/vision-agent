@@ -293,7 +293,7 @@ class VisionAgent(Agent):
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_sandbox_runtime (Optional[str]): For string values it can be one of:
-                None, "local" or "e2b". If None, it will read from the environment
+                None or "local". If None, it will read from the environment
                 variable "CODE_SANDBOX_RUNTIME".
         """
 
@@ -560,7 +560,7 @@ class OpenAIVisionAgent(VisionAgent):
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
-                it can be one of: None, "local" or "e2b". If None, it will read from
+                it can be one of: None or "local". If None, it will read from
                 the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
                 object is provided it will use that.
         """
@@ -591,7 +591,7 @@ class AnthropicVisionAgent(VisionAgent):
             callback_message (Optional[Callable[[Dict[str, Any]], None]]): Callback
                 function to send intermediate update messages.
             code_interpreter (Optional[Union[str, CodeInterpreter]]): For string values
-                it can be one of: None, "local" or "e2b". If None, it will read from
+                it can be one of: None or "local". If None, it will read from
                 the environment variable "CODE_SANDBOX_RUNTIME". If a CodeInterpreter
                 object is provided it will use that.
         """
