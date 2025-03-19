@@ -80,4 +80,3 @@ nav:
       - vision_agent.sim: api/sim.md
       - vision_agent.configs: api/configs.md
       - vision_agent.models: api/models.md
-  - VisionAgent (Old): index_old.md
