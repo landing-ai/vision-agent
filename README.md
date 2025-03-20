@@ -12,102 +12,178 @@
 </div>
 
 ## VisionAgent
-VisionAgent is a library that helps you utilize agent frameworks to generate code to
-solve your vision task. Check out our discord for updates and roadmaps! The fastest
-way to test out VisionAgent is to use our web application which you can find [here](https://va.landing.ai/).
+VisionAgent is the Visual AI Pilot from LandingAI. Submit a prompt and image to VisionAgent, and the app selects the best models for your tasks. VisionAgent then generates code so that you can build vision-enabled apps in minutes. 
+ 
+## How to Use This VisionAgent Library
+- [Prompt VisionAgent](#quickstart-prompt-visionagent): Submit your prompt and VisionAgent generates code.
+- [Call specific tools](#use-specific-tools-from-visionagent): Incorporate specific tools from the library into your code.
+
+Instead of downloading this library, you can also use the [VisionAgent web app](https://va.landing.ai/).
+
+## Prerequisites
+- Python version 3.9, 3.10, or 3.11
+- [VisionAgent API key](https://va.landing.ai/account/api-key)
+- [Anthropic API key](#get-an-anthropic-api-key)
+- [Gemini API key](#get-a-gemini-api-key)
+
+### Why do I need Anthropic and Google API Keys?
+VisionAgent uses models from Anthropic and Google to respond to prompts and generate code. 
+
+When you run the web-based version of VisionAgent, the app uses the LandingAI API keys to access these models. 
+
+When you run VisionAgent programmatically, the app will need to use your API keys to access the Anthropic and Google models. This ensures that any projects you run with VisionAgent aren’t limited by the rate limits in place with the LandingAI accounts, and it also prevents many users from overloading the LandingAI rate limits.
+
+Anthropic and Gemini each have their own rate limits and paid tiers. Refer to their documentation and pricing to learn more.
+
+> **_NOTE:_** In VisionAgent v1.0.2 and earlier, VisionAgent was powered by Anthropic Claude-3.5 and OpenAI o1. If using one of these VisionAgent versions, you get an OpenAI API key and set it as an environment variable.
+
+
+### Get an Anthropic API Key
+1. If you don’t have one yet, create an [Anthropic Console account](https://console.anthropic.com/).
+2. In the Anthropic Console, go to the [API Keys](https://console.anthropic.com/settings/keys) page.
+3. Generate an API key.
+
+### Get a Gemini API Key
+1. If you don’t have one yet, create a [Google AI Studio account](https://aistudio.google.com/).
+2. In Google AI Studio, go to the [Get API Key](https://aistudio.google.com/app/apikey) page.
+3. Generate an API key.
+
 
 ## Installation
 ```bash
 pip install vision-agent
 ```
 
-```bash
-export ANTHROPIC_API_KEY="your-api-key"
-export GEMINI_API_KEY="your-api-key"
-```
+## Quickstart: Prompt VisionAgent
+Follow this quickstart to learn how to prompt VisionAgent. After learning the basics, customize your prompt and workflow to meet your needs.
 
-> **_NOTE:_** We found using both Anthropic Claude-3.7 and Gemini-2.0-Flash-Exp to be provide the best performance for VisionAgent. If you want to use a different LLM provider or only one, see 'Using Other LLM Providers' below.
+1. Get your Anthropic, Gemini, and VisionAgent API keys.
+2. [Set the Anthropic, Gemini, and VisionAgent API keys as environment variables](#set-api-keys-as-environment-variables).
+3. [Install VisionAgent](#installation).
+4. Create a folder called `quickstart`. 
+5. Find an image you want to analyze and save it to the `quickstart` folder.
+6. Create an empty Python file called `generate_code.py`. Save it to the `quickstart` folder.
+7. Create an empty Python file called `source.py`.  Save it to the `quickstart` folder. 
+8. Copy the [Sample Script](#sample-script-prompt-visionagent) to `source.py`.
+9. Run `source.py`. 
+10. VisionAgent saves the generated code in `generate_code.py`.  
 
-You will also need to set your VisionAgent API key to be able to authenticate when using the hosted vision tools that we provide through our APIs. Currently, the APIs are free to use so you will only need to get it from [here](https://va.landing.ai/account/api-key).
+### Set API Keys as Environment Variables
+Before running VisionAgent code, you must set the Anthropic, Gemini, and VisionAgent API keys as environment variables. Each operating system offers different ways to do this.
 
+Here is the code for setting the variables:
 ```bash
 export VISION_AGENT_API_KEY="your-api-key"
+export ANTHROPIC_API_KEY="your-api-key"
+export GEMINI_API_KEY="your-api-key" 
 ```
+### Sample Script: Prompt VisionAgent
+To use VisionAgent to generate code, use the following script as a starting point:
 
-## Documentation
-
-[VisionAgent Library Docs](https://landing-ai.github.io/vision-agent/)
-
-## Examples
-### Counting cans in an image
-You can run VisionAgent in a local Jupyter Notebook [Counting cans in an image](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks/counting_cans.ipynb)
-
-### Generating code
-You can use VisionAgent to generate code to count the number of people in an image:
 ```python
+# Import the classes you need from the VisionAgent package
 from vision_agent.agent import VisionAgentCoderV2
 from vision_agent.models import AgentMessage
 
+# Enable verbose output 
 agent = VisionAgentCoderV2(verbose=True)
+
+# Add your prompt (content) and image file (media)
 code_context = agent.generate_code(
     [
         AgentMessage(
             role="user",
-            content="Count the number of people in this image",
-            media=["people.png"]
+            content="Describe the image",
+            media=["friends.jpg"]
         )
     ]
 )
 
-with open("generated_code.py", "w") as f:
+# Write the output to a file
+with open("generate_code.py", "w") as f:
     f.write(code_context.code + "\n" + code_context.test)
 ```
+### What to Expect When You Prompt VisionAgent
+When you submit a prompt, VisionAgent performs the following tasks.
 
-### Using the tools directly
-VisionAgent produces code that utilizes our tools. You can also use the tools directly.
-For example if you wanted to detect people in an image and visualize the results:
+1. Generates a plan for the code generation task. If verbose output is on, the numbered steps for this plan display.
+2. Generates code and a test case based on the plan. 
+3. Tests the generated code with the test case. If the test case fails, VisionAgent iterates on the code generation process until the test case passes.
+
+## Example: Count Cans in an Image
+Check out how to use VisionAgent in this Jupyter Notebook to learn how to count the number of cans in an image:
+
+[Count Cans in an Image](https://github.com/landing-ai/vision-agent/blob/main/examples/notebooks/counting_cans.ipynb)
+
+## Use Specific Tools from VisionAgent
+The VisionAgent library includes a set of [tools](vision_agent/tools), which are standalone models or functions that complete specific tasks. When you prompt VisionAgent, VisionAgent selects one or more of these tools to complete the tasks outlined in your prompt.
+
+For example, if you prompt VisionAgent to “count the number of dogs in an image”, VisionAgent might use the `florence2_object_detection` tool to detect all the dogs, and then the `countgd_object_detection` tool to count the number of detected dogs.
+
+After installing the VisionAgent library, you can also use the tools in your own scripts. For example, if you’re writing a script to track objects in videos, you can call the `owlv2_sam2_video_tracking` function. In other words, you can use the VisionAgent tools outside of simply prompting VisionAgent. 
+
+The tools are in the [vision_agent.tools](vision_agent/tools) API.
+
+### Sample Script: Use Specific Tools for Images
+You can call the `countgd_object_detection` function to count the number of objects in an image. 
+
+To do this, you could run this script:
 ```python
+# Import the VisionAgent Tools library; import Matplotlib to visualize the results
 import vision_agent.tools as T
 import matplotlib.pyplot as plt
 
+# Load the image
 image = T.load_image("people.png")
+
+# Call the function to count objects in an image, and specify that you want to count people
 dets = T.countgd_object_detection("person", image)
-# visualize the countgd bounding boxes on the image
+
+# Visualize the countgd bounding boxes on the image
 viz = T.overlay_bounding_boxes(image, dets)
 
-# save the visualization to a file
+# Save the visualization to a file
 T.save_image(viz, "people_detected.png")
 
-# display the visualization
+# Display the visualization
 plt.imshow(viz)
 plt.show()
-```
 
-You can also use the tools for running on video files:
+```
+### Sample Script: Use Specific Tools for Videos
+You can call the `countgd_sam2_video_tracking` function to track people in a video and pair it with the `extract_frames_and_timestamps` function to return the frames and timestamps in which those people appear.
+
+To do this, you could run this script:
 ```python
+# Import the VisionAgent Tools library
 import vision_agent.tools as T
 
+# Call the function to get the frames and timestamps
 frames_and_ts = T.extract_frames_and_timestamps("people.mp4")
-# extract the frames from the frames_and_ts list
+
+# Extract the frames from the frames_and_ts list
 frames = [f["frame"] for f in frames_and_ts]
 
-# run the countgd tracking on the frames
+# Call the function to track objects, and specify that you want to track people
 tracks = T.countgd_sam2_video_tracking("person", frames)
-# visualize the countgd tracking results on the frames and save the video
+
+# Visualize the countgd tracking results on the frames and save the video
 viz = T.overlay_segmentation_masks(frames, tracks)
 T.save_video(viz, "people_detected.mp4")
 ```
 
-## Using Other LLM Providers
-You can use other LLM providers by changing `config.py` in the `vision_agent/configs`
-directory. For example to change to Anthropic simply just run:
+
+## Use Other LLM Providers
+VisionAgent uses [Anthropic Claude 3.7 Sonnet](https://www.anthropic.com/claude/sonnet) and [Gemini Flash 2.0 Experimental](https://ai.google.dev/gemini-api/docs/models/experimental-models) (`gemini-2.0-flash-exp`) to respond to prompts and generate code. We’ve found that these provide the best performance for VisionAgent and are available on the free tiers (with rate limits) from their providers.
+
+If you prefer to use only one of these models or a different set of models, you can change the selected LLM provider in this file: `vision_agent/configs/config.py`. You must also add the provider’s API Key as an [environment variable](#set-api-keys-as-environment-variables).
+
+For example, if you want to use **only** the Anthropic model, run this command:
 ```bash
 cp vision_agent/configs/anthropic_config.py vision_agent/configs/config.py
 ```
 
-You can also modify the existing `config.py` file yourself to use a different LLM
-provider, for example if you wanted to change the planner from Anthropic inside
-`config.py` to OpenAI you would replace this code:
+Or, you can manually enter the model details in the `config.py` file. For example, if you want to change the planner model from Anthropic to OpenAI, you would replace this code:
 ```python
     planner: Type[LMM] = Field(default=AnthropicLMM)
     planner_kwargs: dict = Field(
@@ -133,4 +209,8 @@ with this code:
     )
 ```
 
-> **_NOTE:_** VisionAgent moves fast and we are constantly updating and changing the library. If you have any questions or need help, please reach out to us on our discord channel.
+## Resources
+- [Discord](https://discord.com/invite/RVcW3j9RgR): Check out our community of VisionAgent users to share use cases and learn about updates.
+- [VisionAgent Library Docs](https://landing-ai.github.io/vision-agent/): Learn how to use this library.
+- [VisionAgent Web App Docs](https://support.landing.ai/docs/agentic-ai): Learn how to use the web-based version of VisionAgent. 
+- [Video Tutorials](https://www.youtube.com/playlist?list=PLrKGAzovU85fvo22OnVtPl90mxBygIf79): Watch the latest video tutorials to see how VisionAgent is used in a variety of use cases.
