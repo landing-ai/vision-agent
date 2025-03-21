@@ -62,11 +62,9 @@ Follow this quickstart to learn how to prompt VisionAgent. After learning the ba
 3. [Install VisionAgent](#installation).
 4. Create a folder called `quickstart`. 
 5. Find an image you want to analyze and save it to the `quickstart` folder.
-6. Create an empty Python file called `generate_code.py`. Save it to the `quickstart` folder.
-7. Create an empty Python file called `source.py`.  Save it to the `quickstart` folder. 
-8. Copy the [Sample Script](#sample-script-prompt-visionagent) to `source.py`.
-9. Run `source.py`. 
-10. VisionAgent saves the generated code in `generate_code.py`.  
+6. Copy the [Sample Script](#sample-script-prompt-visionagent) to a file called `source.py`. Save the file to the `quickstart` folder.  
+7. Run `source.py`. 
+8. VisionAgent creates a file called `generated_code.py` and saves the generated code there.  
 
 ### Set API Keys as Environment Variables
 Before running VisionAgent code, you must set the Anthropic, Gemini, and VisionAgent API keys as environment variables. Each operating system offers different ways to do this.
@@ -100,7 +98,7 @@ code_context = agent.generate_code(
 )
 
 # Write the output to a file
-with open("generate_code.py", "w") as f:
+with open("generated_code.py", "w") as f:
     f.write(code_context.code + "\n" + code_context.test)
 ```
 ### What to Expect When You Prompt VisionAgent
