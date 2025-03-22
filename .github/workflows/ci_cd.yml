@@ -27,9 +27,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install Python Poetry
-      uses: abatilo/actions-poetry@v2.1.0
+      uses: abatilo/actions-poetry@v4
       with:
-        poetry-version: 1.4.2
+        poetry-version: 2.1.1
     - name: Configure poetry
       shell: bash
       run: poetry config virtualenvs.in-project true
@@ -67,9 +67,9 @@ jobs:
       with:
         python-version: 3.11
     - name: Install Python Poetry
-      uses: abatilo/actions-poetry@v2.1.0
+      uses: abatilo/actions-poetry@v4
       with:
-        poetry-version: 1.4.2
+        poetry-version: 2.1.1
     - name: Configure poetry
       shell: bash
       run: poetry config virtualenvs.in-project true
@@ -97,9 +97,9 @@ jobs:
         with:
           python-version: 3.10.11
       - name: Install Python Poetry
-        uses: abatilo/actions-poetry@v2.1.0
+        uses: abatilo/actions-poetry@v4
         with:
-          poetry-version: 1.4.2
+          poetry-version: 2.1.1
       - name: Configure poetry
         shell: bash
         run: poetry config virtualenvs.in-project true
