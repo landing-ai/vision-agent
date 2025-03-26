@@ -18,13 +18,13 @@ VisionAgent is the Visual AI Pilot from LandingAI. Submit a prompt and image to 
 - [Prompt VisionAgent](#quickstart-prompt-visionagent): Submit your prompt and VisionAgent generates code.
 - [Call specific tools](#use-specific-tools-from-visionagent): Incorporate specific tools from the library into your code.
 
-If you are a seasoned developer who wants to build locally using this library and enjoys having more control then we recommend setting this up otherwise, you can use the [VisionAgent web app](https://va.landing.ai/).
+If you are a seasoned developer who wants to build locally using this library and enjoys having more control then we recommend setting this up. Otherwise, you can use the [VisionAgent web app](https://va.landing.ai/).
 
-## Steps to setup the VisionAgent library
-The most important step is to [signup] (https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key)
+## Get Your VisionAgent API Key
+The most important step is to [signup] (https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
 
 ### Other Prerequisites
-- Python version 3.9, 3.10, or 3.11 works well
+- Python version > 3.9
 - [Anthropic API key](#get-an-anthropic-api-key)
 - [Gemini API key](#get-a-gemini-api-key)
 
