@@ -21,10 +21,10 @@ VisionAgent is the Visual AI Pilot from LandingAI. Submit a prompt and image to 
 If you are a seasoned developer who wants to build locally using this library and enjoys having more control then we recommend setting this up. Otherwise, you can use the [VisionAgent web app](https://va.landing.ai/).
 
 ## Get Your VisionAgent API Key
-The most important step is to [signup] (https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
+The most important step is to [signup](https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
 
 ### Other Prerequisites
-- Python version > 3.9
+- Python version 3.9 or higher
 - [Anthropic API key](#get-an-anthropic-api-key)
 - [Gemini API key](#get-a-gemini-api-key)
 
