@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Tuple, Union, cast
+from warnings import warn
 
 import cv2
 import numpy as np
@@ -2143,6 +2144,11 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
                                 'summary': 'This table illustrates a trend of ...'},
                     ],
     """
+    warning = (
+        "This function is deprecated. For document extraction please use the agentic-doc python package on "
+        "https://pypi.org/project/agentic-doc/ "
+    )
+    warn(warning, DeprecationWarning, stacklevel=2)
 
     image_file = numpy_to_bytes(image)
 
@@ -2205,6 +2211,12 @@ def document_qa(
         >>> document_qa(image, question)
         'The answer to the question ...'
     """
+
+    warning = (
+        "This function is deprecated. For document extraction please use the agentic-doc python package on "
+        "https://pypi.org/project/agentic-doc/ "
+    )
+    warn(warning, DeprecationWarning, stacklevel=2)
 
     image_file = numpy_to_bytes(image)
 
