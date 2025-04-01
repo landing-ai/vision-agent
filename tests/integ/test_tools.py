@@ -536,7 +536,7 @@ def test_agentic_document_extraction():
 def test_document_qa():
     img = ski.data.page()
     result = document_qa(
-        question="What is the document about?",
+        prompt="What is the document about?",
         image=img,
     )
     assert len(result) > 0
