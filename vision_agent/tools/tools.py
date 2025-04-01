@@ -2146,7 +2146,7 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
     """
     warning = (
         "This function is deprecated. For document extraction please use the agentic-doc python package on "
-        "https://pypi.org/project/agentic-doc/ "
+        "https://pypi.org/project/agentic-doc/ or the agentic_document_extraction function."
     )
     warn(warning, DeprecationWarning, stacklevel=2)
 
@@ -2190,6 +2190,76 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
     return data
 
 
+def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
+    """'agentic_document_extraction' is a tool that can extract structured information out of
+    documents with different layouts. It returns the extracted data in a structured
+    hierarchical format containing text, tables, figures, charts, and other
+    information.
+
+    Parameters:
+        image (np.ndarray): The document image to analyze
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the extracted information.
+
+    Example
+    -------
+        >>> agentic_document_analysis(image)
+        {
+            "markdown": "",
+            "chunks": [
+                {
+                    "text": "",
+                    "grounding": [
+                        {
+                            "box": [0.06125, 0.019355758266818696, 0.17375, 0.03290478905359179],
+                            "page": 0
+                        }
+                    ],
+                    "chunk_type": "page_header",
+                    "chunk_id": "622e0374-c50e-4960-a013-650138b42528"
+                },
+            ...
+            ]
+        }
+    """
+
+    image_file = numpy_to_bytes(image)
+
+    files = [("image", image_file)]
+
+    payload = {
+        "model": "agentic-document-analysis",
+    }
+
+    data: Dict[str, Any] = send_inference_request(
+        payload=payload,
+        endpoint_name="agentic-document-analysis",
+        files=files,
+        v2=True,
+        metadata_payload={"function_name": "agentic-document_analysis"},
+    )
+
+    # don't display normalized bboxes
+    _display_tool_trace(
+        agentic_document_extraction.__name__,
+        payload,
+        data,
+        files,
+    )
+
+    def transform_boxes(data: Any) -> Dict[str, Any]:
+        for chunk in data["chunks"]:
+            for grounding in chunk["grounding"]:
+                box = grounding["box"]
+                grounding["box"] = [box["l"], box["t"], box["r"], box["b"]]
+        return data
+
+    data = transform_boxes(data)
+
+    return data
+
+
 def document_qa(
     prompt: str,
     image: np.ndarray,
@@ -2212,40 +2282,30 @@ def document_qa(
         'The answer to the question ...'
     """
 
-    warning = (
-        "This function is deprecated. For document extraction please use the agentic-doc python package on "
-        "https://pypi.org/project/agentic-doc/ "
-    )
-    warn(warning, DeprecationWarning, stacklevel=2)
-
     image_file = numpy_to_bytes(image)
 
     files = [("image", image_file)]
 
     payload = {
-        "model": "document-analysis",
+        "model": "agentic-document-analysis",
     }
 
     data: Dict[str, Any] = send_inference_request(
         payload=payload,
-        endpoint_name="document-analysis",
+        endpoint_name="agentic-document-analysis",
         files=files,
         v2=True,
         metadata_payload={"function_name": "document_qa"},
     )
 
-    def normalize(data: Any) -> Dict[str, Any]:
-        if isinstance(data, Dict):
-            if "bbox" in data:
-                data["bbox"] = normalize_bbox(data["bbox"], image.shape[:2])
-            for key in data:
-                data[key] = normalize(data[key])
-        elif isinstance(data, List):
-            for i in range(len(data)):
-                data[i] = normalize(data[i])
-        return data  # type: ignore
+    def transform_boxes(data: Any) -> Dict[str, Any]:
+        for chunk in data["chunks"]:
+            for grounding in chunk["grounding"]:
+                box = grounding["box"]
+                grounding["box"] = [box["l"], box["t"], box["r"], box["b"]]
+        return data
 
-    data = normalize(data)
+    data = transform_boxes(data)
 
     prompt = f"""
 Document Context:
@@ -3500,7 +3560,7 @@ FUNCTION_TOOLS = [
     florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
     claude35_text_extraction,
-    document_extraction,
+    agentic_document_extraction,
     document_qa,
     ocr,
     qwen25_vl_images_vqa,

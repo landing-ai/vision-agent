@@ -1,11 +1,10 @@
-import logging
-
 import numpy as np
 import skimage as ski
 from PIL import Image
 
 from vision_agent.tools import (
     activity_recognition,
+    agentic_document_extraction,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
     agentic_sam2_video_tracking,
@@ -17,6 +16,7 @@ from vision_agent.tools import (
     custom_object_detection,
     depth_anything_v2,
     detr_segmentation,
+    document_qa,
     florence2_object_detection,
     florence2_ocr,
     florence2_sam2_instance_segmentation,
@@ -503,3 +503,41 @@ def test_finetuned_object_detection_empty():
         image=img,
     )
     assert len(result) == 0  # no coin objects detected on the finetuned model
+
+
+def test_agentic_document_extraction():
+    img = ski.data.page()
+    result = agentic_document_extraction(image=img)
+    assert "markdown" in result
+    assert isinstance(result["markdown"], str)
+    assert "chunks" in result
+    assert isinstance(result["chunks"], list)
+    assert len(result["chunks"]) > 0
+    for chunk in result["chunks"]:
+        assert isinstance(chunk, dict)
+        assert "text" in chunk
+        assert isinstance(chunk["text"], str)
+        assert "grounding" in chunk
+        assert isinstance(chunk["grounding"], list)
+        assert len(chunk["grounding"]) > 0
+        for grounding in chunk["grounding"]:
+            assert isinstance(grounding, dict)
+            assert "box" in grounding
+            assert len(grounding["box"]) == 4
+            for coord in grounding["box"]:
+                assert isinstance(coord, float)
+                assert 0 <= coord <= 1
+            assert "chunk_type" in grounding
+            assert isinstance(grounding["chunk_type"], str)
+            assert "chunk_id" in grounding
+            assert isinstance(grounding["chunk_id"], str)
+
+
+def test_document_qa():
+    img = ski.data.page()
+    result = document_qa(
+        question="What is the document about?",
+        image=img,
+    )
+    assert len(result) > 0
+    assert isinstance(result, str)
