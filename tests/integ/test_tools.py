@@ -517,6 +517,10 @@ def test_agentic_document_extraction():
         assert isinstance(chunk, dict)
         assert "text" in chunk
         assert isinstance(chunk["text"], str)
+        assert "chunk_type" in chunk
+        assert isinstance(chunk["chunk_type"], str)
+        assert "chunk_id" in chunk
+        assert isinstance(chunk["chunk_id"], str)
         assert "grounding" in chunk
         assert isinstance(chunk["grounding"], list)
         assert len(chunk["grounding"]) > 0
@@ -527,10 +531,8 @@ def test_agentic_document_extraction():
             for coord in grounding["box"]:
                 assert isinstance(coord, float)
                 assert 0 <= coord <= 1
-            assert "chunk_type" in grounding
-            assert isinstance(grounding["chunk_type"], str)
-            assert "chunk_id" in grounding
-            assert isinstance(grounding["chunk_id"], str)
+            assert "page" in grounding
+            assert isinstance(grounding["page"], int)
 
 
 def test_document_qa():

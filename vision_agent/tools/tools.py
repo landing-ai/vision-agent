@@ -2237,7 +2237,7 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
         endpoint_name="agentic-document-analysis",
         files=files,
         v2=True,
-        metadata_payload={"function_name": "agentic-document_analysis"},
+        metadata_payload={"function_name": "agentic_document_analysis"},
     )
 
     # don't display normalized bboxes
