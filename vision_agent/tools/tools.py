@@ -2248,7 +2248,7 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
         files,
     )
 
-    def transform_boxes(data: Any) -> Dict[str, Any]:
+    def transform_boxes(data: Dict[str, Any]) -> Dict[str, Any]:
         for chunk in data["chunks"]:
             for grounding in chunk["grounding"]:
                 box = grounding["box"]
@@ -2298,7 +2298,7 @@ def document_qa(
         metadata_payload={"function_name": "document_qa"},
     )
 
-    def transform_boxes(data: Any) -> Dict[str, Any]:
+    def transform_boxes(data: Dict[str, Any]) -> Dict[str, Any]:
         for chunk in data["chunks"]:
             for grounding in chunk["grounding"]:
                 box = grounding["box"]
