@@ -2206,10 +2206,10 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
     -------
         >>> agentic_document_analysis(image)
         {
-            "markdown": "",
+            "markdown": "# Document title\n\n## Document subtitle\n\nThis is a sample document.",
             "chunks": [
                 {
-                    "text": "",
+                    "text": "# Document title",
                     "grounding": [
                         {
                             "box": [0.06125, 0.019355758266818696, 0.17375, 0.03290478905359179],
