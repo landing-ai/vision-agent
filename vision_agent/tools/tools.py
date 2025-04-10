@@ -3109,9 +3109,10 @@ def load_pdf(pdf_path: str) -> List[np.ndarray]:
 
         # Render page to an image
         pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
+        
 
         # Convert to PIL Image
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
 
         # Convert to numpy array
         images.append(np.array(img))
