@@ -19,6 +19,7 @@ from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
+import pymupdf  # type: ignore
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -3145,6 +3146,56 @@ def save_image(image: np.ndarray, file_path: str) -> None:
         display(pil_image)
 
     pil_image.save(file_path)
+
+
+def load_pdf(pdf_path: str) -> List[np.ndarray]:
+    """'load_pdf' is a utility function that loads a PDF from the given file path string and converts each page to an image.
+
+    Parameters:
+        pdf_path (str): The path to the PDF file.
+
+    Returns:
+        List[np.ndarray]: A list of images as NumPy arrays, one for each page of the PDF.
+
+    Example
+    -------
+        >>> load_pdf("path/to/document.pdf")
+    """
+
+    # Handle URL case
+    if pdf_path.startswith(("http", "https")):
+        _, pdf_suffix = os.path.splitext(pdf_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=pdf_suffix) as tmp_file:
+            # Download the PDF and save it to the temporary file
+            with urllib.request.urlopen(pdf_path) as response:
+                tmp_file.write(response.read())
+            pdf_path = tmp_file.name
+
+    # Open the PDF
+    doc = pymupdf.open(pdf_path)
+    images = []
+
+    # Convert each page to an image
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+
+        # Render page to an image
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
+
+        # Convert to PIL Image
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+        # Convert to numpy array
+        images.append(np.array(img))
+
+    # Close the document
+    doc.close()
+
+    # Clean up temporary file if it was a URL
+    if pdf_path.startswith(("http", "https")):
+        os.unlink(pdf_path)
+
+    return images
 
 
 def save_video(
