@@ -3106,23 +3106,23 @@ def load_pdf(pdf_path: str) -> List[np.ndarray]:
     # Convert each page to an image
     for page_num in range(len(doc)):
         page = doc.load_page(page_num)
-        
+
         # Render page to an image
         pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
-        
+
         # Convert to PIL Image
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        
+
         # Convert to numpy array
         images.append(np.array(img))
 
     # Close the document
     doc.close()
-    
+
     # Clean up temporary file if it was a URL
     if pdf_path.startswith(("http", "https")):
         os.unlink(pdf_path)
-        
+
     return images
 
 def save_video(
