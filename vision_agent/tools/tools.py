@@ -3125,6 +3125,7 @@ def load_pdf(pdf_path: str) -> List[np.ndarray]:
 
     return images
 
+
 def save_video(
     frames: List[np.ndarray], output_video_path: Optional[str] = None, fps: float = 5
 ) -> str:
