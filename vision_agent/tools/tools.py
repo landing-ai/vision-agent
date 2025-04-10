@@ -3023,7 +3023,7 @@ def save_json(data: Any, file_path: str) -> None:
 
 
 def load_image(image_path: str) -> np.ndarray:
-    """'load_image' is a utility function that loads an image from the given file path string or an URL.
+    """'load_image' is a utility function that loads an image from the given file path string or a URL.
 
     Parameters:
         image_path (str): The path or URL to the image.
@@ -3035,7 +3035,7 @@ def load_image(image_path: str) -> np.ndarray:
     -------
         >>> load_image("path/to/image.jpg")
     """
-    # NOTE: sometimes the generated code pass in a NumPy array
+    # NOTE: sometimes the generated code passes in a NumPy array
     if isinstance(image_path, np.ndarray):
         return image_path
     if image_path.startswith(("http", "https")):
@@ -3047,6 +3047,63 @@ def load_image(image_path: str) -> np.ndarray:
             image_path = tmp_file.name
     image = Image.open(image_path).convert("RGB")
     return np.array(image)
+
+
+def load_pdf(pdf_path: str) -> List[np.ndarray]:
+    """'load_pdf' is a utility function that loads a PDF from the given file path string and converts each page to an image.
+
+    Parameters:
+        pdf_path (str): The path to the PDF file.
+
+    Returns:
+        List[np.ndarray]: A list of images as NumPy arrays, one for each page of the PDF.
+
+    Example
+    -------
+        >>> load_pdf("path/to/document.pdf")
+    """
+    import pymupdf
+    import numpy as np
+    from PIL import Image
+    import tempfile
+    import urllib.request
+    import os
+    from typing import List
+
+    # Handle URL case
+    if pdf_path.startswith(("http", "https")):
+        _, pdf_suffix = os.path.splitext(pdf_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=pdf_suffix) as tmp_file:
+            # Download the PDF and save it to the temporary file
+            with urllib.request.urlopen(pdf_path) as response:
+                tmp_file.write(response.read())
+            pdf_path = tmp_file.name
+
+    # Open the PDF
+    doc = pymupdf.open(pdf_path)
+    images = []
+
+    # Convert each page to an image
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        
+        # Render page to an image
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
+        
+        # Convert to PIL Image
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        
+        # Convert to numpy array
+        images.append(np.array(img))
+
+    # Close the document
+    doc.close()
+    
+    # Clean up temporary file if it was a URL
+    if pdf_path.startswith(("http", "https")):
+        os.unlink(pdf_path)
+        
+    return images
 
 
 def save_image(image: np.ndarray, file_path: str) -> None:
