@@ -2,6 +2,10 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[project]
+name = "vision-agent"
+version = "1.0.7"
+
 [tool.poetry]
 name = "vision-agent"
 version = "1.0.7"
