@@ -8,6 +8,7 @@ from .planner_tools import judge_od_results
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
     activity_recognition,
+    agentic_document_extraction,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
     agentic_sam2_video_tracking,
