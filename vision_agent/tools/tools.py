@@ -18,6 +18,7 @@ from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
+import pymupdf
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -3062,13 +3063,6 @@ def load_pdf(pdf_path: str) -> List[np.ndarray]:
     -------
         >>> load_pdf("path/to/document.pdf")
     """
-    import pymupdf
-    import numpy as np
-    from PIL import Image
-    import tempfile
-    import urllib.request
-    import os
-    from typing import List
 
     # Handle URL case
     if pdf_path.startswith(("http", "https")):
