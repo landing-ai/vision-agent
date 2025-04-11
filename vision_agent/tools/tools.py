@@ -20,6 +20,8 @@ from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 import pymupdf  # type: ignore
+from google import genai  # type: ignore
+from google.genai import types  # type: ignore
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -2743,24 +2745,19 @@ def template_match(
     return return_data
 
 
-def flux_image_inpainting(
+def gemini_image_inpainting(
     prompt: str,
     image: np.ndarray,
-    mask: np.ndarray,
 ) -> np.ndarray:
-    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding
-    image context. It can be used to edit regions of an image according to the prompt
-    given.
+    """'gemini_image_inpainting' performs image inpainting given an image and text prompt.
+    It can be used to edit parts of an image or the entire image according to the prompt given.
 
     Parameters:
         prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield
+            in the image. More detailed and specific prompts typically yield
             better results.
         image (np.ndarray): The source image to be inpainted. The image will serve as
             the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's, where 1 indicates
-            areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
         np.ndarray: The generated image(s) as a numpy array in RGB format with values
@@ -2769,21 +2766,21 @@ def flux_image_inpainting(
     -------
     Example:
         >>> # Generate inpainting
-        >>> result = flux_image_inpainting(
+        >>> result = gemini_image_inpainting(
         ...     prompt="a modern black leather sofa with white pillows",
         ...     image=image,
-        ...     mask=mask,
         ... )
         >>> save_image(result, "inpainted_room.png")
     """
 
     min_dim = 8
 
-    if any(dim < min_dim for dim in image.shape[:2] + mask.shape[:2]):
-        raise ValueError(f"Image and mask must be at least {min_dim}x{min_dim} pixels")
+    # Check if the image is at least 8x8 pixels
+    if any(dim < min_dim for dim in image.shape[:2]):
+        raise ValueError(f"Image must be at least {min_dim}x{min_dim} pixels")
 
+    # Set the max image size to 512 by 512 (and keep the aspect ratio)
     max_size = (512, 512)
-
     if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
         scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
         new_size = (
@@ -2792,49 +2789,40 @@ def flux_image_inpainting(
         )
         new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
         image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
 
+    # Make sure the image dimensions are divisible by 8
     elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
         new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
         image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
 
-    if np.array_equal(mask, mask.astype(bool).astype(int)):
-        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
-    else:
-        raise ValueError("Mask should contain only binary values (0 or 1)")
-
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_file = numpy_to_bytes(image)
-    mask_file = numpy_to_bytes(mask)
+    image = Image.open(io.BytesIO(image_file))
 
-    files = [
-        ("image", image_file),
-        ("mask_image", mask_file),
-    ]
+    files = [("image", image_file)]
 
-    payload = {
-        "prompt": prompt,
-        "task": "inpainting",
-        "height": image.shape[0],
-        "width": image.shape[1],
-        "strength": 0.99,
-        "guidance_scale": 18,
-        "num_inference_steps": 20,
-        "seed": None,
-    }
+    client = genai.Client()
 
-    response = send_inference_request(
-        payload=payload,
-        endpoint_name="flux1",
-        files=files,
-        v2=True,
-        metadata_payload={"function_name": "flux_image_inpainting"},
+    # Generate the inpainted image
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-exp-image-generation",
+        contents=[prompt, image],
+        config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
     )
 
-    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
+    # Get the generated image
+    output_image = np.array(
+        b64_to_pil(
+            response.candidates[0].content.parts[0].inline_data.data.decode("utf-8")
+        )
+    )
+
     _display_tool_trace(
-        flux_image_inpainting.__name__,
-        payload,
+        gemini_image_inpainting.__name__,
+        {
+            "prompt": prompt,
+            "model": "gemini-2.0-flash-exp-image-generation",
+        },
         output_image,
         files,
     )
@@ -3620,7 +3608,6 @@ FUNCTION_TOOLS = [
     depth_anything_v2,
     generate_pose_image,
     vit_nsfw_classification,
-    flux_image_inpainting,
     siglip_classification,
     minimum_distance,
 ]
