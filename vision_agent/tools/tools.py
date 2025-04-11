@@ -2797,7 +2797,7 @@ def gemini_image_inpainting(
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_file = numpy_to_bytes(image)
-    image = Image.open(io.BytesIO(image_file))
+    input_image = Image.open(io.BytesIO(image_file))
 
     files = [("image", image_file)]
 
@@ -2806,15 +2806,33 @@ def gemini_image_inpainting(
     # Generate the inpainted image
     response = client.models.generate_content(
         model="gemini-2.0-flash-exp-image-generation",
-        contents=[prompt, image],
+        contents=[prompt, input_image],
         config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
     )
 
+    def extract_inline_data(response):
+        try:
+            candidate = response.candidates[0]
+            part = candidate.content.parts[0]
+            inline_data = part.inline_data
+            data = inline_data.data
+        except (IndexError, AttributeError) as e:
+            raise KeyError(f"Malformed response structure: {e}")
+
+        if not data or data == b"":
+            raise ValueError("Inline data is empty or missing in the response.")
+
+        return data
+
+    data = extract_inline_data(response)
+
     # Get the generated image
-    output_image = np.array(
-        b64_to_pil(
-            response.candidates[0].content.parts[0].inline_data.data.decode("utf-8")
-        )
+    try:
+        output_image = np.array(b64_to_pil(data.decode("utf-8")))
+    except UnicodeDecodeError:
+        output_image = np.array(Image.open(io.BytesIO(data)))
+    output_image = cv2.resize(
+        output_image, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_AREA
     )
 
     _display_tool_trace(
@@ -3607,6 +3625,7 @@ FUNCTION_TOOLS = [
     activity_recognition,
     depth_anything_v2,
     generate_pose_image,
+    gemini_image_inpainting,
     vit_nsfw_classification,
     siglip_classification,
     minimum_distance,

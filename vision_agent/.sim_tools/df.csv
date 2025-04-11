@@ -530,20 +530,16 @@ desc,doc,name
         >>> vit_nsfw_classification(image)
         {""label"": ""normal"", ""scores"": 0.68},
     ",vit_nsfw_classification
-"'flux_image_inpainting' performs image inpainting to fill the masked regions, given by mask, in the image, given image based on the text prompt and surrounding image context. It can be used to edit regions of an image according to the prompt given.","flux_image_inpainting(prompt: str, image: numpy.ndarray, mask: numpy.ndarray) -> numpy.ndarray:
-'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding
-    image context. It can be used to edit regions of an image according to the prompt
-    given.
+"'gemini_image_inpainting' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_inpainting(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
+'gemini_image_inpainting' performs image inpainting given an image and text prompt.
+    It can be used to edit parts of an image or the entire image according to the prompt given.
 
     Parameters:
         prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield
+            in the image. More detailed and specific prompts typically yield
             better results.
         image (np.ndarray): The source image to be inpainted. The image will serve as
             the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's, where 1 indicates
-            areas to be inpainted and 0 indicates areas to be preserved.
 
     Returns:
         np.ndarray: The generated image(s) as a numpy array in RGB format with values
@@ -552,13 +548,12 @@ desc,doc,name
     -------
     Example:
         >>> # Generate inpainting
-        >>> result = flux_image_inpainting(
-        ...     prompt=""a modern black leather sofa with white pillows"",
+        >>> result = gemini_image_inpainting(
+        ...     prompt="a modern black leather sofa with white pillows",
         ...     image=image,
-        ...     mask=mask,
         ... )
         >>> save_image(result, ""inpainted_room.png"")
-    ",flux_image_inpainting
+    ",gemini_image_inpainting
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list of input labels or tags. It returns the same list of the input labels along with their probability scores based on image content.,"siglip_classification(image: numpy.ndarray, labels: List[str]) -> Dict[str, Any]:
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list
     of input labels or tags. It returns the same list of the input labels along with
