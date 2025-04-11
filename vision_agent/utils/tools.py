@@ -62,9 +62,6 @@ def send_inference_request(
         "Authorization": f"Basic {vision_agent_api_key}",
         "X-Source": "vision_agent",
     }
-    if "TOOL_ENDPOINT_AUTH" in os.environ:
-        headers["Authorization"] = os.environ["TOOL_ENDPOINT_AUTH"]
-        headers.pop("apikey")
 
     if runtime_tag := os.environ.get("RUNTIME_TAG", "vision-agent"):
         headers["runtime_tag"] = runtime_tag
