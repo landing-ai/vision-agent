@@ -21,7 +21,7 @@ from vision_agent.tools import (
     florence2_ocr,
     florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
-    flux_image_inpainting,
+    gemini_image_inpainting,
     generate_pose_image,
     ocr,
     od_sam2_video_tracking,
@@ -384,15 +384,12 @@ def test_countgd_visual_object_detection_empty():
     assert result == []
 
 
-def test_flux_image_inpainting():
-    mask_image = np.zeros((32, 32), dtype=np.uint8)
-    mask_image[:4, :4] = 1
+def test_gemini_image_inpainting():
     image = np.zeros((32, 32), dtype=np.uint8)
 
-    result = flux_image_inpainting(
+    result = gemini_image_inpainting(
         prompt="horse",
         image=image,
-        mask=mask_image,
     )
 
     assert result.shape[0] == 32
@@ -419,15 +416,12 @@ def test_siglip_classification():
     assert result["scores"][0] > result["scores"][2]
 
 
-def test_flux_image_inpainting_resizing_not_multiple_8():
-    mask_image = np.zeros((37, 37), dtype=np.uint8)
-    mask_image[:4, :4] = 1
+def test_gemini_image_inpainting_resizing_not_multiple_8():
     image = np.zeros((37, 37), dtype=np.uint8)
 
-    result = flux_image_inpainting(
+    result = gemini_image_inpainting(
         prompt="horse",
         image=image,
-        mask=mask_image,
     )
 
     assert result.shape[0] == 32
@@ -436,15 +430,12 @@ def test_flux_image_inpainting_resizing_not_multiple_8():
     assert result.shape[1] != image.shape[1]
 
 
-def test_flux_image_inpainting_resizing_big_image():
-    mask_image = np.zeros((1200, 500), dtype=np.uint8)
-    mask_image[:100, :100] = 1
+def test_gemini_image_inpainting_resizing_big_image():
     image = np.zeros((1200, 500), dtype=np.uint8)
 
-    result = flux_image_inpainting(
+    result = gemini_image_inpainting(
         prompt="horse",
         image=image,
-        mask=mask_image,
     )
 
     assert result.shape[0] == 512
