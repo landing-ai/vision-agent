@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vision-agent"
-version = "1.1.1"
+version = "1.1.2"
 description = "Toolset for Vision Agent"
 authors = [{ name = "Landing AI", email = "dev@landing.ai" }]
 requires-python = ">=3.9,<4.0"
@@ -36,6 +36,7 @@ dependencies = [
     "scikit-learn>=1.5.2,<2",
     "opentelemetry-api>=1.29.0,<2",
     "dotenv>=0.9.9,<0.10",
+    "pymupdf>=1.23.0,<2",
 ]
 
 [project.urls]
