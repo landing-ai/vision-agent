@@ -2841,6 +2841,108 @@ def flux_image_inpainting(
     return output_image
 
 
+def gemini_image_inpainting(
+    prompt: str,
+    image: np.ndarray,
+) -> np.ndarray:
+    """'gemini_image_inpainting' performs image inpainting given an image and text prompt.
+    It can be used to edit parts of an image or the entire image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the image. More detailed and specific prompts typically yield
+            better results.
+        image (np.ndarray): The source image to be inpainted. The image will serve as
+            the base context for the inpainting process.
+
+    Returns:
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = gemini_image_inpainting(
+        ...     prompt="a modern black leather sofa with white pillows",
+        ...     image=image,
+        ... )
+        >>> save_image(result, "inpainted_room.png")
+    """
+
+    min_dim = 8
+
+    # Check if the image is at least 8x8 pixels
+    if any(dim < min_dim for dim in image.shape[:2]):
+        raise ValueError(f"Image must be at least {min_dim}x{min_dim} pixels")
+
+    # Set the max image size to 512 by 512 (and keep the aspect ratio)
+    max_size = (512, 512)
+    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
+        new_size = (
+            int(image.shape[1] * scaling_factor),
+            int(image.shape[0] * scaling_factor),
+        )
+        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+
+    # Make sure the image dimensions are divisible by 8
+    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
+        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
+        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image_file = numpy_to_bytes(image)
+    input_image = Image.open(io.BytesIO(image_file))
+
+    files = [("image", image_file)]
+
+    client = genai.Client()
+
+    # Generate the inpainted image
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-exp-image-generation",
+        contents=[prompt, input_image],
+        config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
+    )
+
+    def extract_inline_data(response):
+        try:
+            candidate = response.candidates[0]
+            part = candidate.content.parts[0]
+            inline_data = part.inline_data
+            data = inline_data.data
+        except (IndexError, AttributeError) as e:
+            raise KeyError(f"Malformed response structure: {e}")
+
+        if not data or data == b"":
+            raise ValueError("Inline data is empty or missing in the response.")
+
+        return data
+
+    data = extract_inline_data(response)
+
+    # Get the generated image
+    try:
+        output_image = np.array(b64_to_pil(data.decode("utf-8")))
+    except UnicodeDecodeError:
+        output_image = np.array(Image.open(io.BytesIO(data)))
+    output_image = cv2.resize(
+        output_image, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_AREA
+    )
+
+    _display_tool_trace(
+        gemini_image_inpainting.__name__,
+        {
+            "prompt": prompt,
+            "model": "gemini-2.0-flash-exp-image-generation",
+        },
+        output_image,
+        files,
+    )
+    return output_image
+
+
 def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
     """'siglip_classification' is a tool that can classify an image or a cropped detection given a list
     of input labels or tags. It returns the same list of the input labels along with
