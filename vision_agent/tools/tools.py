@@ -21,6 +21,7 @@ from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 import pymupdf  # type: ignore
 from google import genai  # type: ignore
+from google.genai import types  # type: ignore
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.utils.execute import FileSerializer, MimeType
