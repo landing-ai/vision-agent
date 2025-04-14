@@ -32,35 +32,28 @@ jobs:
       run: |
         pip install uv
         uv --version
-    - name: Create virtual environment
-      shell: bash
-      run: |
-        uv venv .venv
-        echo "VIRTUAL_ENV=$(pwd)/.venv" >> $GITHUB_ENV
-        echo "$(pwd)/.venv/bin" >> $GITHUB_PATH
     - name: Print Python environment information
       run: |
-        which python
-        python --version
-        pip --version
+        uv run which python
+        uv run python --version
+        uv run pip --version
     - name: Install dependencies
       run: |
         # Install main dependencies first so we can see their size
-        uv pip install -e . tomli
-        uv pip install $(python -c "import tomli; print(' '.join(tomli.load(open('pyproject.toml', 'rb'))['tool']['poetry']['group']['dev']['dependencies'].keys()))")
+        uv sync --all-extras
     - name: Linting
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --exclude .venv,examples,tests --count --show-source --statistics
+        uv run flake8 . --exclude .venv,examples,tests --count --show-source --statistics
     - name: Check Format
       run: |
-        black --check --diff --color vision_agent/
+        uv run black --check --diff --color vision_agent/
     - name: Type Checking
       run: |
         uv run mypy --disable-error-code=unused-ignore vision_agent
     - name: Test with pytest
       run: |
-        pytest -s -vvv tests/unit
+        uv run pytest -s -vvv tests/unit
 
   integ_test:
     name: Integration Test
@@ -77,25 +70,18 @@ jobs:
       run: |
         pip install uv
         uv --version
-    - name: Create virtual environment
-      shell: bash
-      run: |
-        uv venv .venv
-        echo "VIRTUAL_ENV=$(pwd)/.venv" >> $GITHUB_ENV
-        echo "$(pwd)/.venv/bin" >> $GITHUB_PATH
     - name: Print Python environment information
       run: |
-        which python
-        python --version
-        pip --version
+        uv run which python
+        uv run python --version
+        uv run pip --version
     - name: Install dependencies
       run: |
         # Install main dependencies first so we can see their size
-        uv pip install -e . tomli
-        uv pip install $(python -c "import tomli; print(' '.join(tomli.load(open('pyproject.toml', 'rb'))['tool']['poetry']['group']['dev']['dependencies'].keys()))")
+        uv sync --all-extras
     - name: Test with pytest
       run: |
-        pytest -v tests/integ
+        uv run pytest -v tests/integ
 
   release:
     name: Release
@@ -107,13 +93,11 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.10.11
-      - name: Install Python Poetry
-        uses: abatilo/actions-poetry@v4
-        with:
-          poetry-version: 2.1.1
-      - name: Configure poetry
+      - name: Install uv
         shell: bash
-        run: poetry config virtualenvs.in-project true
+        run: |
+          pip install uv
+          uv --version
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -124,12 +108,13 @@ jobs:
           git config user.email "yazhou.cao@landing.ai"
       - name: Bump up version
         run: |
-          poetry version patch
+          VERSION=$(uvx --from=toml-cli toml get --toml-path=pyproject.toml project.version)
+          uvx --from=toml-cli toml set --toml-path=pyproject.toml project.version $VERSION
           git add pyproject.toml
-          new_version=`poetry version`
+          new_version=`uv version`
           git commit -m "[skip ci] chore(release): ${new_version}"
           git push -f
       - name: Publish to PyPI
         run: |
-          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-          poetry publish --build -vvv
+          uv build
+          uv publish --token ${{ secrets.PYPI_TOKEN }}
