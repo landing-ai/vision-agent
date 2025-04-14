@@ -2908,21 +2908,11 @@ def gemini_image_inpainting(
         config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
     )
 
-    def extract_inline_data(response):
-        try:
-            candidate = response.candidates[0]
-            part = candidate.content.parts[0]
-            inline_data = part.inline_data
-            data = inline_data.data
-        except (IndexError, AttributeError) as e:
-            raise KeyError(f"Malformed response structure: {e}")
-
-        if not data or data == b"":
-            raise ValueError("Inline data is empty or missing in the response.")
-
-        return data
-
-    data = extract_inline_data(response)
+    # Extract the generated image from the response
+    candidate = response.candidates[0]
+    part = candidate.content.parts[0]
+    inline_data = part.inline_data
+    data = inline_data.data
 
     # Get the generated image
     try:
