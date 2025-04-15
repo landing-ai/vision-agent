@@ -50,7 +50,7 @@ jobs:
         uv run black --check --diff --color vision_agent/
     - name: Type Checking
       run: |
-        uv run mypy --disable-error-code=unused-ignore vision_agent
+        uv run mypy vision_agent
     - name: Test with pytest
       run: |
         uv run pytest -s -vvv tests/unit
