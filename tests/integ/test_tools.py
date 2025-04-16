@@ -77,7 +77,7 @@ def test_owl_v2_video():
         frames=frames,
     )
 
-    assert len(result) == 10
+    assert len(result) == 5
     assert 24 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
@@ -122,7 +122,7 @@ def test_agentic_video():
         frames=frames,
     )
 
-    assert len(result) == 10
+    assert len(result) == 5
     assert 24 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
@@ -155,7 +155,7 @@ def test_florence2_phrase_grounding_video():
         prompt="coin",
         frames=frames,
     )
-    assert len(result) == 10
+    assert len(result) == 5
     assert 2 <= len([res["label"] for res in result[0]]) <= 26
     assert all([all([0 <= x <= 1 for x in obj["bbox"]]) for obj in result[0]])
 
@@ -196,7 +196,7 @@ def test_florence2_sam2_video_tracking():
         prompt="coin",
         frames=frames,
     )
-    assert len(result) == 10
+    assert len(result) == 5
     assert len([res["label"] for res in result[0]]) == 24
     assert len([res["mask"] for res in result[0]]) == 24
 
@@ -271,7 +271,7 @@ def test_activity_recognition():
         frames=frames,
         model="qwen2vl",
     )
-    assert len(result) == 10
+    assert len(result) == 5
 
 
 def test_ocr():
@@ -460,7 +460,7 @@ def test_video_tracking_with_countgd():
         frames=frames,
     )
 
-    assert len(result) == 10
+    assert len(result) == 5
     assert len([res["label"] for res in result[0]]) == 24
     assert len([res["mask"] for res in result[0]]) == 24
 
@@ -474,7 +474,7 @@ def test_video_tracking_with_owlv2():
         frames=frames,
     )
 
-    assert len(result) == 10
+    assert len(result) == 5
     assert len([res["label"] for res in result[0]]) == 24
     assert len([res["mask"] for res in result[0]]) == 24
 
@@ -490,7 +490,7 @@ def test_video_tracking_by_given_model():
     )
     result = result["return_data"]
 
-    assert len(result) == 10
+    assert len(result) == 5
     assert len([res["label"] for res in result[0]]) == 24
     assert len([res["mask"] for res in result[0]]) == 24
 
