@@ -46,6 +46,7 @@ scikit-learn = "^1.5.2"
 opentelemetry-api = "^1.29.0"
 dotenv = "^0.9.9"
 pymupdf = "^1.23.0"
+google-genai = "^1.10.0"
 
 [tool.poetry.group.dev.dependencies]
 autoflake = "1.*"
