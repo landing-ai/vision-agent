@@ -28,7 +28,7 @@ _Prompt with an image/video → Get runnable vision code → Build Visual AI App
 
 Prefer full control? Install the library and run VisionAgent locally. Just want to dive in quickly? Use the [VisionAgent web app](https://va.landing.ai/).
 
-## Steps to Set up the Library  
+## Steps to Set Up the Library  
 
 ### Get Your VisionAgent API Key
 The most important step is to [signup](https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
