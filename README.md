@@ -5,7 +5,7 @@
         <img alt="VisionAgent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_light.svg?raw=true">
     </picture> 
     
-_Prompt with an image/video → Get runnable Vision Code → Build Visual AI App in Minutes_
+_Prompt with an image/video → Get runnable vision code → Build Visual AI App in minutes_
 
 
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
@@ -15,7 +15,7 @@ _Prompt with an image/video → Get runnable Vision Code → Build Visual AI App
 </div>
 
 <p align="center">
-  <a href="https://va.landing.ai/agent" target="_blank"><strong>WebApp</strong></a> ·
+  <a href="https://va.landing.ai/agent" target="_blank"><strong>Web App</strong></a> ·
   <a href="https://discord.com/invite/RVcW3j9RgR" target="_blank"><strong>Discord</strong></a> ·
   <a href="https://landing.ai/blog/visionagent-an-agentic-approach-for-complex-visual-reasoning" target="_blank"><strong>Architecture</strong></a> ·
   <a href="https://support.landing.ai/docs/visionagent" target="_blank"><strong>Docs</strong></a> ·
@@ -24,11 +24,11 @@ _Prompt with an image/video → Get runnable Vision Code → Build Visual AI App
 
 <br />
 
-**VisionAgent** is LandingAI’s visual‑AI copilot. Give it a prompt and an image, and it automatically picks the right vision models and outputs ready‑to‑run code—letting you build vision‑enabled apps in minutes.
+**VisionAgent** is the Visual AI pilot from LandingAI. Give it a prompt and an image, and it automatically picks the right vision models and outputs ready‑to‑run code—letting you build vision‑enabled apps in minutes.
 
 Prefer full control? Install the library and run VisionAgent locally. Just want to dive in quickly? Use the [VisionAgent web app](https://va.landing.ai/).
 
-## Steps to Setup the Library  
+## Steps to Set up the Library  
 
 ### Get Your VisionAgent API Key
 The most important step is to [signup](https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
