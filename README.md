@@ -30,7 +30,7 @@ Prefer full control? Install the library and run VisionAgent locally. Just want
 
 ## Steps to Setup the Library  
 
-## Get Your VisionAgent API Key
+### Get Your VisionAgent API Key
 The most important step is to [signup](https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
 
 ### Other Prerequisites
