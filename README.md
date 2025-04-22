@@ -17,6 +17,7 @@ _Prompt with an image/video → Get runnable Vision Code → Build Visual AI App
 <p align="center">
   <a href="https://va.landing.ai/agent" target="_blank"><strong>WebApp</strong></a> ·
   <a href="https://discord.com/invite/RVcW3j9RgR" target="_blank"><strong>Discord</strong></a> ·
+  <a href="https://landing.ai/blog/visionagent-an-agentic-approach-for-complex-visual-reasoning" target="_blank"><strong>Architecture</strong></a> ·
   <a href="https://support.landing.ai/docs/visionagent" target="_blank"><strong>Docs</strong></a> ·
   <a href="https://www.youtube.com/playlist?list=PLrKGAzovU85fvo22OnVtPl90mxBygIf79" target="_blank"><strong>YouTube</strong></a>
 </p>
