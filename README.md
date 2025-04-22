@@ -3,7 +3,10 @@
         <source media="(prefers-color-scheme: dark)" srcset="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_light.svg?raw=true">
         <source media="(prefers-color-scheme: light)" srcset="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_dark.svg?raw=true">
         <img alt="VisionAgent" height="200px" src="https://github.com/landing-ai/vision-agent/blob/main/assets/logo_light.svg?raw=true">
-    </picture>
+    </picture> 
+    
+_Prompt with an image/video → Get runnable vision code → Build Visual AI App in minutes_
+
 
 [![](https://dcbadge.vercel.app/api/server/wPdN8RCYew?compact=true&style=flat)](https://discord.gg/wPdN8RCYew)
 ![ci_status](https://github.com/landing-ai/vision-agent/actions/workflows/ci_cd.yml/badge.svg)
@@ -11,16 +14,23 @@
 ![version](https://img.shields.io/pypi/pyversions/vision-agent)
 </div>
 
-## VisionAgent
-VisionAgent is the Visual AI Pilot from LandingAI. Submit a prompt and image to VisionAgent, and the app selects the best models for your tasks. VisionAgent then generates code so that you can build vision-enabled apps in minutes. 
- 
-## How to Use This VisionAgent Library
-- [Prompt VisionAgent](#quickstart-prompt-visionagent): Submit your prompt and VisionAgent generates code.
-- [Call specific tools](#use-specific-tools-from-visionagent): Incorporate specific tools from the library into your code.
+<p align="center">
+  <a href="https://va.landing.ai/agent" target="_blank"><strong>Web App</strong></a> ·
+  <a href="https://discord.com/invite/RVcW3j9RgR" target="_blank"><strong>Discord</strong></a> ·
+  <a href="https://landing.ai/blog/visionagent-an-agentic-approach-for-complex-visual-reasoning" target="_blank"><strong>Architecture</strong></a> ·
+  <a href="https://support.landing.ai/docs/visionagent" target="_blank"><strong>Docs</strong></a> ·
+  <a href="https://www.youtube.com/playlist?list=PLrKGAzovU85fvo22OnVtPl90mxBygIf79" target="_blank"><strong>YouTube</strong></a>
+</p>
 
-If you are a seasoned developer who wants to build locally using this library and enjoys having more control then we recommend setting this up. Otherwise, you can use the [VisionAgent web app](https://va.landing.ai/).
+<br />
 
-## Get Your VisionAgent API Key
+**VisionAgent** is the Visual AI pilot from LandingAI. Give it a prompt and an image, and it automatically picks the right vision models and outputs ready‑to‑run code—letting you build vision‑enabled apps in minutes.
+
+Prefer full control? Install the library and run VisionAgent locally. Just want to dive in quickly? Use the [VisionAgent web app](https://va.landing.ai/).
+
+## Steps to Set Up the Library  
+
+### Get Your VisionAgent API Key
 The most important step is to [signup](https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/account/api-key).
 
 ### Other Prerequisites
