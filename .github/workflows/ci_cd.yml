@@ -106,14 +106,16 @@ jobs:
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "yazhou.cao@landing.ai"
-      - name: Bump up version
-        run: |
-          VERSION=$(uvx --from=toml-cli toml get --toml-path=pyproject.toml project.version)
-          uvx --from=toml-cli toml set --toml-path=pyproject.toml project.version $VERSION
-          git add pyproject.toml
-          new_version=`uv version`
-          git commit -m "[skip ci] chore(release): ${new_version}"
-          git push -f
+          - name: Bump up version
+          run: |
+            current_version=$(uvx --from=toml-cli toml get --toml-path=pyproject.toml project.version)
+            IFS='.' read -r major minor patch <<< "$current_version"
+            patch=$((patch + 1))
+            new_version="${major}.${minor}.${patch}"
+            uvx --from=toml-cli toml set --toml-path=pyproject.toml project.version "$new_version"
+            git add pyproject.toml
+            git commit -m "[skip ci] chore(release): ${new_version}"
+            git push        
       - name: Publish to PyPI
         run: |
           uv build
