@@ -62,6 +62,7 @@ Anthropic and Gemini each have their own rate limits and paid tiers. Refer to th
 
 
 ## Installation
+
 ```bash
 pip install vision-agent
 ```
