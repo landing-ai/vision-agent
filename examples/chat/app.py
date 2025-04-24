@@ -13,6 +13,7 @@ from pydantic import BaseModel
 import vision_agent.tools as T
 from vision_agent.agent import VisionAgentV2
 from vision_agent.models import AgentMessage
+from vision_agent.lmm import AnthropicLMM
 from vision_agent.utils.execute import CodeInterpreterFactory
 from vision_agent.utils.video import frames_to_bytes
 
@@ -55,6 +56,7 @@ if DEBUG_HIL:
     code_interpreter = CodeInterpreterFactory.new_instance(non_exiting=True)
 else:
     agent = VisionAgentV2(
+        agent = AnthropicLMM(model_name="claude-3-7-sonnet-20250219"),
         verbose=True,
         update_callback=update_callback,
     )
@@ -128,7 +130,7 @@ async def chat(
         "message": "Your messages are being processed in the background",
     }
 
-
+# Could also use SSE
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
