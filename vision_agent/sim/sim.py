@@ -62,6 +62,9 @@ def stella_embeddings(prompts: List[str]) -> List[np.ndarray]:
         "Authorization": f"Basic {vision_agent_api_key}",
         "X-Source": "vision_agent",
     }
+    if runtime_tag := os.environ.get("RUNTIME_TAG", "vision-agent"):
+        headers["runtime_tag"] = runtime_tag
+
     session = _create_requests_session(
         url=url,
         num_retry=3,
