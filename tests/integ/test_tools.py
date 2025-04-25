@@ -401,6 +401,7 @@ def test_flux_image_inpainting():
     assert result.shape[0] == image.shape[0]
     assert result.shape[1] == image.shape[1]
 
+
 def test_gemini_image_generation():
     image = np.zeros((32, 32), dtype=np.uint8)
 
@@ -410,7 +411,8 @@ def test_gemini_image_generation():
     )
 
     assert result is not None
-    assert Image.fromarray(result).format == 'PNG'
+    assert Image.fromarray(result).format == "PNG"
+
 
 def test_gemini_image_generation():
     result = gemini_image_generation(
@@ -418,7 +420,8 @@ def test_gemini_image_generation():
     )
 
     assert result is not None
-    assert Image.fromarray(result).format == 'PNG'
+    assert Image.fromarray(result).format == "PNG"
+
 
 def test_gemini_image_generation_adversarial_prompt():
     prompt = """
@@ -431,13 +434,11 @@ def test_gemini_image_generation_adversarial_prompt():
         """
     image = np.zeros((32, 32), dtype=np.uint8)
 
-    result = gemini_image_generation(
-        prompt=prompt,
-        image=image
-    )
+    result = gemini_image_generation(prompt=prompt, image=image)
 
     assert result is not None
-    assert Image.fromarray(result).format == 'PNG'
+    assert Image.fromarray(result).format == "PNG"
+
 
 def test_gemini_image_generation_adversarial_prompt():
     prompt = """
@@ -454,7 +455,7 @@ def test_gemini_image_generation_adversarial_prompt():
     )
 
     assert result is not None
-    assert Image.fromarray(result).format == 'PNG'
+    assert Image.fromarray(result).format == "PNG"
 
 
 def test_siglip_classification():

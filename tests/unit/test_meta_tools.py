@@ -19,4 +19,3 @@ def test_check_and_load_image_one():
 def test_check_and_load_image_two():
     code = "view_media_artifact(artifacts, 'image1.jpg')\nview_media_artifact(artifacts, 'image2.jpg')"
     assert check_and_load_image(code) == ["image1.jpg", "image2.jpg"]
-

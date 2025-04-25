@@ -2848,7 +2848,7 @@ def gemini_image_generation(
     prompt: str,
     image: np.ndarray = None,
 ) -> np.ndarray:
-    """'gemini_image_inpainting' performs either image inpainting given an image and text prompt, or image generation given a prompt.
+    """'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
 
     Parameters:
@@ -2865,7 +2865,7 @@ def gemini_image_generation(
     -------
     Example:
         >>> # Generate inpainting
-        >>> result = gemini_image_inpainting(
+        >>> result = gemini_image_generation(
         ...     prompt="a modern black leather sofa with white pillows",
         ...     image=image,
         ... )
@@ -2959,7 +2959,7 @@ def gemini_image_generation(
         output_image = np.array(Image.open(io.BytesIO(output_image_bytes)))
 
     _display_tool_trace(
-        gemini_image_inpainting.__name__,
+        gemini_image_generation.__name__,
         {
             "prompt": prompt,
             "model": "gemini-2.0-flash-exp-image-generation",

@@ -559,7 +559,7 @@ desc,doc,name
         ... )
         >>> save_image(result, ""inpainted_room.png"")
     ",flux_image_inpainting
-"'gemini_image_generation' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_inpainting(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
+"'gemini_image_generation' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_generation(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
 'gemini_image_generation' performs image inpainting given an image and text prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
 
@@ -577,12 +577,12 @@ desc,doc,name
     -------
     Example:
         >>> # Generate inpainting
-        >>> result = gemini_image_inpainting(
+        >>> result = gemini_image_generation(
         ...     prompt="a modern black leather sofa with white pillows",
         ...     image=image,
         ... )
         >>> save_image(result, ""inpainted_room.png"")
-    ",gemini_image_inpainting
+    ",gemini_image_generation
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list of input labels or tags. It returns the same list of the input labels along with their probability scores based on image content.,"siglip_classification(image: numpy.ndarray, labels: List[str]) -> Dict[str, Any]:
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list
     of input labels or tags. It returns the same list of the input labels along with
