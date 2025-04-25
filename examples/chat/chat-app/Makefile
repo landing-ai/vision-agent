@@ -1,11 +1,6 @@
 .PHONY: all
 all: setup
 
-.PHONY: add-components
-add-components:
-	npx shadcn@latest add button card scroll-area tabs
-	npx shadcn@latest add collapsible
-
 # Target to install dependencies using package-lock.json
 .PHONY: install-dependencies
 install-dependencies:
@@ -15,4 +10,4 @@ install-dependencies:
 
 # Setup target to run all necessary commands
 .PHONY: setup
-setup: add-components install-dependencies
+setup: install-dependencies

@@ -5,9 +5,9 @@ to find bugs and issues.
 
 
 # Quick Start
-To get started install the fastapi library:
+To get started, install the dependencies:
 ```bash
-pip install "fastapi[standard]"
+pip install "fastapi[standard]" opencv-python vision-agent openai==1.55.3 httpx==0.27.2
 ```
 
 Then cd into `chat-app` and run `make` to install the node dependencies.
