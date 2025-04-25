@@ -18,7 +18,7 @@ from vision_agent.utils.execute import CodeInterpreterFactory
 from vision_agent.utils.video import frames_to_bytes
 
 app = FastAPI()
-DEBUG_HIL = True
+DEBUG_HIL = False
 
 # Configure CORS
 app.add_middleware(
