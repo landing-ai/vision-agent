@@ -1679,7 +1679,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.61.0"
+version = "1.55.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1691,9 +1691,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/2a/b3fa8790be17d632f59d4f50257b909a3f669036e5195c1ae55737274620/openai-1.61.0.tar.gz", hash = "sha256:216f325a24ed8578e929b0f1b3fb2052165f3b04b0461818adaa51aa29c71f8a", size = 350174 }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/39/d4859d897da053b61b84403f67dbef1abd075e441cb354892ff14f98e2c7/openai-1.55.3.tar.gz", hash = "sha256:547e85b94535469f137a779d8770c8c5adebd507c2cc6340ca401a7c4d5d16f0", size = 314571 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/76/70c5ad6612b3e4c89fa520266bbf2430a89cae8bd87c1e2284698af5927e/openai-1.61.0-py3-none-any.whl", hash = "sha256:e8c512c0743accbdbe77f3429a1490d862f8352045de8dc81969301eb4a4f666", size = 460623 },
+    { url = "https://files.pythonhosted.org/packages/10/06/691ef3f0112ecf0d7420d0bf35b5d16cf81554141f4b4913a9831031013d/openai-1.55.3-py3-none-any.whl", hash = "sha256:2a235d0e1e312cd982f561b18c27692e253852f4e5fb6ccf08cb13540a9bdaa1", size = 389558 },
 ]
 
 [[package]]
@@ -3197,7 +3197,7 @@ requires-dist = [
     { name = "nbclient", specifier = ">=0.10.0,<0.11" },
     { name = "nbformat", specifier = ">=5.10.4,<6" },
     { name = "numpy", specifier = ">=1.21.0,<2.0.0" },
-    { name = "openai", specifier = "==1.*" },
+    { name = "openai", specifier = "==1.55.3" },
     { name = "opencv-python", specifier = "==4.*" },
     { name = "opentelemetry-api", specifier = ">=1.29.0,<2" },
     { name = "pandas", specifier = "==2.*" },

@@ -21,8 +21,8 @@ from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 import pymupdf  # type: ignore
-from google import genai  # type: ignore
-from google.genai import types  # type: ignore
+from google import genai
+from google.genai import types
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -2846,7 +2846,7 @@ def flux_image_inpainting(
 
 def gemini_image_generation(
     prompt: str,
-    image: np.ndarray = None,
+    image: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
@@ -2875,35 +2875,33 @@ def gemini_image_generation(
     min_dim = 8
 
     # Check if the image is at least 8x8 pixels
-    if any(dim < min_dim for dim in image.shape[:2]):
-        raise ValueError(f"Image must be at least {min_dim}x{min_dim} pixels")
+    if image:
+        if any(dim < min_dim for dim in image.shape[:2]):
+            raise ValueError(f"Image must be at least {min_dim}x{min_dim} pixels")
 
-    # Set the max image size to 512 by 512 (and keep the aspect ratio)
-    max_size = (512, 512)
-    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
-        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
-        new_size = (
-            int(image.shape[1] * scaling_factor),
-            int(image.shape[0] * scaling_factor),
-        )
-        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+        # Set the max image size to 512 by 512 (and keep the aspect ratio)
+        max_size = (512, 512)
+        if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+            scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
+            new_size = (
+                int(image.shape[1] * scaling_factor),
+                int(image.shape[0] * scaling_factor),
+            )
+            new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
+            image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image_file = numpy_to_bytes(image)
-    input_image = Image.open(io.BytesIO(image_file))
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_file = numpy_to_bytes(rgb_image)
+        input_image = Image.open(io.BytesIO(image_file))
 
-    files = [("image", image_file)]
+    files = [("image", image_file)] if image else None
 
     client = genai.Client()
-
+    
     input_prompt = (
-        [
-            "I want you to edit this image given this prompt: " + prompt,
-            input_image,
-        ]
+        [types.Content(parts=[types.Part(text="I want you to edit this image given this prompt: " + prompt), input_image])]
         if image
-        else [prompt]
+        else [types.Content(parts=[types.Part(text=prompt)])]
     )
 
     for attempt in range(3):
@@ -2920,12 +2918,19 @@ def gemini_image_generation(
             time.sleep(5)
             continue
 
+        if not response.candidates:
+            raise ValueError("No candidates returned from the model.")
+
         candidate = response.candidates[0]
+        if not candidate.content or not candidate.content.parts:
+            raise ValueError("No content parts in candidate.")
+
         part = candidate.content.parts[0]
         inline_data = part.inline_data if hasattr(part, "inline_data") else None
 
         if inline_data and inline_data.data and inline_data.data != b"":
             output_image_bytes = inline_data.data
+
         else:
             _LOGGER.warning(f"Attempt {attempt + 1} failed: Inline data was empty.")
             time.sleep(5)  # Wait before retrying
@@ -2941,11 +2946,17 @@ def gemini_image_generation(
         time.sleep(10)
         response = client.models.generate_content(
             model="gemini-2.0-flash-exp-image-generation",
-            contents=["Generate an image."],
+            contents=[types.Content(parts=[types.Part(text="Generate an image.")])],
             config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
         )
 
+        if not response.candidates:
+            raise ValueError("No candidates returned from the model.")
+
         candidate = response.candidates[0]
+        if not candidate.content or not candidate.content.parts:
+            raise ValueError("No content parts in candidate.")
+
         part = candidate.content.parts[0]
         inline_data = part.inline_data if hasattr(part, "inline_data") else None
 
