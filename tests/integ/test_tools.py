@@ -433,6 +433,7 @@ def test_gemini_image_inpainting_adversarial_prompt():
 
     result = gemini_image_inpainting(
         prompt=prompt,
+        image=image
     )
 
     assert result is not None
