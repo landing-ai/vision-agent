@@ -2871,116 +2871,128 @@ def gemini_image_generation(
         ... )
         >>> save_image(result, "inpainted_room.png")
     """
-
-    min_dim = 8
-
-    # Check if the image is at least 8x8 pixels
-    if image:
-        if any(dim < min_dim for dim in image.shape[:2]):
-            raise ValueError(f"Image must be at least {min_dim}x{min_dim} pixels")
-
-        # Set the max image size to 512 by 512 (and keep the aspect ratio)
+    
+    # Define helper functions
+    def process_image(img):
+        """Process and validate the input image."""
+        # Check minimum dimensions
+        if any(dim < 8 for dim in img.shape[:2]):
+            raise ValueError("Image must be at least 8x8 pixels")
+        
+        # Resize if needed
         max_size = (512, 512)
-        if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
-            scaling_factor = min(
-                max_size[0] / image.shape[0], max_size[1] / image.shape[1]
-            )
-            new_size = (
-                int(image.shape[1] * scaling_factor),
-                int(image.shape[0] * scaling_factor),
-            )
+        if img.shape[0] > max_size[0] or img.shape[1] > max_size[1]:
+            scaling_factor = min(max_size[0] / img.shape[0], max_size[1] / img.shape[1])
+            new_size = (int(img.shape[1] * scaling_factor), int(img.shape[0] * scaling_factor))
             new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
-            image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_file = numpy_to_bytes(rgb_image)
-        input_image = Image.open(io.BytesIO(image_file))
-
-    files = [("image", image_file)] if image else None
-
+            img = cv2.resize(img, new_size, interpolation=cv2.INTER_AREA)
+        
+        # Convert to RGB
+        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return rgb_img
+    
+    def try_generate_content():
+        """Try to generate content with multiple attempts."""
+        for attempt in range(3):
+            try:
+                resp = client.models.generate_content(
+                    model="gemini-2.0-flash-exp-image-generation",
+                    contents=input_prompt,
+                    config=types.GenerateContentConfig(response_modalities=["Text", "Image"])
+                )
+                
+                if not resp.candidates:
+                    _LOGGER.warning(f"Attempt {attempt + 1}: No candidates returned")
+                    time.sleep(5)
+                    continue
+                
+                cand = resp.candidates[0]
+                if not cand.content or not cand.content.parts:
+                    _LOGGER.warning(f"Attempt {attempt + 1}: No content parts")
+                    time.sleep(5)
+                    continue
+                
+                part = cand.content.parts[0]
+                inline_data = getattr(part, "inline_data", None)
+                
+                if inline_data and inline_data.data and inline_data.data != b"":
+                    return inline_data.data
+                
+                _LOGGER.warning(f"Attempt {attempt + 1}: Empty inline data")
+                time.sleep(5)
+                
+            except genai.errors.ClientError as e:
+                _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                time.sleep(5)
+        
+        return None
+    
+    # Main function logic starts here
     client = genai.Client()
-
-    input_prompt = (
-        [
+    files = None
+    image_file = None
+    
+    # Process image if provided
+    if image is not None:
+        processed_image = process_image(image)
+        image_file = numpy_to_bytes(processed_image)
+        input_image = Image.open(io.BytesIO(image_file))
+        files = [("image", image_file)]
+        
+        input_prompt = [
             types.Content(
                 parts=[
-                    types.Part(
-                        text="I want you to edit this image given this prompt: "
-                        + prompt
-                    ),
+                    types.Part(text="I want you to edit this image given this prompt: " + prompt),
                     input_image,
                 ]
             )
         ]
-        if image
-        else [types.Content(parts=[types.Part(text=prompt)])]
-    )
-
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-exp-image-generation",
-                contents=input_prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["Text", "Image"]
-                ),
-            )
-        except genai.errors.ClientError as e:
-            _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
-            time.sleep(5)
-            continue
-
-        if not response.candidates:
-            raise ValueError("No candidates returned from the model.")
-
-        candidate = response.candidates[0]
-        if not candidate.content or not candidate.content.parts:
-            raise ValueError("No content parts in candidate.")
-
-        part = candidate.content.parts[0]
-        inline_data = part.inline_data if hasattr(part, "inline_data") else None
-
-        if inline_data and inline_data.data and inline_data.data != b"":
-            output_image_bytes = inline_data.data
-
-        else:
-            _LOGGER.warning(f"Attempt {attempt + 1} failed: Inline data was empty.")
-            time.sleep(5)  # Wait before retrying
-
-    # After all retries, fallback
-    if image:
-        _LOGGER.warning("Returning original image after all retries failed.")
-        return image
     else:
-        _LOGGER.warning(
-            "All retries failed and no original image; prompting for fresh generation."
-        )
-        time.sleep(10)
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-exp-image-generation",
-            contents=[types.Content(parts=[types.Part(text="Generate an image.")])],
-            config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
-        )
-
-        if not response.candidates:
-            raise ValueError("No candidates returned from the model.")
-
-        candidate = response.candidates[0]
-        if not candidate.content or not candidate.content.parts:
-            raise ValueError("No content parts in candidate.")
-
-        part = candidate.content.parts[0]
-        inline_data = part.inline_data if hasattr(part, "inline_data") else None
-
-        if inline_data and inline_data.data and inline_data.data != b"":
-            output_image_bytes = inline_data.data
+        input_prompt = [types.Content(parts=[types.Part(text=prompt)])]
+    
+    # Try to generate content
+    output_image_bytes = try_generate_content()
+    
+    # Handle fallback if all attempts failed
+    if output_image_bytes is None:
+        if image is not None:
+            _LOGGER.warning("Returning original image after all retries failed.")
+            return image
         else:
-            raise ValueError("Failed to generate image after fallback.")
+            _LOGGER.warning("All retries failed; prompting for fresh generation.")
+            time.sleep(10)
+            
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash-exp-image-generation",
+                    contents=[types.Content(parts=[types.Part(text="Generate an image.")])],
+                    config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
+                )
+                
+                if not response.candidates:
+                    raise ValueError("No candidates returned from the model.")
+                
+                candidate = response.candidates[0]
+                if not candidate.content or not candidate.content.parts:
+                    raise ValueError("No content parts in candidate.")
+                
+                part = candidate.content.parts[0]
+                inline_data = getattr(part, "inline_data", None)
+                
+                if inline_data and inline_data.data and inline_data.data != b"":
+                    output_image_bytes = inline_data.data
+                else:
+                    raise ValueError("Failed to generate image after fallback.")
+            except Exception as e:
+                raise ValueError(f"Fallback generation failed: {str(e)}")
+    
+    # Convert bytes to image
     try:
         output_image = np.array(b64_to_pil(output_image_bytes.decode("utf-8")))
     except UnicodeDecodeError:
         output_image = np.array(Image.open(io.BytesIO(output_image_bytes)))
-
+    
+    # Record trace
     _display_tool_trace(
         gemini_image_generation.__name__,
         {
@@ -2990,6 +3002,7 @@ def gemini_image_generation(
         output_image,
         files,
     )
+    
     return output_image
 
 
