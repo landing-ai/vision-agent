@@ -2871,34 +2871,15 @@ def gemini_image_generation(
         ... )
         >>> save_image(result, "inpainted_room.png")
     """
-
-    # Define helper functions
-    def process_image(img: np.ndarray) -> Any:
-        """Process and validate the input image."""
-        # Check minimum dimensions
-        if any(dim < 8 for dim in img.shape[:2]):
-            raise ValueError("Image must be at least 8x8 pixels")
-
-        # Resize if needed
-        max_size = (512, 512)
-        if img.shape[0] > max_size[0] or img.shape[1] > max_size[1]:
-            scaling_factor = min(max_size[0] / img.shape[0], max_size[1] / img.shape[1])
-            new_size = (
-                int(img.shape[1] * scaling_factor),
-                int(img.shape[0] * scaling_factor),
-            )
-            new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
-            img = cv2.resize(img, new_size, interpolation=cv2.INTER_AREA)
-
-        # Convert to RGB
-        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return rgb_img
+    client = genai.Client()
+    files = []
+    image_file = None
 
     def try_generate_content(
-        input_prompt: types.Content,
+        input_prompt: types.Content, num_retries: int = 3
     ) -> Optional[bytes]:
         """Try to generate content with multiple attempts."""
-        for attempt in range(3):
+        for attempt in range(num_retries):
             try:
                 resp = client.models.generate_content(
                     model="gemini-2.0-flash-exp-image-generation",
@@ -2908,25 +2889,23 @@ def gemini_image_generation(
                     ),
                 )
 
-                if not resp.candidates:
+                if (
+                    not resp.candidates
+                    or not resp.candidates[0].content
+                    or not resp.candidates[0].content.parts
+                    or not resp.candidates[0].content.parts[0].inline_data
+                    or not resp.candidates[0].content.parts[0].inline_data.data
+                ):
                     _LOGGER.warning(f"Attempt {attempt + 1}: No candidates returned")
                     time.sleep(5)
                     continue
-
-                cand = resp.candidates[0]
-                if not cand.content or not cand.content.parts:
-                    _LOGGER.warning(f"Attempt {attempt + 1}: No content parts")
-                    time.sleep(5)
-                    continue
-
-                part = cand.content.parts[0]
-                inline_data = getattr(part, "inline_data", None)
-
-                if inline_data and inline_data.data and inline_data.data != b"":
-                    return inline_data.data if type(inline_data.data) == bytes else None
-
-                _LOGGER.warning(f"Attempt {attempt + 1}: Empty inline data")
-                time.sleep(5)
+                else:
+                    return (
+                        resp.candidates[0].content.parts[0].inline_data.data
+                        if type(resp.candidates[0].content.parts[0].inline_data.data)
+                        is bytes
+                        else None
+                    )
 
             except genai.errors.ClientError as e:
                 _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
@@ -2934,15 +2913,22 @@ def gemini_image_generation(
 
         return None
 
-    # Main function logic starts here
-    client = genai.Client()
-    files = []
-    image_file = None
+    if image:
+        # Resize if needed
+        max_size = (512, 512)
+        if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+            scaling_factor = min(
+                max_size[0] / image.shape[0], max_size[1] / image.shape[1]
+            )
+            new_size = (
+                int(image.shape[1] * scaling_factor),
+                int(image.shape[0] * scaling_factor),
+            )
+            image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
 
-    # Process image if provided
-    if image is not None:
-        processed_image = process_image(image)
-        image_file = numpy_to_bytes(processed_image)
+        # Convert to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_file = numpy_to_bytes(image)
         input_image = Image.open(io.BytesIO(image_file))
         files = [("image", image_file)]
 
@@ -2967,55 +2953,36 @@ def gemini_image_generation(
             _LOGGER.warning("Returning original image after all retries failed.")
             return image
         else:
-            _LOGGER.warning("All retries failed; prompting for fresh generation.")
-            time.sleep(10)
-
             try:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash-exp-image-generation",
-                    contents=types.Content(
-                        parts=[types.Part(text="Generate an image.")]
-                    ),
-                    config=types.GenerateContentConfig(
-                        response_modalities=["Text", "Image"]
-                    ),
+                _LOGGER.warning("All retries failed; prompting for fresh generation.")
+                time.sleep(10)
+                output_image_bytes = try_generate_content(
+                    types.Content(parts=[types.Part(text="Generate an image.")]),
+                    num_retries=1,
                 )
 
-                if not response.candidates:
-                    raise ValueError("No candidates returned from the model.")
-
-                candidate = response.candidates[0]
-                if not candidate.content or not candidate.content.parts:
-                    raise ValueError("No content parts in candidate.")
-
-                part = candidate.content.parts[0]
-                inline_data = getattr(part, "inline_data", None)
-
-                if inline_data and inline_data.data and inline_data.data != b"":
-                    output_image_bytes = inline_data.data
-                else:
-                    raise ValueError("Failed to generate image after fallback.")
             except Exception as e:
                 raise ValueError(f"Fallback generation failed: {str(e)}")
 
     # Convert bytes to image
-    try:
-        output_image = np.array(b64_to_pil(output_image_bytes.decode("utf-8")))
-    except UnicodeDecodeError:
-        output_image = np.array(Image.open(io.BytesIO(output_image_bytes)))
+    if output_image_bytes is not None:
+        output_image_temp = io.BytesIO(output_image_bytes)
+        output_image_pil = Image.open(output_image_temp)
+        final_image = np.array(output_image_pil)
+    else:
+        raise ValueError("Fallback generation failed")
 
-    # Record trace
     _display_tool_trace(
         gemini_image_generation.__name__,
         {
             "prompt": prompt,
             "model": "gemini-2.0-flash-exp-image-generation",
         },
-        output_image,
+        final_image,
         files,
     )
 
-    return output_image
+    return final_image
 
 
 def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
