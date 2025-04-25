@@ -2882,7 +2882,9 @@ def gemini_image_generation(
         # Set the max image size to 512 by 512 (and keep the aspect ratio)
         max_size = (512, 512)
         if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
-            scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
+            scaling_factor = min(
+                max_size[0] / image.shape[0], max_size[1] / image.shape[1]
+            )
             new_size = (
                 int(image.shape[1] * scaling_factor),
                 int(image.shape[0] * scaling_factor),
@@ -2897,9 +2899,19 @@ def gemini_image_generation(
     files = [("image", image_file)] if image else None
 
     client = genai.Client()
-    
+
     input_prompt = (
-        [types.Content(parts=[types.Part(text="I want you to edit this image given this prompt: " + prompt), input_image])]
+        [
+            types.Content(
+                parts=[
+                    types.Part(
+                        text="I want you to edit this image given this prompt: "
+                        + prompt
+                    ),
+                    input_image,
+                ]
+            )
+        ]
         if image
         else [types.Content(parts=[types.Part(text=prompt)])]
     )
