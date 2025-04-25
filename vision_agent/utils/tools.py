@@ -28,7 +28,7 @@ def get_vision_agent_api_key() -> str:
         return vision_agent_api_key
     else:
         raise ValueError(
-            "VISION_AGENT_API_KEY not found in environment variables, required for tool usage. You can get a free key from https://va.landing.ai/account/api-key"
+            "VISION_AGENT_API_KEY not found in environment variables, required for tool usage. You can get a free key from https://va.landing.ai/settings/api-key"
         )
 
 
