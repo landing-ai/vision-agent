@@ -10,6 +10,7 @@ from importlib import resources
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from warnings import warn
+import time
 
 import cv2
 import numpy as np
@@ -2845,16 +2846,16 @@ def flux_image_inpainting(
 
 def gemini_image_inpainting(
     prompt: str,
-    image: np.ndarray,
+    image: np.ndarray = None,
 ) -> np.ndarray:
-    """'gemini_image_inpainting' performs image inpainting given an image and text prompt.
+    """'gemini_image_inpainting' performs either image inpainting given an image and text prompt, or image generation given a prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
 
     Parameters:
         prompt (str): A detailed text description guiding what should be generated
             in the image. More detailed and specific prompts typically yield
             better results.
-        image (np.ndarray): The source image to be inpainted. The image will serve as
+        image (np.ndarray, optional): The source image to be inpainted. The image will serve as
             the base context for the inpainting process.
 
     Returns:
@@ -2888,11 +2889,6 @@ def gemini_image_inpainting(
         new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
         image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
 
-    # Make sure the image dimensions are divisible by 8
-    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
-        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_file = numpy_to_bytes(image)
     input_image = Image.open(io.BytesIO(image_file))
@@ -2901,27 +2897,66 @@ def gemini_image_inpainting(
 
     client = genai.Client()
 
-    # Generate the inpainted image
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-exp-image-generation",
-        contents=[prompt, input_image],
-        config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
+    input_prompt = (
+        [
+            "I want you to edit this image given this prompt: " + prompt,
+            Image.open(io.BytesIO(image)),
+        ]
+        if image
+        else [prompt]
     )
 
-    # Extract the generated image from the response
-    candidate = response.candidates[0]
-    part = candidate.content.parts[0]
-    inline_data = part.inline_data
-    data = inline_data.data
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-exp-image-generation",
+                contents=input_prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["Text", "Image"]
+                ),
+            )
+        except genai.errors.ClientError as e:
+            _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+            time.sleep(5)
+            continue
 
-    # Get the generated image
+        candidate = response.candidates[0]
+        part = candidate.content.parts[0]
+        inline_data = part.inline_data if hasattr(part, "inline_data") else None
+
+        if inline_data and inline_data.data and inline_data.data != b"":
+            output_image_bytes = inline_data.data
+        else:
+            _LOGGER.warning(f"Attempt {attempt + 1} failed: Inline data was empty.")
+            time.sleep(5)  # Wait before retrying
+
+    # After all retries, fallback
+    if image:
+        _LOGGER.warning("Returning original image after all retries failed.")
+        return image
+    else:
+        _LOGGER.warning(
+            "All retries failed and no original image; prompting for fresh generation."
+        )
+        time.sleep(10)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-exp-image-generation",
+            contents=["Generate an image."],
+            config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
+        )
+
+        candidate = response.candidates[0]
+        part = candidate.content.parts[0]
+        inline_data = part.inline_data if hasattr(part, "inline_data") else None
+
+        if inline_data and inline_data.data and inline_data.data != b"":
+            output_image_bytes = inline_data.data
+        else:
+            raise ValueError("Failed to generate image after fallback.")
     try:
-        output_image = np.array(b64_to_pil(data.decode("utf-8")))
+        output_image = np.array(b64_to_pil(output_image_bytes.decode("utf-8")))
     except UnicodeDecodeError:
-        output_image = np.array(Image.open(io.BytesIO(data)))
-    output_image = cv2.resize(
-        output_image, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_AREA
-    )
+        output_image = np.array(Image.open(io.BytesIO(output_image_bytes)))
 
     _display_tool_trace(
         gemini_image_inpainting.__name__,
@@ -3715,6 +3750,7 @@ FUNCTION_TOOLS = [
     generate_pose_image,
     vit_nsfw_classification,
     flux_image_inpainting,
+    gemini_image_inpainting,
     siglip_classification,
     minimum_distance,
 ]

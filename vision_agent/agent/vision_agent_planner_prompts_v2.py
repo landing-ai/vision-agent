@@ -520,6 +520,7 @@ You are given a task: "{task}" from the user. You must extract the type of categ
 - "depth and pose estimation" - estimating the depth or pose of objects in an image.
 - "activity recognition" - identifying time period(s) an event occurs in a video.
 - "inpainting" - filling in masked parts of an image.
+- "inage generation" - creating an image from a prompt.
 
 Return the category or categories (comma separated) inside tags <category># your categories here</category>. If you are unsure about a task, it is better to include more categories than less.
 """
