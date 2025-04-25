@@ -559,8 +559,8 @@ desc,doc,name
         ... )
         >>> save_image(result, ""inpainted_room.png"")
     ",flux_image_inpainting
-"'gemini_image_inpainting' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_inpainting(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
-'gemini_image_inpainting' performs image inpainting given an image and text prompt.
+"'gemini_image_generation' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_inpainting(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
+'gemini_image_generation' performs image inpainting given an image and text prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
 
     Parameters:
