@@ -2913,7 +2913,7 @@ def gemini_image_generation(
 
         return None
 
-    if image:
+    if image is not None:
         # Resize if needed
         max_size = (512, 512)
         if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
@@ -2934,10 +2934,13 @@ def gemini_image_generation(
 
         input_prompt = types.Content(
             parts=[
+                types.Part(text="I want you to edit this image given this prompt: " + prompt),
                 types.Part(
-                    text="I want you to edit this image given this prompt: " + prompt
+                    inline_data={
+                        "mime_type": "image/png",
+                        "data": image_file
+                    }
                 ),
-                input_image,
             ]
         )
 
