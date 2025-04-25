@@ -1,2 +1,2 @@
 export REPORT_TOOL_TRACES=1
-fastapi dev app.py
+fastapi dev app.py --port 8001

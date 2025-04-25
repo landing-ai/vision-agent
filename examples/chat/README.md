@@ -46,3 +46,21 @@ Note: Not all visualizations are supported — only **object detection** and **s
 ![screenshot](https://github.com/landing-ai/vision-agent/blob/main/assets/screenshot.png?raw=true)
 
 ---
+
+## Troubleshooting
+
+### Port Already in Use (e.g. 8000)
+
+If you get an error like:
+
+```
+[Errno 48] Address already in use
+```
+
+Run the following command to kill the process using port 8000:
+
+```bash
+kill -9 $(lsof -i TCP:8000 | grep LISTEN | awk '{print $$2}')
+```
+
+> **Note**: you can change `8000` to any other port number in `run.sh`
