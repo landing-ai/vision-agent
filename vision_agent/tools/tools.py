@@ -2929,18 +2929,14 @@ def gemini_image_generation(
         # Convert to RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_file = numpy_to_bytes(image)
-        input_image = Image.open(io.BytesIO(image_file))
         files = [("image", image_file)]
 
         input_prompt = types.Content(
             parts=[
-                types.Part(text="I want you to edit this image given this prompt: " + prompt),
                 types.Part(
-                    inline_data={
-                        "mime_type": "image/png",
-                        "data": image_file
-                    }
+                    text="I want you to edit this image given this prompt: " + prompt
                 ),
+                types.Part(inline_data={"mime_type": "image/png", "data": image_file}),
             ]
         )
 
