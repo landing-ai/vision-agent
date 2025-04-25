@@ -2891,7 +2891,6 @@ def gemini_image_generation(
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_file = numpy_to_bytes(image)
-    input_image = Image.open(io.BytesIO(image_file))
 
     files = [("image", image_file)]
 
@@ -2900,7 +2899,7 @@ def gemini_image_generation(
     input_prompt = (
         [
             "I want you to edit this image given this prompt: " + prompt,
-            Image.open(io.BytesIO(image)),
+            input_image,
         ]
         if image
         else [prompt]
