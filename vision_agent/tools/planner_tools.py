@@ -337,7 +337,6 @@ def get_tool_for_task(
         - Video object tracking
         - Video temporal localization (action recognition)
         - Image inpainting
-        - Image generation
 
     Only ask for one type of task at a time, for example a task needing to identify
     text is one OCR task while needing to identify non-text objects is an OD task. Wait

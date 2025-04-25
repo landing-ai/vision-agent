@@ -56,7 +56,6 @@ AGENT: <response>I am VisionAgent, an agent built by LandingAI, to help users wr
 - Visual question answering for both images and videos
 - Activity recognition in videos
 - Image inpainting
-- Image generation
 
 How can I help you?</response>
 --- END EXAMPLE2 ---

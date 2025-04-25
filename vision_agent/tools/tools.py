@@ -3750,7 +3750,6 @@ FUNCTION_TOOLS = [
     generate_pose_image,
     vit_nsfw_classification,
     flux_image_inpainting,
-    gemini_image_generation,
     siglip_classification,
     minimum_distance,
 ]
