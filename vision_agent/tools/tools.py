@@ -2873,7 +2873,7 @@ def gemini_image_generation(
     """
 
     # Define helper functions
-    def process_image(img):
+    def process_image(img: np.ndarray) -> Any:
         """Process and validate the input image."""
         # Check minimum dimensions
         if any(dim < 8 for dim in img.shape[:2]):
@@ -2894,7 +2894,9 @@ def gemini_image_generation(
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return rgb_img
 
-    def try_generate_content():
+    def try_generate_content(
+        input_prompt: types.Content,
+    ) -> Optional[bytes]:
         """Try to generate content with multiple attempts."""
         for attempt in range(3):
             try:
@@ -2921,7 +2923,7 @@ def gemini_image_generation(
                 inline_data = getattr(part, "inline_data", None)
 
                 if inline_data and inline_data.data and inline_data.data != b"":
-                    return inline_data.data
+                    return inline_data.data if type(inline_data.data) == bytes else None
 
                 _LOGGER.warning(f"Attempt {attempt + 1}: Empty inline data")
                 time.sleep(5)
@@ -2934,7 +2936,7 @@ def gemini_image_generation(
 
     # Main function logic starts here
     client = genai.Client()
-    files = None
+    files = []
     image_file = None
 
     # Process image if provided
@@ -2944,22 +2946,20 @@ def gemini_image_generation(
         input_image = Image.open(io.BytesIO(image_file))
         files = [("image", image_file)]
 
-        input_prompt = [
-            types.Content(
-                parts=[
-                    types.Part(
-                        text="I want you to edit this image given this prompt: "
-                        + prompt
-                    ),
-                    input_image,
-                ]
-            )
-        ]
+        input_prompt = types.Content(
+            parts=[
+                types.Part(
+                    text="I want you to edit this image given this prompt: " + prompt
+                ),
+                input_image,
+            ]
+        )
+
     else:
-        input_prompt = [types.Content(parts=[types.Part(text=prompt)])]
+        input_prompt = types.Content(parts=[types.Part(text=prompt)])
 
     # Try to generate content
-    output_image_bytes = try_generate_content()
+    output_image_bytes = try_generate_content(input_prompt)
 
     # Handle fallback if all attempts failed
     if output_image_bytes is None:
@@ -2973,9 +2973,9 @@ def gemini_image_generation(
             try:
                 response = client.models.generate_content(
                     model="gemini-2.0-flash-exp-image-generation",
-                    contents=[
-                        types.Content(parts=[types.Part(text="Generate an image.")])
-                    ],
+                    contents=types.Content(
+                        parts=[types.Part(text="Generate an image.")]
+                    ),
                     config=types.GenerateContentConfig(
                         response_modalities=["Text", "Image"]
                     ),
