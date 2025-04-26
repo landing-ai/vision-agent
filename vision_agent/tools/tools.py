@@ -2902,8 +2902,9 @@ def gemini_image_generation(
                 else:
                     return (
                         resp.candidates[0].content.parts[0].inline_data.data
-                        if type(resp.candidates[0].content.parts[0].inline_data.data)
-                        is bytes
+                        if isinstance(
+                            resp.candidates[0].content.parts[0].inline_data.data, bytes
+                        )
                         else None
                     )
 
