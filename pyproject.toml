@@ -74,6 +74,13 @@ include = [
     "vision_agent/.sim_tools/*",
 ]
 
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "vision_agent",
+    "vision_agent/.sim_tools/*",
+]
+
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
