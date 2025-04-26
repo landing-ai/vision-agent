@@ -15,7 +15,8 @@ dependencies = [
     "requests==2.*",
     "tqdm>=4.64.0,<5.0.0",
     "pandas==2.*",
-    "openai==1.*",
+    "openai==1.55.3",
+    "httpx==0.27.2",
     "flake8>=7.0.0,<8",
     "typing_extensions==4.*",
     "opencv-python==4.*",
@@ -37,6 +38,7 @@ dependencies = [
     "opentelemetry-api>=1.29.0,<2",
     "dotenv>=0.9.9,<0.10",
     "pymupdf>=1.23.0,<2",
+    "google-genai>=1.0.0,<2",
 ]
 
 [project.urls]
@@ -66,13 +68,14 @@ dev = [
     "pre-commit>=3.8.0,<4",
 ]
 
-[tool.hatch.build.targets.sdist]
+[tool.hatch.build.targets.wheel]
 include = [
     "vision_agent",
     "vision_agent/.sim_tools/*",
 ]
 
-[tool.hatch.build.targets.wheel]
+
+[tool.hatch.build.targets.sdist]
 include = [
     "vision_agent",
     "vision_agent/.sim_tools/*",

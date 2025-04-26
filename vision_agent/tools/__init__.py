@@ -31,6 +31,7 @@ from .tools import (
     florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
     flux_image_inpainting,
+    gemini_image_generation,
     generate_pose_image,
     get_tools,
     get_tools_descriptions,

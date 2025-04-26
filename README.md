@@ -36,7 +36,7 @@ The most important step is to [signup](https://va.landing.ai/agent) and obtain y
 ### Other Prerequisites
 - Python version 3.9 or higher
 - [Anthropic API key](#get-an-anthropic-api-key)
-- [Gemini API key](#get-a-gemini-api-key)
+- [Google API key](#get-a-google-api-key)
 
 ### Why do I need Anthropic and Google API Keys?
 VisionAgent uses models from Anthropic and Google to respond to prompts and generate code. 
@@ -45,7 +45,7 @@ When you run the web-based version of VisionAgent, the app uses the LandingAI AP
 
 When you run VisionAgent programmatically, the app will need to use your API keys to access the Anthropic and Google models. This ensures that any projects you run with VisionAgent aren’t limited by the rate limits in place with the LandingAI accounts, and it also prevents many users from overloading the LandingAI rate limits.
 
-Anthropic and Gemini each have their own rate limits and paid tiers. Refer to their documentation and pricing to learn more.
+Anthropic and Google each have their own rate limits and paid tiers. Refer to their documentation and pricing to learn more.
 
 > **_NOTE:_** In VisionAgent v1.0.2 and earlier, VisionAgent was powered by Anthropic Claude-3.5 and OpenAI o1. If using one of these VisionAgent versions, you get an OpenAI API key and set it as an environment variable.
 
@@ -55,7 +55,7 @@ Anthropic and Gemini each have their own rate limits and paid tiers. Refer to th
 2. In the Anthropic Console, go to the [API Keys](https://console.anthropic.com/settings/keys) page.
 3. Generate an API key.
 
-### Get a Gemini API Key
+### Get a Google API Key
 1. If you don’t have one yet, create a [Google AI Studio account](https://aistudio.google.com/).
 2. In Google AI Studio, go to the [Get API Key](https://aistudio.google.com/app/apikey) page.
 3. Generate an API key.
@@ -70,8 +70,8 @@ pip install vision-agent
 ## Quickstart: Prompt VisionAgent
 Follow this quickstart to learn how to prompt VisionAgent. After learning the basics, customize your prompt and workflow to meet your needs.
 
-1. Get your Anthropic, Gemini, and VisionAgent API keys.
-2. [Set the Anthropic, Gemini, and VisionAgent API keys as environment variables](#set-api-keys-as-environment-variables).
+1. Get your Anthropic, Google, and VisionAgent API keys.
+2. [Set the Anthropic, Google, and VisionAgent API keys as environment variables](#set-api-keys-as-environment-variables).
 3. [Install VisionAgent](#installation).
 4. Create a folder called `quickstart`. 
 5. Find an image you want to analyze and save it to the `quickstart` folder.
@@ -80,13 +80,13 @@ Follow this quickstart to learn how to prompt VisionAgent. After learning the ba
 8. VisionAgent creates a file called `generated_code.py` and saves the generated code there.  
 
 ### Set API Keys as Environment Variables
-Before running VisionAgent code, you must set the Anthropic, Gemini, and VisionAgent API keys as environment variables. Each operating system offers different ways to do this.
+Before running VisionAgent code, you must set the Anthropic, Google, and VisionAgent API keys as environment variables. Each operating system offers different ways to do this.
 
 Here is the code for setting the variables:
 ```bash
 export VISION_AGENT_API_KEY="your-api-key"
 export ANTHROPIC_API_KEY="your-api-key"
-export GEMINI_API_KEY="your-api-key" 
+export GOOGLE_API_KEY="your-api-key" 
 ```
 ### Sample Script: Prompt VisionAgent
 To use VisionAgent to generate code, use the following script as a starting point:
