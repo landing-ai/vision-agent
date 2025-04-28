@@ -19,7 +19,7 @@ import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
-from pytube import YouTube  # type: ignore
+from pytubefix import YouTube  # type: ignore
 import pymupdf  # type: ignore
 from google import genai  # type: ignore
 from google.genai import types  # type: ignore

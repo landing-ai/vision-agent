@@ -39,6 +39,7 @@ dependencies = [
     "dotenv>=0.9.9,<0.10",
     "pymupdf>=1.23.0,<2",
     "google-genai>=1.0.0,<2",
+    "pytubefix>=8.12.3",
 ]
 
 [project.urls]
