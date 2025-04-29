@@ -19,7 +19,7 @@ import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
-from pytubefix import YouTube  # type: ignore
+import yt_dlp  # type: ignore
 import pymupdf  # type: ignore
 from google import genai  # type: ignore
 from google.genai import types  # type: ignore
@@ -3169,7 +3169,6 @@ def extract_frames_and_timestamps(
         [{"frame": np.ndarray, "timestamp": 0.0}, ...]
     """
     if isinstance(fps, str):
-        # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
 
     def reformat(
@@ -3189,29 +3188,25 @@ def extract_frames_and_timestamps(
         )
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
-            yt = YouTube(str(video_uri))
-            # Download the highest resolution video
-            video = (
-                yt.streams.filter(progressive=True, file_extension="mp4")
-                .order_by("resolution")
-                .desc()
-                .first()
-            )
-            if not video:
-                raise Exception("No suitable video stream found")
-            video_file_path = video.download(output_path=temp_dir)
+            ydl_opts = {
+                "outtmpl": os.path.join(temp_dir, "%(title)s.%(ext)s"),
+                "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                "quiet": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(str(video_uri), download=True)
+                video_file_path = ydl.prepare_filename(info)
 
             return reformat(extract_frames_from_video(video_file_path, fps))
+
     elif str(video_uri).startswith(("http", "https")):
         _, image_suffix = os.path.splitext(video_uri)
         with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
-            # Download the video and save it to the temporary file
             with urllib.request.urlopen(str(video_uri)) as response:
                 tmp_file.write(response.read())
             return reformat(extract_frames_from_video(tmp_file.name, fps))
 
     return reformat(extract_frames_from_video(str(video_uri), fps))
-
 
 def save_json(data: Any, file_path: str) -> None:
     """'save_json' is a utility function that saves data as a JSON file. It is helpful
