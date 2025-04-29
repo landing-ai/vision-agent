@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vision-agent"
-version = "1.1.7"
+version = "1.1.8"
 description = "Toolset for Vision Agent"
 authors = [{ name = "Landing AI", email = "dev@landing.ai" }]
 requires-python = ">=3.9,<4.0"
