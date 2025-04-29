@@ -10,6 +10,7 @@ from importlib import resources
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from warnings import warn
+import time
 
 import cv2
 import numpy as np
@@ -20,6 +21,8 @@ from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
 from pytube import YouTube  # type: ignore
 import pymupdf  # type: ignore
+from google import genai  # type: ignore
+from google.genai import types  # type: ignore
 
 from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
 from vision_agent.utils.execute import FileSerializer, MimeType
@@ -2844,6 +2847,147 @@ def flux_image_inpainting(
         files,
     )
     return output_image
+
+
+def gemini_image_generation(
+    prompt: str,
+    image: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt.
+    It can be used to edit parts of an image or the entire image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the image. More detailed and specific prompts typically yield
+            better results.
+        image (np.ndarray, optional): The source image to be inpainted. The image will serve as
+            the base context for the inpainting process.
+
+    Returns:
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = gemini_image_generation(
+        ...     prompt="a modern black leather sofa with white pillows",
+        ...     image=image,
+        ... )
+        >>> save_image(result, "inpainted_room.png")
+    """
+    client = genai.Client()
+    files = []
+    image_file = None
+
+    def try_generate_content(
+        input_prompt: types.Content, num_retries: int = 3
+    ) -> Optional[bytes]:
+        """Try to generate content with multiple attempts."""
+        for attempt in range(num_retries):
+            try:
+                resp = client.models.generate_content(
+                    model="gemini-2.0-flash-exp-image-generation",
+                    contents=input_prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["Text", "Image"]
+                    ),
+                )
+
+                if (
+                    not resp.candidates
+                    or not resp.candidates[0].content
+                    or not resp.candidates[0].content.parts
+                    or not resp.candidates[0].content.parts[0].inline_data
+                    or not resp.candidates[0].content.parts[0].inline_data.data
+                ):
+                    _LOGGER.warning(f"Attempt {attempt + 1}: No candidates returned")
+                    time.sleep(5)
+                    continue
+                else:
+                    return (
+                        resp.candidates[0].content.parts[0].inline_data.data
+                        if isinstance(
+                            resp.candidates[0].content.parts[0].inline_data.data, bytes
+                        )
+                        else None
+                    )
+
+            except genai.errors.ClientError as e:
+                _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                time.sleep(5)
+
+        return None
+
+    if image is not None:
+        # Resize if needed
+        max_size = (512, 512)
+        if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+            scaling_factor = min(
+                max_size[0] / image.shape[0], max_size[1] / image.shape[1]
+            )
+            new_size = (
+                int(image.shape[1] * scaling_factor),
+                int(image.shape[0] * scaling_factor),
+            )
+            image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+
+        # Convert to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_file = numpy_to_bytes(image)
+        files = [("image", image_file)]
+
+        input_prompt = types.Content(
+            parts=[
+                types.Part(
+                    text="I want you to edit this image given this prompt: " + prompt
+                ),
+                types.Part(inline_data={"mime_type": "image/png", "data": image_file}),
+            ]
+        )
+
+    else:
+        input_prompt = types.Content(parts=[types.Part(text=prompt)])
+
+    # Try to generate content
+    output_image_bytes = try_generate_content(input_prompt)
+
+    # Handle fallback if all attempts failed
+    if output_image_bytes is None:
+        if image is not None:
+            _LOGGER.warning("Returning original image after all retries failed.")
+            return image
+        else:
+            try:
+                _LOGGER.warning("All retries failed; prompting for fresh generation.")
+                time.sleep(10)
+                output_image_bytes = try_generate_content(
+                    types.Content(parts=[types.Part(text="Generate an image.")]),
+                    num_retries=1,
+                )
+
+            except Exception as e:
+                raise ValueError(f"Fallback generation failed: {str(e)}")
+
+    # Convert bytes to image
+    if output_image_bytes is not None:
+        output_image_temp = io.BytesIO(output_image_bytes)
+        output_image_pil = Image.open(output_image_temp)
+        final_image = np.array(output_image_pil)
+    else:
+        raise ValueError("Fallback generation failed")
+
+    _display_tool_trace(
+        gemini_image_generation.__name__,
+        {
+            "prompt": prompt,
+            "model": "gemini-2.0-flash-exp-image-generation",
+        },
+        final_image,
+        files,
+    )
+
+    return final_image
 
 
 def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
