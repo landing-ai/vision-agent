@@ -177,7 +177,7 @@ def test_google_generate_with_mock(google_lmm_mock):  # noqa: F811
     google_lmm_mock.models.generate_content.assert_called_once()
     call_args = google_lmm_mock.models.generate_content.call_args
 
-    assert call_args.kwargs["model"] == "gemini-2.5-pro"
+    assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert "test prompt" in call_args.kwargs["contents"][0]["text"]
     assert "config" in call_args.kwargs
 
@@ -197,7 +197,7 @@ def test_google_generate_with_mock_stream(google_lmm_mock):  # noqa: F811
     google_lmm_mock.models.generate_content_stream.assert_called_once()
     call_args = google_lmm_mock.models.generate_content_stream.call_args
 
-    assert call_args.kwargs["model"] == "gemini-2.5-pro"
+    assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert "test prompt" in call_args.kwargs["contents"][0]["text"]
     assert "config" in call_args.kwargs
 
@@ -214,7 +214,7 @@ def test_google_chat_with_mock(google_lmm_mock):  # noqa: F811
     google_lmm_mock.models.generate_content.assert_called_once()
     call_args = google_lmm_mock.models.generate_content.call_args
 
-    assert call_args.kwargs["model"] == "gemini-2.5-pro"
+    assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert isinstance(call_args.kwargs["contents"], list)
     assert call_args.kwargs["contents"][0]["text"] == "test prompt"
 
@@ -234,7 +234,7 @@ def test_google_chat_with_mock_stream(google_lmm_mock):  # noqa: F811
     google_lmm_mock.models.generate_content_stream.assert_called_once()
     call_args = google_lmm_mock.models.generate_content_stream.call_args
 
-    assert call_args.kwargs["model"] == "gemini-2.5-pro"
+    assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert isinstance(call_args.kwargs["contents"], list)
     assert call_args.kwargs["contents"][0]["text"] == "test prompt"
 

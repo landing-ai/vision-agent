@@ -3,6 +3,7 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Union, cast
+import base64
 
 import anthropic
 import requests
@@ -524,7 +525,7 @@ class GoogleLMM(LMM):
 
     def __init__(
         self,
-        model_name: str = "gemini-2.5-pro",
+        model_name: str = "gemini-2.5-pro-preview-03-25",
         api_key: Optional[str] = None,
         image_size: int = 768,
         image_detail: str = "low",
@@ -630,20 +631,19 @@ class GoogleLMM(LMM):
                 parts.append(self._convert_media_part(media_path, **kwargs))
         return parts
 
-    def _convert_media_part(
-        self, media: Union[str, Path], **kwargs: Any
-    ) -> Dict[str, Any]:
+    def _convert_media_part(self, media: Union[str, Path], **kwargs: Any) -> types.Part:
         resize = kwargs.get("resize", self.image_size)
         encoded_media = encode_media(str(media), resize=resize)
 
-        if not encoded_media.startswith("data:image/"):
-            encoded_media = f"data:image/png;base64,{encoded_media}"
+        if encoded_media.startswith("data:image/"):
+            encoded_media = encoded_media.split(",", 1)[-1]
 
-        # Create a Part object from bytes for media
-        return {"inline_data": types.Part.from_bytes(
-            data=encoded_media.split(",", 1)[-1],  # Get the base64 data
+        binary_data = base64.b64decode(encoded_media)
+
+        return types.Part.from_bytes(
+            data=binary_data,
             mime_type="image/png",
-        )}
+        )
 
     def _create_generation_config(
         self, kwargs: Dict[str, Any]
