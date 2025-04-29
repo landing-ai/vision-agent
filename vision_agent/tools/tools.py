@@ -3208,6 +3208,7 @@ def extract_frames_and_timestamps(
 
     return reformat(extract_frames_from_video(str(video_uri), fps))
 
+
 def save_json(data: Any, file_path: str) -> None:
     """'save_json' is a utility function that saves data as a JSON file. It is helpful
     for saving data that contains NumPy arrays which are not JSON serializable.

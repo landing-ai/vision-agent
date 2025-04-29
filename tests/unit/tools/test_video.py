@@ -52,14 +52,20 @@ def test_extract_frames_and_timestamps_from_local_video():
     assert len(res) == 48
     assert all("frame" in item and "timestamp" in item for item in res)
 
+
 def test_extract_frames_and_timestamps_from_youtube():
-    res = extract_frames_and_timestamps('https://www.youtube.com/watch?v=WGYPuEs5uKk', fps=1)
+    res = extract_frames_and_timestamps(
+        "https://www.youtube.com/watch?v=WGYPuEs5uKk", fps=1
+    )
     assert isinstance(res, list)
     assert len(res) == 1
     assert all("frame" in item and "timestamp" in item for item in res)
 
+
 def test_extract_frames_and_timestamps_from_http():
-    res = extract_frames_and_timestamps('https://www.w3schools.com/tags/mov_bbb.mp4', fps=0.2)
+    res = extract_frames_and_timestamps(
+        "https://www.w3schools.com/tags/mov_bbb.mp4", fps=0.2
+    )
     assert isinstance(res, list)
     assert len(res) == 2
     assert all("frame" in item and "timestamp" in item for item in res)
@@ -68,7 +74,6 @@ def test_extract_frames_and_timestamps_from_http():
 def test_extract_frames_and_timestamps_invalid_local_file():
     res = extract_frames_and_timestamps("non_existing_file.mp4", fps=1.0)
     assert res == []
-
 
 
 def _create_video(
