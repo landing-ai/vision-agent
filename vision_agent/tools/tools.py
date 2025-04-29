@@ -2192,9 +2192,9 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
 
 
 def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
-    """'agentic_document_extraction' is a tool that can extract structured information out of
-    documents with different layouts. It returns the extracted data in a structured
-    hierarchical format containing text, tables, figures, charts, and other
+    """'agentic_document_extraction' is a tool that can extract structured information
+    out of documents with different layouts. It returns the extracted data in a
+    structured hierarchical format containing text, tables, figures, charts, and other
     information.
 
     Parameters:
@@ -2207,7 +2207,7 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
     -------
         >>> agentic_document_analysis(image)
         {
-            "markdown": "# Document title\n\n## Document subtitle\n\nThis is a sample document.",
+            "markdown": "# Document title ## Document subtitle This is a sample document.",
             "chunks": [
                 {
                     "text": "# Document title",
@@ -2223,6 +2223,11 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
             ...
             ]
         }
+
+    Notes
+    ----
+    For more document analysis features, please use the agentic-doc python package at
+    https://github.com/landing-ai/agentic-doc
     """
 
     image_file = numpy_to_bytes(image)
