@@ -9,8 +9,8 @@ import requests
 from anthropic.types import ImageBlockParam, MessageParam, TextBlockParam
 from openai import AzureOpenAI, OpenAI
 
-from google import genai
-from google.genai import types
+from google import genai  # type: ignore
+from google.genai import types  # type: ignore
 
 from vision_agent.models import Message
 from vision_agent.utils.image_utils import encode_media
@@ -519,7 +519,7 @@ class AnthropicLMM(LMM):
             return cast(str, response.content[0].text)
 
 
-class GoogleLMM(OpenAILMM):
+class GoogleLMM(LMM):
     r"""An LMM class for the Google LMMs."""
 
     def __init__(
@@ -584,7 +584,7 @@ class GoogleLMM(OpenAILMM):
                 contents=prompt_parts,
                 config=generation_config,
             )
-            return response.text
+            return cast(str, response.text)
 
     def generate(
         self,
@@ -592,8 +592,8 @@ class GoogleLMM(OpenAILMM):
         media: Optional[Sequence[Union[str, Path]]] = None,
         **kwargs: Any,
     ) -> Union[str, Iterator[Optional[str]]]:
-        prompt_parts = [prompt]
-        if media and self.model_name != "o3-mini":
+        prompt_parts = [{"text": prompt}]
+        if media:
             for m in media:
                 prompt_parts.append(self._convert_media_part(m, **kwargs))
 
@@ -619,13 +619,13 @@ class GoogleLMM(OpenAILMM):
                 contents=prompt_parts,
                 config=generation_config,
             )
-            return response.text
+            return cast(str, response.text)
 
     def _convert_message_parts(
         self, message: Dict[str, Any], **kwargs: Any
     ) -> List[Any]:
         parts = [{"text": message["content"]}]
-        if "media" in message and self.model_name != "o3-mini":
+        if "media" in message:
             for media_path in message["media"]:
                 parts.append(self._convert_media_part(media_path, **kwargs))
         return parts
@@ -640,10 +640,10 @@ class GoogleLMM(OpenAILMM):
             encoded_media = f"data:image/png;base64,{encoded_media}"
 
         # Create a Part object from bytes for media
-        return types.Part.from_bytes(
+        return {"inline_data": types.Part.from_bytes(
             data=encoded_media.split(",", 1)[-1],  # Get the base64 data
             mime_type="image/png",
-        )
+        )}
 
     def _create_generation_config(
         self, kwargs: Dict[str, Any]
