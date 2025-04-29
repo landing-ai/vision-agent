@@ -12,7 +12,7 @@ def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
     return docstrings
 
 
-def strip_notes(doc: str | None) -> str | None:
+def strip_notes(doc: Optional[str]) -> Optional[str]:
     if doc is None:
         return None
     return doc[: doc.find("Notes\n")].strip()
