@@ -9,6 +9,9 @@ import requests
 from anthropic.types import ImageBlockParam, MessageParam, TextBlockParam
 from openai import AzureOpenAI, OpenAI
 
+from google import genai
+from google.genai import types
+
 from vision_agent.models import Message
 from vision_agent.utils.image_utils import encode_media
 
@@ -521,23 +524,148 @@ class GoogleLMM(OpenAILMM):
 
     def __init__(
         self,
+        model_name: str = "gemini-2.5-pro",
         api_key: Optional[str] = None,
-        model_name: str = "gemini-2.0-flash-exp",
-        max_tokens: int = 4096,
-        image_detail: str = "low",
         image_size: int = 768,
+        image_detail: str = "low",
         **kwargs: Any,
     ):
-        base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
         if not api_key:
-            api_key = os.environ.get("GEMINI_API_KEY")
+            api_key = os.environ.get("GOOGLE_API_KEY")
 
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
-
+        # Create the client using the Google Genai client
+        self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
         self.image_size = image_size
         self.image_detail = image_detail
-
-        if "max_tokens" not in kwargs:
-            kwargs["max_tokens"] = max_tokens
         self.kwargs = kwargs
+
+    def __call__(
+        self,
+        input: Union[str, Sequence[Dict[str, Any]]],
+        **kwargs: Any,
+    ) -> Union[str, Iterator[Optional[str]]]:
+        if isinstance(input, str):
+            return self.generate(input, **kwargs)
+        return self.chat(input, **kwargs)
+
+    def chat(
+        self,
+        chat: Sequence[Dict[str, Any]],
+        **kwargs: Any,
+    ) -> Union[str, Iterator[Optional[str]]]:
+        prompt_parts = []
+        for message in chat:
+            if message["role"] != "user":
+                continue  # Gemini expects only user input
+            prompt_parts.extend(self._convert_message_parts(message, **kwargs))
+
+        tmp_kwargs = self.kwargs | kwargs
+        generation_config = self._create_generation_config(tmp_kwargs)
+
+        if tmp_kwargs.get("stream"):
+
+            def f() -> Iterator[Optional[str]]:
+                # Use the client to stream content
+                response_stream = self.client.models.generate_content_stream(
+                    model=self.model_name,
+                    contents=prompt_parts,
+                    config=generation_config,
+                )
+                for chunk in response_stream:
+                    if chunk.text:
+                        yield chunk.text
+
+            return f()
+        else:
+            # Use the client for non-streaming
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt_parts,
+                config=generation_config,
+            )
+            return response.text
+
+    def generate(
+        self,
+        prompt: str,
+        media: Optional[Sequence[Union[str, Path]]] = None,
+        **kwargs: Any,
+    ) -> Union[str, Iterator[Optional[str]]]:
+        prompt_parts = [prompt]
+        if media and self.model_name != "o3-mini":
+            for m in media:
+                prompt_parts.append(self._convert_media_part(m, **kwargs))
+
+        tmp_kwargs = self.kwargs | kwargs
+        generation_config = self._create_generation_config(tmp_kwargs)
+
+        if tmp_kwargs.get("stream"):
+
+            def f() -> Iterator[Optional[str]]:
+                response_stream = self.client.models.generate_content_stream(
+                    model=self.model_name,
+                    contents=prompt_parts,
+                    config=generation_config,
+                )
+                for chunk in response_stream:
+                    if chunk.text:
+                        yield chunk.text
+
+            return f()
+        else:
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt_parts,
+                config=generation_config,
+            )
+            return response.text
+
+    def _convert_message_parts(
+        self, message: Dict[str, Any], **kwargs: Any
+    ) -> List[Any]:
+        parts = [{"text": message["content"]}]
+        if "media" in message and self.model_name != "o3-mini":
+            for media_path in message["media"]:
+                parts.append(self._convert_media_part(media_path, **kwargs))
+        return parts
+
+    def _convert_media_part(
+        self, media: Union[str, Path], **kwargs: Any
+    ) -> Dict[str, Any]:
+        resize = kwargs.get("resize", self.image_size)
+        encoded_media = encode_media(str(media), resize=resize)
+
+        if not encoded_media.startswith("data:image/"):
+            encoded_media = f"data:image/png;base64,{encoded_media}"
+
+        # Create a Part object from bytes for media
+        return types.Part.from_bytes(
+            data=encoded_media.split(",", 1)[-1],  # Get the base64 data
+            mime_type="image/png",
+        )
+
+    def _create_generation_config(
+        self, kwargs: Dict[str, Any]
+    ) -> types.GenerateContentConfig:
+        # Extract generation-specific parameters
+        config_params = {}
+
+        # Handle known parameters
+        for param in [
+            "max_output_tokens",
+            "temperature",
+            "top_p",
+            "top_k",
+            "response_mime_type",
+            "stop_sequences",
+            "candidate_count",
+            "seed",
+            "safety_settings",
+            "system_instruction",
+        ]:
+            if param in kwargs:
+                config_params[param] = kwargs[param]
+
+        # Create a GenerateContentConfig object
+        return types.GenerateContentConfig(**config_params)

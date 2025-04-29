@@ -350,10 +350,10 @@ desc,doc,name
     Returns:
         str: The extracted text from the image.
     ",claude35_text_extraction
-"'document_extraction' is a tool that can extract structured information out of documents with different layouts. It returns the extracted data in a structured hierarchical format containing text, tables, pictures, charts, and other information.","document_extraction(image: numpy.ndarray) -> Dict[str, Any]:
-'document_extraction' is a tool that can extract structured information out of
+"'agentic_document_extraction' is a tool that can extract structured information out of documents with different layouts. It returns the extracted data in a structured hierarchical format containing text, tables, figures, charts, and other information.","agentic_document_extraction(image: numpy.ndarray) -> Dict[str, Any]:
+'agentic_document_extraction' is a tool that can extract structured information out of
     documents with different layouts. It returns the extracted data in a structured
-    hierarchical format containing text, tables, pictures, charts, and other
+    hierarchical format containing text, tables, figures, charts, and other
     information.
 
     Parameters:
@@ -364,21 +364,29 @@ desc,doc,name
 
     Example
     -------
-        >>> document_analysis(image)
-        {'pages':
-            [{'bbox': [0, 0, 1.0, 1.0],
-                    'chunks': [{'bbox': [0.8, 0.1, 1.0, 0.2],
-                                'label': 'page_header',
-                                'order': 75
-                                'caption': 'Annual Report 2024',
-                                'summary': 'This annual report summarizes ...' },
-                               {'bbox': [0.2, 0.9, 0.9, 1.0],
-                                'label': 'table',
-                                'order': 1119,
-                                'caption': [{'Column 1': 'Value 1', 'Column 2': 'Value 2'},
-                                'summary': 'This table illustrates a trend of ...'},
+        >>> agentic_document_analysis(image)
+        {
+            ""markdown"": ""# Document title
+
+## Document subtitle
+
+This is a sample document."",
+            ""chunks"": [
+                {
+                    ""text"": ""# Document title"",
+                    ""grounding"": [
+                        {
+                            ""box"": [0.06125, 0.019355758266818696, 0.17375, 0.03290478905359179],
+                            ""page"": 0
+                        }
                     ],
-    ",document_extraction
+                    ""chunk_type"": ""page_header"",
+                    ""chunk_id"": ""622e0374-c50e-4960-a013-650138b42528""
+                },
+            ...
+            ]
+        }
+    ",agentic_document_extraction
 "'document_qa' is a tool that can answer any questions about arbitrary documents, presentations, or tables. It's very useful for document QA tasks, you can ask it a specific question or ask it to return a JSON object answering multiple questions about the document.","document_qa(prompt: str, image: numpy.ndarray) -> str:
 'document_qa' is a tool that can answer any questions about arbitrary documents,
     presentations, or tables. It's very useful for document QA tasks, you can ask it a
@@ -559,30 +567,6 @@ desc,doc,name
         ... )
         >>> save_image(result, ""inpainted_room.png"")
     ",flux_image_inpainting
-"'gemini_image_generation' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_generation(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
-'gemini_image_generation' performs image inpainting given an image and text prompt.
-    It can be used to edit parts of an image or the entire image according to the prompt given.
-
-    Parameters:
-        prompt (str): A detailed text description guiding what should be generated
-            in the image. More detailed and specific prompts typically yield
-            better results.
-        image (np.ndarray): The source image to be inpainted. The image will serve as
-            the base context for the inpainting process.
-
-    Returns:
-        np.ndarray: The generated image(s) as a numpy array in RGB format with values
-            ranging from 0 to 255.
-
-    -------
-    Example:
-        >>> # Generate inpainting
-        >>> result = gemini_image_generation(
-        ...     prompt="a modern black leather sofa with white pillows",
-        ...     image=image,
-        ... )
-        >>> save_image(result, ""inpainted_room.png"")
-    ",gemini_image_generation
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list of input labels or tags. It returns the same list of the input labels along with their probability scores based on image content.,"siglip_classification(image: numpy.ndarray, labels: List[str]) -> Dict[str, Any]:
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list
     of input labels or tags. It returns the same list of the input labels along with

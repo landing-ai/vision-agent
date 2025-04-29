@@ -48,3 +48,36 @@ def chat_ollama_lmm_mock(request):
     with patch("vision_agent.lmm.lmm.requests.post") as mock:
         mock.return_value = mock_resp
         yield mock
+
+
+@pytest.fixture
+def google_lmm_mock(request):
+    content = request.param
+
+    # Mock implementation for streaming responses
+    def mock_stream_generator():
+        for chunk in content.split(" "):
+            yield MagicMock(text=chunk)
+        yield MagicMock(text=None)
+
+    # Mock implementation for regular responses
+    mock_generate_response = MagicMock()
+    mock_generate_response.text = content
+
+    # Set up the client mock
+    mock_client = MagicMock()
+    mock_models = MagicMock()
+    mock_client.models = mock_models
+
+    # Configure generate_content method
+    mock_models.generate_content.return_value = mock_generate_response
+
+    # Configure generate_content_stream method
+    mock_stream = MagicMock()
+    mock_stream.__iter__.return_value = mock_stream_generator()
+    mock_models.generate_content_stream.return_value = mock_stream
+
+    # Patch the genai.Client class
+    with patch("google.genai.Client") as mock_client_class:
+        mock_client_class.return_value = mock_client
+        yield mock_client
