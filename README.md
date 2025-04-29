@@ -63,6 +63,13 @@ Anthropic and Google each have their own rate limits and paid tiers. Refer to th
 
 ## Installation
 
+Install with uv:
+```bash
+uv add vision-agent
+```
+
+Intall with pip:
+
 ```bash
 pip install vision-agent
 ```
