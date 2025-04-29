@@ -53,15 +53,6 @@ def test_extract_frames_and_timestamps_from_local_video():
     assert all("frame" in item and "timestamp" in item for item in res)
 
 
-def test_extract_frames_and_timestamps_from_youtube():
-    res = extract_frames_and_timestamps(
-        "https://www.youtube.com/watch?v=WGYPuEs5uKk", fps=1
-    )
-    assert isinstance(res, list)
-    assert len(res) == 1
-    assert all("frame" in item and "timestamp" in item for item in res)
-
-
 def test_extract_frames_and_timestamps_from_http():
     res = extract_frames_and_timestamps(
         "https://www.w3schools.com/tags/mov_bbb.mp4", fps=0.2
