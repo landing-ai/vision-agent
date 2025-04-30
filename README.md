@@ -68,7 +68,7 @@ Install with uv:
 uv add vision-agent
 ```
 
-Intall with pip:
+Install with pip:
 
 ```bash
 pip install vision-agent
