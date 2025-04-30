@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from vision_agent.utils.video import extract_frames_from_video
+from vision_agent.tools import extract_frames_and_timestamps
 
 
 def test_extract_frames_from_video():
@@ -42,6 +43,28 @@ def test_extract_frames_with_input_video_has_no_fps():
     video_path = _create_video(fps_video_prop=None)
     res = extract_frames_from_video(video_path, 1.0)
     assert len(res) == 0
+
+
+def test_extract_frames_and_timestamps_from_local_video():
+    video_path = _create_video(duration=2)
+    res = extract_frames_and_timestamps(video_path, fps=24)
+    assert isinstance(res, list)
+    assert len(res) == 48
+    assert all("frame" in item and "timestamp" in item for item in res)
+
+
+def test_extract_frames_and_timestamps_from_http():
+    res = extract_frames_and_timestamps(
+        "https://www.w3schools.com/tags/mov_bbb.mp4", fps=0.2
+    )
+    assert isinstance(res, list)
+    assert len(res) == 2
+    assert all("frame" in item and "timestamp" in item for item in res)
+
+
+def test_extract_frames_and_timestamps_invalid_local_file():
+    res = extract_frames_and_timestamps("non_existing_file.mp4", fps=1.0)
+    assert res == []
 
 
 def _create_video(

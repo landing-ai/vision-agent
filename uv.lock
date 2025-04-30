@@ -2276,15 +2276,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytube"
-version = "15.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d8/e7/16fec46c8d255c4bbc4b185d89c91dc92cdb802836570d8004d0db169c91/pytube-15.0.0.tar.gz", hash = "sha256:076052efe76f390dfa24b1194ff821d4e86c17d41cb5562f3a276a8bcbfc9d1d", size = 67229 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/51/64/bcf8632ed2b7a36bbf84a0544885ffa1d0b4bcf25cc0903dba66ec5fdad9/pytube-15.0.0-py3-none-any.whl", hash = "sha256:07b9904749e213485780d7eb606e5e5b8e4341aa4dccf699160876da00e12d78", size = 57594 },
-]
-
-[[package]]
 name = "pytz"
 version = "2025.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3150,7 +3141,6 @@ dependencies = [
     { name = "pillow-heif" },
     { name = "pydantic" },
     { name = "pymupdf" },
-    { name = "pytube" },
     { name = "requests" },
     { name = "rich" },
     { name = "scikit-learn" },
@@ -3159,6 +3149,7 @@ dependencies = [
     { name = "tenacity" },
     { name = "tqdm" },
     { name = "typing-extensions" },
+    { name = "yt-dlp" },
 ]
 
 [package.dev-dependencies]
@@ -3205,7 +3196,6 @@ requires-dist = [
     { name = "pillow-heif", specifier = ">=0.16.0,<0.17" },
     { name = "pydantic", specifier = ">=2.0.0,<3" },
     { name = "pymupdf", specifier = ">=1.23.0,<2" },
-    { name = "pytube", specifier = "==15.0.0" },
     { name = "requests", specifier = "==2.*" },
     { name = "rich", specifier = ">=13.7.1,<14" },
     { name = "scikit-learn", specifier = ">=1.5.2,<2" },
@@ -3214,6 +3204,7 @@ requires-dist = [
     { name = "tenacity", specifier = ">=8.3.0,<9" },
     { name = "tqdm", specifier = ">=4.64.0,<5.0.0" },
     { name = "typing-extensions", specifier = "==4.*" },
+    { name = "yt-dlp", specifier = ">=2025.3.31" },
 ]
 
 [package.metadata.requires-dev]
@@ -3433,6 +3424,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/49/364a615a0cc0872685646c495c7172e4fc7bf1959e3b12a1807a03014e05/wrapt-1.17.2-cp39-cp39-win32.whl", hash = "sha256:f393cda562f79828f38a819f4788641ac7c4085f30f1ce1a68672baa686482bb", size = 36423 },
     { url = "https://files.pythonhosted.org/packages/00/ad/5d2c1b34ba3202cd833d9221833e74d6500ce66730974993a8dc9a94fb8c/wrapt-1.17.2-cp39-cp39-win_amd64.whl", hash = "sha256:36ccae62f64235cf8ddb682073a60519426fdd4725524ae38874adf72b5f2aeb", size = 38772 },
     { url = "https://files.pythonhosted.org/packages/2d/82/f56956041adef78f849db6b289b282e72b55ab8045a75abad81898c28d19/wrapt-1.17.2-py3-none-any.whl", hash = "sha256:b18f2d1533a71f069c7f82d524a52599053d4c7166e9dd374ae2136b7f40f7c8", size = 23594 },
+]
+
+[[package]]
+name = "yt-dlp"
+version = "2025.3.31"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/11/333d16f88b1515d4c601e1dfbf1028e6798f0b2a8ff1dc5aaa7b797aa9e8/yt_dlp-2025.3.31.tar.gz", hash = "sha256:1bfe0e660d1a70a09e27b2d58f92e30b1e2e362cc487829f2f824346ae49fb91", size = 2967466 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/bf/7b0affb8f163376309696cfd1c677818fa0969fbb9d88225087208799afe/yt_dlp-2025.3.31-py3-none-any.whl", hash = "sha256:8ecb3aa218a3bebe431119f513a8972b9b9d992edf67168c00ab92329a03baec", size = 3226021 },
 ]
 
 [[package]]
