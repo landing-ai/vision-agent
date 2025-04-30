@@ -7,7 +7,7 @@ import pandas as pd
 def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
     docstrings = ""
     for func in funcs:
-        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}\n\n"
+        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{strip_notes(func.__doc__)}\n\n"
 
     return docstrings
 
