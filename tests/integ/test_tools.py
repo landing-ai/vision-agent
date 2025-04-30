@@ -37,6 +37,7 @@ from vision_agent.tools import (
     vit_nsfw_classification,
 )
 
+
 def test_owlv2_object_detection():
     img = ski.data.coins()
     result = owlv2_object_detection(
