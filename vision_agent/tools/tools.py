@@ -10,6 +10,7 @@ from importlib import resources
 from pathlib import Path
 from typing import IO, Any, Callable, Dict, List, Optional, Tuple, Union, cast
 from warnings import warn
+import time
 
 import cv2
 import numpy as np
@@ -18,7 +19,7 @@ import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
-from pytube import YouTube  # type: ignore
+import yt_dlp  # type: ignore
 import pymupdf  # type: ignore
 from google import genai  # type: ignore
 from google.genai import types  # type: ignore
@@ -2194,9 +2195,9 @@ def document_extraction(image: np.ndarray) -> Dict[str, Any]:
 
 
 def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
-    """'agentic_document_extraction' is a tool that can extract structured information out of
-    documents with different layouts. It returns the extracted data in a structured
-    hierarchical format containing text, tables, figures, charts, and other
+    """'agentic_document_extraction' is a tool that can extract structured information
+    out of documents with different layouts. It returns the extracted data in a
+    structured hierarchical format containing text, tables, figures, charts, and other
     information.
 
     Parameters:
@@ -2209,7 +2210,7 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
     -------
         >>> agentic_document_analysis(image)
         {
-            "markdown": "# Document title\n\n## Document subtitle\n\nThis is a sample document.",
+            "markdown": "# Document title ## Document subtitle This is a sample document.",
             "chunks": [
                 {
                     "text": "# Document title",
@@ -2225,6 +2226,11 @@ def agentic_document_extraction(image: np.ndarray) -> Dict[str, Any]:
             ...
             ]
         }
+
+    Notes
+    ----
+    For more document analysis features, please use the agentic-doc python package at
+    https://github.com/landing-ai/agentic-doc
     """
 
     image_file = numpy_to_bytes(image)
@@ -2843,18 +2849,18 @@ def flux_image_inpainting(
     return output_image
 
 
-def gemini_image_inpainting(
+def gemini_image_generation(
     prompt: str,
-    image: np.ndarray,
+    image: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """'gemini_image_inpainting' performs image inpainting given an image and text prompt.
+    """'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
 
     Parameters:
         prompt (str): A detailed text description guiding what should be generated
             in the image. More detailed and specific prompts typically yield
             better results.
-        image (np.ndarray): The source image to be inpainted. The image will serve as
+        image (np.ndarray, optional): The source image to be inpainted. The image will serve as
             the base context for the inpainting process.
 
     Returns:
@@ -2864,75 +2870,124 @@ def gemini_image_inpainting(
     -------
     Example:
         >>> # Generate inpainting
-        >>> result = gemini_image_inpainting(
+        >>> result = gemini_image_generation(
         ...     prompt="a modern black leather sofa with white pillows",
         ...     image=image,
         ... )
         >>> save_image(result, "inpainted_room.png")
     """
-
-    min_dim = 8
-
-    # Check if the image is at least 8x8 pixels
-    if any(dim < min_dim for dim in image.shape[:2]):
-        raise ValueError(f"Image must be at least {min_dim}x{min_dim} pixels")
-
-    # Set the max image size to 512 by 512 (and keep the aspect ratio)
-    max_size = (512, 512)
-    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
-        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
-        new_size = (
-            int(image.shape[1] * scaling_factor),
-            int(image.shape[0] * scaling_factor),
-        )
-        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-
-    # Make sure the image dimensions are divisible by 8
-    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
-        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image_file = numpy_to_bytes(image)
-    input_image = Image.open(io.BytesIO(image_file))
-
-    files = [("image", image_file)]
-
     client = genai.Client()
+    files = []
+    image_file = None
 
-    # Generate the inpainted image
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-exp-image-generation",
-        contents=[prompt, input_image],
-        config=types.GenerateContentConfig(response_modalities=["Text", "Image"]),
-    )
+    def try_generate_content(
+        input_prompt: types.Content, num_retries: int = 3
+    ) -> Optional[bytes]:
+        """Try to generate content with multiple attempts."""
+        for attempt in range(num_retries):
+            try:
+                resp = client.models.generate_content(
+                    model="gemini-2.0-flash-exp-image-generation",
+                    contents=input_prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["Text", "Image"]
+                    ),
+                )
 
-    # Extract the generated image from the response
-    candidate = response.candidates[0]
-    part = candidate.content.parts[0]
-    inline_data = part.inline_data
-    data = inline_data.data
+                if (
+                    not resp.candidates
+                    or not resp.candidates[0].content
+                    or not resp.candidates[0].content.parts
+                    or not resp.candidates[0].content.parts[0].inline_data
+                    or not resp.candidates[0].content.parts[0].inline_data.data
+                ):
+                    _LOGGER.warning(f"Attempt {attempt + 1}: No candidates returned")
+                    time.sleep(5)
+                    continue
+                else:
+                    return (
+                        resp.candidates[0].content.parts[0].inline_data.data
+                        if isinstance(
+                            resp.candidates[0].content.parts[0].inline_data.data, bytes
+                        )
+                        else None
+                    )
 
-    # Get the generated image
-    try:
-        output_image = np.array(b64_to_pil(data.decode("utf-8")))
-    except UnicodeDecodeError:
-        output_image = np.array(Image.open(io.BytesIO(data)))
-    output_image = cv2.resize(
-        output_image, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_AREA
-    )
+            except genai.errors.ClientError as e:
+                _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                time.sleep(5)
+
+        return None
+
+    if image is not None:
+        # Resize if needed
+        max_size = (512, 512)
+        if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
+            scaling_factor = min(
+                max_size[0] / image.shape[0], max_size[1] / image.shape[1]
+            )
+            new_size = (
+                int(image.shape[1] * scaling_factor),
+                int(image.shape[0] * scaling_factor),
+            )
+            image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+
+        # Convert to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_file = numpy_to_bytes(image)
+        files = [("image", image_file)]
+
+        input_prompt = types.Content(
+            parts=[
+                types.Part(
+                    text="I want you to edit this image given this prompt: " + prompt
+                ),
+                types.Part(inline_data={"mime_type": "image/png", "data": image_file}),
+            ]
+        )
+
+    else:
+        input_prompt = types.Content(parts=[types.Part(text=prompt)])
+
+    # Try to generate content
+    output_image_bytes = try_generate_content(input_prompt)
+
+    # Handle fallback if all attempts failed
+    if output_image_bytes is None:
+        if image is not None:
+            _LOGGER.warning("Returning original image after all retries failed.")
+            return image
+        else:
+            try:
+                _LOGGER.warning("All retries failed; prompting for fresh generation.")
+                time.sleep(10)
+                output_image_bytes = try_generate_content(
+                    types.Content(parts=[types.Part(text="Generate an image.")]),
+                    num_retries=1,
+                )
+
+            except Exception as e:
+                raise ValueError(f"Fallback generation failed: {str(e)}")
+
+    # Convert bytes to image
+    if output_image_bytes is not None:
+        output_image_temp = io.BytesIO(output_image_bytes)
+        output_image_pil = Image.open(output_image_temp)
+        final_image = np.array(output_image_pil)
+    else:
+        raise ValueError("Fallback generation failed")
 
     _display_tool_trace(
-        gemini_image_inpainting.__name__,
+        gemini_image_generation.__name__,
         {
             "prompt": prompt,
             "model": "gemini-2.0-flash-exp-image-generation",
         },
-        output_image,
+        final_image,
         files,
     )
-    return output_image
+
+    return final_image
 
 
 def siglip_classification(image: np.ndarray, labels: List[str]) -> Dict[str, Any]:
@@ -3119,7 +3174,6 @@ def extract_frames_and_timestamps(
         [{"frame": np.ndarray, "timestamp": 0.0}, ...]
     """
     if isinstance(fps, str):
-        # fps could be a string when it's passed in from a web endpoint deployment
         fps = float(fps)
 
     def reformat(
@@ -3139,23 +3193,20 @@ def extract_frames_and_timestamps(
         )
     ):
         with tempfile.TemporaryDirectory() as temp_dir:
-            yt = YouTube(str(video_uri))
-            # Download the highest resolution video
-            video = (
-                yt.streams.filter(progressive=True, file_extension="mp4")
-                .order_by("resolution")
-                .desc()
-                .first()
-            )
-            if not video:
-                raise Exception("No suitable video stream found")
-            video_file_path = video.download(output_path=temp_dir)
+            ydl_opts = {
+                "outtmpl": os.path.join(temp_dir, "%(title)s.%(ext)s"),
+                "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                "quiet": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(str(video_uri), download=True)
+                video_file_path = ydl.prepare_filename(info)
 
             return reformat(extract_frames_from_video(video_file_path, fps))
+
     elif str(video_uri).startswith(("http", "https")):
         _, image_suffix = os.path.splitext(video_uri)
         with tempfile.NamedTemporaryFile(delete=False, suffix=image_suffix) as tmp_file:
-            # Download the video and save it to the temporary file
             with urllib.request.urlopen(str(video_uri)) as response:
                 tmp_file.write(response.read())
             return reformat(extract_frames_from_video(tmp_file.name, fps))

@@ -7,15 +7,21 @@ import pandas as pd
 def get_tool_documentation(funcs: List[Callable[..., Any]]) -> str:
     docstrings = ""
     for func in funcs:
-        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}\n\n"
+        docstrings += f"{func.__name__}{inspect.signature(func)}:\n{strip_notes(func.__doc__)}\n\n"
 
     return docstrings
+
+
+def strip_notes(doc: Optional[str]) -> Optional[str]:
+    if doc is None:
+        return None
+    return doc[: doc.find("Notes\n")].strip()
 
 
 def get_tool_descriptions(funcs: List[Callable[..., Any]]) -> str:
     descriptions = ""
     for func in funcs:
-        description = func.__doc__
+        description = strip_notes(func.__doc__)
         if description is None:
             description = ""
 
@@ -60,13 +66,13 @@ def get_tools_df(funcs: List[Callable[..., Any]]) -> pd.DataFrame:
     data: Dict[str, List[str]] = {"desc": [], "doc": [], "name": []}
 
     for func in funcs:
-        desc = func.__doc__
+        desc = strip_notes(func.__doc__)
         if desc is None:
             desc = ""
         desc = desc[: desc.find("Parameters:")].replace("\n", " ").strip()
         desc = " ".join(desc.split())
 
-        doc = f"{func.__name__}{inspect.signature(func)}:\n{func.__doc__}"
+        doc = f"{func.__name__}{inspect.signature(func)}:\n{strip_notes(func.__doc__)}"
         data["desc"].append(desc)
         data["doc"].append(doc)
         data["name"].append(func.__name__)
@@ -78,7 +84,7 @@ def get_tools_info(funcs: List[Callable[..., Any]]) -> Dict[str, str]:
     data: Dict[str, str] = {}
 
     for func in funcs:
-        desc = func.__doc__
+        desc = strip_notes(func.__doc__)
         if desc is None:
             desc = ""
 
