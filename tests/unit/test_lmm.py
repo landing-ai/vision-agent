@@ -171,12 +171,9 @@ def test_google_generate_with_mock(google_lmm_mock):  # noqa: F811
     temp_image = create_temp_image()
     lmm = GoogleLMM()
     response = lmm.generate("test prompt", media=[temp_image])
-
     assert response == "mocked response"
-
     google_lmm_mock.models.generate_content.assert_called_once()
     call_args = google_lmm_mock.models.generate_content.call_args
-
     assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert "test prompt" in call_args.kwargs["contents"][0]["text"]
     assert "config" in call_args.kwargs
@@ -189,14 +186,11 @@ def test_google_generate_with_mock_stream(google_lmm_mock):  # noqa: F811
     temp_image = create_temp_image()
     lmm = GoogleLMM()
     response = lmm.generate("test prompt", media=[temp_image], stream=True)
-
     expected_response = ["mocked", "response", None]
     for i, chunk in enumerate(response):
         assert chunk == expected_response[i]
-
     google_lmm_mock.models.generate_content_stream.assert_called_once()
     call_args = google_lmm_mock.models.generate_content_stream.call_args
-
     assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert "test prompt" in call_args.kwargs["contents"][0]["text"]
     assert "config" in call_args.kwargs
@@ -208,12 +202,9 @@ def test_google_generate_with_mock_stream(google_lmm_mock):  # noqa: F811
 def test_google_chat_with_mock(google_lmm_mock):  # noqa: F811
     lmm = GoogleLMM()
     response = lmm.chat([{"role": "user", "content": "test prompt"}])
-
     assert response == "mocked response"
-
     google_lmm_mock.models.generate_content.assert_called_once()
     call_args = google_lmm_mock.models.generate_content.call_args
-
     assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert isinstance(call_args.kwargs["contents"], list)
     assert call_args.kwargs["contents"][0]["text"] == "test prompt"
@@ -225,15 +216,11 @@ def test_google_chat_with_mock(google_lmm_mock):  # noqa: F811
 def test_google_chat_with_mock_stream(google_lmm_mock):  # noqa: F811
     lmm = GoogleLMM()
     response = lmm.chat([{"role": "user", "content": "test prompt"}], stream=True)
-
     expected_response = ["mocked", "response", None]
     for i, chunk in enumerate(response):
         assert chunk == expected_response[i]
-
-    # Verify client was called correctly
     google_lmm_mock.models.generate_content_stream.assert_called_once()
     call_args = google_lmm_mock.models.generate_content_stream.call_args
-
     assert call_args.kwargs["model"] == "gemini-2.5-pro-preview-03-25"
     assert isinstance(call_args.kwargs["contents"], list)
     assert call_args.kwargs["contents"][0]["text"] == "test prompt"
@@ -244,13 +231,10 @@ def test_google_chat_with_mock_stream(google_lmm_mock):  # noqa: F811
 )
 def test_google_call_with_mock(google_lmm_mock):  # noqa: F811
     lmm = GoogleLMM()
-
     response = lmm("test prompt")
     assert response == "mocked response"
-
     response = lmm([{"role": "user", "content": "test prompt"}])
     assert response == "mocked response"
-
     assert google_lmm_mock.models.generate_content.call_count == 2
 
 
@@ -260,15 +244,12 @@ def test_google_call_with_mock(google_lmm_mock):  # noqa: F811
 def test_google_call_with_mock_stream(google_lmm_mock):  # noqa: F811
     expected_response = ["mocked", "response", None]
     lmm = GoogleLMM()
-
     response = lmm("test prompt", stream=True)
     for i, chunk in enumerate(response):
         assert chunk == expected_response[i]
-
     response = lmm([{"role": "user", "content": "test prompt"}], stream=True)
     for i, chunk in enumerate(response):
         assert chunk == expected_response[i]
-
     assert google_lmm_mock.models.generate_content_stream.call_count == 2
 
 
@@ -277,16 +258,12 @@ def test_google_call_with_mock_stream(google_lmm_mock):  # noqa: F811
 )
 def test_google_generation_config(google_lmm_mock):  # noqa: F811
     lmm = GoogleLMM()
-
     response = lmm.generate(
         "test prompt", temperature=0.7, max_output_tokens=200, top_k=40, top_p=0.95
     )
-
     assert response == "mocked response"
-
     call_args = google_lmm_mock.models.generate_content.call_args
     config = call_args.kwargs["config"]
-
     assert config.temperature == 0.7
     assert config.max_output_tokens == 200
     assert config.top_k == 40
