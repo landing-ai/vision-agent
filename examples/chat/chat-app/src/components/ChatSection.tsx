@@ -12,6 +12,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-python.min.js"
+
 
 
 interface ChatSectionProps {
@@ -87,6 +91,9 @@ const formatAssistantContent = (
   content: string,
   onSubmit: (functionName: string, boxThreshold: number) => void,
 ) => {
+  useEffect(() => {
+    Prism.highlightAll();
+  }, [content]);
   const responseMatch = content.match(/<response>(.*?)<\/response>/s);
   const thinkingMatch = content.match(/<thinking>(.*?)<\/thinking>/s);
   const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
@@ -146,8 +153,13 @@ const formatAssistantContent = (
           </div>
         )}
         {pythonMatch && (
-          <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs max-w-full whitespace-pre-wrap">
-            <code>{pythonMatch[1].trim()}</code>
+          <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs max-w-full whitespace-pre-wrap" style={{ fontSize: '12px' }}>
+            <code
+              className="language-python"
+              dangerouslySetInnerHTML={{
+                __html: Prism.highlight(pythonMatch[1].trim(), Prism.languages.python, "python"),
+              }}
+            />
           </pre>
         )}
       </>
