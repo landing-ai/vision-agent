@@ -19,9 +19,9 @@ from dotenv import load_dotenv
 import os
 
 PORT_FRONTEND = os.getenv("PORT_FRONTEND")
+DEBUG_HIL = os.getenv("DEBUG_HIL")
 
 app = FastAPI()
-DEBUG_HIL = False
 
 # CORS config
 app.add_middleware(
@@ -36,8 +36,19 @@ app.add_middleware(
 active_client: Optional[WebSocket] = None
 active_client_lock = asyncio.Lock()
 
+# Add a global flag to track if processing should be canceled
+processing_canceled = False
+processing_canceled_lock = asyncio.Lock()
 
 async def _async_update_callback(message: Dict[str, Any]):
+    global processing_canceled
+    
+    # Check if processing has been canceled
+    async with processing_canceled_lock:
+        if processing_canceled:
+            # Skip sending updates if processing has been canceled
+            return
+    
     # Try to send message to active WebSocket client
     async with active_client_lock:
         if active_client:
@@ -73,11 +84,22 @@ else:
     )
     code_interpreter = CodeInterpreterFactory.new_instance()
 
+async def reset_cancellation_flag():
+    global processing_canceled
+    async with processing_canceled_lock:
+        processing_canceled = False
+
 
 def process_messages_background(messages: List[Dict[str, Any]]):
+    global processing_canceled
+    if processing_canceled:
+        return
+        
     for message in messages:
         if "media" in message and message["media"] is None:
             del message["media"]
+
+    # Process messages normally (since cancellation is checked in the callback)
 
     response = agent.chat(
         [
@@ -128,10 +150,35 @@ def b64_video_to_frames(b64_video: str) -> List[np.ndarray]:
 async def chat(
     messages: List[Message], background_tasks: BackgroundTasks
 ) -> Dict[str, Any]:
+    # Reset cancellation flag before starting new processing
+    await reset_cancellation_flag()
+    
     background_tasks.add_task(
         process_messages_background, [m.model_dump() for m in messages]
     )
     return {"status": "Processing started"}
+
+
+@app.post("/cancel")
+async def cancel_processing():
+    """Cancel any ongoing message processing."""
+    global processing_canceled
+    async with processing_canceled_lock:
+        processing_canceled = True
+    
+    # Also clear the active websocket if possible
+    async with active_client_lock:
+        if active_client:
+            try:
+                # Send a cancellation message that the frontend can detect
+                await active_client.send_json({
+                    "role": "system",
+                    "content": "Processing canceled by user."
+                })
+            except Exception:
+                pass
+    
+    return {"status": "Processing canceled"}
 
 
 @app.websocket("/ws")

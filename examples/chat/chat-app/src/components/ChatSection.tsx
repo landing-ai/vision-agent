@@ -15,6 +15,9 @@ import {
 import Prism from "prismjs";
 import "prismjs/themes/prism-tomorrow.css";
 import "prismjs/components/prism-python.min.js"
+import ReactMarkdown from "react-markdown";
+import remarkGfm from 'remark-gfm' // For tables, strikethrough
+import rehypeHighlight from 'rehype-highlight' // For code syntax highlighting
 
 
 
@@ -109,7 +112,6 @@ const formatAssistantContent = (
   const finalPlanJson = JSON.parse(
     finalPlanJsonMatch ? finalPlanJsonMatch[1] : "{}",
   );
-
   if ("plan" in finalPlanJson && "instructions" in finalPlanJson) {
     return (
       <>
@@ -117,7 +119,7 @@ const formatAssistantContent = (
           <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
           {finalPlanJson.plan}
         </div>
-        <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
+        <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs]">
           <code style={{ whiteSpace: "pre-wrap" }}>
             {Array.isArray(finalPlanJson.instructions)
               ? "-" + finalPlanJson.instructions.join("\n-")
@@ -149,7 +151,14 @@ const formatAssistantContent = (
         {responseMatch && (
           <div>
             <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
-            {responseMatch[1]}
+            <div className="prose prose-sm max-w-none markdown">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]} 
+                rehypePlugins={[rehypeHighlight]}
+              >
+                {responseMatch[1]}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
         {pythonMatch && (
@@ -215,6 +224,39 @@ export function ChatSection({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const handleCancel = async () => {
+    try {
+      const response = await fetch(`http://localhost:${port_backend}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        }
+      });
+  
+      if (!response.ok) {
+        console.error("Failed to cancel processing:", await response.text());
+      } else {
+        console.log("Processing canceled successfully");
+      }
+      
+      setMessages([]);
+      setIsTyping(false);
+      if (uploadedMedia) {
+        onUploadedMedia("");
+      }
+    } catch (error) {
+      console.error("Error canceling processing:", error);
+    }
+  };
+  const TypingIndicator = () => {
+    return (
+      <div className="flex items-center space-x-1 p-2 rounded-lg bg-gray-100 w-12">
+        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }}></div>
+        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }}></div>
+        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "600ms" }}></div>
+      </div>
+    );
+  };
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);    
@@ -248,15 +290,10 @@ export function ChatSection({
       console.log("Recieved response:", data);
     } catch (error) {
       console.error("Error:", error);
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error processing your request.",
-        },
+        { role: "assistant", content: "Request canceled or failed." },
       ]);
-    } finally {
-      setIsTyping(false);
     }
   };
 
@@ -351,6 +388,7 @@ export function ChatSection({
         const data = JSON.parse(event.data);
         setMessages((prev) => [...prev, data]);
         handleFinalCode(data);
+        setIsTyping(false);
       };
   
       ws.onclose = () => {
@@ -387,8 +425,8 @@ export function ChatSection({
               />
             ))}
           {isTyping && (
-            <div className="text-sm italic text-gray-500 animate-pulse">
-              Assistant is typing...
+            <div className="mr-auto">
+              <TypingIndicator />
             </div>
           )}
           <div ref={bottomRef} />
@@ -419,6 +457,10 @@ export function ChatSection({
           <Button type="submit" size="icon">
             <Send className="h-4 w-4" />
           </Button>
+          <Button type="button" variant="secondary" size="icon" onClick={handleCancel}>
+            ✖
+          </Button>
+
         </form>
       </div>
     </Card>

@@ -53,10 +53,10 @@ This will:
 
 To enable human-in-the-loop support:
 
-1. Open `app.py`
+1. Open `.env`
 2. Set:
-   ```python
-   DEBUG_HIL = True
+   ```bash
+   DEBUG_HIL=true
    ```
 
 **Note:** Currently, only **object detection** and **segmentation** visualizations are supported.
