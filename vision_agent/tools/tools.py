@@ -2960,8 +2960,8 @@ def gemini_image_generation(
         else:
             try:
                 current_dir = os.path.dirname(os.path.abspath(__file__))
-                img_path = os.path.join(current_dir, '../../assets/gemini.png')
-                encoded_image = cv2.imencode('.png', img_path)[1]
+                img_path = os.path.join(current_dir, "../../assets/gemini.png")
+                encoded_image = cv2.imencode(".png", img_path)[1]
                 output_image_bytes = encoded_image.tobytes()
             except Exception as e:
                 raise ValueError(f"Fallback generation failed: {str(e)}")
