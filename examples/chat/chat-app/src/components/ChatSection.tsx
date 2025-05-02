@@ -2,7 +2,7 @@
 
 import { GroupedVisualizer } from "@/components/GroupedVisualizer";
 import { Polygon } from "@/components/PolygonDrawer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Send, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +12,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import Prism from "prismjs";
+import "prismjs/themes/prism-tomorrow.css";
+import "prismjs/components/prism-python.min.js"
+import ReactMarkdown from "react-markdown";
+import remarkGfm from 'remark-gfm' // For tables, strikethrough
+import rehypeHighlight from 'rehype-highlight' // For code syntax highlighting
+
+
 
 interface ChatSectionProps {
   uploadedMedia: string | null;
@@ -86,6 +94,9 @@ const formatAssistantContent = (
   content: string,
   onSubmit: (functionName: string, boxThreshold: number) => void,
 ) => {
+  useEffect(() => {
+    Prism.highlightAll();
+  }, [content]);
   const responseMatch = content.match(/<response>(.*?)<\/response>/s);
   const thinkingMatch = content.match(/<thinking>(.*?)<\/thinking>/s);
   const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
@@ -101,7 +112,6 @@ const formatAssistantContent = (
   const finalPlanJson = JSON.parse(
     finalPlanJsonMatch ? finalPlanJsonMatch[1] : "{}",
   );
-
   if ("plan" in finalPlanJson && "instructions" in finalPlanJson) {
     return (
       <>
@@ -109,7 +119,7 @@ const formatAssistantContent = (
           <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
           {finalPlanJson.plan}
         </div>
-        <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs">
+        <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs]">
           <code style={{ whiteSpace: "pre-wrap" }}>
             {Array.isArray(finalPlanJson.instructions)
               ? "-" + finalPlanJson.instructions.join("\n-")
@@ -141,12 +151,24 @@ const formatAssistantContent = (
         {responseMatch && (
           <div>
             <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
-            {responseMatch[1]}
+            <div className="prose prose-sm max-w-none markdown">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]} 
+                rehypePlugins={[rehypeHighlight]}
+              >
+                {responseMatch[1]}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
         {pythonMatch && (
-          <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs max-w-full whitespace-pre-wrap">
-            <code>{pythonMatch[1].trim()}</code>
+          <pre className="bg-gray-800 text-white p-1.5 rounded mt-2 overflow-x-auto text-xs max-w-full whitespace-pre-wrap" style={{ fontSize: '12px' }}>
+            <code
+              className="language-python"
+              dangerouslySetInnerHTML={{
+                __html: Prism.highlight(pythonMatch[1].trim(), Prism.languages.python, "python"),
+              }}
+            />
           </pre>
         )}
       </>
@@ -156,16 +178,24 @@ const formatAssistantContent = (
 };
 
 function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
+  const handleSubmit = onSubmit || ((functionName: string, boxThreshold: number) => {
+    console.log("No onSubmit handler provided", functionName, boxThreshold);
+  });
   return (
-    <div
-      className={`mb-4 break-words ${
-        message.role === "user" || message.role === "interaction_response"
-          ? "ml-auto bg-primary text-primary-foreground"
-          : message.role === "assistant"
-          ? "mr-auto bg-muted"
-          : "mr-auto bg-secondary"
-      } max-w-[80%] rounded-lg p-3`}
-    >
+      <div
+        className={`mb-4 max-w-[80%] p-3 rounded-lg shadow-sm ${
+          message.role === "user" || message.role === "interaction_response"
+            ? "ml-auto bg-blue-600 text-white"
+            : message.role === "assistant"
+            ? "mr-auto bg-gray-100 text-gray-900"
+            : "mr-auto bg-gray-200 text-gray-800"
+        }`}
+      >
+      {message.role !== "user" && (
+        <div className="mb-1 text-xs text-gray-500 uppercase font-medium">
+          {message.role}
+        </div>
+      )}
       {message.role === "observation" ? (
         <CollapsibleMessage content={message.content} />
       ) : message.role === "assistant" ||
@@ -173,7 +203,7 @@ function MessageBubble({ message, onSubmit }: MessageBubbleProps) {
         message.role === "planner" ||
         message.role === "interaction" ||
         message.role === "coder" ? (
-        formatAssistantContent(message.role, message.content, onSubmit)
+        formatAssistantContent(message.role, message.content, handleSubmit)
       ) : (
         message.content
       )}
@@ -190,7 +220,46 @@ export function ChatSection({
   onUploadedResult,
   polygons,
 }: ChatSectionProps) {
+  const port_backend = process.env.PORT_BACKEND;
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const handleCancel = async () => {
+    try {
+      const response = await fetch(`http://localhost:${port_backend}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        }
+      });
+  
+      if (!response.ok) {
+        console.error("Failed to cancel processing:", await response.text());
+      } else {
+        console.log("Processing canceled successfully");
+      }
+      
+      setMessages([]);
+      setIsTyping(false);
+      if (uploadedMedia) {
+        onUploadedMedia("");
+      }
+    } catch (error) {
+      console.error("Error canceling processing:", error);
+    }
+  };
+  const TypingIndicator = () => {
+    return (
+      <div className="flex items-center space-x-1 p-2 rounded-lg bg-gray-100 w-12">
+        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }}></div>
+        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }}></div>
+        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "600ms" }}></div>
+      </div>
+    );
+  };
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);    
 
   const sendMessages = async (messages: Message[]) => {
     try {
@@ -204,7 +273,8 @@ export function ChatSection({
       
       console.log("Sending message:", lastMessage);
       messages[messages.length - 1] = lastMessage;
-      const response = await fetch("http://localhost:8000/chat", {
+      setIsTyping(true);
+      const response = await fetch(`http://localhost:${port_backend}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -220,12 +290,9 @@ export function ChatSection({
       console.log("Recieved response:", data);
     } catch (error) {
       console.error("Error:", error);
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error processing your request.",
-        },
+        { role: "assistant", content: "Request canceled or failed." },
       ]);
     }
   };
@@ -306,15 +373,43 @@ export function ChatSection({
   };
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws");
-    ws.onmessage = (event) => {
-      console.log("Recieved event", event);
-      const data = JSON.parse(event.data);
-      setMessages((prev) => [...prev, data]);
-      handleFinalCode(data);
+    let ws: WebSocket;
+    let reconnectInterval: NodeJS.Timeout;
+  
+    const connect = () => {
+      ws = new WebSocket(`ws://localhost:${port_backend}/ws`);
+  
+      ws.onopen = () => {
+        console.log("✅ WebSocket connected");
+      };
+  
+      ws.onmessage = (event) => {
+        console.log("Received event", event);
+        const data = JSON.parse(event.data);
+        setMessages((prev) => [...prev, data]);
+        handleFinalCode(data);
+        setIsTyping(false);
+      };
+  
+      ws.onclose = () => {
+        console.warn("WebSocket closed. Reconnecting...");
+        reconnectInterval = setTimeout(connect, 1000); // Retry after 1s
+      };
+  
+      ws.onerror = (err) => {
+        console.error("WebSocket error (backend likely shut down)", err);
+        ws.close(); // Triggers onclose -> reconnect
+      };
     };
-    return () => ws.close();
+  
+    connect();
+  
+    return () => {
+      if (ws) ws.close();
+      if (reconnectInterval) clearTimeout(reconnectInterval);
+    };
   }, []);
+  
 
   return (
     <Card className="flex flex-col h-[800px]">
@@ -329,10 +424,17 @@ export function ChatSection({
                 onSubmit={interactionCallback}
               />
             ))}
+          {isTyping && (
+            <div className="mr-auto">
+              <TypingIndicator />
+            </div>
+          )}
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
+
       <div className="p-4 border-t">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form onSubmit={handleSubmit} className="flex gap-2 items-center bg-white border rounded-lg p-2 shadow-md">
           <input
             type="file"
             id="file-upload"
@@ -355,6 +457,10 @@ export function ChatSection({
           <Button type="submit" size="icon">
             <Send className="h-4 w-4" />
           </Button>
+          <Button type="button" variant="secondary" size="icon" onClick={handleCancel}>
+            ✖
+          </Button>
+
         </form>
       </div>
     </Card>

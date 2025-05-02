@@ -28,54 +28,108 @@ export function PreviewSection({
   onPolygonsChange,
 }: PreviewSectionProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden shadow-md border border-gray-200 h-[800px]">
       <Tabs defaultValue="media">
-        <TabsList className="w-full justify-start border-b rounded-none">
-          <TabsTrigger value="media">Media</TabsTrigger>
-          <TabsTrigger value="code">Code</TabsTrigger>
-          <TabsTrigger value="result">Result</TabsTrigger>
+        <TabsList className="w-full justify-start rounded-none bg-gray-50">
+          <TabsTrigger value="media" className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+            </svg>
+            Media
+          </TabsTrigger>
+          <TabsTrigger value="code" className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
+            </svg>
+            Code
+          </TabsTrigger>
+          <TabsTrigger value="result" className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-3" />
+              <path d="M18 3h3v3" />
+              <path d="M21 13V6h-8" />
+              <path d="m16 8-8 8" />
+            </svg>
+            Result
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="media" className="p-4">
-          <div className="border rounded-md p-4">
+        
+        <TabsContent value="media" className="p-4 bg-white">
+          <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
             {uploadedMedia ? (
               <PolygonDrawer
                 media={uploadedMedia || ""}
                 onPolygonsChange={onPolygonsChange}
               />
             ) : (
-              <p>No media uploaded yet.</p>
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                </svg>
+                <p className="text-gray-500">No media uploaded yet.</p>
+                <p className="text-sm text-gray-400 mt-2">Upload media to begin annotation.</p>
+              </div>
             )}
           </div>
         </TabsContent>
-        <TabsContent value="code" className="p-4">
+        
+        <TabsContent value="code" className="p-4 bg-white">
           <ScrollArea className="h-[calc(100vh-8rem)]">
             <div className="mb-4">
-              <SyntaxHighlighter
-                language="python"
-                style={gruvboxLight}
-                customStyle={{
-                  padding: "1rem",
-                  borderRadius: "0.375rem",
-                  backgroundColor: "var(--muted)",
-                  fontSize: "0.8rem", // 14px
-                }}
-                wrapLongLines={true}
-              >
-                {uploadedFile || ""}
-              </SyntaxHighlighter>
+              {uploadedFile ? (
+                <SyntaxHighlighter
+                  language="python"
+                  style={gruvboxLight}
+                  customStyle={{
+                    padding: "1.25rem",
+                    borderRadius: "0.5rem",
+                    backgroundColor: "#f8f9fa",
+                    fontSize: "0.875rem",
+                    border: "1px solid #e2e8f0",
+                    boxShadow: "inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)"
+                  }}
+                  wrapLongLines={true}
+                >
+                  {uploadedFile || ""}
+                </SyntaxHighlighter>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center border rounded-md bg-gray-50">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </svg>
+                  <p className="text-gray-500">No code uploaded yet.</p>
+                  <p className="text-sm text-gray-400 mt-2">Ask VisionAgent a question and wait for it to generate code.</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </TabsContent>
-        <TabsContent value="result" className="p-4">
-          <div className="border rounded-md p-4">
+        
+        <TabsContent value="result" className="p-4 bg-white">
+          <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
             {uploadedResult ? (
               <img
                 src={uploadedResult}
                 alt="Uploaded"
-                className="max-w-full rounded-md border"
+                className="max-w-full rounded-md border shadow-sm"
               />
             ) : (
-              <p>No image uploaded yet.</p>
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-3" />
+                  <path d="M18 3h3v3" />
+                  <path d="M21 13V6h-8" />
+                  <path d="m16 8-8 8" />
+                </svg>
+                <p className="text-gray-500">No result uploaded yet.</p>
+                <p className="text-sm text-gray-400 mt-2">Results will appear here after processing.</p>
+              </div>
             )}
           </div>
         </TabsContent>

@@ -1,6 +1,21 @@
+@import "tailwindcss";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.markdown > * {
+  all: revert;
+}
+
+/* For links */
+.markdown a {
+  color: #3b82f6; /* Tailwind's blue-500 */
+  text-decoration: underline;
+}
+
+.markdown a:hover {
+  color: #1d4ed8; /* Tailwind's blue-700 */
+}
 
 body {
   font-family: Arial, Helvetica, sans-serif;
@@ -64,9 +79,9 @@ body {
 
 @layer base {
   * {
-    @apply border-border;
+    @reference border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @reference bg-background text-foreground;
   }
 }

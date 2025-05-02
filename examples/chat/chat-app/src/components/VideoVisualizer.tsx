@@ -4,7 +4,7 @@ import { drawBoundingBox } from "./utils";
 
 interface VideoVisualizerProps {
   videoSrc: string; // Base64 video source (with data URI prefix)
-  detections: Detection[][]; // Each inner array corresponds to one frame’s detections.
+  detections: Detection[][] | string; // Allow both array of detections or string response
   threshold: number;
   fps?: number;
 }
