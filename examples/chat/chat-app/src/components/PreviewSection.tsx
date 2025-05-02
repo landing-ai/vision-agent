@@ -28,8 +28,8 @@ export function PreviewSection({
   onPolygonsChange,
 }: PreviewSectionProps) {
   return (
-    <Card className="overflow-hidden shadow-md border border-gray-200 h-[800px]">
-      <Tabs defaultValue="media">
+    <Card className="overflow-hidden shadow-md border border-gray-200 h-[800px] flex flex-col">
+      <Tabs defaultValue="media" className="flex-1 flex flex-col">
         <TabsList className="w-full justify-start rounded-none bg-gray-50">
           <TabsTrigger value="media" className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,29 +57,31 @@ export function PreviewSection({
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="media" className="p-4 bg-white">
-          <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
-            {uploadedMedia ? (
-              <PolygonDrawer
-                media={uploadedMedia || ""}
-                onPolygonsChange={onPolygonsChange}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
-                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                  <circle cx="9" cy="9" r="2" />
-                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                </svg>
-                <p className="text-gray-500">No media uploaded yet.</p>
-                <p className="text-sm text-gray-400 mt-2">Upload media to begin annotation.</p>
-              </div>
-            )}
-          </div>
+        <TabsContent value="media" className="p-4 bg-white flex-1 flex flex-col">
+          <ScrollArea className="flex-1">
+            <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
+              {uploadedMedia ? (
+                <PolygonDrawer
+                  media={uploadedMedia || ""}
+                  onPolygonsChange={onPolygonsChange}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                  </svg>
+                  <p className="text-gray-500">No media uploaded yet.</p>
+                  <p className="text-sm text-gray-400 mt-2">Upload media to begin annotation.</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </TabsContent>
         
-        <TabsContent value="code" className="p-4 bg-white">
-          <ScrollArea className="h-[calc(100vh-8rem)]">
+        <TabsContent value="code" className="p-4 bg-white flex-1 flex flex-col">
+          <ScrollArea className="flex-1">
             <div className="mb-4">
               {uploadedFile ? (
                 <SyntaxHighlighter
@@ -111,27 +113,29 @@ export function PreviewSection({
           </ScrollArea>
         </TabsContent>
         
-        <TabsContent value="result" className="p-4 bg-white">
-          <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
-            {uploadedResult ? (
-              <img
-                src={uploadedResult}
-                alt="Uploaded"
-                className="max-w-full rounded-md border shadow-sm"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
-                  <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-3" />
-                  <path d="M18 3h3v3" />
-                  <path d="M21 13V6h-8" />
-                  <path d="m16 8-8 8" />
-                </svg>
-                <p className="text-gray-500">No result uploaded yet.</p>
-                <p className="text-sm text-gray-400 mt-2">Results will appear here after processing.</p>
-              </div>
-            )}
-          </div>
+        <TabsContent value="result" className="p-4 bg-white flex-1 flex flex-col">
+          <ScrollArea className="flex-1">
+            <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
+              {uploadedResult ? (
+                <img
+                  src={uploadedResult}
+                  alt="Uploaded"
+                  className="max-w-full rounded-md border shadow-sm"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-3" />
+                    <path d="M18 3h3v3" />
+                    <path d="M21 13V6h-8" />
+                    <path d="m16 8-8 8" />
+                  </svg>
+                  <p className="text-gray-500">No result uploaded yet.</p>
+                  <p className="text-sm text-gray-400 mt-2">Results will appear here after processing.</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
     </Card>
