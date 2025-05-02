@@ -247,7 +247,7 @@ def print_table(title: str, columns: List[str], rows: List[List[str]]) -> None:
 
 
 def add_media_to_chat(
-    chat: List[AgentMessage], code_interpreter: Optional[CodeInterpreter] = None
+    chat: List[AgentMessage], code_interpreter: Optional[CodeInterpreter] = None, append_to_prompt: bool = True
 ) -> Tuple[List[AgentMessage], List[AgentMessage], List[Union[str, Path]]]:
     orig_chat = copy.deepcopy(chat)
     int_chat = copy.deepcopy(chat)
@@ -278,6 +278,7 @@ def add_media_to_chat(
                 if (
                     not str(chat_i.content).endswith(f" Media name {media}")
                     and chat_i.role == "user"
+                    and append_to_prompt
                 ):
                     chat_i.content += f" Media name {media}"
             chat_i.media = media_list_i if len(media_list_i) > 0 else None
@@ -304,13 +305,26 @@ def add_media_to_chat(
 def capture_media_from_exec(execution: Execution) -> List[str]:
     images = []
     for result in execution.results:
-        for format in result.formats():
-            if format in ["png", "jpeg"]:
-                # converts the image to png and then to base64
-                images.append(
-                    "data:image/png;base64,"
-                    + convert_to_b64(b64_to_pil(result[format]))
-                )
+        if hasattr(result, "formats"):
+            for format in result.formats():
+                if format in ["png", "jpeg"]:
+                    # converts the image to png and then to base64
+                    images.append(
+                        "data:image/png;base64,"
+                        + convert_to_b64(b64_to_pil(result[format]))
+                    )
+        elif hasattr(result, "savefig"):
+            pass
+        elif hasattr(result, "_repr_png_") and result._repr_png_():
+            images.append(
+                "data:image/png;base64,"
+                + convert_to_b64(b64_to_pil(result._repr_png_()))
+            )
+        elif hasattr(result, "_repr_jpeg_") and result._repr_jpeg_():
+            images.append(
+                "data:image/jpeg;base64,"
+                + convert_to_b64(b64_to_pil(result._repr_jpeg_()))
+            )
     return images
 
 
