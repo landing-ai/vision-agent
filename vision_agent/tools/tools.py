@@ -2962,8 +2962,8 @@ def gemini_image_generation(
                 _LOGGER.warning("All retries failed; prompting for fresh generation.")
                 time.sleep(10)
                 output_image_bytes = try_generate_content(
-                    types.Content(parts=[types.Part(text="Generate an image.")]),
-                    num_retries=1,
+                    types.Content(parts=[types.Part(text="Generate an image of a dog.")]),
+                    num_retries=3,
                 )
 
             except Exception as e:
