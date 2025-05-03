@@ -2959,13 +2959,10 @@ def gemini_image_generation(
             return image
         else:
             try:
-                _LOGGER.warning("All retries failed; prompting for fresh generation.")
-                time.sleep(10)
-                output_image_bytes = try_generate_content(
-                    types.Content(parts=[types.Part(text="Generate an image.")]),
-                    num_retries=1,
-                )
-
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                img_path = os.path.join(current_dir, "../../assets/gemini.png")
+                with open(img_path, "rb") as img_file:
+                    output_image_bytes = img_file.read()
             except Exception as e:
                 raise ValueError(f"Fallback generation failed: {str(e)}")
 

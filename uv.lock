@@ -3118,7 +3118,7 @@ wheels = [
 
 [[package]]
 name = "vision-agent"
-version = "1.1.7"
+version = "1.1.12"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
