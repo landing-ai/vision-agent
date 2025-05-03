@@ -3803,7 +3803,6 @@ FUNCTION_TOOLS = [
     agentic_document_extraction,
     document_qa,
     ocr,
-    hero_activity_recognition,
     qwen25_vl_images_vqa,
     qwen25_vl_video_vqa,
     activity_recognition,
