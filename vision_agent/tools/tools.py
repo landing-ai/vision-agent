@@ -2961,7 +2961,7 @@ def gemini_image_generation(
             try:
                 current_dir = os.path.dirname(os.path.abspath(__file__))
                 img_path = os.path.join(current_dir, "../../assets/gemini.png")
-                with open(img_path, 'rb') as img_file:
+                with open(img_path, "rb") as img_file:
                     output_image_bytes = img_file.read()
             except Exception as e:
                 raise ValueError(f"Fallback generation failed: {str(e)}")
