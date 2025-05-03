@@ -401,7 +401,7 @@ export function ChatSection({
         ws.close(); // Triggers onclose -> reconnect
       };
     };
-  
+    console.log("Trying to connect");
     connect();
   
     return () => {
