@@ -451,13 +451,13 @@ export function ChatSection({
           </Button>
           <input
             name="message"
-            className="flex-1 px-3 py-2 rounded-md border"
+            className="flex-1 px-2 py-2 rounded-md border"
             placeholder="Type your message..."
           />
-          <Button type="submit" size="icon">
+          <Button type="submit" variant="outline" size="icon">
             <Send className="h-4 w-4" />
           </Button>
-          <Button type="button" variant="secondary" size="icon" onClick={handleCancel}>
+          <Button type="button" variant="outline" size="icon" onClick={handleCancel}>
             ✖
           </Button>
 
