@@ -2478,7 +2478,7 @@ def hero_activity_recognition(
     frames: List[np.ndarray],
     specificity: str = "max",
     with_audio: bool = False,
-):
+) -> List[Dict[str, Any]]:
     """'hero_activity_recognition' is a tool that allows you to detect multiple activities within a video.
     It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.
 
@@ -2517,7 +2517,9 @@ def hero_activity_recognition(
         files,
     )
 
-    return response["events"]
+    events: List[Dict[str, Any]] = response["events"]
+
+    return events
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
