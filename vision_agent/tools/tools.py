@@ -3803,6 +3803,7 @@ FUNCTION_TOOLS = [
     florence2_sam2_video_tracking,
     claude35_text_extraction,
     agentic_document_extraction,
+    hero_activity_recognition,
     document_qa,
     ocr,
     qwen25_vl_images_vqa,
