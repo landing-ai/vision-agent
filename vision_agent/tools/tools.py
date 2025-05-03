@@ -2473,6 +2473,53 @@ def activity_recognition(
     return return_values_flattened
 
 
+def hero_activity_recognition(
+    prompt: str,
+    frames: List[np.ndarray],
+    specificity: str = "max",
+    with_audio: bool = False,
+):
+    """'hero_activity_recognition' is a tool that allows you to detect multiple activities within a video.
+    It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.
+
+    Parameters:
+        prompt (str): The prompt for activity recognition. Multiple activieties can be separated by semi-colon.
+        frames (List[np.ndarray]): The list of frames corresponding to the video.
+        specificity (str): Optional - Specificity or precision level for activity recognition - low, medium, high, max. Default is max.
+        with_audio (bool): Optional - Whether to include audio processing in activity recognition. Set it to false if there is no audio in the video. Default is false.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries containing the start time, end time, location, description, and label for each detected activity.
+            The start and end times are in seconds, the location is a string, the description is a string, and the label is an integer.
+
+    Example
+    -------
+        >>> activity_recognition('Person gets on bike; Person gets off bike', frames)
+        [
+            {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
+            {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
+        ]
+    """
+
+    buffer_bytes = frames_to_bytes(frames)
+    files = [("video", buffer_bytes)]
+
+    payload = {"prompt": prompt, "specificity": specificity, "with_audio": with_audio}
+
+    response = send_inference_request(
+        payload=payload, endpoint_name="activity-recognition", files=files, v2=True
+    )
+
+    _display_tool_trace(
+        hero_activity_recognition.__name__,
+        {"prompt": prompt, "specificity": specificity, "with_audio": with_audio},
+        response,
+        files,
+    )
+
+    return response["events"]
+
+
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
     """'vit_image_classification' is a tool that can classify an image. It returns a
     list of classes and their probability scores based on image content.
@@ -2960,8 +3007,8 @@ def gemini_image_generation(
         else:
             try:
                 current_dir = os.path.dirname(os.path.abspath(__file__))
-                img_path = os.path.join(current_dir, '../../assets/gemini.png')
-                encoded_image = cv2.imencode('.png', img_path)[1]
+                img_path = os.path.join(current_dir, "../../assets/gemini.png")
+                encoded_image = cv2.imencode(".png", img_path)[1]
                 output_image_bytes = encoded_image.tobytes()
             except Exception as e:
                 raise ValueError(f"Fallback generation failed: {str(e)}")
@@ -3756,6 +3803,7 @@ FUNCTION_TOOLS = [
     agentic_document_extraction,
     document_qa,
     ocr,
+    hero_activity_recognition,
     qwen25_vl_images_vqa,
     qwen25_vl_video_vqa,
     activity_recognition,

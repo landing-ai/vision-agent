@@ -33,6 +33,7 @@ from .tools import (
     flux_image_inpainting,
     gemini_image_generation,
     generate_pose_image,
+    hero_activity_recognition,
     get_tools,
     get_tools_descriptions,
     get_tools_df,

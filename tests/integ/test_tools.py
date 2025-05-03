@@ -24,6 +24,7 @@ from vision_agent.tools import (
     flux_image_inpainting,
     gemini_image_generation,
     generate_pose_image,
+    hero_activity_recognition,
     ocr,
     od_sam2_video_tracking,
     owlv2_object_detection,
@@ -273,6 +274,46 @@ def test_activity_recognition():
         model="qwen2vl",
     )
     assert len(result) == 5
+
+
+def test_hero_activity_recognition_no_audio():
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(5)
+    ]
+    result = hero_activity_recognition(
+        prompt="cat",
+        frames=frames,
+        with_audio=False
+    )
+    assert len(result) == 1
+    assert isinstance(result[0]["start_time"], int)
+    assert result[0]["end_time"] > 0
+    assert result[0]["location"] is not None and len(result[0]["location"]) > 0
+    assert result[0]["description"] is not None and len(result[0]["description"]) > 0
+    assert result[0]["label"] == 0
+    
+
+def test_hero_activity_recognition_multiple_activities_low_specificity():
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(5)
+    ]
+    result = hero_activity_recognition(
+        prompt="cat; animal",
+        frames=frames,
+        with_audio=False,
+        specificity="low",
+    )
+    assert len(result) == 2
+    assert isinstance(result[0]["start_time"], int)
+    assert result[0]["end_time"] > 0
+    assert result[0]["location"] is not None and len(result[0]["location"]) > 0
+    assert result[0]["description"] is not None and len(result[0]["description"]) > 0
+    assert result[0]["label"] == 0
+    assert isinstance(result[1]["start_time"], int)
+    assert result[1]["end_time"] > 0
+    assert result[1]["location"] is not None and len(result[0]["location"]) > 0
+    assert result[1]["description"] is not None and len(result[0]["description"]) > 0
+    assert result[1]["label"] == 1
 
 
 def test_ocr():

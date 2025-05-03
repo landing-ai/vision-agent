@@ -322,3 +322,7 @@ def load_sim(sim_file: Union[str, Path]) -> Sim:
     embs = np.load(sim_file / "embs.npy")
     df["embs"] = list(embs)
     return Sim(df)
+
+
+if __name__ == "__main__":
+    get_tool_recommender()
