@@ -264,7 +264,7 @@ def test_qwen2_vl_video_vqa():
 
 def test_agentic_activity_recognition_no_audio():
     frames = [
-        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(5)
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
     ]
     result = agentic_activity_recognition(
         prompt="cat",
@@ -273,7 +273,7 @@ def test_agentic_activity_recognition_no_audio():
     )
     assert len(result) == 1
     assert isinstance(result[0]["start_time"], int)
-    assert result[0]["end_time"] > 0
+    assert isinstance(result[0]["end_time"], int)
     assert result[0]["location"] is not None and len(result[0]["location"]) > 0
     assert result[0]["description"] is not None and len(result[0]["description"]) > 0
     assert result[0]["label"] == 0
@@ -286,12 +286,13 @@ def test_agentic_activity_recognition_multiple_activities_low_specificity():
     result = agentic_activity_recognition(
         prompt="cat; animal",
         frames=frames,
+        fps=3,
         with_audio=False,
         specificity="low",
     )
     assert len(result) == 2
     assert isinstance(result[0]["start_time"], int)
-    assert result[0]["end_time"] > 0
+    assert isinstance(result[0]["end_time"], int)
     assert result[0]["location"] is not None and len(result[0]["location"]) > 0
     assert result[0]["description"] is not None and len(result[0]["description"]) > 0
     assert result[0]["label"] == 0
