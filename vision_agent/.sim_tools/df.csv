@@ -406,6 +406,29 @@ desc,doc,name
         [
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
         ]",ocr
+"'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_generation(prompt: str, image: Optional[numpy.ndarray] = None) -> numpy.ndarray:
+'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt.
+    It can be used to edit parts of an image or the entire image according to the prompt given.
+
+    Parameters:
+        prompt (str): A detailed text description guiding what should be generated
+            in the image. More detailed and specific prompts typically yield
+            better results.
+        image (np.ndarray, optional): The source image to be inpainted. The image will serve as
+            the base context for the inpainting process.
+
+    Returns:
+        np.ndarray: The generated image(s) as a numpy array in RGB format with values
+            ranging from 0 to 255.
+
+    -------
+    Example:
+        >>> # Generate inpainting
+        >>> result = gemini_image_generation(
+        ...     prompt=""a modern black leather sofa with white pillows"",
+        ...     image=image,
+        ... )
+        >>> save_image(result, ""inpainted_room.png"")",gemini_image_generation
 'qwen25_vl_images_vqa' is a tool that can answer any questions about arbitrary images including regular images or images of documents or presentations. It can be very useful for document QA or OCR text extraction. It returns text as an answer to the question.,"qwen25_vl_images_vqa(prompt: str, images: List[numpy.ndarray]) -> str:
 'qwen25_vl_images_vqa' is a tool that can answer any questions about arbitrary
     images including regular images or images of documents or presentations. It can be
@@ -439,27 +462,28 @@ desc,doc,name
     -------
         >>> qwen25_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'",qwen25_vl_video_vqa
-'activity_recognition' is a tool that can recognize activities in a video given a text prompt. It can be used to identify where specific activities or actions happen in a video and returns a list of 0s and 1s to indicate the activity.,"activity_recognition(prompt: str, frames: List[numpy.ndarray], model: str = 'qwen25vl', chunk_length_frames: int = 10) -> List[float]:
-'activity_recognition' is a tool that can recognize activities in a video given a
-    text prompt. It can be used to identify where specific activities or actions
-    happen in a video and returns a list of 0s and 1s to indicate the activity.
+"'activity_recognition' is a tool that allows you to detect multiple activities within a video. It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.","activity_recognition(prompt: str, frames: List[numpy.ndarray], fps: Optional[float] = 5, specificity: str = 'max', with_audio: bool = False) -> List[Dict[str, Any]]:
+'activity_recognition' is a tool that allows you to detect multiple activities within a video.
+    It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.
 
     Parameters:
-        prompt (str): The event you want to identify, should be phrased as a question,
-            for example, ""Did a goal happen?"".
-        frames (List[np.ndarray]): The reference frames used for the question
-        model (str): The model to use for the inference. Valid values are
-            'claude-35', 'gpt-4o', 'qwen2vl'.
-        chunk_length_frames (int): length of each chunk in frames
+        prompt (str): The prompt for activity recognition. Multiple activieties can be separated by semi-colon.
+        frames (List[np.ndarray]): The list of frames corresponding to the video.
+        fps (float, optional): The frame rate per second to extract the frames at. Defaults to 5.
+        specificity (str, optional): Specificity or precision level for activity recognition - low, medium, high, max. Default is max.
+        with_audio (bool, optional): Whether to include audio processing in activity recognition. Set it to false if there is no audio in the video. Default is false.
 
     Returns:
-        List[float]: A list of floats with a value of 1.0 if the activity is detected in
-            the chunk_length_frames of the video.
+        List[Dict[str, Any]]: A list of dictionaries containing the start time, end time, location, description, and label for each detected activity.
+            The start and end times are in seconds, the location is a string, the description is a string, and the label is an integer.
 
     Example
     -------
-        >>> activity_recognition('Did a goal happened?', frames)
-        [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]",activity_recognition
+        >>> activity_recognition('Person gets on bike; Person gets off bike', frames)
+        [
+            {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
+            {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
+        ]",activity_recognition
 'depth_anything_v2' is a tool that runs depth anything v2 model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intensities with pixel values ranging from 0 to 255.,"depth_anything_v2(image: numpy.ndarray) -> numpy.ndarray:
 'depth_anything_v2' is a tool that runs depth anything v2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
@@ -514,59 +538,6 @@ desc,doc,name
     -------
         >>> vit_nsfw_classification(image)
         {""label"": ""normal"", ""scores"": 0.68},",vit_nsfw_classification
-"'flux_image_inpainting' performs image inpainting to fill the masked regions, given by mask, in the image, given image based on the text prompt and surrounding image context. It can be used to edit regions of an image according to the prompt given.","flux_image_inpainting(prompt: str, image: numpy.ndarray, mask: numpy.ndarray) -> numpy.ndarray:
-'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding
-    image context. It can be used to edit regions of an image according to the prompt
-    given.
-
-    Parameters:
-        prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield
-            better results.
-        image (np.ndarray): The source image to be inpainted. The image will serve as
-            the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's, where 1 indicates
-            areas to be inpainted and 0 indicates areas to be preserved.
-
-    Returns:
-        np.ndarray: The generated image(s) as a numpy array in RGB format with values
-            ranging from 0 to 255.
-
-    -------
-    Example:
-        >>> # Generate inpainting
-        >>> result = flux_image_inpainting(
-        ...     prompt=""a modern black leather sofa with white pillows"",
-        ...     image=image,
-        ...     mask=mask,
-        ... )
-        >>> save_image(result, ""inpainted_room.png"")
-    ",flux_image_inpainting
-"'gemini_image_generation' performs image inpainting given an image and text prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_generation(prompt: str, image: numpy.ndarray) -> numpy.ndarray:
-'gemini_image_generation' performs image inpainting given an image and text prompt.
-    It can be used to edit parts of an image or the entire image according to the prompt given.
-
-    Parameters:
-        prompt (str): A detailed text description guiding what should be generated
-            in the image. More detailed and specific prompts typically yield
-            better results.
-        image (np.ndarray): The source image to be inpainted. The image will serve as
-            the base context for the inpainting process.
-
-    Returns:
-        np.ndarray: The generated image(s) as a numpy array in RGB format with values
-            ranging from 0 to 255.
-
-    -------
-    Example:
-        >>> # Generate inpainting
-        >>> result = gemini_image_generation(
-        ...     prompt="a modern black leather sofa with white pillows",
-        ...     image=image,
-        ... )
-        >>> save_image(result, ""inpainted_room.png"")
-    ",gemini_image_generation
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list of input labels or tags. It returns the same list of the input labels along with their probability scores based on image content.,"siglip_classification(image: numpy.ndarray, labels: List[str]) -> Dict[str, Any]:
 'siglip_classification' is a tool that can classify an image or a cropped detection given a list
     of input labels or tags. It returns the same list of the input labels along with

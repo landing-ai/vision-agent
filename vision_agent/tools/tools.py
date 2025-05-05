@@ -24,7 +24,7 @@ import pymupdf  # type: ignore
 from google import genai  # type: ignore
 from google.genai import types  # type: ignore
 
-from vision_agent.lmm.lmm import LMM, AnthropicLMM, OpenAILMM
+from vision_agent.lmm.lmm import AnthropicLMM
 from vision_agent.utils.execute import FileSerializer, MimeType
 from vision_agent.utils.image_utils import (
     b64_to_pil,
@@ -2337,140 +2337,55 @@ Answer the question directly using only the information from the document, do no
     return llm_output
 
 
-def _sample(frames: List[np.ndarray], sample_size: int) -> List[np.ndarray]:
-    sample_indices = np.linspace(0, len(frames) - 1, sample_size, dtype=int)
-    sampled_frames = []
-
-    for i, frame in enumerate(frames):
-        if i in sample_indices:
-            sampled_frames.append(frame)
-        if len(sampled_frames) >= sample_size:
-            break
-    return sampled_frames
-
-
-def _lmm_activity_recognition(
-    lmm: LMM,
-    segment: List[np.ndarray],
-    prompt: str,
-) -> List[float]:
-    frames = _sample(segment, 10)
-    media = []
-    for frame in frames:
-        buffer = io.BytesIO()
-        image_pil = Image.fromarray(frame)
-        if image_pil.size[0] > 768:
-            image_pil.thumbnail((768, 768))
-        image_pil.save(buffer, format="PNG")
-        image_bytes = buffer.getvalue()
-        image_b64 = "data:image/png;base64," + encode_image_bytes(image_bytes)
-        media.append(image_b64)
-
-    response = cast(str, lmm.generate(prompt, media))
-    if "yes" in response.lower():
-        return [1.0] * len(segment)
-    return [0.0] * len(segment)
-
-
-def _qwenvl_activity_recognition(
-    segment: List[np.ndarray], prompt: str, model_name: str = "qwen2vl"
-) -> List[float]:
-    payload: Dict[str, Any] = {
-        "prompt": prompt,
-        "model": model_name,
-        "function_name": f"{model_name}_vl_video_vqa",
-    }
-    segment_buffer_bytes = [("video", frames_to_bytes(segment))]
-    response = send_inference_request(
-        payload, "image-to-text", files=segment_buffer_bytes, v2=True
-    )
-    if "yes" in response.lower():
-        return [1.0] * len(segment)
-    return [0.0] * len(segment)
-
-
 def activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
-    model: str = "qwen25vl",
-    chunk_length_frames: int = 10,
-) -> List[float]:
-    """'activity_recognition' is a tool that can recognize activities in a video given a
-    text prompt. It can be used to identify where specific activities or actions
-    happen in a video and returns a list of 0s and 1s to indicate the activity.
+    fps: Optional[float] = 5,
+    specificity: str = "max",
+    with_audio: bool = False,
+) -> List[Dict[str, Any]]:
+    """'activity_recognition' is a tool that allows you to detect multiple activities within a video.
+    It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.
 
     Parameters:
-        prompt (str): The event you want to identify, should be phrased as a question,
-            for example, "Did a goal happen?".
-        frames (List[np.ndarray]): The reference frames used for the question
-        model (str): The model to use for the inference. Valid values are
-            'claude-35', 'gpt-4o', 'qwen2vl'.
-        chunk_length_frames (int): length of each chunk in frames
+        prompt (str): The prompt for activity recognition. Multiple activieties can be separated by semi-colon.
+        frames (List[np.ndarray]): The list of frames corresponding to the video.
+        fps (float, optional): The frame rate per second to extract the frames at. Defaults to 5.
+        specificity (str, optional): Specificity or precision level for activity recognition - low, medium, high, max. Default is max.
+        with_audio (bool, optional): Whether to include audio processing in activity recognition. Set it to false if there is no audio in the video. Default is false.
 
     Returns:
-        List[float]: A list of floats with a value of 1.0 if the activity is detected in
-            the chunk_length_frames of the video.
+        List[Dict[str, Any]]: A list of dictionaries containing the start time, end time, location, description, and label for each detected activity.
+            The start and end times are in seconds, the location is a string, the description is a string, and the label is an integer.
 
     Example
     -------
-        >>> activity_recognition('Did a goal happened?', frames)
-        [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
+        >>> activity_recognition('Person gets on bike; Person gets off bike', frames)
+        [
+            {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
+            {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
+        ]
     """
 
-    buffer_bytes = frames_to_bytes(frames)
+    buffer_bytes = frames_to_bytes(frames, fps=fps)
     files = [("video", buffer_bytes)]
 
-    segments = split_frames_into_segments(
-        frames, segment_size=chunk_length_frames, overlap=0
+    payload = {"prompt": prompt, "specificity": specificity, "with_audio": with_audio}
+
+    response = send_inference_request(
+        payload=payload, endpoint_name="activity-recognition", files=files, v2=True
     )
-
-    prompt = (
-        f"{prompt} Please respond with a 'yes' or 'no' based on the frames provided."
-    )
-
-    if model == "claude-35":
-
-        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _lmm_activity_recognition(AnthropicLMM(), segment, prompt)
-
-    elif model == "gpt-4o":
-
-        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _lmm_activity_recognition(OpenAILMM(), segment, prompt)
-
-    elif model == "qwen2vl":
-
-        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _qwenvl_activity_recognition(segment, prompt, model_name="qwen2vl")
-
-    elif model == "qwen25vl":
-
-        def _apply_activity_recognition(segment: List[np.ndarray]) -> List[float]:
-            return _qwenvl_activity_recognition(segment, prompt, model_name="qwen25vl")
-
-    else:
-        raise ValueError(f"Invalid model: {model}")
-
-    with ThreadPoolExecutor() as executor:
-        futures = {
-            executor.submit(_apply_activity_recognition, segment): segment_index
-            for segment_index, segment in enumerate(segments)
-        }
-
-        return_value_tuples = []
-        for future in as_completed(futures):
-            segment_index = futures[future]
-            return_value_tuples.append((segment_index, future.result()))
-    return_values = [x[1] for x in sorted(return_value_tuples, key=lambda x: x[0])]
-    return_values_flattened = cast(List[float], [e for o in return_values for e in o])
 
     _display_tool_trace(
         activity_recognition.__name__,
-        {"prompt": prompt, "model": model},
-        return_values,
+        {"prompt": prompt, "specificity": specificity, "with_audio": with_audio},
+        response,
         files,
     )
-    return return_values_flattened
+
+    events: List[Dict[str, Any]] = response["events"]
+
+    return events
 
 
 def vit_image_classification(image: np.ndarray) -> Dict[str, Any]:
@@ -2751,104 +2666,6 @@ def template_match(
     return return_data
 
 
-def flux_image_inpainting(
-    prompt: str,
-    image: np.ndarray,
-    mask: np.ndarray,
-) -> np.ndarray:
-    """'flux_image_inpainting' performs image inpainting to fill the masked regions,
-    given by mask, in the image, given image based on the text prompt and surrounding
-    image context. It can be used to edit regions of an image according to the prompt
-    given.
-
-    Parameters:
-        prompt (str): A detailed text description guiding what should be generated
-            in the masked area. More detailed and specific prompts typically yield
-            better results.
-        image (np.ndarray): The source image to be inpainted. The image will serve as
-            the base context for the inpainting process.
-        mask (np.ndarray): A binary mask image with 0's and 1's, where 1 indicates
-            areas to be inpainted and 0 indicates areas to be preserved.
-
-    Returns:
-        np.ndarray: The generated image(s) as a numpy array in RGB format with values
-            ranging from 0 to 255.
-
-    -------
-    Example:
-        >>> # Generate inpainting
-        >>> result = flux_image_inpainting(
-        ...     prompt="a modern black leather sofa with white pillows",
-        ...     image=image,
-        ...     mask=mask,
-        ... )
-        >>> save_image(result, "inpainted_room.png")
-    """
-
-    min_dim = 8
-
-    if any(dim < min_dim for dim in image.shape[:2] + mask.shape[:2]):
-        raise ValueError(f"Image and mask must be at least {min_dim}x{min_dim} pixels")
-
-    max_size = (512, 512)
-
-    if image.shape[0] > max_size[0] or image.shape[1] > max_size[1]:
-        scaling_factor = min(max_size[0] / image.shape[0], max_size[1] / image.shape[1])
-        new_size = (
-            int(image.shape[1] * scaling_factor),
-            int(image.shape[0] * scaling_factor),
-        )
-        new_size = ((new_size[0] // 8) * 8, (new_size[1] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
-
-    elif image.shape[0] % 8 != 0 or image.shape[1] % 8 != 0:
-        new_size = ((image.shape[1] // 8) * 8, (image.shape[0] // 8) * 8)
-        image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
-        mask = cv2.resize(mask, new_size, interpolation=cv2.INTER_NEAREST)
-
-    if np.array_equal(mask, mask.astype(bool).astype(int)):
-        mask = np.where(mask > 0, 255, 0).astype(np.uint8)
-    else:
-        raise ValueError("Mask should contain only binary values (0 or 1)")
-
-    image_file = numpy_to_bytes(image)
-    mask_file = numpy_to_bytes(mask)
-
-    files = [
-        ("image", image_file),
-        ("mask_image", mask_file),
-    ]
-
-    payload = {
-        "prompt": prompt,
-        "task": "inpainting",
-        "height": image.shape[0],
-        "width": image.shape[1],
-        "strength": 0.99,
-        "guidance_scale": 18,
-        "num_inference_steps": 20,
-        "seed": None,
-    }
-
-    response = send_inference_request(
-        payload=payload,
-        endpoint_name="flux1",
-        files=files,
-        v2=True,
-        metadata_payload={"function_name": "flux_image_inpainting"},
-    )
-
-    output_image = np.array(b64_to_pil(response[0]).convert("RGB"))
-    _display_tool_trace(
-        flux_image_inpainting.__name__,
-        payload,
-        output_image,
-        files,
-    )
-    return output_image
-
-
 def gemini_image_generation(
     prompt: str,
     image: Optional[np.ndarray] = None,
@@ -2894,24 +2711,18 @@ def gemini_image_generation(
                     ),
                 )
 
-                if (
-                    not resp.candidates
-                    or not resp.candidates[0].content
-                    or not resp.candidates[0].content.parts
-                    or not resp.candidates[0].content.parts[0].inline_data
-                    or not resp.candidates[0].content.parts[0].inline_data.data
-                ):
+                if not resp.candidates or not resp.candidates[0].content:
                     _LOGGER.warning(f"Attempt {attempt + 1}: No candidates returned")
                     time.sleep(5)
                     continue
-                else:
-                    return (
-                        resp.candidates[0].content.parts[0].inline_data.data
-                        if isinstance(
-                            resp.candidates[0].content.parts[0].inline_data.data, bytes
-                        )
-                        else None
-                    )
+
+                for part in resp.candidates[0].content.parts:
+                    if (
+                        hasattr(part, "inline_data")
+                        and part.inline_data
+                        and isinstance(data := part.inline_data.data, bytes)
+                    ):
+                        return data
 
             except genai.errors.ClientError as e:
                 _LOGGER.warning(f"Attempt {attempt + 1} failed: {str(e)}")
@@ -3756,13 +3567,13 @@ FUNCTION_TOOLS = [
     agentic_document_extraction,
     document_qa,
     ocr,
+    gemini_image_generation,
     qwen25_vl_images_vqa,
     qwen25_vl_video_vqa,
     activity_recognition,
     depth_anything_v2,
     generate_pose_image,
     vit_nsfw_classification,
-    flux_image_inpainting,
     siglip_classification,
     minimum_distance,
 ]
