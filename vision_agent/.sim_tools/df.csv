@@ -462,8 +462,8 @@ desc,doc,name
     -------
         >>> qwen25_vl_video_vqa('Which football player made the goal?', frames)
         'Lionel Messi'",qwen25_vl_video_vqa
-"'activity_recognition' is a tool that allows you to detect multiple activities within a video. It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.","activity_recognition(prompt: str, frames: List[numpy.ndarray], fps: Optional[float] = 5, specificity: str = 'max', with_audio: bool = False) -> List[Dict[str, Any]]:
-'activity_recognition' is a tool that allows you to detect multiple activities within a video.
+"'agentic_activity_recognition' is a tool that allows you to detect multiple activities within a video. It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.","agentic_activity_recognition(prompt: str, frames: List[numpy.ndarray], fps: Optional[float] = 5, specificity: str = 'max', with_audio: bool = False) -> List[Dict[str, Any]]:
+'agentic_activity_recognition' is a tool that allows you to detect multiple activities within a video.
     It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.
 
     Parameters:
@@ -479,11 +479,11 @@ desc,doc,name
 
     Example
     -------
-        >>> activity_recognition('Person gets on bike; Person gets off bike', frames)
+        >>> agentic_activity_recognition('Person gets on bike; Person gets off bike', frames)
         [
             {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
             {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
-        ]",activity_recognition
+        ]",agentic_activity_recognition
 'depth_anything_v2' is a tool that runs depth anything v2 model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intensities with pixel values ranging from 0 to 255.,"depth_anything_v2(image: numpy.ndarray) -> numpy.ndarray:
 'depth_anything_v2' is a tool that runs depth anything v2 model to generate a
     depth image from a given RGB image. The returned depth image is monochrome and
