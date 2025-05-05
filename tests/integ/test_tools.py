@@ -286,7 +286,7 @@ def test_agentic_activity_recognition_multiple_activities_low_specificity():
     result = agentic_activity_recognition(
         prompt="cat; animal",
         frames=frames,
-        fps=3,
+        fps=1,
         with_audio=False,
         specificity="low",
     )
