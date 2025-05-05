@@ -3,7 +3,7 @@ import skimage as ski
 from PIL import Image
 
 from vision_agent.tools import (
-    activity_recognition,
+    agentic_activity_recognition,
     agentic_document_extraction,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
@@ -262,11 +262,11 @@ def test_qwen2_vl_video_vqa():
     assert "cat" in result.strip()
 
 
-def test_activity_recognition_no_audio():
+def test_agentic_activity_recognition_no_audio():
     frames = [
         np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(5)
     ]
-    result = activity_recognition(
+    result = agentic_activity_recognition(
         prompt="cat",
         frames=frames,
         with_audio=False
@@ -279,11 +279,11 @@ def test_activity_recognition_no_audio():
     assert result[0]["label"] == 0
 
 
-def test_activity_recognition_multiple_activities_low_specificity():
+def test_agentic_activity_recognition_multiple_activities_low_specificity():
     frames = [
         np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(5)
     ]
-    result = hero_activity_recognition(
+    result = agentic_activity_recognition(
         prompt="cat; animal",
         frames=frames,
         with_audio=False,

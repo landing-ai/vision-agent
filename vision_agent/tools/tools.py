@@ -2337,14 +2337,14 @@ Answer the question directly using only the information from the document, do no
     return llm_output
 
 
-def activity_recognition(
+def agentic_activity_recognition(
     prompt: str,
     frames: List[np.ndarray],
     fps: Optional[float] = 5,
     specificity: str = "max",
     with_audio: bool = False,
 ) -> List[Dict[str, Any]]:
-    """'activity_recognition' is a tool that allows you to detect multiple activities within a video.
+    """'agentic_activity_recognition' is a tool that allows you to detect multiple activities within a video.
     It can be used to identify when specific activities or actions happen in a video, along with a description of the activity.
 
     Parameters:
@@ -2360,7 +2360,7 @@ def activity_recognition(
 
     Example
     -------
-        >>> activity_recognition('Person gets on bike; Person gets off bike', frames)
+        >>> agentic_activity_recognition('Person gets on bike; Person gets off bike', frames)
         [
             {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
             {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
@@ -2377,7 +2377,7 @@ def activity_recognition(
     )
 
     _display_tool_trace(
-        activity_recognition.__name__,
+        agentic_activity_recognition.__name__,
         {"prompt": prompt, "specificity": specificity, "with_audio": with_audio},
         response,
         files,
@@ -3568,7 +3568,7 @@ FUNCTION_TOOLS = [
     gemini_image_generation,
     qwen25_vl_images_vqa,
     qwen25_vl_video_vqa,
-    activity_recognition,
+    agentic_activity_recognition,
     depth_anything_v2,
     generate_pose_image,
     vit_nsfw_classification,
