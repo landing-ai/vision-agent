@@ -2366,7 +2366,7 @@ def activity_recognition(
             {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
         ]
     """
-
+    fps = fps if fps is not None else 5
     buffer_bytes = frames_to_bytes(frames, fps=fps)
     files = [("video", buffer_bytes)]
 
@@ -2743,8 +2743,6 @@ def gemini_image_generation(
             )
             image = cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
 
-        # Convert to RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_file = numpy_to_bytes(image)
         files = [("image", image_file)]
 
