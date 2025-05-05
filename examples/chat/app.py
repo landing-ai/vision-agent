@@ -183,19 +183,20 @@ async def cancel_processing():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """This basically only allows one client connections
-    and makes other clients wait if they want to connect."""
     global active_client
-    await websocket.accept()
-
+    
+    # First check if there's already a connection before accepting
     async with active_client_lock:
         if active_client:
-            try:
-                await active_client.close(code=1000)
-            except Exception:
-                pass
+            # Don't immediately accept if there's already a connection
+            # Either reject or queue this connection
+            await websocket.close(code=1000, reason="Only one connection allowed")
+            return
+        
+        # Accept the connection only if there isn't an active client
+        await websocket.accept()
         active_client = websocket
-
+    
     try:
         while True:
             await websocket.receive_json()

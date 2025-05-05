@@ -16,6 +16,7 @@
     "@tailwindcss/postcss": "^4.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "concurrently": "^9.1.2",
     "dotenv": "^16.5.0",
     "lucide-react": "^0.503.0",
     "next": "^15.3.1",
@@ -27,6 +28,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.2.0",
+    "tailwind-scrollbar": "^4.0.2",
     "tailwindcss-animate": "^1.0.7",
     "zeromq": "^6.4.2"
   },

@@ -79,6 +79,7 @@ To modify the frontend or backend port:
 - **Port conflicts**: The run script will attempt to free ports if they're already in use, but if not, either use another port or kill the process that is currently running on the conflicting port (make sure you know what is running on this port before killing it)
 - **Services not starting**: Verify you have the prerequisites installed and ran the setup
 - **Browser doesn't open**: Manually navigate to http://localhost:3000 (or whatever your frontend port is)
+- **Constant string of messages saying connection rejected/closed**: Check that you do not have multiple tabs open to http://localhost:3000 (or whatever your frontend port is)
 
 ## Support
 
