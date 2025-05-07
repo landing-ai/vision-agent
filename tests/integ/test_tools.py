@@ -3,7 +3,7 @@ import skimage as ski
 from PIL import Image
 
 from vision_agent.tools import (
-    activity_recognition,
+    agentic_activity_recognition,
     agentic_document_extraction,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
@@ -21,7 +21,6 @@ from vision_agent.tools import (
     florence2_ocr,
     florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
-    flux_image_inpainting,
     gemini_image_generation,
     generate_pose_image,
     ocr,
@@ -263,16 +262,45 @@ def test_qwen2_vl_video_vqa():
     assert "cat" in result.strip()
 
 
-def test_activity_recognition():
+def test_agentic_activity_recognition_no_audio():
+    frames = [
+        np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(10)
+    ]
+    result = agentic_activity_recognition(
+        prompt="cat",
+        frames=frames,
+        with_audio=False
+    )
+    assert len(result) == 1
+    assert isinstance(result[0]["start_time"], int)
+    assert isinstance(result[0]["end_time"], int)
+    assert result[0]["location"] is not None and len(result[0]["location"]) > 0
+    assert result[0]["description"] is not None and len(result[0]["description"]) > 0
+    assert result[0]["label"] == 0
+
+
+def test_agentic_activity_recognition_multiple_activities_low_specificity():
     frames = [
         np.array(Image.fromarray(ski.data.cat()).convert("RGB")) for _ in range(5)
     ]
-    result = activity_recognition(
-        prompt="Is it there a cat in this video?",
+    result = agentic_activity_recognition(
+        prompt="cat; animal",
         frames=frames,
-        model="qwen2vl",
+        fps=1,
+        with_audio=False,
+        specificity="low",
     )
-    assert len(result) == 5
+    assert len(result) == 2
+    assert isinstance(result[0]["start_time"], int)
+    assert isinstance(result[0]["end_time"], int)
+    assert result[0]["location"] is not None and len(result[0]["location"]) > 0
+    assert result[0]["description"] is not None and len(result[0]["description"]) > 0
+    assert result[0]["label"] == 0
+    assert isinstance(result[1]["start_time"], int)
+    assert result[1]["end_time"] > 0
+    assert result[1]["location"] is not None and len(result[0]["location"]) > 0
+    assert result[1]["description"] is not None and len(result[0]["description"]) > 0
+    assert result[1]["label"] == 1
 
 
 def test_ocr():
@@ -385,23 +413,6 @@ def test_countgd_visual_object_detection_empty():
     assert result == []
 
 
-def test_flux_image_inpainting():
-    mask_image = np.zeros((32, 32), dtype=np.uint8)
-    mask_image[:4, :4] = 1
-    image = np.zeros((32, 32), dtype=np.uint8)
-
-    result = flux_image_inpainting(
-        prompt="horse",
-        image=image,
-        mask=mask_image,
-    )
-
-    assert result.shape[0] == 32
-    assert result.shape[1] == 32
-    assert result.shape[0] == image.shape[0]
-    assert result.shape[1] == image.shape[1]
-
-
 def test_gemini_image_inpainting():
     image = np.zeros((32, 32), dtype=np.uint8)
 
@@ -474,38 +485,6 @@ def test_siglip_classification():
     assert result["labels"][2] == "bird"
     assert result["scores"][0] > result["scores"][1]
     assert result["scores"][0] > result["scores"][2]
-
-
-def test_flux_image_inpainting_resizing_not_multiple_8():
-    mask_image = np.zeros((37, 37), dtype=np.uint8)
-    mask_image[:4, :4] = 1
-    image = np.zeros((37, 37), dtype=np.uint8)
-
-    result = flux_image_inpainting(
-        prompt="horse",
-        image=image,
-        mask=mask_image,
-    )
-
-    assert result.shape[0] == 32
-    assert result.shape[1] == 32
-    assert result.shape[0] != image.shape[0]
-    assert result.shape[1] != image.shape[1]
-
-
-def test_flux_image_inpainting_resizing_big_image():
-    mask_image = np.zeros((1200, 500), dtype=np.uint8)
-    mask_image[:100, :100] = 1
-    image = np.zeros((1200, 500), dtype=np.uint8)
-
-    result = flux_image_inpainting(
-        prompt="horse",
-        image=image,
-        mask=mask_image,
-    )
-
-    assert result.shape[0] == 512
-    assert result.shape[1] == 208
 
 
 def test_video_tracking_with_countgd():

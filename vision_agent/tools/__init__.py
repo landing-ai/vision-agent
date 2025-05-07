@@ -7,7 +7,7 @@ from .meta_tools import (
 from .planner_tools import judge_od_results
 from .prompts import CHOOSE_PARAMS, SYSTEM_PROMPT
 from .tools import (
-    activity_recognition,
+    agentic_activity_recognition,
     agentic_document_extraction,
     agentic_object_detection,
     agentic_sam2_instance_segmentation,
@@ -30,7 +30,6 @@ from .tools import (
     florence2_ocr,
     florence2_sam2_instance_segmentation,
     florence2_sam2_video_tracking,
-    flux_image_inpainting,
     gemini_image_generation,
     generate_pose_image,
     get_tools,
