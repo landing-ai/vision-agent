@@ -167,7 +167,7 @@ def _call_post(
             error=None,
             files=files_in_b64,
         )
-
+        print(url)
         if response.status_code != 200:
             tool_call_trace.error = Error(
                 name="RemoteToolCallFailed",
