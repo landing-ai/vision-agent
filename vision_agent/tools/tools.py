@@ -2550,9 +2550,10 @@ def depth_pro(
 
     depth_map_pil = b64_to_pil(detections["depth"])
     depth_map_np = np.array(depth_map_pil, dtype=np.float32)
+
     depth_map_np = (depth_map_np - depth_map_np.min()) / (
         depth_map_np.max() - depth_map_np.min()
-    )
+    ) if depth_map_np.max() != depth_map_np.min() else depth_map_np
     depth_map_np = (255 * depth_map_np).astype(np.uint8)
 
     _display_tool_trace(
