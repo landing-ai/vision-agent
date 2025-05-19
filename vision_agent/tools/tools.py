@@ -2351,7 +2351,12 @@ def agentic_activity_recognition(
     buffer_bytes = frames_to_bytes(frames, fps=fps)
     files = [("video", buffer_bytes)]
 
-    payload = {"prompt": prompt, "specificity": specificity, "with_audio": with_audio, "function_name": "agentic_activity_recognition"}
+    payload = {
+        "prompt": prompt,
+        "specificity": specificity,
+        "with_audio": with_audio,
+        "function_name": "agentic_activity_recognition",
+    }
 
     response = send_inference_request(
         payload=payload, endpoint_name="activity-recognition", files=files, v2=True
