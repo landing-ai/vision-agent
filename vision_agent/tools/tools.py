@@ -2536,7 +2536,7 @@ def depth_pro(
 
     image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
-        return []
+        return np.empty(0)
     buffer_bytes = numpy_to_bytes(image)
     files = [("image", buffer_bytes)]
 
