@@ -15,7 +15,6 @@ import time
 import cv2
 import numpy as np
 import pandas as pd
-import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
