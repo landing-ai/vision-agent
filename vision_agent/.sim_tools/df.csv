@@ -484,17 +484,17 @@ desc,doc,name
             {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
             {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
         ]",agentic_activity_recognition
-'depth_pro' is a tool that runs the Apple DepthPro model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intensities with integer pixel values ranging from 0 to 255.,"depth_pro(image: numpy.ndarray) -> numpy.ndarray:
+"'depth_pro' is a tool that runs the Apple DepthPro model to generate a depth map from a given RGB image. The returned depth map has the same dimensions as the input image, with each pixel indicating the distance from the camera in meters.","depth_pro(image: numpy.ndarray) -> numpy.ndarray:
 'depth_pro' is a tool that runs the Apple DepthPro model to generate a
-    depth image from a given RGB image. The returned depth image is monochrome and
-    represents depth values as pixel intensities with integer pixel values ranging from 0 to 255.
+    depth map from a given RGB image. The returned depth map has the same dimensions 
+    as the input image, with each pixel indicating the distance from the camera in meters.
 
     Parameters:
         image (np.ndarray): The image to used to generate depth image
 
     Returns:
-        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255
-            where high values represent closer objects and low values further.
+        np.ndarray: A depth map with float32 pixel values that represent
+            the distance from the camera in meters.
 
     Example
     -------
@@ -503,7 +503,7 @@ desc,doc,name
                 [0, 20, 24, ..., 0, 100, 103],
                 ...,
                 [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),",depth_pro
+                [10, 10, 10, ..., 200, 200, 200]], dtype=np.float32),",depth_pro
 'generate_pose_image' is a tool that generates a open pose bone/stick image from a given RGB image. The returned bone image is RGB with the pose amd keypoints colored and background as black.,"generate_pose_image(image: numpy.ndarray) -> numpy.ndarray:
 'generate_pose_image' is a tool that generates a open pose bone/stick image from
     a given RGB image. The returned bone image is RGB with the pose amd keypoints colored

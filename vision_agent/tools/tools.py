@@ -4,7 +4,7 @@ import logging
 import os
 import tempfile
 import urllib.request
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
@@ -2519,15 +2519,15 @@ def depth_pro(
     image: np.ndarray,
 ) -> np.ndarray:
     """'depth_pro' is a tool that runs the Apple DepthPro model to generate a
-    depth image from a given RGB image. The returned depth image is monochrome and
-    represents depth values as pixel intensities with integer pixel values ranging from 0 to 255.
+    depth map from a given RGB image. The returned depth map has the same dimensions
+    as the input image, with each pixel indicating the distance from the camera in meters.
 
     Parameters:
         image (np.ndarray): The image to used to generate depth image
 
     Returns:
-        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255
-            where high values represent closer objects and low values further.
+        np.ndarray: A depth map with float32 pixel values that represent
+            the distance from the camera in meters.
 
     Example
     -------
@@ -2536,7 +2536,7 @@ def depth_pro(
                 [0, 20, 24, ..., 0, 100, 103],
                 ...,
                 [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
+                [10, 10, 10, ..., 200, 200, 200]], dtype=np.float32),
     """
 
     image_size = image.shape[:2]
@@ -2552,15 +2552,10 @@ def depth_pro(
         v2=True,
     )
 
-    depth_map_pil = b64_to_pil(detections["depth"])
-    depth_map_np = np.array(depth_map_pil, dtype=np.float32)
-
-    depth_map_np = (
-        (depth_map_np - depth_map_np.min()) / (depth_map_np.max() - depth_map_np.min())
-        if depth_map_np.max() != depth_map_np.min()
-        else depth_map_np
+    depth_bytes = b64decode(detections['depth'])
+    depth_map_np = np.frombuffer(depth_bytes, dtype=np.float32).reshape(
+        image_size
     )
-    depth_map_np = (255 * depth_map_np).astype(np.uint8)
 
     _display_tool_trace(
         depth_pro.__name__,
