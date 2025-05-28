@@ -15,10 +15,8 @@ _Prompt with an image/video → Get runnable vision code → Build Visual AI App
 </div>
 
 <p align="center">
-  <a href="https://va.landing.ai/agent" target="_blank"><strong>Web App</strong></a> ·
   <a href="https://discord.com/invite/RVcW3j9RgR" target="_blank"><strong>Discord</strong></a> ·
   <a href="https://landing.ai/blog/visionagent-an-agentic-approach-for-complex-visual-reasoning" target="_blank"><strong>Architecture</strong></a> ·
-  <a href="https://support.landing.ai/docs/visionagent" target="_blank"><strong>Docs</strong></a> ·
   <a href="https://www.youtube.com/playlist?list=PLrKGAzovU85fvo22OnVtPl90mxBygIf79" target="_blank"><strong>YouTube</strong></a>
 </p>
 
@@ -26,12 +24,11 @@ _Prompt with an image/video → Get runnable vision code → Build Visual AI App
 
 **VisionAgent** is the Visual AI pilot from LandingAI. Give it a prompt and an image, and it automatically picks the right vision models and outputs ready‑to‑run code—letting you build vision‑enabled apps in minutes.
 
-Prefer full control? Install the library and run VisionAgent locally. Just want to dive in quickly? Use the [VisionAgent web app](https://va.landing.ai/).
 
 ## Steps to Set Up the Library  
 
 ### Get Your VisionAgent API Key
-The most important step is to [signup](https://va.landing.ai/agent) and obtain your [API key](https://va.landing.ai/settings/api-key).
+The most important step is to [create an account](https://va.landing.ai/home) and obtain your [API key](https://va.landing.ai/settings/api-key).
 
 ### Other Prerequisites
 - Python version 3.9 or higher
@@ -41,9 +38,8 @@ The most important step is to [signup](https://va.landing.ai/agent) and obtain y
 ### Why do I need Anthropic and Google API Keys?
 VisionAgent uses models from Anthropic and Google to respond to prompts and generate code. 
 
-When you run the web-based version of VisionAgent, the app uses the LandingAI API keys to access these models. 
 
-When you run VisionAgent programmatically, the app will need to use your API keys to access the Anthropic and Google models. This ensures that any projects you run with VisionAgent aren’t limited by the rate limits in place with the LandingAI accounts, and it also prevents many users from overloading the LandingAI rate limits.
+When you run VisionAgent, the app will need to use your API keys to access the Anthropic and Google models. This ensures that any projects you run with VisionAgent aren’t limited by the rate limits in place with the LandingAI accounts, and it also prevents many users from overloading the LandingAI rate limits.
 
 Anthropic and Google each have their own rate limits and paid tiers. Refer to their documentation and pricing to learn more.
 
@@ -230,5 +226,4 @@ with this code:
 ## Resources
 - [Discord](https://discord.com/invite/RVcW3j9RgR): Check out our community of VisionAgent users to share use cases and learn about updates.
 - [VisionAgent Library Docs](https://landing-ai.github.io/vision-agent/): Learn how to use this library.
-- [VisionAgent Web App Docs](https://support.landing.ai/docs/agentic-ai): Learn how to use the web-based version of VisionAgent. 
 - [Video Tutorials](https://www.youtube.com/playlist?list=PLrKGAzovU85fvo22OnVtPl90mxBygIf79): Watch the latest video tutorials to see how VisionAgent is used in a variety of use cases.
