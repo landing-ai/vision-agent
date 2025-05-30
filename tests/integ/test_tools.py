@@ -368,7 +368,7 @@ def test_generate_pose():
     )
     import cv2
 
-    cv2.imwrite("imag.png", result)
+    cv2.imwrite("image.png", result)
     assert result.shape == img.shape + (3,)
 
 
