@@ -2552,10 +2552,8 @@ def depth_pro(
         v2=True,
     )
 
-    depth_bytes = b64decode(detections['depth'])
-    depth_map_np = np.frombuffer(depth_bytes, dtype=np.float32).reshape(
-        image_size
-    )
+    depth_bytes = b64decode(detections["depth"])
+    depth_map_np = np.frombuffer(depth_bytes, dtype=np.float32).reshape(image_size)
 
     _display_tool_trace(
         depth_pro.__name__,
