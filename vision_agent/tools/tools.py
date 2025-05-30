@@ -4,7 +4,7 @@ import logging
 import os
 import tempfile
 import urllib.request
-from base64 import b64encode
+from base64 import b64encode, b64decode
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import resources
 from pathlib import Path
@@ -15,7 +15,6 @@ import time
 import cv2
 import numpy as np
 import pandas as pd
-import requests
 from IPython.display import display
 from PIL import Image, ImageDraw, ImageFont
 from pillow_heif import register_heif_opener  # type: ignore
@@ -2034,8 +2033,8 @@ def qwen2_vl_video_vqa(prompt: str, frames: List[np.ndarray]) -> str:
     return cast(str, data)
 
 
-def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
-    """'ocr' extracts text from an image. It returns a list of detected text, bounding
+def paddle_ocr(image: np.ndarray) -> List[Dict[str, Any]]:
+    """'paddle_ocr' extracts text from an image. It returns a list of detected text, bounding
     boxes with normalized coordinates, and confidence scores. The results are sorted
     from top-left to bottom right.
 
@@ -2048,51 +2047,33 @@ def ocr(image: np.ndarray) -> List[Dict[str, Any]]:
 
     Example
     -------
-        >>> ocr(image)
+        >>> paddle_ocr(image)
         [
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
         ]
     """
 
-    pil_image = Image.fromarray(image).convert("RGB")
-    image_size = pil_image.size[::-1]
+    image_size = image.shape[:2]
     if image_size[0] < 1 or image_size[1] < 1:
         return []
-    image_buffer = io.BytesIO()
-    pil_image.save(image_buffer, format="PNG")
-    buffer_bytes = image_buffer.getvalue()
-    image_buffer.close()
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
 
-    res = requests.post(
-        _OCR_URL,
-        files={"images": buffer_bytes},
-        data={"language": "en"},
-        headers={"contentType": "multipart/form-data", "apikey": _API_KEY},
+    res = send_inference_request(
+        payload={"function_name": "paddle-ocr"},
+        endpoint_name="paddle-ocr",
+        files=files,
+        v2=True,
     )
-
-    if res.status_code != 200:
-        raise ValueError(f"OCR request failed with status code {res.status_code}")
-
-    data = res.json()
-    output = []
-    for det in data[0]:
-        label = det["text"]
-        box = [
-            det["location"][0]["x"],
-            det["location"][0]["y"],
-            det["location"][2]["x"],
-            det["location"][2]["y"],
-        ]
-        box = normalize_bbox(box, image_size)
-        output.append({"label": label, "bbox": box, "score": round(det["score"], 2)})
 
     _display_tool_trace(
-        ocr.__name__,
+        paddle_ocr.__name__,
         {},
-        data,
-        cast(List[Tuple[str, bytes]], [("image", buffer_bytes)]),
+        res,
+        files,
     )
-    return sorted(output, key=lambda x: (x["bbox"][1], x["bbox"][0]))
+
+    return sorted(res, key=lambda x: (x["bbox"][1], x["bbox"][0]))
 
 
 def claude35_text_extraction(image: np.ndarray) -> str:
@@ -2370,7 +2351,12 @@ def agentic_activity_recognition(
     buffer_bytes = frames_to_bytes(frames, fps=fps)
     files = [("video", buffer_bytes)]
 
-    payload = {"prompt": prompt, "specificity": specificity, "with_audio": with_audio}
+    payload = {
+        "prompt": prompt,
+        "specificity": specificity,
+        "with_audio": with_audio,
+        "function_name": "agentic_activity_recognition",
+    }
 
     response = send_inference_request(
         payload=payload, endpoint_name="activity-recognition", files=files, v2=True
@@ -2529,48 +2515,53 @@ def detr_segmentation(image: np.ndarray) -> List[Dict[str, Any]]:
     return return_data
 
 
-def depth_anything_v2(image: np.ndarray) -> np.ndarray:
-    """'depth_anything_v2' is a tool that runs depth anything v2 model to generate a
-    depth image from a given RGB image. The returned depth image is monochrome and
-    represents depth values as pixel intensities with pixel values ranging from 0 to 255.
+def depth_pro(
+    image: np.ndarray,
+) -> np.ndarray:
+    """'depth_pro' is a tool that runs the Apple DepthPro model to generate a
+    depth map from a given RGB image. The returned depth map has the same dimensions
+    as the input image, with each pixel indicating the distance from the camera in meters.
 
     Parameters:
         image (np.ndarray): The image to used to generate depth image
 
     Returns:
-        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255
-            where high values represent closer objects and low values further.
+        np.ndarray: A depth map with float32 pixel values that represent
+            the distance from the camera in meters.
 
     Example
     -------
-        >>> depth_anything_v2(image)
+        >>> depth_pro(image)
         array([[0, 0, 0, ..., 0, 0, 0],
                 [0, 20, 24, ..., 0, 100, 103],
                 ...,
                 [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),
+                [10, 10, 10, ..., 200, 200, 200]], dtype=np.float32),
     """
-    if image.shape[0] < 1 or image.shape[1] < 1:
-        raise ValueError(f"Image is empty, image shape: {image.shape}")
 
-    image_b64 = convert_to_b64(image)
-    data = {
-        "image": image_b64,
-        "function_name": "depth_anything_v2",
-    }
+    image_size = image.shape[:2]
+    if image_size[0] < 1 or image_size[1] < 1:
+        return np.empty(0)
+    buffer_bytes = numpy_to_bytes(image)
+    files = [("image", buffer_bytes)]
 
-    depth_map = send_inference_request(data, "depth-anything-v2", v2=True)
-    depth_map_np = np.array(depth_map["map"])
-    depth_map_np = (depth_map_np - depth_map_np.min()) / (
-        depth_map_np.max() - depth_map_np.min()
+    detections = send_inference_request(
+        payload={"function_name": "depth-pro"},
+        endpoint_name="depth-pro",
+        files=files,
+        v2=True,
     )
-    depth_map_np = (255 * depth_map_np).astype(np.uint8)
+
+    depth_bytes = b64decode(detections["depth"])
+    depth_map_np = np.frombuffer(depth_bytes, dtype=np.float32).reshape(image_size)
+
     _display_tool_trace(
-        depth_anything_v2.__name__,
+        depth_pro.__name__,
         {},
-        depth_map,
-        image_b64,
+        response=detections,
+        files=files,
     )
+
     return depth_map_np
 
 
@@ -3564,12 +3555,12 @@ FUNCTION_TOOLS = [
     claude35_text_extraction,
     agentic_document_extraction,
     document_qa,
-    ocr,
+    paddle_ocr,
     gemini_image_generation,
     qwen25_vl_images_vqa,
     qwen25_vl_video_vqa,
     agentic_activity_recognition,
-    depth_anything_v2,
+    depth_pro,
     generate_pose_image,
     vit_nsfw_classification,
     siglip_classification,
