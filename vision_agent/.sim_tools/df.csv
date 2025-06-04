@@ -388,8 +388,8 @@ desc,doc,name
     -------
         >>> document_qa(image, question)
         'The answer to the question ...'",document_qa
-"'ocr' extracts text from an image. It returns a list of detected text, bounding boxes with normalized coordinates, and confidence scores. The results are sorted from top-left to bottom right.","ocr(image: numpy.ndarray) -> List[Dict[str, Any]]:
-'ocr' extracts text from an image. It returns a list of detected text, bounding
+"'paddle_ocr' extracts text from an image. It returns a list of detected text, bounding boxes with normalized coordinates, and confidence scores. The results are sorted from top-left to bottom right.","paddle_ocr(image: numpy.ndarray) -> List[Dict[str, Any]]:
+'paddle_ocr' extracts text from an image. It returns a list of detected text, bounding
     boxes with normalized coordinates, and confidence scores. The results are sorted
     from top-left to bottom right.
 
@@ -402,10 +402,10 @@ desc,doc,name
 
     Example
     -------
-        >>> ocr(image)
+        >>> paddle_ocr(image)
         [
             {'label': 'hello world', 'bbox': [0.1, 0.11, 0.35, 0.4], 'score': 0.99},
-        ]",ocr
+        ]",paddle_ocr
 "'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt. It can be used to edit parts of an image or the entire image according to the prompt given.","gemini_image_generation(prompt: str, image: Optional[numpy.ndarray] = None) -> numpy.ndarray:
 'gemini_image_generation' performs either image inpainting given an image and text prompt, or image generation given a prompt.
     It can be used to edit parts of an image or the entire image according to the prompt given.
@@ -484,26 +484,26 @@ desc,doc,name
             {'start_time': 2, 'end_time': 4, 'location': 'Outdoor area', 'description': 'A person approaches a white bicycle parked in a row. The person then swings their leg over the bike and gets on it.', 'label': 0},
             {'start_time': 10, 'end_time': 13, 'location': 'Outdoor area', 'description': 'A person gets off a white bicycle parked in a row. The person swings their leg over the bike and dismounts.', 'label': 1},
         ]",agentic_activity_recognition
-'depth_anything_v2' is a tool that runs depth anything v2 model to generate a depth image from a given RGB image. The returned depth image is monochrome and represents depth values as pixel intensities with pixel values ranging from 0 to 255.,"depth_anything_v2(image: numpy.ndarray) -> numpy.ndarray:
-'depth_anything_v2' is a tool that runs depth anything v2 model to generate a
-    depth image from a given RGB image. The returned depth image is monochrome and
-    represents depth values as pixel intensities with pixel values ranging from 0 to 255.
+"'depth_pro' is a tool that runs the Apple DepthPro model to generate a depth map from a given RGB image. The returned depth map has the same dimensions as the input image, with each pixel indicating the distance from the camera in meters.","depth_pro(image: numpy.ndarray) -> numpy.ndarray:
+'depth_pro' is a tool that runs the Apple DepthPro model to generate a
+    depth map from a given RGB image. The returned depth map has the same dimensions 
+    as the input image, with each pixel indicating the distance from the camera in meters.
 
     Parameters:
         image (np.ndarray): The image to used to generate depth image
 
     Returns:
-        np.ndarray: A grayscale depth image with pixel values ranging from 0 to 255
-            where high values represent closer objects and low values further.
+        np.ndarray: A depth map with float32 pixel values that represent
+            the distance from the camera in meters.
 
     Example
     -------
-        >>> depth_anything_v2(image)
+        >>> depth_pro(image)
         array([[0, 0, 0, ..., 0, 0, 0],
                 [0, 20, 24, ..., 0, 100, 103],
                 ...,
                 [10, 11, 15, ..., 202, 202, 205],
-                [10, 10, 10, ..., 200, 200, 200]], dtype=uint8),",depth_anything_v2
+                [10, 10, 10, ..., 200, 200, 200]], dtype=np.float32),",depth_pro
 'generate_pose_image' is a tool that generates a open pose bone/stick image from a given RGB image. The returned bone image is RGB with the pose amd keypoints colored and background as black.,"generate_pose_image(image: numpy.ndarray) -> numpy.ndarray:
 'generate_pose_image' is a tool that generates a open pose bone/stick image from
     a given RGB image. The returned bone image is RGB with the pose amd keypoints colored

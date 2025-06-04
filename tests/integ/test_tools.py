@@ -14,7 +14,7 @@ from vision_agent.tools import (
     countgd_sam2_video_tracking,
     countgd_visual_object_detection,
     custom_object_detection,
-    depth_anything_v2,
+    depth_pro,
     detr_segmentation,
     document_qa,
     florence2_object_detection,
@@ -23,7 +23,7 @@ from vision_agent.tools import (
     florence2_sam2_video_tracking,
     gemini_image_generation,
     generate_pose_image,
-    ocr,
+    paddle_ocr,
     od_sam2_video_tracking,
     owlv2_object_detection,
     owlv2_sam2_instance_segmentation,
@@ -303,16 +303,16 @@ def test_agentic_activity_recognition_multiple_activities_low_specificity():
     assert result[1]["label"] == 1
 
 
-def test_ocr():
+def test_paddle_ocr():
     img = ski.data.page()
-    result = ocr(
+    result = paddle_ocr(
         image=img,
     )
     assert any("Region-based segmentation" in res["label"] for res in result)
 
 
-def test_ocr_empty():
-    result = ocr(
+def test_paddle_ocr_empty():
+    result = paddle_ocr(
         image=np.zeros((0, 0, 3)).astype(np.uint8),
     )
     assert result == []
@@ -354,7 +354,7 @@ def test_mask_distance():
 
 def test_generate_depth():
     img = ski.data.coins()
-    result = depth_anything_v2(
+    result = depth_pro(
         image=img,
     )
 
@@ -366,9 +366,7 @@ def test_generate_pose():
     result = generate_pose_image(
         image=img,
     )
-    import cv2
-
-    cv2.imwrite("imag.png", result)
+    
     assert result.shape == img.shape + (3,)
 
 
