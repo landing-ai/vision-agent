@@ -29,6 +29,7 @@ interface ChatSectionProps {
   uploadedResult: string | null;
   onUploadedResult: (result: string) => void;
   polygons: Polygon[];
+  version: 'v2' | 'v3' | null;
 }
 
 interface Message {
@@ -219,6 +220,7 @@ export function ChatSection({
   uploadedResult,
   onUploadedResult,
   polygons,
+  version,
 }: ChatSectionProps) {
   const port_backend = process.env.PORT_BACKEND;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -274,7 +276,8 @@ export function ChatSection({
       console.log("Sending message:", lastMessage);
       messages[messages.length - 1] = lastMessage;
       setIsTyping(true);
-      const response = await fetch(`http://localhost:${port_backend}/chat`, {
+      const endpoint = version ? `/chat/${version}` : '/chat';
+      const response = await fetch(`http://localhost:${port_backend}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
