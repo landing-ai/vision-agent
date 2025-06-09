@@ -99,11 +99,11 @@ class OpenAILMM(LMM):
                 [{"role": "user", "content": "Hello!", "media": ["image1.jpg", ...]}, ...]
         """
         fixed_chat = []
-        for c in chat:
-            fixed_c = {"role": c["role"]}
-            fixed_c["content"] = [{"type": "text", "text": c["content"]}]  # type: ignore
-            if "media" in c and self.model_name != "o3-mini":
-                for media in c["media"]:
+        for msg in chat:
+            fixed_c = {"role": msg["role"]}
+            fixed_c["content"] = [{"type": "text", "text": msg["content"]}]  # type: ignore
+            if "media" in msg and msg["media"] is not None and self.model_name != "o3-mini":
+                for media in msg["media"]:
                     resize = kwargs["resize"] if "resize" in kwargs else self.image_size
                     image_detail = (
                         kwargs["image_detail"]
@@ -297,14 +297,14 @@ class OllamaLMM(LMM):
                 [{"role": "user", "content": "Hello!", "media": ["image1.jpg", ...]}, ...]
         """
         fixed_chat = []
-        for message in chat:
-            if "media" in message:
+        for msg in chat:
+            if "media" in msg and msg["media"] is not None:
                 resize = kwargs["resize"] if "resize" in kwargs else self.image_size
-                message["images"] = [
-                    encode_media(cast(str, m), resize=resize) for m in message["media"]
+                msg["images"] = [
+                    encode_media(cast(str, m), resize=resize) for m in msg["media"]
                 ]
-                del message["media"]
-            fixed_chat.append(message)
+                del msg["media"]
+            fixed_chat.append(msg)
         url = f"{self.url}/chat"
         model = self.model_name
         messages = fixed_chat
@@ -427,7 +427,7 @@ class AnthropicLMM(LMM):
             content: List[Union[TextBlockParam, ImageBlockParam]] = [
                 TextBlockParam(type="text", text=msg["content"])
             ]
-            if "media" in msg:
+            if "media" in msg and msg["media"] is not None:
                 for media_path in msg["media"]:
                     resize = kwargs["resize"] if "resize" in kwargs else self.image_size
                     encoded_media = encode_media(media_path, resize=resize)
