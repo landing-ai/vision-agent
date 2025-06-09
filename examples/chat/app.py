@@ -1,22 +1,27 @@
 import asyncio
 import base64
+import os
 import tempfile
 from typing import Any, Dict, List, Optional
 
 import cv2
 import httpx
 import numpy as np
-from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
+from dotenv import load_dotenv
+from fastapi import (
+    BackgroundTasks,
+    FastAPI,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from vision_agent.agent import VisionAgentV2
-from vision_agent.models import AgentMessage
+from vision_agent.agent import Agent, VisionAgentV2, VisionAgentV3
 from vision_agent.lmm import AnthropicLMM
+from vision_agent.models import AgentMessage
 from vision_agent.utils.execute import CodeInterpreterFactory
-
-from dotenv import load_dotenv
-import os
 
 PORT_FRONTEND = os.getenv("PORT_FRONTEND")
 DEBUG_HIL = os.getenv("DEBUG_HIL")
@@ -40,15 +45,16 @@ active_client_lock = asyncio.Lock()
 processing_canceled = False
 processing_canceled_lock = asyncio.Lock()
 
+
 async def _async_update_callback(message: Dict[str, Any]):
     global processing_canceled
-    
+
     # Check if processing has been canceled
     async with processing_canceled_lock:
         if processing_canceled:
             # Skip sending updates if processing has been canceled
             return
-    
+
     # Try to send message to active WebSocket client
     async with active_client_lock:
         if active_client:
@@ -68,21 +74,17 @@ def update_callback(message: Dict[str, Any]):
     loop.close()
 
 
-# Agent setup
-if DEBUG_HIL:
-    agent = VisionAgentV2(
-        verbose=True,
-        update_callback=update_callback,
-        hil=True,
-    )
-    code_interpreter = CodeInterpreterFactory.new_instance(non_exiting=True)
-else:
-    agent = VisionAgentV2(
-        agent=AnthropicLMM(model_name="claude-3-7-sonnet-20250219"),
-        verbose=True,
-        update_callback=update_callback,
-    )
-    code_interpreter = CodeInterpreterFactory.new_instance()
+agent_v2 = VisionAgentV2(
+    verbose=True,
+    update_callback=update_callback,
+    hil=True,
+)
+agent_v3 = VisionAgentV3(
+    verbose=True,
+    update_callback=update_callback,
+)
+code_interpreter = CodeInterpreterFactory.new_instance(non_exiting=True)
+
 
 async def reset_cancellation_flag():
     global processing_canceled
@@ -90,11 +92,11 @@ async def reset_cancellation_flag():
         processing_canceled = False
 
 
-def process_messages_background(messages: List[Dict[str, Any]]):
+def process_messages_background(agent: Agent, messages: List[Dict[str, Any]]):
     global processing_canceled
     if processing_canceled:
         return
-        
+
     for message in messages:
         if "media" in message and message["media"] is None:
             del message["media"]
@@ -146,15 +148,25 @@ def b64_video_to_frames(b64_video: str) -> List[np.ndarray]:
     return video_frames
 
 
-@app.post("/chat")
+@app.post("/chat/{version}")
 async def chat(
-    messages: List[Message], background_tasks: BackgroundTasks
+    version: str, messages: List[Message], background_tasks: BackgroundTasks
 ) -> Dict[str, Any]:
     # Reset cancellation flag before starting new processing
     await reset_cancellation_flag()
-    
+
+    if version == "v2":
+        agent = agent_v2
+    elif version == "v3":
+        agent = agent_v3
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported version: {version}. Supported versions are 'v2' and 'v3'.",
+        )
+
     background_tasks.add_task(
-        process_messages_background, [m.model_dump() for m in messages]
+        process_messages_background, agent, [m.model_dump() for m in messages]
     )
     return {"status": "Processing started"}
 
@@ -165,19 +177,18 @@ async def cancel_processing():
     global processing_canceled
     async with processing_canceled_lock:
         processing_canceled = True
-    
+
     # Also clear the active websocket if possible
     async with active_client_lock:
         if active_client:
             try:
                 # Send a cancellation message that the frontend can detect
-                await active_client.send_json({
-                    "role": "system",
-                    "content": "Processing canceled by user."
-                })
+                await active_client.send_json(
+                    {"role": "system", "content": "Processing canceled by user."}
+                )
             except Exception:
                 pass
-    
+
     return {"status": "Processing canceled"}
 
 
@@ -209,3 +220,4 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/send_message")
 async def send_message(message: Message):
     await _async_update_callback(message.model_dump())
+
