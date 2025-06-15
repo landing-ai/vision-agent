@@ -106,7 +106,7 @@ def send_task_inference_request(
     if metadata is not None and "function_name" in metadata:
         function_name = metadata["function_name"]
     response = _call_post(url, payload, session, files, function_name, is_form)
-    return response["data"]
+    return response["data"] if "data" in response else response
 
 
 def _create_requests_session(
