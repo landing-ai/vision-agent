@@ -102,7 +102,11 @@ class OpenAILMM(LMM):
         for msg in chat:
             fixed_c = {"role": msg["role"]}
             fixed_c["content"] = [{"type": "text", "text": msg["content"]}]  # type: ignore
-            if "media" in msg and msg["media"] is not None and self.model_name != "o3-mini":
+            if (
+                "media" in msg
+                and msg["media"] is not None
+                and self.model_name != "o3-mini"
+            ):
                 for media in msg["media"]:
                     resize = kwargs["resize"] if "resize" in kwargs else self.image_size
                     image_detail = (
@@ -453,6 +457,7 @@ class AnthropicLMM(LMM):
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
 
             def f() -> Iterator[Optional[str]]:
+                thinking_start = False
                 for chunk in response:
                     if (
                         chunk.type == "message_start"
@@ -460,11 +465,35 @@ class AnthropicLMM(LMM):
                     ):
                         continue
                     elif chunk.type == "content_block_delta":
-                        yield chunk.delta.text
+                        if chunk.delta.type == "text_delta":
+                            if thinking_start:
+                                thinking_start = False
+                                yield f"</thinking>\n{chunk.delta.text}"
+                            else:
+                                yield chunk.delta.text
+                        elif chunk.delta.type == "thinking_delta":
+                            if not thinking_start:
+                                thinking_start = True
+                                yield f"<thinking>{chunk.delta.thinking}"
+                            else:
+                                yield chunk.delta.thinking
                     elif chunk.type == "message_stop":
                         yield None
 
             return f()
+        elif (
+            "thinking" in tmp_kwargs
+            and "type" in tmp_kwargs["thinking"]
+            and tmp_kwargs["thinking"]["type"] == "enabled"
+        ):
+            thinking = ""
+            text = ""
+            for block in response.content:
+                if block.type == "thinking":
+                    thinking += block.thinking
+                elif block.type == "text":
+                    text += block.text
+            return "<thinking>" + thinking + "</thinking>\n" + text
         else:
             return cast(str, response.content[0].text)
 
