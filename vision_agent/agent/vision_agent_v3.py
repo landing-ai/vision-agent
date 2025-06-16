@@ -5,11 +5,12 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
 
 from rich.console import Console
+from rich.markup import escape
 
 from vision_agent.agent import Agent
 from vision_agent.agent.vision_agent_prompts_v3 import get_init_prompt
 from vision_agent.configs import Config
-from vision_agent.lmm import LMM
+from vision_agent.lmm import LMM, AnthropicLMM
 from vision_agent.models import AgentMessage, Message
 from vision_agent.utils.agent import (
     add_media_to_chat,
@@ -47,6 +48,7 @@ class DefaultImports:
 def run_chat(
     model: LMM,
     chat: List[AgentMessage],
+    kwargs: Optional[Dict[str, Any]] = None,
 ) -> str:
     chat = copy.deepcopy(chat)
     formatted_chat = []
@@ -56,7 +58,7 @@ def run_chat(
         else:
             role = "assistant"
         formatted_chat.append({"role": role, "content": c.content, "media": c.media})
-    response = cast(str, model(formatted_chat))
+    response = cast(str, model(formatted_chat, **(kwargs or {})))
     return response
 
 
@@ -88,7 +90,7 @@ def fix_xml_code_tags(response: str) -> str:
     return response
 
 
-def fix_response(response: str) -> str:
+def strip_extra_content(response: str) -> str:
     code_pos = [i.start() for i in re.finditer("<code>", response)]
     if len(code_pos) > 0:
         thinking_start = response.find("<thinking>")
@@ -105,8 +107,7 @@ def fix_response(response: str) -> str:
 def run_code(
     code: str,
     code_interpreter: CodeInterpreter,
-    verbose: bool = False,
-) -> Tuple[str, List[str]]:
+) -> Tuple[str, List[str], float]:
     code = remove_installs_from_code(code)
     start = time.time()
     execution = code_interpreter.exec_cell(DefaultImports.prepend_imports(code))
@@ -122,7 +123,7 @@ def run_code(
         obs += image_note
     return_images = result_images[:max_images_to_include] if result_images else []
 
-    return obs, return_images
+    return obs, return_images, end - start
 
 
 def format_obs_message(
@@ -146,7 +147,17 @@ class VisionAgentV3(Agent):
         code_sandbox_runtime: Optional[str] = None,
         update_callback: Callable[[Dict[str, Any]], None] = lambda x: None,
     ) -> None:
-        self.agent = agent if agent is not None else CONFIG.create_agent()
+        if agent is None:
+            self.agent = AnthropicLMM(
+                model_name="claude-3-7-sonnet-20250219", max_tokens=8192
+            )
+        else:
+            self.agent = CONFIG.create_agent()
+        self.kwargs = {
+            "thinking": {"type": "enabled", "budget_tokens": 4096},
+            "stop_sequences": ["</code>", "</answer>"],
+        }
+
         self.turns = 7
         self.verbose = verbose
         self.code_sandbox_runtime = code_sandbox_runtime
@@ -191,11 +202,10 @@ class VisionAgentV3(Agent):
                 AgentMessage(role="user", content=init_prompt, media=int_chat[0].media)
             )
 
-            __import__("ipdb").set_trace()
             for turn in range(self.turns):
-                response = run_chat(self.agent, return_chat)
+                response = run_chat(self.agent, return_chat, self.kwargs)
                 response = fix_xml_code_tags(response)
-                response = fix_response(response)
+                response = strip_extra_content(response)
 
                 return_chat.append(AgentMessage(role="assistant", content=response))
                 self.update_callback(return_chat[-1].model_dump())
@@ -220,8 +230,12 @@ class VisionAgentV3(Agent):
                     break
 
                 if code is not None:
-                    obs, images = run_code(code, code_interpreter, self.verbose)
+                    obs, images, latency = run_code(code, code_interpreter)
                     obs = format_obs_message(obs, turn, self.turns)
+                    _CONSOLE.print(
+                        f"[bold cyan]Code execution took {latency:.2f} seconds.[/bold cyan]\n"
+                        f"[yellow]{escape(obs)}[/yellow]\n"
+                    )
                     return_chat.append(
                         AgentMessage(role="observation", content=obs, media=images)
                     )
