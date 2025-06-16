@@ -451,6 +451,15 @@ class AnthropicLMM(LMM):
 
         # prefers kwargs from second dictionary over first
         tmp_kwargs = self.kwargs | kwargs
+
+        thinking_enabled = (
+            "thinking" in tmp_kwargs
+            and "type" in tmp_kwargs["thinking"]
+            and tmp_kwargs["thinking"]["type"] == "enabled"
+        )
+        if thinking_enabled:
+            tmp_kwargs["temperature"] = 1.0
+
         response = self.client.messages.create(
             model=self.model_name, messages=messages, **tmp_kwargs
         )
@@ -481,11 +490,7 @@ class AnthropicLMM(LMM):
                         yield None
 
             return f()
-        elif (
-            "thinking" in tmp_kwargs
-            and "type" in tmp_kwargs["thinking"]
-            and tmp_kwargs["thinking"]["type"] == "enabled"
-        ):
+        elif thinking_enabled:
             thinking = ""
             text = ""
             for block in response.content:
