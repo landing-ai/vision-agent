@@ -28,8 +28,8 @@ export function PreviewSection({
   onPolygonsChange,
 }: PreviewSectionProps) {
   return (
-    <Card className="overflow-hidden shadow-md border border-gray-200 h-[800px] flex flex-col">
-      <Tabs defaultValue="media" className="flex-1 flex flex-col">
+    <Card className="overflow-y-auto h-[800px]">
+      <Tabs defaultValue="media">
         <TabsList className="w-full justify-start rounded-none bg-gray-50">
           <TabsTrigger value="media" className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
