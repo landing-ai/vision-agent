@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import (
     Any,
-    Collection,
     Dict,
     Iterator,
     List,
@@ -464,14 +463,9 @@ class AnthropicLMM(LMM):
             content.append(TextBlockParam(type="text", text=text_content.strip()))
         return MessageParam(role="assistant", content=content)
 
-    def chat(
-        self,
-        chat: Sequence[Message],
-        **kwargs: Any,
-    ) -> Union[str, Iterator[Optional[str]]]:
-        # prefers kwargs from second dictionary over first
+    def _setup_chat_kwargs(self, kwargs: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
+        """Set up kwargs and determine if thinking mode is enabled."""
         tmp_kwargs = self.kwargs | kwargs
-
         thinking_enabled = (
             "thinking" in tmp_kwargs
             and "type" in tmp_kwargs["thinking"]
@@ -479,7 +473,12 @@ class AnthropicLMM(LMM):
         )
         if thinking_enabled:
             tmp_kwargs["temperature"] = 1.0
+        return tmp_kwargs, thinking_enabled
 
+    def _convert_messages_to_anthropic_format(
+        self, chat: Sequence[Message], thinking_enabled: bool, **kwargs: Any
+    ) -> List[MessageParam]:
+        """Convert chat messages to Anthropic format."""
         messages: List[MessageParam] = []
 
         for msg in chat:
@@ -531,6 +530,91 @@ class AnthropicLMM(LMM):
                     f"Unsupported role {msg['role']}. Only 'user' and 'assistant' roles are supported."
                 )
 
+        return messages
+
+    def _handle_streaming_response(
+        self, stream_response: anthropic.Stream[anthropic.MessageStreamEvent]
+    ) -> Iterator[Optional[str]]:
+        """Handle streaming response from Anthropic API."""
+
+        def f() -> Iterator[Optional[str]]:
+            thinking_start = False
+            signature_start = False
+            for chunk in stream_response:
+                if chunk.type == "message_start" or chunk.type == "content_block_start":
+                    continue
+                elif chunk.type == "content_block_delta":
+                    if chunk.delta.type == "text_delta":
+                        if thinking_start:
+                            thinking_start = False
+                            yield f"</thinking>\n{chunk.delta.text}"
+                        elif signature_start:
+                            signature_start = False
+                            yield f"</signature>\n{chunk.delta.text}"
+                        else:
+                            yield chunk.delta.text
+                    elif chunk.delta.type == "thinking_delta":
+                        if not thinking_start:
+                            thinking_start = True
+                            yield f"<thinking>{chunk.delta.thinking}"
+                        else:
+                            yield chunk.delta.thinking
+                    elif chunk.delta.type == "signature_delta":
+                        if not signature_start:
+                            signature_start = True
+                            yield f"<signature>{chunk.delta.signature}"
+                        else:
+                            yield chunk.delta.signature
+                elif chunk.type == "message_stop":
+                    yield None
+
+        return f()
+
+    def _format_thinking_response(self, msg_response: anthropic.types.Message) -> str:
+        """Format thinking mode response with proper tags."""
+        thinking = ""
+        signature = ""
+        redacted_thinking = ""
+        text = ""
+        for block in msg_response.content:
+            if block.type == "thinking":
+                thinking += block.thinking
+                if block.signature:
+                    signature = block.signature
+            elif block.type == "text":
+                text += block.text
+            elif block.type == "redacted_thinking":
+                redacted_thinking += block.data
+        return (
+            f"<thinking>{thinking}</thinking>\n"
+            + (
+                f"<redacted_thinking>{redacted_thinking}</redacted_thinking>\n"
+                if redacted_thinking
+                else ""
+            )
+            + (f"<signature>{signature}</signature>\n" if signature else "")
+            + text
+        )
+
+    def _handle_non_streaming_response(
+        self, response_untyped: Any, thinking_enabled: bool
+    ) -> str:
+        """Handle non-streaming response from Anthropic API."""
+        msg_response = cast(anthropic.types.Message, response_untyped)
+        if thinking_enabled:
+            return self._format_thinking_response(msg_response)
+        return cast(anthropic.types.TextBlock, msg_response.content[0]).text
+
+    def chat(
+        self,
+        chat: Sequence[Message],
+        **kwargs: Any,
+    ) -> Union[str, Iterator[Optional[str]]]:
+        tmp_kwargs, thinking_enabled = self._setup_chat_kwargs(kwargs)
+        messages = self._convert_messages_to_anthropic_format(
+            chat, thinking_enabled, **kwargs
+        )
+
         response_untyped = self.client.messages.create(
             model=self.model_name, messages=messages, **tmp_kwargs
         )
@@ -540,69 +624,11 @@ class AnthropicLMM(LMM):
             stream_response = cast(
                 anthropic.Stream[anthropic.MessageStreamEvent], response_untyped
             )
-
-            def f() -> Iterator[Optional[str]]:
-                thinking_start = False
-                signature_start = False
-                for chunk in stream_response:
-                    if (
-                        chunk.type == "message_start"
-                        or chunk.type == "content_block_start"
-                    ):
-                        continue
-                    elif chunk.type == "content_block_delta":
-                        if chunk.delta.type == "text_delta":
-                            if thinking_start:
-                                thinking_start = False
-                                yield f"</thinking>\n{chunk.delta.text}"
-                            elif signature_start:
-                                signature_start = False
-                                yield f"</signature>\n{chunk.delta.text}"
-                            else:
-                                yield chunk.delta.text
-                        elif chunk.delta.type == "thinking_delta":
-                            if not thinking_start:
-                                thinking_start = True
-                                yield f"<thinking>{chunk.delta.thinking}"
-                            else:
-                                yield chunk.delta.thinking
-                        elif chunk.delta.type == "signature_delta":
-                            if not signature_start:
-                                signature_start = True
-                                yield f"<signature>{chunk.delta.signature}"
-                            else:
-                                yield chunk.delta.signature
-                    elif chunk.type == "message_stop":
-                        yield None
-
-            return f()
+            return self._handle_streaming_response(stream_response)
         else:
-            msg_response = cast(anthropic.types.Message, response_untyped)
-            if thinking_enabled:
-                thinking = ""
-                signature = ""
-                redacted_thinking = ""
-                text = ""
-                for block in msg_response.content:
-                    if block.type == "thinking":
-                        thinking += block.thinking
-                        if block.signature:
-                            signature = block.signature
-                    elif block.type == "text":
-                        text += block.text
-                    elif block.type == "redacted_thinking":
-                        redacted_thinking += block.data
-                return (
-                    f"<thinking>{thinking}</thinking>\n"
-                    + (
-                        f"<redacted_thinking>{redacted_thinking}</redacted_thinking>\n"
-                        if redacted_thinking
-                        else ""
-                    )
-                    + (f"<signature>{signature}</signature>\n" if signature else "")
-                    + text
-                )
-        return cast(anthropic.types.TextBlock, msg_response.content[0]).text
+            return self._handle_non_streaming_response(
+                response_untyped, thinking_enabled
+            )
 
     def generate(
         self,
