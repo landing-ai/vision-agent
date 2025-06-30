@@ -528,7 +528,7 @@ def suggestion(prompt: str, medias: List[np.ndarray]) -> None:
         medias: List[np.ndarray]: The images to use for the problem
     """
     try:
-        from .suggestion import suggestion_impl
+        from .suggestion import suggestion_impl  # type: ignore
 
         suggestion = suggestion_impl(prompt, medias)
         print(suggestion)
