@@ -7,12 +7,15 @@ import { Card } from "@/components/ui/card";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { gruvboxLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { PolygonDrawer, Polygon } from "@/components/PolygonDrawer";
+import { ResultImageWithBoundingBoxes } from "@/components/ResultImageWithBoundingBoxes";
 
 interface PreviewSectionProps {
   uploadedMedia: string | null;
   uploadedFile: string | null;
-  uploadedResult: string | null;
+  uploadedResult: number[][] | null;
   onPolygonsChange: (polygons: Polygon[]) => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
 interface File {
@@ -26,10 +29,12 @@ export function PreviewSection({
   uploadedFile,
   uploadedResult,
   onPolygonsChange,
+  activeTab = "media",
+  onTabChange,
 }: PreviewSectionProps) {
   return (
     <Card className="overflow-y-auto h-[800px]">
-      <Tabs defaultValue="media">
+      <Tabs value={activeTab} onValueChange={onTabChange}>
         <TabsList className="w-full justify-start rounded-none bg-gray-50">
           <TabsTrigger value="media" className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -113,29 +118,33 @@ export function PreviewSection({
           </ScrollArea>
         </TabsContent>
         
-        <TabsContent value="result" className="p-4 bg-white flex-1 flex flex-col">
-          <ScrollArea className="flex-1">
-            <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
-              {uploadedResult ? (
-                <img
-                  src={uploadedResult}
-                  alt="Uploaded"
-                  className="max-w-full rounded-md border shadow-sm"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-3" />
-                    <path d="M18 3h3v3" />
-                    <path d="M21 13V6h-8" />
-                    <path d="m16 8-8 8" />
-                  </svg>
-                  <p className="text-gray-500">No result uploaded yet.</p>
-                  <p className="text-sm text-gray-400 mt-2">Results will appear here after processing.</p>
+        <TabsContent value="result" className="p-4 bg-white">
+          <div className="border rounded-md p-4 bg-gray-50 shadow-inner">
+            {uploadedResult && uploadedMedia ? (
+              <ResultImageWithBoundingBoxes
+                imageSrc={uploadedMedia}
+                boundingBoxes={uploadedResult}
+              />
+            ) : uploadedResult ? (
+              <div className="text-center p-4">
+                <p className="text-yellow-600 mb-2">Bounding box coordinates detected but no original image available.</p>
+                <div className="bg-gray-100 p-3 rounded text-sm font-mono">
+                  {JSON.stringify(uploadedResult, null, 2)}
                 </div>
-              )}
-            </div>
-          </ScrollArea>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300 mb-4">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-3" />
+                  <path d="M18 3h3v3" />
+                  <path d="M21 13V6h-8" />
+                  <path d="m16 8-8 8" />
+                </svg>
+                <p className="text-gray-500">No result uploaded yet.</p>
+                <p className="text-sm text-gray-400 mt-2">Results will appear here after processing.</p>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </Card>

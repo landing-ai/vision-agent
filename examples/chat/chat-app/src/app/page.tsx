@@ -7,20 +7,23 @@ import { VersionSelector } from "@/components/VersionSelector";
 import { Polygon } from "@/components/PolygonDrawer";
 
 export default function Component() {
-  const [selectedVersion, setSelectedVersion] = useState<'v1' | 'v2' | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<'v2' | 'v3' | null>(null);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const handleFileUpload = (file: string) => setUploadedFile(file);
 
   const [uploadedImage, setUploadedMedia] = useState<string | null>(null);
   const handleMediaUpload = (image: string) => setUploadedMedia(image);
 
-  const [uploadedResult, setUploadedResult] = useState<string | null>(null);
-  const handleResultUpload = (result: string) => setUploadedResult(result);
+  const [uploadedResult, setUploadedResult] = useState<number[][] | null>(null);
+  const handleResultUpload = (result: number[][]) => setUploadedResult(result);
 
   const [polygons, setPolygons] = useState<Polygon[]>([]);
   const handlePolygonChange = (polygons: Polygon[]) => setPolygons(polygons);
 
-  const handleVersionSelect = (version: 'v1' | 'v2') => {
+  const [activeTab, setActiveTab] = useState<string>("media");
+  const handleTabChange = (tab: string) => setActiveTab(tab);
+
+  const handleVersionSelect = (version: 'v2' | 'v3' | null) => {
     setSelectedVersion(version);
   };
 
@@ -39,12 +42,15 @@ export default function Component() {
           onUploadedResult={handleResultUpload}
           polygons={polygons}
           version={selectedVersion}
+          onTabChange={handleTabChange}
         />
         <PreviewSection
           uploadedMedia={uploadedImage}
           uploadedFile={uploadedFile}
           uploadedResult={uploadedResult}
           onPolygonsChange={handlePolygonChange}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
         />
       </div>
     </>

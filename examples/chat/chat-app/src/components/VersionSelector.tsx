@@ -21,18 +21,18 @@ export function VersionSelector({ onVersionSelect }: VersionSelectorProps) {
           </p>
           <div className="space-y-3">
             <Button
-              onClick={() => onVersionSelect('v2')}
-              className="w-full py-3 text-lg bg-gray-900 text-white hover:bg-gray-800"
-              variant="default"
-            >
-              VisionAgentV2
-            </Button>
-            <Button
               onClick={() => onVersionSelect('v3')}
               className="w-full py-3 text-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
               variant="outline"
             >
               VisionAgentV3
+            </Button>
+            <Button
+              onClick={() => onVersionSelect('v2')}
+              className="w-full py-3 text-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+              variant="default"
+            >
+              VisionAgentV2
             </Button>
           </div>
         </div>
