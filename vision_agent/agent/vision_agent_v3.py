@@ -35,7 +35,7 @@ class DefaultImports:
         "from typing import *",
         "from pillow_heif import register_heif_opener",
         "from vision_agent.tools import load_image",
-        "from vision_agent.tools.agent_tools import instance_segmentation, ocr, depth_estimation, visualize_bounding_boxes, visualize_segmentation_masks, get_crops, rotate_90, display_image, iou",
+        "from vision_agent.tools.planner_v3_tools import instance_segmentation, ocr, depth_estimation, visualize_bounding_boxes, visualize_segmentation_masks, get_crops, rotate_90, display_image, iou",
         "register_heif_opener()",
         "import matplotlib.pyplot as plt",
     ]

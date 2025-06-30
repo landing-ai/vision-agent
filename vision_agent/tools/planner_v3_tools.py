@@ -37,7 +37,7 @@ def maybe_normalize_bbox(
 
 def instance_segmentation(
     prompt: str, image: np.ndarray, threshold: float = 0.23, nms_threshold: float = 0.5
-) -> List[Dict[str, Union[str, float, list[float], np.ndarray]]]:
+) -> List[Dict[str, Union[str, float, List[float], np.ndarray]]]:
     image_bytes = numpy_to_bytes(image)
     files = [("image", image_bytes)]
     data = {"prompts": [prompt], "threshold": threshold, "nms_threshold": nms_threshold}
@@ -97,7 +97,7 @@ def depth_estimation(image: np.ndarray) -> np.ndarray:
 
 
 def visualize_bounding_boxes(
-    image: np.ndarray, bounding_boxes: List[Dict[str, Union[str, float, list[float]]]]
+    image: np.ndarray, bounding_boxes: List[Dict[str, Union[str, float, List[float]]]]
 ) -> np.ndarray:
     image = image.copy()
     image_size = image.shape[:2]
@@ -138,7 +138,7 @@ def visualize_segmentation_masks(
 
 
 def get_crops(
-    image: np.ndarray, bounding_boxes: List[Dict[str, Union[str, float, list[float]]]]
+    image: np.ndarray, bounding_boxes: List[Dict[str, Union[str, float, List[float]]]]
 ) -> List[np.ndarray]:
     image = image.copy()
     bounding_boxes = copy.deepcopy(bounding_boxes)
