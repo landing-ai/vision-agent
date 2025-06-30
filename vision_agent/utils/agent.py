@@ -320,12 +320,12 @@ def capture_media_from_exec(execution: Execution) -> List[str]:
         elif hasattr(result, "_repr_png_") and result._repr_png_():
             images.append(
                 "data:image/png;base64,"
-                + convert_to_b64(b64_to_pil(result._repr_png_()))
+                + convert_to_b64(b64_to_pil(result._repr_png_()))  # type: ignore
             )
         elif hasattr(result, "_repr_jpeg_") and result._repr_jpeg_():
             images.append(
                 "data:image/jpeg;base64,"
-                + convert_to_b64(b64_to_pil(result._repr_jpeg_()))
+                + convert_to_b64(b64_to_pil(result._repr_jpeg_()))  # type: ignore
             )
     return images
 

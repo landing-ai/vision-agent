@@ -58,7 +58,7 @@ def run_chat(
         else:
             role = "assistant"
         formatted_chat.append({"role": role, "content": c.content, "media": c.media})
-    response = cast(str, model(formatted_chat, **(kwargs or {})))
+    response = cast(str, model(formatted_chat, **(kwargs or {})))  # type: ignore
     return response
 
 
@@ -175,8 +175,6 @@ class VisionAgentV3(Agent):
             self.agent = AnthropicLMM(
                 model_name="claude-3-7-sonnet-20250219", max_tokens=8192
             )
-        else:
-            self.agent = CONFIG.create_agent()
         self.kwargs = {
             "thinking": {"type": "enabled", "budget_tokens": 4096},
             "stop_sequences": ["</code>", "</answer>"],

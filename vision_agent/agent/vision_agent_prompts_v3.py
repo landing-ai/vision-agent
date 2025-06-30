@@ -326,7 +326,7 @@ def get_init_prompt(
     image_path: str,
     tool_docs: str = TOOLS,
     examples: str = EXAMPLES,
-):
+) -> str:
     if category == "localization":
         cat_text = "Return bounding box coordinates for this question."
     elif category == "text":

@@ -1,6 +1,7 @@
 import base64
 import copy
 import io
+from typing import Dict, List, Optional, Tuple, Union, cast
 
 import cv2
 import matplotlib.figure
@@ -19,16 +20,16 @@ from vision_agent.utils.tools import send_inference_request
 
 
 def maybe_denormalize_bbox(
-    bbox: list[int | float], image_size: tuple[int, ...]
-) -> list[float]:
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
     if all([0 <= c <= 1 for c in bbox]):
         return denormalize_bbox(bbox, image_size)
     return bbox
 
 
 def maybe_normalize_bbox(
-    bbox: list[int | float], image_size: tuple[int, ...]
-) -> list[float]:
+    bbox: List[Union[int, float]], image_size: Tuple[int, ...]
+) -> List[float]:
     if any([1 <= c for c in bbox]):
         return normalize_bbox(bbox, image_size)
     return bbox
@@ -36,7 +37,7 @@ def maybe_normalize_bbox(
 
 def instance_segmentation(
     prompt: str, image: np.ndarray, threshold: float = 0.23, nms_threshold: float = 0.5
-) -> list[dict[str, str | float | list[float] | np.ndarray]]:
+) -> List[Dict[str, Union[str, float, list[float], np.ndarray]]]:
     image_bytes = numpy_to_bytes(image)
     files = [("image", image_bytes)]
     data = {"prompts": [prompt], "threshold": threshold, "nms_threshold": nms_threshold}
@@ -59,7 +60,7 @@ def instance_segmentation(
     return results_formatted
 
 
-def ocr(image: np.ndarray) -> list[dict[str, str | float | list[float]]]:
+def ocr(image: np.ndarray) -> List[Dict[str, Union[str, float, List[float]]]]:
     image_bytes = numpy_to_bytes(image)
     files = [("image", image_bytes)]
     results = send_inference_request(
@@ -96,29 +97,32 @@ def depth_estimation(image: np.ndarray) -> np.ndarray:
 
 
 def visualize_bounding_boxes(
-    image: np.ndarray, bounding_boxes: list[dict[str, str | float | list[float]]]
-):
+    image: np.ndarray, bounding_boxes: List[Dict[str, Union[str, float, list[float]]]]
+) -> np.ndarray:
     image = image.copy()
     image_size = image.shape[:2]
     bounding_boxes = copy.deepcopy(bounding_boxes)
 
     for bbox in bounding_boxes:
-        bbox["bbox"] = maybe_denormalize_bbox(bbox["bbox"], image_size)
+        bbox["bbox"] = maybe_denormalize_bbox(
+            cast(List[float], bbox["bbox"]), image_size
+        )
     for bbox in bounding_boxes:
-        x1, y1, x2, y2 = bbox["bbox"]
+        x1, y1, x2, y2 = bbox["bbox"]  # type: ignore
         cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
     return image
 
 
 def visualize_segmentation_masks(
-    image: np.ndarray, segmentation_masks: list[dict[str, str | float | np.ndarray]]
-):
+    image: np.ndarray,
+    segmentation_masks: List[Dict[str, Union[str, float, np.ndarray]]],
+) -> np.ndarray:
     alpha = 0.5
     overlay = image.copy()
     color_mask = np.zeros_like(image)
     color_mask[:, :] = (0, 100, 255)
-    for mask in segmentation_masks:
-        mask = mask["mask"]
+    for elt in segmentation_masks:
+        mask = cast(np.ndarray, elt["mask"])
         overlay[mask == 1] = (1 - alpha) * overlay[mask == 1] + alpha * color_mask[
             mask == 1
         ]
@@ -134,16 +138,18 @@ def visualize_segmentation_masks(
 
 
 def get_crops(
-    image: np.ndarray, bounding_boxes: list[dict[str, str | float | list[float]]]
-):
+    image: np.ndarray, bounding_boxes: List[Dict[str, Union[str, float, list[float]]]]
+) -> List[np.ndarray]:
     image = image.copy()
     bounding_boxes = copy.deepcopy(bounding_boxes)
 
     for bbox in bounding_boxes:
-        bbox["bbox"] = maybe_denormalize_bbox(bbox["bbox"], image.shape[:2])
+        bbox["bbox"] = maybe_denormalize_bbox(
+            cast(List[float], bbox["bbox"]), image.shape[:2]
+        )
     crops = []
     for bbox in bounding_boxes:
-        x1, y1, x2, y2 = bbox["bbox"]
+        x1, y1, x2, y2 = bbox["bbox"]  # type: ignore
         crops.append(image[int(y1) : int(y2), int(x1) : int(x2)])
     return crops
 
@@ -152,7 +158,9 @@ def rotate_90(image: np.ndarray, k: int = 1) -> np.ndarray:
     return np.rot90(image, k=k, axes=(0, 1))
 
 
-def iou(pred1: list[float] | np.ndarray, pred2: list[float] | np.ndarray) -> float:
+def iou(
+    pred1: Union[List[float], np.ndarray], pred2: Union[List[float], np.ndarray]
+) -> float:
     if isinstance(pred1, list) and isinstance(pred2, list):
         x1, y1, x2, y2 = pred1
         x1_, y1_, x2_, y2_ = pred2
@@ -171,9 +179,9 @@ def iou(pred1: list[float] | np.ndarray, pred2: list[float] | np.ndarray) -> flo
 
 
 def display_image(
-    image: np.ndarray | PILImageType | matplotlib.figure.Figure | str,
-):
-    display_img = None
+    image: Union[np.ndarray, PILImageType, matplotlib.figure.Figure, str],
+) -> None:
+    display_img: Optional[PILImageType] = None
     if isinstance(image, np.ndarray):
         display_img = Image.fromarray(image)
     elif isinstance(image, matplotlib.figure.Figure):
@@ -183,15 +191,15 @@ def display_image(
         buf.seek(0)
         # Load the buffer as a PIL Image
         display_img = Image.open(buf)
-        plt.close(image)  # Close the figure to prevent it from displaying separately
+        plt.close(image)  # type: ignore
     elif isinstance(image, PILImageType):
         display_img = image  # Already a PIL Image
     elif isinstance(image, str):
         display_img = Image.open(image)
 
-    if display_img:
-        plt.imshow(display_img)
-        plt.axis("off")  # Hide axes for cleaner display
+    if display_img is not None:
+        plt.imshow(display_img)  # type: ignore
+        plt.axis("off")  # type: ignore
         plt.show()
     else:
         # Handle cases where image type is not supported or conversion failed
