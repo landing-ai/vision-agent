@@ -7,13 +7,13 @@ import base64
 
 import anthropic
 import requests
-from anthropic.types import ImageBlockParam, MessageParam, TextBlockParam
 from openai import AzureOpenAI, OpenAI
 
 from google import genai  # type: ignore
 from google.genai import types  # type: ignore
 
 from vision_agent.models import Message
+from vision_agent.utils.agent import extract_tag
 from vision_agent.utils.image_utils import encode_media
 
 
@@ -421,34 +421,39 @@ class AnthropicLMM(LMM):
             return self.generate(input, **kwargs)
         return self.chat(input, **kwargs)
 
+    def create_thinking_assistant_message(
+        self,
+        response: str,
+    ):
+        content = []
+        thinking_content = extract_tag(response, "thinking")
+        signature = extract_tag(response, "signature")
+        if thinking_content:
+            content.append(
+                {
+                    "type": "thinking",
+                    "thinking": thinking_content.strip(),
+                    "signature": signature,
+                }
+            )
+        signature_content = extract_tag(response, "signature")
+        if signature_content:
+            text_content = response.replace(
+                f"<thinking>{thinking_content}</thinking>", ""
+            ).replace(f"<signature>{signature_content}</signature>", "")
+        else:
+            text_content = response.replace(
+                f"<thinking>{thinking_content}</thinking>", ""
+            )
+        if text_content.strip():
+            content.append({"type": "text", "text": text_content.strip()})
+        return {"role": "assistant", "content": content}
+
     def chat(
         self,
         chat: Sequence[Dict[str, Any]],
         **kwargs: Any,
     ) -> Union[str, Iterator[Optional[str]]]:
-        messages: List[MessageParam] = []
-        for msg in chat:
-            content: List[Union[TextBlockParam, ImageBlockParam]] = [
-                TextBlockParam(type="text", text=msg["content"])
-            ]
-            if "media" in msg and msg["media"] is not None:
-                for media_path in msg["media"]:
-                    resize = kwargs["resize"] if "resize" in kwargs else self.image_size
-                    encoded_media = encode_media(media_path, resize=resize)
-                    if encoded_media.startswith("data:image/png;base64,"):
-                        encoded_media = encoded_media[len("data:image/png;base64,") :]
-                    content.append(
-                        ImageBlockParam(
-                            type="image",
-                            source={
-                                "type": "base64",
-                                "media_type": "image/png",
-                                "data": encoded_media,
-                            },
-                        )
-                    )
-            messages.append({"role": msg["role"], "content": content})
-
         # prefers kwargs from second dictionary over first
         tmp_kwargs = self.kwargs | kwargs
 
@@ -460,13 +465,61 @@ class AnthropicLMM(LMM):
         if thinking_enabled:
             tmp_kwargs["temperature"] = 1.0
 
+        messages = []
+
+        for msg in chat:
+            if msg["role"] == "user":
+                content = [{"type": "text", "text": msg["content"]}]
+                if "media" in msg and msg["media"] is not None:
+                    for media_path in msg["media"]:
+                        resize = (
+                            kwargs["resize"] if "resize" in kwargs else self.image_size
+                        )
+                        encoded_media = encode_media(media_path, resize=resize)
+                        if encoded_media.startswith("data:image/png;base64,"):
+                            encoded_media = encoded_media[
+                                len("data:image/png;base64,") :
+                            ]
+                        content.append(
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": "image/png",
+                                    "data": encoded_media,
+                                },
+                            }
+                        )
+                messages.append({"role": "user", "content": content})
+            elif msg["role"] == "assistant":
+                if thinking_enabled:
+                    messages.append(
+                        self.create_thinking_assistant_message(
+                            msg["content"],
+                        )
+                    )
+                else:
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": [{"type": "text", "text": msg["content"]}],
+                        }
+                    )
+            else:
+                raise ValueError(
+                    f"Unsupported role {msg['role']}. Only 'user' and 'assistant' roles are supported."
+                )
+
         response = self.client.messages.create(
             model=self.model_name, messages=messages, **tmp_kwargs
         )
+
         if "stream" in tmp_kwargs and tmp_kwargs["stream"]:
 
             def f() -> Iterator[Optional[str]]:
                 thinking_start = False
+                redacted_thinking_start = False
+                signature_start = False
                 for chunk in response:
                     if (
                         chunk.type == "message_start"
@@ -478,6 +531,12 @@ class AnthropicLMM(LMM):
                             if thinking_start:
                                 thinking_start = False
                                 yield f"</thinking>\n{chunk.delta.text}"
+                            elif redacted_thinking_start:
+                                redacted_thinking_start = False
+                                yield f"</redacted_thinking>\n{chunk.delta.text}"
+                            elif signature_start:
+                                signature_start = False
+                                yield f"</signature>\n{chunk.delta.text}"
                             else:
                                 yield chunk.delta.text
                         elif chunk.delta.type == "thinking_delta":
@@ -486,19 +545,46 @@ class AnthropicLMM(LMM):
                                 yield f"<thinking>{chunk.delta.thinking}"
                             else:
                                 yield chunk.delta.thinking
+                        elif chunk.delta.type == "redacted_thinking_delta":
+                            if not redacted_thinking_start:
+                                redacted_thinking_start = True
+                                yield f"<redacted_thinking>{chunk.delta.thinking}"
+                            else:
+                                yield chunk.delta.thinking
+                        elif chunk.delta.type == "signature_delta":
+                            if not signature_start:
+                                signature_start = True
+                                yield f"<signature>{chunk.delta.signature}"
+                            else:
+                                yield chunk.delta.signature
                     elif chunk.type == "message_stop":
                         yield None
 
             return f()
         elif thinking_enabled:
             thinking = ""
+            signature = ""
+            redacted_thinking = ""
             text = ""
             for block in response.content:
                 if block.type == "thinking":
                     thinking += block.thinking
+                    if block.signature:
+                        signature = block.signature
                 elif block.type == "text":
                     text += block.text
-            return "<thinking>" + thinking + "</thinking>\n" + text
+                elif block.type == "redacted_thinking":
+                    redacted_thinking += block.thinking
+            return (
+                f"<thinking>{thinking}</thinking>\n"
+                + (
+                    f"<redacted_thinking>{redacted_thinking}</redacted_thinking>\n"
+                    if redacted_thinking
+                    else ""
+                )
+                + (f"<signature>{signature}</signature>\n" if signature else "")
+                + text
+            )
         else:
             return cast(str, response.content[0].text)
 
@@ -508,9 +594,7 @@ class AnthropicLMM(LMM):
         media: Optional[Sequence[Union[str, Path]]] = None,
         **kwargs: Any,
     ) -> Union[str, Iterator[Optional[str]]]:
-        content: List[Union[TextBlockParam, ImageBlockParam]] = [
-            TextBlockParam(type="text", text=prompt)
-        ]
+        content = [{"type": "text", "text": prompt}]
         if media:
             for m in media:
                 resize = kwargs["resize"] if "resize" in kwargs else self.image_size
@@ -518,14 +602,14 @@ class AnthropicLMM(LMM):
                 if encoded_media.startswith("data:image/png;base64,"):
                     encoded_media = encoded_media[len("data:image/png;base64,") :]
                 content.append(
-                    ImageBlockParam(
-                        type="image",
-                        source={
+                    {
+                        "type": "image",
+                        "source": {
                             "type": "base64",
                             "media_type": "image/png",
                             "data": encoded_media,
                         },
-                    )
+                    }
                 )
 
         # prefers kwargs from second dictionary over first

@@ -62,6 +62,23 @@ def run_chat(
     return response
 
 
+def strip_signature(response: str) -> str:
+    signature = extract_tag(response, "signature")
+    if signature is not None:
+        response = response.replace(f"<signature>{signature}</signature>", "")
+    return response
+
+
+def strip_signature_from_agentmessage(
+    response: AgentMessage,
+) -> AgentMessage:
+    return AgentMessage(
+        role=response.role,
+        content=strip_signature(response.content),
+        media=response.media,
+    )
+
+
 def fix_xml_code_tags(response: str) -> str:
     start_tag = "```python"
     end_tag = "```"
@@ -95,10 +112,17 @@ def strip_extra_content(response: str) -> str:
     if len(code_pos) > 0:
         thinking_start = response.find("<thinking>")
         thinking_end = response.find("</thinking>", thinking_start)
+        signature_start = response.find("<signature>")
+        signature_end = response.find("</signature>", signature_start)
         code_start = response.find("<code>")
         code_end = response.find("</code>", code_start)
         return (
             response[thinking_start : thinking_end + len("</thinking>")]
+            + (
+                response[signature_start : signature_end + len("</signature>")]
+                if signature_start != -1
+                else ""
+            )
             + response[code_start : code_end + len("</code>")]
         )
     return response
@@ -208,7 +232,9 @@ class VisionAgentV3(Agent):
                 response = strip_extra_content(response)
 
                 return_chat.append(AgentMessage(role="assistant", content=response))
-                self.update_callback(return_chat[-1].model_dump())
+                self.update_callback(
+                    strip_signature_from_agentmessage(return_chat[-1]).model_dump()
+                )
 
                 code = extract_tag(response, "code")
                 thoughts = extract_tag(response, "thinking")
@@ -219,17 +245,23 @@ class VisionAgentV3(Agent):
                         f"[bold cyan]Step {turn}/{self.turns}[/bold cyan]\n"
                         f"[green]{thoughts}[/green]\n"
                     )
+                    if answer is not None:
+                        _CONSOLE.print(
+                            f"[magenta]Final answer: {escape(answer)}[/magenta]\n"
+                        )
                     if code is not None:
                         print_code("Code:", code)
 
                 if answer is not None:
-                    return_chat.append(
-                        AgentMessage(role="final_observation", content=answer)
+                    # final answer is in the previous response message so no need to add
+                    # add it to the return_chat
+                    self.update_callback(
+                        AgentMessage(
+                            role="final_observation",
+                            content=f"<answer>{answer}</answer>",
+                        ).model_dump()
                     )
-                    self.update_callback(return_chat[-1].model_dump())
-                    break
-
-                if code is not None:
+                elif code is not None:
                     obs, images, latency = run_code(code, code_interpreter)
                     obs = format_obs_message(obs, turn, self.turns)
                     _CONSOLE.print(
@@ -239,7 +271,9 @@ class VisionAgentV3(Agent):
                     return_chat.append(
                         AgentMessage(role="observation", content=obs, media=images)
                     )
-                    self.update_callback(return_chat[-1].model_dump())
+                    self.update_callback(
+                        strip_signature_from_agentmessage(return_chat[-1]).model_dump()
+                    )
         return return_chat
 
     def log_progress(self, data: Dict[str, Any]) -> None:

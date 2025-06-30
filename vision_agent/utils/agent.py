@@ -247,7 +247,9 @@ def print_table(title: str, columns: List[str], rows: List[List[str]]) -> None:
 
 
 def add_media_to_chat(
-    chat: List[AgentMessage], code_interpreter: Optional[CodeInterpreter] = None, append_to_prompt: bool = True
+    chat: List[AgentMessage],
+    code_interpreter: Optional[CodeInterpreter] = None,
+    append_to_prompt: bool = True,
 ) -> Tuple[List[AgentMessage], List[AgentMessage], List[Union[str, Path]]]:
     orig_chat = copy.deepcopy(chat)
     int_chat = copy.deepcopy(chat)
