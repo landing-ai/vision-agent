@@ -18,6 +18,7 @@ const versionInfo = {
       "Can hanlde image inputs",
       "Can do object detection",
       "More stable and faster but less feature-rich",
+      "Final output is the final answer, not code",
     ]
   },
   v2: {
@@ -28,6 +29,7 @@ const versionInfo = {
       "Can handle image and video inputs",
       "Can do object detection, instance segmentation, activitiy recognition and more.",
       "Less stable but more feature-rich",
+      "Final output is code that can be executed",
     ]
   }
 };
