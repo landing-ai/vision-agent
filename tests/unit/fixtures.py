@@ -81,3 +81,32 @@ def google_lmm_mock(request):
     with patch("google.genai.Client") as mock_client_class:
         mock_client_class.return_value = mock_client
         yield mock_client
+
+@pytest.fixture
+def anthropic_lmm_mock(request):
+    content = request.param
+
+    def mock_create(*args, **kwargs):
+        if kwargs.get("stream", False):
+
+            def generator():
+                chunks = []
+                for chunk in content.split(" "):
+                    chunks.append(
+                        MagicMock(
+                            type="content_block_delta",
+                            delta=MagicMock(text=chunk + " " if chunk else ""),
+                        )
+                    )
+                chunks.append(MagicMock(type="message_stop"))
+                for chunk in chunks:
+                    yield chunk
+
+            return generator()
+        else:
+            return MagicMock(content=[MagicMock(text=content, type="text")])
+
+    with patch("vision_agent.lmm.lmm.anthropic.Anthropic") as mock:
+        mock_instance = mock.return_value
+        mock_instance.messages.create.return_value = mock_create()
+        yield mock_instance

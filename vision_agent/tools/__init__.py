@@ -42,7 +42,6 @@ from .tools import (
     glee_sam2_video_tracking,
     load_image,
     minimum_distance,
-    paddle_ocr,
     od_sam2_video_tracking,
     overlay_bounding_boxes,
     overlay_heat_map,
@@ -50,6 +49,7 @@ from .tools import (
     owlv2_object_detection,
     owlv2_sam2_instance_segmentation,
     owlv2_sam2_video_tracking,
+    paddle_ocr,
     qwen2_vl_images_vqa,
     qwen2_vl_video_vqa,
     qwen25_vl_images_vqa,
@@ -74,7 +74,7 @@ def register_tool(imports: Optional[List] = None) -> Callable:
     def decorator(tool: Callable) -> Callable:
         import inspect
 
-        global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO
+        global TOOLS, TOOLS_DF, TOOL_DESCRIPTIONS, TOOL_DOCSTRING, TOOLS_INFO  # noqa: F824
         from vision_agent.tools.tools import TOOLS
 
         if tool not in TOOLS:  # type: ignore

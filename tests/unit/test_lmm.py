@@ -4,13 +4,14 @@ import tempfile
 import pytest
 from PIL import Image
 
-from vision_agent.lmm.lmm import OllamaLMM, OpenAILMM, GoogleLMM
+from vision_agent.lmm.lmm import AnthropicLMM, GoogleLMM, OllamaLMM, OpenAILMM
 
 from .fixtures import (  # noqa: F401
+    anthropic_lmm_mock,
     chat_ollama_lmm_mock,
     generate_ollama_lmm_mock,
-    openai_lmm_mock,
     google_lmm_mock,
+    openai_lmm_mock,
 )
 
 
@@ -268,3 +269,90 @@ def test_google_generation_config(google_lmm_mock):  # noqa: F811
     assert config.max_output_tokens == 200
     assert config.top_k == 40
     assert config.top_p == 0.95
+
+
+@pytest.mark.parametrize(
+    "anthropic_lmm_mock", ["mocked response"], indirect=["anthropic_lmm_mock"]
+)
+def test_generate_anthropic_mock(anthropic_lmm_mock):  # noqa: F811
+    temp_image = create_temp_image()
+    lmm = AnthropicLMM()
+    response = lmm.generate("test prompt", media=[temp_image])
+    assert response == "mocked response"
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+    assert call_args["messages"][0]["content"][1]["type"] == "image"
+
+
+@pytest.mark.parametrize(
+    "anthropic_lmm_mock", ["mocked response"], indirect=["anthropic_lmm_mock"]
+)
+def test_generate_anthropic_mock_stream(anthropic_lmm_mock):  # noqa: F811
+    temp_image = create_temp_image()
+    lmm = AnthropicLMM()
+    response = lmm.generate("test prompt", media=[temp_image], stream=True)
+    expected_response = ["mocked ", "response ", None]
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+    assert call_args["messages"][0]["content"][1]["type"] == "image"
+
+
+@pytest.mark.parametrize(
+    "anthropic_lmm_mock", ["mocked response"], indirect=["anthropic_lmm_mock"]
+)
+def test_chat_anthropic_mock(anthropic_lmm_mock):  # noqa: F811
+    lmm = AnthropicLMM()
+    response = lmm.chat([{"role": "user", "content": "test prompt"}])
+    assert response == "mocked response"
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+
+
+@pytest.mark.parametrize(
+    "anthropic_lmm_mock", ["mocked response"], indirect=["anthropic_lmm_mock"]
+)
+def test_chat_anthropic_mock_stream(anthropic_lmm_mock):  # noqa: F811
+    lmm = AnthropicLMM()
+    response = lmm.chat([{"role": "user", "content": "test prompt"}], stream=True)
+    expected_response = ["mocked ", "response ", None]
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+
+
+@pytest.mark.parametrize(
+    "anthropic_lmm_mock", ["mocked response"], indirect=["anthropic_lmm_mock"]
+)
+def test_call_anthropic_mock(anthropic_lmm_mock):  # noqa: F811
+    lmm = AnthropicLMM()
+    response = lmm("test prompt")
+    assert response == "mocked response"
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+
+    response = lmm([{"role": "user", "content": "test prompt"}])
+    assert response == "mocked response"
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+
+
+@pytest.mark.parametrize(
+    "anthropic_lmm_mock", ["mocked response"], indirect=["anthropic_lmm_mock"]
+)
+def test_call_anthropic_mock_stream(anthropic_lmm_mock):  # noqa: F811
+    expected_response = ["mocked ", "response ", None]
+    lmm = AnthropicLMM()
+    response = lmm("test prompt", stream=True)
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"
+
+    response = lmm([{"role": "user", "content": "test prompt"}], stream=True)
+    for i, chunk in enumerate(response):
+        assert chunk == expected_response[i]
+    call_args = anthropic_lmm_mock.messages.create.call_args.kwargs
+    assert call_args["messages"][0]["content"][0]["text"] == "test prompt"

@@ -486,7 +486,7 @@ desc,doc,name
         ]",agentic_activity_recognition
 "'depth_pro' is a tool that runs the Apple DepthPro model to generate a depth map from a given RGB image. The returned depth map has the same dimensions as the input image, with each pixel indicating the distance from the camera in meters.","depth_pro(image: numpy.ndarray) -> numpy.ndarray:
 'depth_pro' is a tool that runs the Apple DepthPro model to generate a
-    depth map from a given RGB image. The returned depth map has the same dimensions 
+    depth map from a given RGB image. The returned depth map has the same dimensions
     as the input image, with each pixel indicating the distance from the camera in meters.
 
     Parameters:

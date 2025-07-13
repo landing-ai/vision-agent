@@ -26,9 +26,11 @@ interface ChatSectionProps {
   onUploadedMedia: (image: string) => void;
   uploadedFile: string | null;
   onUploadedFile: (file: string) => void;
-  uploadedResult: string | null;
-  onUploadedResult: (result: string) => void;
+  uploadedResult: number[][] | null;
+  onUploadedResult: (result: number[][]) => void;
   polygons: Polygon[];
+  version: 'v2' | 'v3' | null;
+  onTabChange?: (tab: string) => void;
 }
 
 interface Message {
@@ -66,7 +68,6 @@ const CollapsibleMessage = ({ content }: { content: string }) => {
             )}
           </Button>
         </CollapsibleTrigger>
-        <span className="text-sm font-medium">Observation</span>
       </div>
       <CollapsibleContent>
         <pre className="pt-2 bg-gray-100 p-2 rounded-md overflow-x-auto max-w-full whitespace-pre-wrap">
@@ -82,8 +83,9 @@ const checkContent = (role: string, content: string) => {
     /<finalize_plan>(.*?)<\/finalize_plan>/s,
   );
   const finalCodeMatch = content.match(/<final_code>(.*?)<\/final_code>/s);
+  const answerMatch = content.match(/<answer>(.*?)<\/answer>/s);
   return (
-    !(finalizePlanMatch || finalCodeMatch) &&
+    !(finalizePlanMatch || finalCodeMatch || answerMatch) &&
     !role.includes("update") &&
     !role.includes("response")
   );
@@ -99,7 +101,7 @@ const formatAssistantContent = (
   }, [content]);
   const responseMatch = content.match(/<response>(.*?)<\/response>/s);
   const thinkingMatch = content.match(/<thinking>(.*?)<\/thinking>/s);
-  const pythonMatch = content.match(/<execute_python>(.*?)<\/execute_python>/s);
+  const pythonMatch = content.match(/<(execute_python|code)>(.*?)<\/(execute_python|code)>/s);
   const finalPlanJsonMatch = content.match(/<json>(.*?)<\/json>/s);
   const interactionMatch = content.match(/<interaction>(.*?)<\/interaction>/s);
   let interactionJson = JSON.parse(
@@ -144,13 +146,13 @@ const formatAssistantContent = (
       <>
         {thinkingMatch && (
           <div>
-            <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
+            <strong className="text-gray-700">[THINKING]</strong>{" "}
             {thinkingMatch[1]}
           </div>
         )}
         {responseMatch && (
           <div>
-            <strong className="text-gray-700">[{role.toUpperCase()}]</strong>{" "}
+            <strong className="text-gray-700">[RESPONSE]</strong>{" "}
             <div className="prose prose-sm max-w-none markdown">
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]} 
@@ -166,7 +168,7 @@ const formatAssistantContent = (
             <code
               className="language-python"
               dangerouslySetInnerHTML={{
-                __html: Prism.highlight(pythonMatch[1].trim(), Prism.languages.python, "python"),
+                __html: Prism.highlight(pythonMatch[2].trim(), Prism.languages.python, "python"),
               }}
             />
           </pre>
@@ -219,6 +221,8 @@ export function ChatSection({
   uploadedResult,
   onUploadedResult,
   polygons,
+  version,
+  onTabChange,
 }: ChatSectionProps) {
   const port_backend = process.env.PORT_BACKEND;
   const [messages, setMessages] = useState<Message[]>([]);
@@ -248,6 +252,7 @@ export function ChatSection({
       console.error("Error canceling processing:", error);
     }
   };
+
   const TypingIndicator = () => {
     return (
       <div className="flex items-center space-x-1 p-2 rounded-lg bg-gray-100 w-12">
@@ -274,7 +279,8 @@ export function ChatSection({
       console.log("Sending message:", lastMessage);
       messages[messages.length - 1] = lastMessage;
       setIsTyping(true);
-      const response = await fetch(`http://localhost:${port_backend}/chat`, {
+      const endpoint = version ? `/chat/${version}` : '/chat';
+      const response = await fetch(`http://localhost:${port_backend}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -372,6 +378,46 @@ export function ChatSection({
     }
   };
 
+  const parseCoordinates = (coordinateString: string): number[][] => {
+    try {
+      // Remove any whitespace and normalize the string
+      const cleanString = coordinateString.trim();
+      
+      // Try to parse as JSON first
+      const parsed = JSON.parse(cleanString);
+      
+      // If it's already a 2D array, return it
+      if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+        return parsed.map(coords => coords.map(Number));
+      }
+      
+      // If it's a 1D array, wrap it in another array
+      if (Array.isArray(parsed)) {
+        return [parsed.map(Number)];
+      }
+      
+      // If it's not an array, return empty array
+      return [];
+    } catch (error) {
+      console.error('Error parsing coordinates:', error);
+      return [];
+    }
+  };
+
+  const handleAnswer = (message: Message) => {
+    const answerMatch = message.content.match(/<answer>(.*?)<\/answer>/s);
+    if (answerMatch) {
+      const answer = answerMatch[1];
+      // Parse the coordinates if they are in string format
+      const parsedCoordinates = parseCoordinates(answer);
+      onUploadedResult(parsedCoordinates);
+      // Switch to result tab when answer is received
+      if (onTabChange) {
+        onTabChange("result");
+      }
+    }
+  };
+
   useEffect(() => {
     let ws: WebSocket;
     let reconnectInterval: NodeJS.Timeout;
@@ -388,6 +434,7 @@ export function ChatSection({
         const data = JSON.parse(event.data);
         setMessages((prev) => [...prev, data]);
         handleFinalCode(data);
+        handleAnswer(data);
         setIsTyping(false);
       };
   
