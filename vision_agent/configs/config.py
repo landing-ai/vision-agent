@@ -2,7 +2,7 @@ from typing import Type
 
 from pydantic import BaseModel, Field
 
-from vision_agent.lmm import LMM, AnthropicLMM, OpenAILMM, GoogleLMM
+from vision_agent.lmm import LMM, AnthropicLMM, GoogleLMM
 
 
 class Config(BaseModel):
@@ -106,12 +106,11 @@ class Config(BaseModel):
     )
 
     # for suggestions module
-    suggester: Type[LMM] = Field(default=OpenAILMM)
+    suggester: Type[LMM] = Field(default=AnthropicLMM)
     suggester_kwargs: dict = Field(
         default_factory=lambda: {
-            "model_name": "o1",
+            "model_name": "claude-3-7-sonnet-20250219",
             "temperature": 1.0,
-            "image_detail": "high",
             "image_size": 1024,
         }
     )
