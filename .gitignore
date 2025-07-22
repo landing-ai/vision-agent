@@ -95,6 +95,4 @@ site
 local/
 
 vision-agent-benchmark/
-vision_agent/tools/suggestion.py
-vision_agent/agent/visual_design_patterns.py
 */node_modules
