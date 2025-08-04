@@ -173,7 +173,7 @@ class VisionAgentV3(Agent):
     ) -> None:
         if agent is None:
             self.agent = AnthropicLMM(
-                model_name="claude-3-7-sonnet-20250219", max_tokens=8192
+                model_name="claude-sonnet-4-20250514", max_tokens=8192
             )
         self.kwargs = {
             "thinking": {"type": "enabled", "budget_tokens": 4096},
