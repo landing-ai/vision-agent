@@ -24,6 +24,8 @@ _Prompt with an image/video → Get runnable vision code → Build Visual AI App
 
 **VisionAgent** is the Visual AI pilot from LandingAI. Give it a prompt and an image, and it automatically picks the right vision models and outputs ready‑to‑run code—letting you build vision‑enabled apps in minutes. You can play around with VisionAgent using our local webapp in `examples/chat` and following the directions in the `README.md`:
 
+<https://github.com/user-attachments/assets/752632b3-dda5-44f1-b27e-5cb4c97757ac>
+
 
 ## Steps to Set Up the Library  
 
