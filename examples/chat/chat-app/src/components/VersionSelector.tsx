@@ -15,7 +15,7 @@ const versionInfo = {
     description: "Latest version that's faster and better at reasoning but has fewer features.",
     features: [
       "Improved reasoning and planning",
-      "Can hanlde image inputs",
+      "Can handle image inputs",
       "Can do object detection",
       "More stable and faster but less feature-rich",
       "Final output is the final answer, not code",
