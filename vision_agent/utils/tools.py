@@ -9,6 +9,7 @@ from IPython.display import display
 from pydantic import BaseModel
 from requests import Session
 from requests.adapters import HTTPAdapter
+from urllib.parse import urlparse
 from urllib3.util.retry import Retry
 
 from vision_agent.utils.exceptions import RemoteToolCallFailed
@@ -128,7 +129,7 @@ def _create_requests_session(
             504,  # Gateway Timeout
         ],
     )
-    session.mount(url, HTTPAdapter(max_retries=retries if num_retry > 0 else 0))
+    session.mount(urlparse(url).scheme, HTTPAdapter(max_retries=retries if num_retry > 0 else 0))
     session.headers.update(headers)
     return session
 
@@ -137,7 +138,7 @@ def _call_post(
     url: str,
     payload: dict[str, Any],
     session: Session,
-    files: Optional[List[Tuple[Any, ...]]] = None,
+    files: Optional[List[Tuple[str, bytes]]] = None,
     function_name: str = "unknown",
     is_form: bool = False,
 ) -> Any:
